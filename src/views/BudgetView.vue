@@ -1,219 +1,276 @@
 <template>
   <ion-page>
-    <ion-list class="ion-padding">
-      <ion-grid>
-        <ion-row class="row-top-align">
-          <!-- Izquierda: resumen + ingresos -->
-          <ion-col size="12" size-md="4">
-            <ion-list class="main">
-              <ion-list-header>
-                <ion-label> Presupuesto </ion-label>
-              </ion-list-header>
+    <ion-header class="ion-no-border" mode="ios">
+      <ion-toolbar>
+        <ion-title>Presupuesto</ion-title>
 
-              <div>
-                <ion-card class="no-shadow">
-                  <ion-card-header>
-                    <ion-card-title
-                      >Ingresos ({{
-                        formatCurrency({ v: totalIngresos })
-                      }})</ion-card-title
-                    >
-                  </ion-card-header>
+        <ion-buttons slot="end">
+          <ion-button
+            @click="openDatePopover({ e: $event })"
+            title="Seleccionar fecha"
+          >
+            <ion-icon :icon="calendarOutline"></ion-icon>
+          </ion-button>
+        </ion-buttons>
+      </ion-toolbar>
+    </ion-header>
 
-                  <ion-card-content>
-                    <ion-grid>
-                      <ion-row>
-                        <ion-col>
-                          <ion-item v-for="(inc, idx) in ingresos" :key="idx">
-                            <ion-input
-                              placeholder="Nombre"
-                              v-model="inc.name"
-                            ></ion-input>
+    <ion-content>
+      <ion-list class="ion-padding">
+        <ion-grid>
+          <ion-row class="row-top-align">
+            <!-- Izquierda: resumen + ingresos -->
+            <ion-col size="12" size-md="4">
+              <ion-list class="main">
+                <ion-list-header>
+                  <ion-label> Presupuesto </ion-label>
+                </ion-list-header>
 
-                            <ion-input
-                              type="number"
-                              slot="end"
-                              v-model.number="inc.amount"
-                              class="num-input"
-                            ></ion-input>
-                          </ion-item>
-
-                          <!-- <ion-item> -->
-                          <!--   <ion-input -->
-                          <!--     placeholder="Nombre" -->
-                          <!--     :value="newIngreso.name" -->
-                          <!--     @ionInput="onNewIngresoNameInput($event)" -->
-                          <!--   ></ion-input> -->
-                          <!---->
-                          <!--   <ion-input -->
-                          <!--     type="number" -->
-                          <!--     placeholder="Monto" -->
-                          <!--     :value="newIngreso.amount" -->
-                          <!--     @ionInput="onNewIngresoAmountInput($event)" -->
-                          <!--   ></ion-input> -->
-                          <!---->
-                          <!--   <ion-button size="small" @click="addIngreso()"> -->
-                          <!--     <ion-icon :icon="addOutline"></ion-icon> -->
-                          <!--   </ion-button> -->
-                          <!-- </ion-item> -->
-
-                          <ion-button
-                            fill="clear"
-                            expand="full"
-                            @click="addIngresoField()"
-                          >
-                            <ion-icon :icon="addOutline"> </ion-icon>
-                          </ion-button>
-                        </ion-col>
-                      </ion-row>
-                    </ion-grid>
-                  </ion-card-content>
-                </ion-card>
-
-                <ion-card class="no-shadow">
-                  <ion-card-header>
-                    <ion-card-title>Resumen</ion-card-title>
-                  </ion-card-header>
-
-                  <ion-card-content>
-                    <ion-item>
-                      <ion-label>Presupuesto después de(estimacion)</ion-label>
-                      <ion-note slot="end">{{
-                        formatCurrency({ v: totalIngresos - totalProviders })
-                      }}</ion-note>
-                    </ion-item>
-
-                    <ion-item>
-                      <ion-label>Presupuesto después de(real)</ion-label>
-                      <ion-note slot="end">{{
-                        formatCurrency({
-                          v: totalIngresos - totalVisitedProviders,
-                        })
-                      }}</ion-note>
-                    </ion-item>
-                  </ion-card-content>
-                </ion-card>
-              </div>
-            </ion-list>
-          </ion-col>
-
-          <!-- Derecha: proveedores + inesperados -->
-          <ion-col size="12" size-md="8">
-            <ion-list class="providers-list main">
-              <ion-list-header>
-                <ion-label
-                  >Proveedores ({{
-                    formatCurrency({ v: totalProviders })
-                  }})</ion-label
-                >
-              </ion-list-header>
-
-              <div class="providers-list-body">
-                <ion-grid>
-                  <ion-row>
-                    <ion-col
-                      v-for="p in proveedores"
-                      :key="p.id"
-                      :class="{ 'provider-just-added': p._justAdded }"
-                      size="12"
-                      size-md="6"
-                    >
-                      <ion-card
-                        class="no-shadow"
-                        style="
-                          box-shadow:
-                            rgba(27, 31, 35, 0.04) 0px 1px 0px,
-                            rgba(255, 255, 255, 0.25) 0px 1px 0px inset;
-                        "
+                <div>
+                  <ion-card class="no-shadow">
+                    <ion-card-header>
+                      <ion-card-title
+                        >Ingresos ({{
+                          formatCurrency({ v: totalIngresos })
+                        }})</ion-card-title
                       >
-                        <ion-card-header>
-                          <template v-if="p.name">
-                            <ion-card-title>{{ p.name }}</ion-card-title>
-                          </template>
-                          <template v-else>
-                            <ion-item lines="none">
+                    </ion-card-header>
+
+                    <ion-card-content>
+                      <ion-grid>
+                        <ion-row>
+                          <ion-col>
+                            <ion-item v-for="inc in ingresos" :key="inc.id">
                               <ion-input
-                                :ref="(el) => (nameInputRefs[p.id] = el)"
-                                v-model="p.name"
-                                placeholder="Nombre proveedor"
+                                placeholder="Nombre"
+                                v-model="inc.name"
+                              ></ion-input>
+
+                              <ion-input
+                                type="number"
+                                slot="end"
+                                v-model.number="inc.amount"
+                                class="num-input"
+                              ></ion-input>
+
+                              <ion-button
+                                slot="end"
+                                fill="clear"
+                                size="small"
+                                @click="removeIngreso(inc.id)"
+                                title="Eliminar ingreso"
+                              >
+                                <ion-icon :icon="trashOutline"></ion-icon>
+                              </ion-button>
+                            </ion-item>
+
+                            <!-- <ion-item> -->
+                            <!--   <ion-input -->
+                            <!--     placeholder="Nombre" -->
+                            <!--     :value="newIngreso.name" -->
+                            <!--     @ionInput="onNewIngresoNameInput($event)" -->
+                            <!--   ></ion-input> -->
+                            <!---->
+                            <!--   <ion-input -->
+                            <!--     type="number" -->
+                            <!--     placeholder="Monto" -->
+                            <!--     :value="newIngreso.amount" -->
+                            <!--     @ionInput="onNewIngresoAmountInput($event)" -->
+                            <!--   ></ion-input> -->
+                            <!---->
+                            <!--   <ion-button size="small" @click="addIngreso()"> -->
+                            <!--     <ion-icon :icon="addOutline"></ion-icon> -->
+                            <!--   </ion-button> -->
+                            <!-- </ion-item> -->
+
+                            <ion-button
+                              fill="clear"
+                              expand="full"
+                              @click="addIngresoField()"
+                            >
+                              <ion-icon :icon="addOutline"> </ion-icon>
+                            </ion-button>
+                          </ion-col>
+                        </ion-row>
+                      </ion-grid>
+                    </ion-card-content>
+                  </ion-card>
+
+                  <ion-card class="no-shadow">
+                    <ion-card-header>
+                      <ion-card-title>Resumen</ion-card-title>
+                    </ion-card-header>
+
+                    <ion-card-content>
+                      <ion-item>
+                        <ion-label
+                          >Presupuesto después de(estimacion)</ion-label
+                        >
+                        <ion-note slot="end">{{
+                          formatCurrency({ v: totalIngresos - totalProviders })
+                        }}</ion-note>
+                      </ion-item>
+
+                      <ion-item>
+                        <ion-label>Presupuesto después de(real)</ion-label>
+                        <ion-note slot="end">{{
+                          formatCurrency({
+                            v: totalIngresos - totalVisitedProviders,
+                          })
+                        }}</ion-note>
+                      </ion-item>
+                    </ion-card-content>
+                  </ion-card>
+                </div>
+              </ion-list>
+            </ion-col>
+
+            <!-- Derecha: proveedores + inesperados -->
+            <ion-col size="12" size-md="8">
+              <ion-list class="providers-list main">
+                <ion-list-header>
+                  <ion-label
+                    >Proveedores ({{
+                      formatCurrency({ v: totalProviders })
+                    }})</ion-label
+                  >
+                </ion-list-header>
+
+                <div class="providers-list-body">
+                  <ion-grid>
+                    <ion-row>
+                      <ion-col
+                        v-for="p in proveedores"
+                        :key="p.id"
+                        :class="{ 'provider-just-added': p._justAdded }"
+                        size="12"
+                        size-md="6"
+                      >
+                        <ion-card
+                          class="no-shadow"
+                          style="
+                            box-shadow: rgba(27, 31, 35, 0.04) 0px 1px 0px,
+                              rgba(255, 255, 255, 0.25) 0px 1px 0px inset;
+                          "
+                        >
+                          <ion-card-header>
+                            <template v-if="p.name">
+                              <ion-card-title>{{ p.name }}</ion-card-title>
+                            </template>
+
+                            <template v-else>
+                              <ion-item lines="none">
+                                <ion-input
+                                  :ref="(el) => (nameInputRefs[p.id] = el)"
+                                  v-model="p.name"
+                                  placeholder="Nombre proveedor"
+                                ></ion-input>
+                              </ion-item>
+                            </template>
+                          </ion-card-header>
+
+                          <ion-card-content>
+                            <ion-item>
+                              <ion-label>Estimado</ion-label>
+
+                              <ion-input
+                                slot="end"
+                                type="number"
+                                v-model.number="p.estimated"
+                                class="num-input"
                               ></ion-input>
                             </ion-item>
-                          </template>
-                        </ion-card-header>
 
-                        <ion-card-content>
-                          <ion-item>
-                            <ion-label>Estimado</ion-label>
+                            <ion-item>
+                              <ion-label>$</ion-label>
 
-                            <ion-input
-                              slot="end"
-                              type="number"
-                              v-model.number="p.estimated"
-                              class="num-input"
-                            ></ion-input>
-                          </ion-item>
+                              <ion-input
+                                slot="end"
+                                type="number"
+                                v-model.number="p.dollar"
+                                class="num-input"
+                              ></ion-input>
+                            </ion-item>
 
-                          <ion-item>
-                            <ion-label>$</ion-label>
+                            <ion-item>
+                              <ion-label>Valor a considerar</ion-label>
 
-                            <ion-input
-                              slot="end"
-                              type="number"
-                              v-model.number="p.dollar"
-                              class="num-input"
-                            ></ion-input>
-                          </ion-item>
+                              <ion-input
+                                slot="end"
+                                :value="valueToConsider(p)"
+                                readonly
+                                class="num-input"
+                              ></ion-input>
+                            </ion-item>
 
-                          <ion-item>
-                            <ion-label>Valor a considerar</ion-label>
+                            <ion-item>
+                              <ion-label>Notas</ion-label>
 
-                            <ion-input
-                              slot="end"
-                              :value="valueToConsider(p)"
-                              readonly
-                              class="num-input"
-                            ></ion-input>
-                          </ion-item>
+                              <ion-textarea
+                                v-model="p.notes"
+                                slot="end"
+                              ></ion-textarea>
+                            </ion-item>
 
-                          <ion-item>
-                            <ion-label>Notas</ion-label>
+                            <ion-item lines="none">
+                              <ion-checkbox
+                                slot="start"
+                                v-model="p.visited"
+                              ></ion-checkbox>
+                              <ion-label>Visita</ion-label>
+                            </ion-item>
 
-                            <ion-textarea
-                              v-model="p.notes"
-                              slot="end"
-                            ></ion-textarea>
-                          </ion-item>
+                            <ion-button
+                              color="danger"
+                              expand="full"
+                              fill="clear"
+                              @click.stop="removeProveedor(p.id)"
+                              title="Eliminar proveedor"
+                            >
+                              <ion-icon :icon="trashOutline"></ion-icon>
+                            </ion-button>
+                          </ion-card-content>
+                        </ion-card>
+                      </ion-col>
 
-                          <ion-item lines="none">
-                            <ion-checkbox
-                              slot="start"
-                              v-model="p.visited"
-                            ></ion-checkbox>
-                            <ion-label>Visita</ion-label>
-                          </ion-item>
-                        </ion-card-content>
-                      </ion-card>
-                    </ion-col>
+                      <!-- Card vacía para agregar un nuevo proveedor (botón + centrado) -->
+                      <ion-col size="12" size-md="6">
+                        <ion-card
+                          class="no-shadow add-provider-card"
+                          @click="addBlankProvider"
+                        >
+                          <ion-card-content class="add-card-content">
+                            <div class="add-card-plus">+</div>
+                          </ion-card-content>
+                        </ion-card>
+                      </ion-col>
+                    </ion-row>
+                  </ion-grid>
+                </div>
+              </ion-list>
+            </ion-col>
+          </ion-row>
+        </ion-grid>
+      </ion-list>
 
-                    <!-- Card vacía para agregar un nuevo proveedor (botón + centrado) -->
-                    <ion-col size="12" size-md="6">
-                      <ion-card
-                        class="no-shadow add-provider-card"
-                        @click="addBlankProvider"
-                      >
-                        <ion-card-content class="add-card-content">
-                          <div class="add-card-plus">+</div>
-                        </ion-card-content>
-                      </ion-card>
-                    </ion-col>
-                  </ion-row>
-                </ion-grid>
-              </div>
-            </ion-list>
-          </ion-col>
-        </ion-row>
-      </ion-grid>
-    </ion-list>
+      <!-- popover -->
+      <ion-popover
+        :is-open="popovers.date.open"
+        :event="popovers.date.event"
+        @didDismiss="onPopoverDidDismiss"
+      >
+        <ion-content>
+          <ion-datetime
+            v-model="selectedDate"
+            presentation="date"
+            display-format="DD/MM/YYYY"
+            picker-format="DD/MM/YYYY"
+            style="margin-left: 12px"
+          ></ion-datetime>
+        </ion-content>
+      </ion-popover>
+      <!-- end popover -->
+    </ion-content>
   </ion-page>
 </template>
 
@@ -221,6 +278,11 @@
 // imports
 import {
   IonPage,
+  IonHeader,
+  IonToolbar,
+  IonTitle,
+  IonButtons,
+  IonIcon,
   IonGrid,
   IonRow,
   IonCol,
@@ -228,6 +290,7 @@ import {
   IonCardHeader,
   IonCardTitle,
   IonCardContent,
+  IonContent,
   IonList,
   IonItem,
   IonLabel,
@@ -235,18 +298,45 @@ import {
   IonInput,
   IonCheckbox,
   IonButton,
+  IonDatetime,
+  IonPopover,
 } from "@ionic/vue";
-import { reactive, computed, nextTick } from "vue";
-import { addOutline } from "ionicons/icons";
+import { reactive, computed, nextTick, ref, onMounted, watch } from "vue";
+import { addOutline, calendarOutline, trashOutline } from "ionicons/icons";
+
+// controllers
+import {
+  backupBudgetViewData,
+  getLatestBackupForDate,
+} from "../controllers/backupController";
+// end controllers
 
 // vars
 const ingresos = reactive([
-  { name: "Inicio", amount: 0 },
-  { name: "Corte", amount: 0 },
-  { name: "Jesus", amount: 0 },
+  {
+    id: Date.now() + Math.random(),
+    name: "Inicio",
+    amount: 0,
+    date: new Date().toISOString(),
+  },
+  {
+    id: Date.now() + Math.random(),
+    name: "Corte",
+    amount: 0,
+    date: new Date().toISOString(),
+  },
+  {
+    id: Date.now() + Math.random(),
+    name: "Jesus",
+    amount: 0,
+    date: new Date().toISOString(),
+  },
 ]);
-const newIngreso = reactive({ name: "", amount: 0 });
-// Inicializar proveedores con un id único para permitir animaciones en inserción/eliminación
+const newIngreso = reactive({
+  name: "",
+  amount: 0,
+  date: new Date().toISOString(),
+});
 const proveedores = reactive(
   [
     "Agua",
@@ -263,28 +353,66 @@ const proveedores = reactive(
   ].map((n) => ({
     id: Date.now() + Math.random(),
     name: n,
+    date: new Date().toISOString(),
     estimated: 0,
     dollar: 0,
     notes: "",
     visited: false,
     _justAdded: false,
-  })),
+  }))
 );
 const newProveedor = reactive({ name: "", estimated: 0, dollar: 0, notes: "" });
-// refs a los inputs de nombre (indexados por id de proveedor) para poder hacer setFocus
 const nameInputRefs = reactive({} as Record<string | number, any>);
+const STORAGE_KEY = "budget:selectedDate";
+const selectedDate = ref(new Date().toISOString());
+const popovers = reactive({
+  date: { open: false, event: null as any },
+});
 // end vars
+
+// life
+onMounted(() => {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (saved) {
+    selectedDate.value = saved;
+  }
+  // cargar datos para la fecha actual/seleccionada
+  loadDataForDate(selectedDate.value);
+  // Referencias a funciones/variables que pueden parecer no usadas para evitar errores de lint/TS
+  // (se usan en la plantilla o en handlers dinámicos en runtime)
+  void addIngreso;
+  void onIngresoIonInput;
+  void onNewIngresoNameInput;
+  void onNewIngresoAmountInput;
+  void addProveedor;
+});
+// end life
+
+// watch
+watch(
+  selectedDate,
+  (v) => {
+    try {
+      localStorage.setItem(STORAGE_KEY, v);
+    } catch (e) {
+      /* noop */
+    }
+    loadDataForDate(v);
+  },
+  { immediate: false }
+);
+// watch
 
 // computed
 const totalIngresos = computed(() =>
-  ingresos.reduce((s, i) => s + Number(i.amount || 0), 0),
+  ingresos.reduce((s, i) => s + Number(i.amount || 0), 0)
 );
 const totalProviders = computed(() =>
-  proveedores.reduce((s, p) => s + valueToConsider(p), 0),
+  proveedores.reduce((s, p) => s + valueToConsider(p), 0)
 );
 // Total of providers that have been visited (checked)
 const totalVisitedProviders = computed(() =>
-  proveedores.reduce((s, p) => s + (p.visited ? valueToConsider(p) : 0), 0),
+  proveedores.reduce((s, p) => s + (p.visited ? valueToConsider(p) : 0), 0)
 );
 // end computed
 
@@ -294,19 +422,69 @@ function addIngreso(params: { name?: string; amount?: number } = {}) {
   const n = name ?? newIngreso.name;
   const a = amount ?? newIngreso.amount;
   if (!n) return;
-  ingresos.push({ name: n, amount: Number(a) || 0 });
+  ingresos.push({
+    id: Date.now() + Math.random(),
+    name: n,
+    amount: Number(a) || 0,
+    date: selectedDate.value,
+  });
   newIngreso.name = "";
   newIngreso.amount = 0;
 }
 
 function addIngresoField() {
   // Adds a new empty income field to the ingresos array so the user can enter a new ingreso inline
-  ingresos.push({ name: "", amount: 0 });
+  ingresos.push({
+    id: Date.now() + Math.random(),
+    name: "",
+    amount: 0,
+    date: selectedDate.value,
+  });
 }
 
 function updateIngresoAmount(params: { value: any; idx: number }) {
   const { value, idx } = params;
   ingresos[idx].amount = Number(value) || 0;
+}
+
+async function removeIngreso(id: string | number) {
+  const idx = ingresos.findIndex((i: any) => i.id === id);
+  if (idx >= 0) {
+    ingresos.splice(idx, 1);
+    // esperar a que Vue actualice el DOM/reactividad; el auto-guardado lo maneja el watcher debounced
+    try {
+      await nextTick();
+      console.log(
+        "removeIngreso: ingreso eliminado, auto-guardado por watcher",
+        id
+      );
+    } catch (e) {
+      console.error(
+        "removeIngreso: error en nextTick después de eliminar ingreso",
+        e
+      );
+    }
+  }
+}
+
+async function removeProveedor(id: string | number) {
+  const idx = proveedores.findIndex((p: any) => p.id === id);
+  if (idx >= 0) {
+    proveedores.splice(idx, 1);
+    // esperar a que Vue actualice el DOM/reactividad; el auto-guardado lo maneja el watcher debounced
+    try {
+      await nextTick();
+      console.log(
+        "removeProveedor: proveedor eliminado, auto-guardado por watcher",
+        id
+      );
+    } catch (e) {
+      console.error(
+        "removeProveedor: error en nextTick después de eliminar proveedor",
+        e
+      );
+    }
+  }
 }
 
 function updateNewIngreso(params: { name?: string; amount?: number } = {}) {
@@ -324,15 +502,18 @@ function formatCurrency(params: { v: number }) {
 }
 
 // template-friendly wrappers (avoid implicit any in template lambdas)
-function onIngresoIonInput(e: any, idx: number) {
+function onIngresoIonInput(params: { e: any; idx: number }) {
+  const { e, idx } = params;
   updateIngresoAmount({ value: e?.detail?.value, idx });
 }
 
-function onNewIngresoNameInput(e: any) {
+function onNewIngresoNameInput(params: { e: any }) {
+  const { e } = params;
   updateNewIngreso({ name: e?.detail?.value || "" });
 }
 
-function onNewIngresoAmountInput(e: any) {
+function onNewIngresoAmountInput(params: { e: any }) {
+  const { e } = params;
   updateNewIngreso({ amount: Number(e?.detail?.value) || 0 });
 }
 
@@ -342,7 +523,7 @@ function addProveedor(
     estimated?: number;
     dollar?: number;
     notes?: string;
-  } = {},
+  } = {}
 ) {
   const { name, estimated, dollar, notes } = params;
   const n = name ?? newProveedor.name;
@@ -353,6 +534,7 @@ function addProveedor(
   // crear con id y marcar como recién agregado para animación
   const newItem = {
     id: Date.now() + Math.random(),
+    date: selectedDate.value,
     name: n,
     estimated: Number(e) || 0,
     dollar: Number(d) || 0,
@@ -379,6 +561,7 @@ function valueToConsider(p: any) {
 function addBlankProvider() {
   const newItem = {
     id: Date.now() + Math.random(),
+    date: selectedDate.value,
     name: "",
     estimated: 0,
     dollar: 0,
@@ -403,6 +586,139 @@ function addBlankProvider() {
     }
   });
   setTimeout(() => (newItem._justAdded = false), 400);
+}
+
+// Recolecta los datos relevantes del componente y pide al controller que los guarde en dixie
+async function onBackupClick() {
+  try {
+    const payload = {
+      ingresos: JSON.parse(JSON.stringify(ingresos)),
+      proveedores: JSON.parse(JSON.stringify(proveedores)),
+      newIngreso: { ...newIngreso },
+      newProveedor: { ...newProveedor },
+      selectedDate: selectedDate.value,
+      totals: {
+        totalIngresos: totalIngresos.value,
+        totalProviders: totalProviders.value,
+        totalVisitedProviders: totalVisitedProviders.value,
+      },
+    };
+
+    console.log("onBackupClick: payload summary", {
+      selectedDate: payload.selectedDate,
+      ingresosCount: payload.ingresos.length,
+    });
+
+    const res = await backupBudgetViewData(payload);
+    console.log("Backup guardado:", res);
+  } catch (err) {
+    console.error("Error al guardar backup:", err);
+  }
+}
+
+// (debugListBackups removed)
+
+// --- Auto-save debounced ---
+// Debounce simple para evitar escrituras excesivas al storage/controller
+function debounce<T extends (...args: any[]) => any>(fn: T, wait = 800) {
+  let t: ReturnType<typeof setTimeout> | null = null;
+  return (...args: Parameters<T>) => {
+    if (t) clearTimeout(t as any);
+    t = setTimeout(() => {
+      t = null;
+      try {
+        fn(...args);
+      } catch (e) {
+        /* noop */
+      }
+    }, wait);
+  };
+}
+
+// autoSave usa onBackupClick internamente (debounced)
+const autoSave = debounce(async () => {
+  try {
+    await onBackupClick();
+  } catch (e) {
+    console.error("autoSave error:", e);
+  }
+}, 800);
+
+// Watchers deep que disparan el auto-guardado al cambiar datos importantes
+watch(
+  ingresos,
+  () => {
+    autoSave();
+  },
+  { deep: true }
+);
+
+watch(
+  proveedores,
+  () => {
+    autoSave();
+  },
+  { deep: true }
+);
+
+async function loadDataForDate(dateISO: string) {
+  try {
+    const b = await getLatestBackupForDate(dateISO);
+    if (b && b.data) {
+      const d = b.data;
+      // Reemplazar arrays reactivos; asegurar ids estables en ingresos
+      ingresos.splice(
+        0,
+        ingresos.length,
+        ...(d.ingresos || []).map((i: any) => ({
+          id: i.id ?? Date.now() + Math.random(),
+          ...i,
+        }))
+      );
+      proveedores.splice(0, proveedores.length, ...(d.proveedores || []));
+      // Reemplazar objetos
+      Object.assign(
+        newIngreso,
+        d.newIngreso || { name: "", amount: 0, date: dateISO }
+      );
+      Object.assign(
+        newProveedor,
+        d.newProveedor || { name: "", estimated: 0, dollar: 0, notes: "" }
+      );
+      console.log("Datos cargados para", dateISO, b);
+    } else {
+      // No hay backup para esa fecha: inicializar vacío pero con fecha
+      ingresos.splice(0, ingresos.length);
+      proveedores.splice(0, proveedores.length);
+      Object.assign(newIngreso, { name: "", amount: 0, date: dateISO });
+      Object.assign(newProveedor, {
+        name: "",
+        estimated: 0,
+        dollar: 0,
+        notes: "",
+      });
+      console.log("No se encontró backup para", dateISO);
+    }
+  } catch (err) {
+    console.error("Error cargando datos para fecha", dateISO, err);
+  }
+}
+
+function openDatePopover(params: { e: any }) {
+  const { e } = params;
+  // assign event first, then open after small delay to avoid timing issues with dismiss animation
+  console.log("openDatePopover: event=", e);
+  popovers.date.event = e;
+  setTimeout(() => {
+    popovers.date.open = true;
+    console.log("openDatePopover: popover opened, event=", popovers.date.event);
+  }, 50);
+}
+
+function onPopoverDidDismiss() {
+  console.log("onPopoverDidDismiss");
+  popovers.date.open = false;
+  popovers.date.event = null;
 }
 </script>
 
