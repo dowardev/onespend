@@ -1,5 +1,18 @@
 # Changelog
 
+## [v0.1.3] - 2025-10-29
+
+- Refactor `BudgetView` provider card layout and styles: promote the displayed provider value, add provider actions (visited checkbox and delete button), and move inputs to compact floating labels for a cleaner layout.
+- Replace `no-shadow` provider cards with a consistent `.shadow1` style and adjust the add-provider card sizing, padding and colors.
+- Add provider notes display, small entrance animation for newly added providers, and CSS classes to improve spacing and responsiveness (e.g. `provider-top`, `provider-value`, `provider-actions`, `provider-row-fields`).
+- Minor script updates: add `toggleVisited` helper and small template-friendly wrappers; reorganize some template markup and imports for clarity.
+- Minor CSS cleanup: add `.transparent` ion-item background variable to `src/theme/variables.css` and consolidate several style refinements.
+
+**Files changed for this release**
+
+- `src/views/BudgetView.vue`
+- `src/theme/variables.css`
+
 ## [v0.1.2] - 2025-10-28
 
 - Add a small IndexedDB wrapper at `src/controllers/dixie.ts` to store local backups.
