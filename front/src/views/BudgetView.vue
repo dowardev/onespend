@@ -16,214 +16,208 @@
     </ion-header>
 
     <ion-content>
-      <ion-list class="ion-padding">
-        <ion-grid>
-          <ion-row>
-            <!-- Izquierda: resumen + ingresos -->
-            <ion-col size="12" size-md="4">
-              <ion-list class="main">
-                <ion-list-header>
-                  <ion-label> Presupuesto </ion-label>
-                </ion-list-header>
+      <ion-grid>
+        <ion-row>
+          <!-- Izquierda: resumen + ingresos -->
+          <ion-col size="12" size-md="5" size-lg="4">
+            <ion-list class="main">
+              <ion-list-header>
+                <ion-label> Presupuesto </ion-label>
+              </ion-list-header>
 
-                <div>
-                  <ion-card class="shadow1">
-                    <ion-card-header>
-                      <ion-card-title
-                        >Ingresos ({{
-                          formatCurrency({ v: totalIngresos })
-                        }})</ion-card-title
-                      >
-                    </ion-card-header>
+              <div>
+                <ion-card class="shadow1">
+                  <ion-card-header>
+                    <ion-card-title
+                      >Ingresos ({{
+                        formatCurrency({ v: totalIngresos })
+                      }})</ion-card-title
+                    >
+                  </ion-card-header>
 
-                    <ion-card-content>
-                      <ion-grid>
-                        <ion-row>
-                          <ion-col>
-                            <ion-item v-for="inc in ingresos" :key="inc.id">
-                              <ion-input
-                                placeholder="Nombre"
-                                v-model="inc.name"
-                              ></ion-input>
+                  <ion-card-content>
+                    <ion-grid>
+                      <ion-row>
+                        <ion-col>
+                          <ion-item v-for="inc in ingresos" :key="inc.id">
+                            <ion-input
+                              placeholder="Nombre"
+                              v-model="inc.name"
+                            ></ion-input>
 
-                              <ion-input
-                                type="number"
-                                slot="end"
-                                v-model.number="inc.amount"
-                                class="num-input"
-                              ></ion-input>
+                            <ion-input
+                              type="number"
+                              slot="end"
+                              v-model.number="inc.amount"
+                              class="num-input"
+                            ></ion-input>
+
+                            <ion-button
+                              slot="end"
+                              fill="clear"
+                              size="small"
+                              @click="removeIngreso(inc.id)"
+                              title="Eliminar ingreso"
+                            >
+                              <ion-icon :icon="trashOutline"></ion-icon>
+                            </ion-button>
+                          </ion-item>
+
+                          <ion-button
+                            fill="clear"
+                            expand="full"
+                            @click="addIngresoField()"
+                          >
+                            <ion-icon :icon="addOutline"> </ion-icon>
+                          </ion-button>
+                        </ion-col>
+                      </ion-row>
+                    </ion-grid>
+                  </ion-card-content>
+                </ion-card>
+
+                <ion-card class="shadow1">
+                  <ion-card-header>
+                    <ion-card-title>Resumen</ion-card-title>
+                  </ion-card-header>
+
+                  <ion-card-content>
+                    <ion-item class="transparent">
+                      <ion-label>Presupuesto después de(estimacion)</ion-label>
+                      <ion-note slot="end">{{
+                        formatCurrency({ v: totalIngresos - totalProviders })
+                      }}</ion-note>
+                    </ion-item>
+
+                    <ion-item class="transparent">
+                      <ion-label>Presupuesto después de(real)</ion-label>
+                      <ion-note slot="end">{{
+                        formatCurrency({
+                          v: totalIngresos - totalVisitedProviders,
+                        })
+                      }}</ion-note>
+                    </ion-item>
+                  </ion-card-content>
+                </ion-card>
+              </div>
+            </ion-list>
+          </ion-col>
+
+          <!-- Derecha: proveedores + inesperados -->
+          <ion-col size="12" size-md="7" size-lg="8">
+            <ion-list class="providers-list main">
+              <ion-list-header>
+                <ion-label
+                  >Proveedores ({{
+                    formatCurrency({ v: totalProviders })
+                  }})</ion-label
+                >
+              </ion-list-header>
+
+              <div class="providers-list-body" ref="providersBodyRef">
+                <ion-grid>
+                  <ion-row>
+                    <ion-col
+                      v-for="p in proveedores"
+                      :key="p.id"
+                      :class="{ 'provider-just-added': p._justAdded }"
+                      size="12"
+                      size-lg="6"
+                    >
+                      <ion-card class="shadow1">
+                        <ion-card-header>
+                          <template v-if="p.name">
+                            <ion-card-title class="provider-title">{{
+                              p.name
+                            }}</ion-card-title>
+                          </template>
+
+                          <template v-else>
+                            <ion-input
+                              :ref="(el) => (nameInputRefs[p.id] = el)"
+                              v-model="p.name"
+                              placeholder="Nombre proveedor"
+                            ></ion-input>
+                          </template>
+                        </ion-card-header>
+
+                        <ion-card-content>
+                          <div class="provider-top">
+                            <div class="provider-value">
+                              {{ formatCurrency({ v: valueToConsider(p) }) }}
+                            </div>
+
+                            <div class="provider-actions">
+                              <ion-item
+                                class="transparent"
+                                lines="none"
+                                button
+                                @click="toggleVisited(p)"
+                              >
+                                <ion-checkbox
+                                  slot="start"
+                                  v-model="p.visited"
+                                  @click.stop
+                                ></ion-checkbox>
+
+                                <ion-label class="tiny-label">Visita</ion-label>
+                              </ion-item>
 
                               <ion-button
-                                slot="end"
                                 fill="clear"
                                 size="small"
-                                @click="removeIngreso(inc.id)"
-                                title="Eliminar ingreso"
+                                @click.stop="removeProveedor(p.id)"
+                                title="Eliminar proveedor"
+                                class="icon-btn"
                               >
                                 <ion-icon :icon="trashOutline"></ion-icon>
                               </ion-button>
-                            </ion-item>
+                            </div>
+                          </div>
 
-                            <ion-button
-                              fill="clear"
-                              expand="full"
-                              @click="addIngresoField()"
-                            >
-                              <ion-icon :icon="addOutline"> </ion-icon>
-                            </ion-button>
-                          </ion-col>
-                        </ion-row>
-                      </ion-grid>
-                    </ion-card-content>
-                  </ion-card>
+                          <div class="provider-row-fields">
+                            <ion-input
+                              label="Estimado"
+                              label-placement="floating"
+                              type="number"
+                              v-model.number="p.estimated"
+                              class="num-input small"
+                            ></ion-input>
 
-                  <ion-card class="shadow1">
-                    <ion-card-header>
-                      <ion-card-title>Resumen</ion-card-title>
-                    </ion-card-header>
+                            <ion-input
+                              label="$"
+                              label-placement="floating"
+                              type="number"
+                              v-model.number="p.dollar"
+                              class="num-input small"
+                            ></ion-input>
+                          </div>
 
-                    <ion-card-content>
-                      <ion-item class="transparent">
-                        <ion-label
-                          >Presupuesto después de(estimacion)</ion-label
-                        >
-                        <ion-note slot="end">{{
-                          formatCurrency({ v: totalIngresos - totalProviders })
-                        }}</ion-note>
-                      </ion-item>
+                          <div class="provider-notes" v-if="p.notes">
+                            <small class="notes-text">{{ p.notes }}</small>
+                          </div>
+                        </ion-card-content>
+                      </ion-card>
+                    </ion-col>
 
-                      <ion-item class="transparent">
-                        <ion-label>Presupuesto después de(real)</ion-label>
-                        <ion-note slot="end">{{
-                          formatCurrency({
-                            v: totalIngresos - totalVisitedProviders,
-                          })
-                        }}</ion-note>
-                      </ion-item>
-                    </ion-card-content>
-                  </ion-card>
-                </div>
-              </ion-list>
-            </ion-col>
-
-            <!-- Derecha: proveedores + inesperados -->
-            <ion-col size="12" size-md="8">
-              <ion-list class="providers-list main">
-                <ion-list-header>
-                  <ion-label
-                    >Proveedores ({{
-                      formatCurrency({ v: totalProviders })
-                    }})</ion-label
-                  >
-                </ion-list-header>
-
-                <div class="providers-list-body">
-                  <ion-grid>
-                    <ion-row>
-                      <ion-col
-                        v-for="p in proveedores"
-                        :key="p.id"
-                        :class="{ 'provider-just-added': p._justAdded }"
-                        size="12"
-                        size-md="6"
+                    <!-- Card vacía para agregar un nuevo proveedor (botón + centrado) -->
+                    <ion-col size="12" size-lg="6">
+                      <ion-card
+                        class="no-shadow add-provider-card"
+                        @click="addBlankProvider"
                       >
-                        <ion-card class="shadow1">
-                          <ion-card-header>
-                            <template v-if="p.name">
-                              <ion-card-title class="provider-title">{{
-                                p.name
-                              }}</ion-card-title>
-                            </template>
-
-                            <template v-else>
-                              <ion-input
-                                :ref="(el) => (nameInputRefs[p.id] = el)"
-                                v-model="p.name"
-                                placeholder="Nombre proveedor"
-                              ></ion-input>
-                            </template>
-                          </ion-card-header>
-
-                          <ion-card-content>
-                            <div class="provider-top">
-                              <div class="provider-value">
-                                {{ formatCurrency({ v: valueToConsider(p) }) }}
-                              </div>
-
-                              <div class="provider-actions">
-                                <ion-item
-                                  class="transparent"
-                                  lines="none"
-                                  button
-                                  @click="toggleVisited(p)"
-                                >
-                                  <ion-checkbox
-                                    slot="start"
-                                    v-model="p.visited"
-                                    @click.stop
-                                  ></ion-checkbox>
-
-                                  <ion-label class="tiny-label"
-                                    >Visita</ion-label
-                                  >
-                                </ion-item>
-
-                                <ion-button
-                                  fill="clear"
-                                  size="small"
-                                  @click.stop="removeProveedor(p.id)"
-                                  title="Eliminar proveedor"
-                                  class="icon-btn"
-                                >
-                                  <ion-icon :icon="trashOutline"></ion-icon>
-                                </ion-button>
-                              </div>
-                            </div>
-
-                            <div class="provider-row-fields">
-                              <ion-input
-                                label="Estimado"
-                                label-placement="floating"
-                                type="number"
-                                v-model.number="p.estimated"
-                                class="num-input small"
-                              ></ion-input>
-
-                              <ion-input
-                                label="$"
-                                label-placement="floating"
-                                type="number"
-                                v-model.number="p.dollar"
-                                class="num-input small"
-                              ></ion-input>
-                            </div>
-
-                            <div class="provider-notes" v-if="p.notes">
-                              <small class="notes-text">{{ p.notes }}</small>
-                            </div>
-                          </ion-card-content>
-                        </ion-card>
-                      </ion-col>
-
-                      <!-- Card vacía para agregar un nuevo proveedor (botón + centrado) -->
-                      <ion-col size="12" size-md="6">
-                        <ion-card
-                          class="no-shadow add-provider-card"
-                          @click="addBlankProvider"
-                        >
-                          <ion-card-content class="add-card-content">
-                            <div class="add-card-plus">+</div>
-                          </ion-card-content>
-                        </ion-card>
-                      </ion-col>
-                    </ion-row>
-                  </ion-grid>
-                </div>
-              </ion-list>
-            </ion-col>
-          </ion-row>
-        </ion-grid>
-      </ion-list>
+                        <ion-card-content class="add-card-content">
+                          <div class="add-card-plus">+</div>
+                        </ion-card-content>
+                      </ion-card>
+                    </ion-col>
+                  </ion-row>
+                </ion-grid>
+              </div>
+            </ion-list>
+          </ion-col>
+        </ion-row>
+      </ion-grid>
 
       <!-- popover -->
       <ion-popover
@@ -274,7 +268,15 @@ import {
   IonDatetime,
   IonPopover,
 } from "@ionic/vue";
-import { reactive, computed, nextTick, ref, onMounted, watch } from "vue";
+import {
+  reactive,
+  computed,
+  nextTick,
+  ref,
+  onMounted,
+  onUnmounted,
+  watch,
+} from "vue";
 import { addOutline, calendarOutline, trashOutline } from "ionicons/icons";
 
 // controllers
@@ -341,6 +343,8 @@ const selectedDate = ref(new Date().toISOString());
 const popovers = reactive({
   date: { open: false, event: null as any },
 });
+const providersBodyRef = ref<HTMLElement | null>(null);
+
 // end vars
 
 // life
@@ -698,6 +702,55 @@ function onPopoverDidDismiss() {
   popovers.date.open = false;
   popovers.date.event = null;
 }
+
+// --- Mobile tap handlers: add temporary class 'touch-active' on pointerdown so
+// cards show the primary border when tapped on touch devices. The class is
+// removed on pointerup / pointercancel. We keep a short delay removal so the
+// visual feedback is noticeable.
+function handlePointerDown(e: PointerEvent | TouchEvent) {
+  try {
+    const target = e.target as HTMLElement | null;
+    if (!target) return;
+    const card = target.closest("ion-card.shadow1") as HTMLElement | null;
+    if (card) {
+      card.classList.add("touch-active");
+    }
+  } catch (err) {
+    /* noop */
+  }
+}
+
+function handlePointerUp(e: PointerEvent | TouchEvent) {
+  try {
+    const target = e.target as HTMLElement | null;
+    if (!target) return;
+    const card = target.closest("ion-card.shadow1") as HTMLElement | null;
+    if (card) {
+      // remove after a short delay so the user sees the feedback
+      setTimeout(() => card.classList.remove("touch-active"), 250);
+    }
+  } catch (err) {
+    /* noop */
+  }
+}
+
+onMounted(() => {
+  const el = providersBodyRef.value as HTMLElement | null;
+  if (el && typeof el.addEventListener === "function") {
+    el.addEventListener("pointerdown", handlePointerDown, { passive: true });
+    el.addEventListener("pointerup", handlePointerUp);
+    el.addEventListener("pointercancel", handlePointerUp);
+  }
+});
+
+onUnmounted(() => {
+  const el = providersBodyRef.value as HTMLElement | null;
+  if (el && typeof el.removeEventListener === "function") {
+    el.removeEventListener("pointerdown", handlePointerDown as any);
+    el.removeEventListener("pointerup", handlePointerUp as any);
+    el.removeEventListener("pointercancel", handlePointerUp as any);
+  }
+});
 </script>
 
 <style scoped>
@@ -707,9 +760,21 @@ ion-card {
   transition: border-color 160ms ease, box-shadow 160ms ease;
 }
 
-.providers-list ion-card.shadow1:hover,
-.providers-list ion-card.shadow1:active,
-.providers-list ion-card.shadow1:focus-within {
+.providers-list ion-card.shadow1:active {
+  border-color: var(--ion-color-primary, #3880ff);
+  box-shadow: 0 6px 18px rgba(56, 128, 255, 0.06);
+}
+
+/* Mostrar borde solo mientras el puntero está encima en escritorio (puntero fino) */
+@media (hover: hover) and (pointer: fine) {
+  .providers-list ion-card.shadow1:hover {
+    border-color: var(--ion-color-primary, #3880ff);
+    box-shadow: 0 6px 18px rgba(56, 128, 255, 0.06);
+  }
+}
+
+/* Mostrar borde cuando el elemento recibe foco por teclado (accesibilidad) */
+.providers-list ion-card.shadow1:focus-visible {
   border-color: var(--ion-color-primary, #3880ff);
   box-shadow: 0 6px 18px rgba(56, 128, 255, 0.06);
 }
@@ -955,6 +1020,17 @@ ion-list.main {
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
+  }
+}
+
+/* Mobile / touch: mostrar borde cuando la card recibe foco interno (inputs) o cuando
+   se agrega la clase .touch-active por los handlers de pointer. Esto asegura que
+   en móvil la card se active al tocar cualquiera de sus elementos. */
+@media (hover: none) and (pointer: coarse) {
+  .providers-list ion-card.shadow1:focus-within,
+  .providers-list ion-card.shadow1.touch-active {
+    border-color: var(--ion-color-primary, #3880ff);
+    box-shadow: 0 6px 18px rgba(56, 128, 255, 0.06);
   }
 }
 </style>

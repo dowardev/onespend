@@ -1,5 +1,16 @@
 # Changelog
 
+## [v0.1.4] - 2025-10-29
+
+- Adjust layout and responsive column sizing in `BudgetView` to improve spacing on medium and large screens.
+- Move and fix add/remove income button behavior and tidy the incomes section markup for clarity.
+- Add touch visual feedback for provider cards (temporary `.touch-active` class) and register/unregister pointer event handlers using a new `providersBodyRef` to improve mobile UX.
+- Introduce `onUnmounted` cleanup for the added listeners and several small accessibility/responsive CSS adjustments for provider cards (hover/focus/touch states).
+
+**Files changed for this release**
+
+- `src/views/BudgetView.vue`
+
 ## [v0.1.3] - 2025-10-29
 
 - Refactor `BudgetView` provider card layout and styles: promote the displayed provider value, add provider actions (visited checkbox and delete button), and move inputs to compact floating labels for a cleaner layout.
