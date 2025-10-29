@@ -18,7 +18,7 @@
     <ion-content>
       <ion-list class="ion-padding">
         <ion-grid>
-          <ion-row class="row-top-align">
+          <ion-row>
             <!-- Izquierda: resumen + ingresos -->
             <ion-col size="12" size-md="4">
               <ion-list class="main">
@@ -27,7 +27,7 @@
                 </ion-list-header>
 
                 <div>
-                  <ion-card class="no-shadow">
+                  <ion-card class="shadow1">
                     <ion-card-header>
                       <ion-card-title
                         >Ingresos ({{
@@ -64,25 +64,6 @@
                               </ion-button>
                             </ion-item>
 
-                            <!-- <ion-item> -->
-                            <!--   <ion-input -->
-                            <!--     placeholder="Nombre" -->
-                            <!--     :value="newIngreso.name" -->
-                            <!--     @ionInput="onNewIngresoNameInput($event)" -->
-                            <!--   ></ion-input> -->
-                            <!---->
-                            <!--   <ion-input -->
-                            <!--     type="number" -->
-                            <!--     placeholder="Monto" -->
-                            <!--     :value="newIngreso.amount" -->
-                            <!--     @ionInput="onNewIngresoAmountInput($event)" -->
-                            <!--   ></ion-input> -->
-                            <!---->
-                            <!--   <ion-button size="small" @click="addIngreso()"> -->
-                            <!--     <ion-icon :icon="addOutline"></ion-icon> -->
-                            <!--   </ion-button> -->
-                            <!-- </ion-item> -->
-
                             <ion-button
                               fill="clear"
                               expand="full"
@@ -96,13 +77,13 @@
                     </ion-card-content>
                   </ion-card>
 
-                  <ion-card class="no-shadow">
+                  <ion-card class="shadow1">
                     <ion-card-header>
                       <ion-card-title>Resumen</ion-card-title>
                     </ion-card-header>
 
                     <ion-card-content>
-                      <ion-item>
+                      <ion-item class="transparent">
                         <ion-label
                           >Presupuesto después de(estimacion)</ion-label
                         >
@@ -111,7 +92,7 @@
                         }}</ion-note>
                       </ion-item>
 
-                      <ion-item>
+                      <ion-item class="transparent">
                         <ion-label>Presupuesto después de(real)</ion-label>
                         <ion-note slot="end">{{
                           formatCurrency({
@@ -146,89 +127,80 @@
                         size="12"
                         size-md="6"
                       >
-                        <ion-card
-                          class="no-shadow"
-                          style="
-                            box-shadow: rgba(27, 31, 35, 0.04) 0px 1px 0px,
-                              rgba(255, 255, 255, 0.25) 0px 1px 0px inset;
-                          "
-                        >
+                        <ion-card class="shadow1">
                           <ion-card-header>
                             <template v-if="p.name">
-                              <ion-card-title>{{ p.name }}</ion-card-title>
+                              <ion-card-title class="provider-title">{{
+                                p.name
+                              }}</ion-card-title>
                             </template>
 
                             <template v-else>
-                              <ion-item lines="none">
-                                <ion-input
-                                  :ref="(el) => (nameInputRefs[p.id] = el)"
-                                  v-model="p.name"
-                                  placeholder="Nombre proveedor"
-                                ></ion-input>
-                              </ion-item>
+                              <ion-input
+                                :ref="(el) => (nameInputRefs[p.id] = el)"
+                                v-model="p.name"
+                                placeholder="Nombre proveedor"
+                              ></ion-input>
                             </template>
                           </ion-card-header>
 
                           <ion-card-content>
-                            <ion-item>
-                              <ion-label>Estimado</ion-label>
+                            <div class="provider-top">
+                              <div class="provider-value">
+                                {{ formatCurrency({ v: valueToConsider(p) }) }}
+                              </div>
 
+                              <div class="provider-actions">
+                                <ion-item
+                                  class="transparent"
+                                  lines="none"
+                                  button
+                                  @click="toggleVisited(p)"
+                                >
+                                  <ion-checkbox
+                                    slot="start"
+                                    v-model="p.visited"
+                                    @click.stop
+                                  ></ion-checkbox>
+
+                                  <ion-label class="tiny-label"
+                                    >Visita</ion-label
+                                  >
+                                </ion-item>
+
+                                <ion-button
+                                  fill="clear"
+                                  size="small"
+                                  @click.stop="removeProveedor(p.id)"
+                                  title="Eliminar proveedor"
+                                  class="icon-btn"
+                                >
+                                  <ion-icon :icon="trashOutline"></ion-icon>
+                                </ion-button>
+                              </div>
+                            </div>
+
+                            <div class="provider-row-fields">
                               <ion-input
-                                slot="end"
+                                label="Estimado"
+                                label-placement="floating"
                                 type="number"
                                 v-model.number="p.estimated"
-                                class="num-input"
+                                class="num-input small"
                               ></ion-input>
-                            </ion-item>
-
-                            <ion-item>
-                              <ion-label>$</ion-label>
 
                               <ion-input
-                                slot="end"
+                                label="$"
+                                label-placement="floating"
                                 type="number"
                                 v-model.number="p.dollar"
-                                class="num-input"
+                                class="num-input small"
                               ></ion-input>
-                            </ion-item>
+                            </div>
 
-                            <ion-item>
-                              <ion-label>Valor a considerar</ion-label>
-
-                              <ion-input
-                                slot="end"
-                                :value="valueToConsider(p)"
-                                readonly
-                                class="num-input"
-                              ></ion-input>
-                            </ion-item>
-
-                            <ion-item>
-                              <ion-label>Notas</ion-label>
-
-                              <ion-textarea
-                                v-model="p.notes"
-                                slot="end"
-                              ></ion-textarea>
-                            </ion-item>
-
-                            <ion-item lines="none">
-                              <ion-checkbox
-                                slot="start"
-                                v-model="p.visited"
-                              ></ion-checkbox>
-                              <ion-label>Visita</ion-label>
-                            </ion-item>
-
-                            <ion-button
-                              color="danger"
-                              expand="full"
-                              fill="clear"
-                              @click.stop="removeProveedor(p.id)"
-                              title="Eliminar proveedor"
-                            >
-                              <ion-icon :icon="trashOutline"></ion-icon>
-                            </ion-button>
+                            <div class="provider-notes" v-if="p.notes">
+                              <small class="notes-text">{{ p.notes }}</small>
+                            </div>
                           </ion-card-content>
                         </ion-card>
                       </ion-col>
@@ -292,6 +264,7 @@ import {
   IonCardContent,
   IonContent,
   IonList,
+  IonListHeader,
   IonItem,
   IonLabel,
   IonNote,
@@ -557,6 +530,11 @@ function valueToConsider(p: any) {
   return d > 0 ? d : e;
 }
 
+// Toggle visited flag from item click (template-friendly)
+function toggleVisited(p: any) {
+  p.visited = !p.visited;
+}
+
 // Añade una card vacía (rápida) al final para poder editar/agregar un proveedor
 function addBlankProvider() {
   const newItem = {
@@ -725,6 +703,15 @@ function onPopoverDidDismiss() {
 <style scoped>
 ion-card {
   margin-bottom: 16px;
+  border: 1px solid transparent;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.providers-list ion-card.shadow1:hover,
+.providers-list ion-card.shadow1:active,
+.providers-list ion-card.shadow1:focus-within {
+  border-color: var(--ion-color-primary, #3880ff);
+  box-shadow: 0 6px 18px rgba(56, 128, 255, 0.06);
 }
 .header {
   font-weight: bold;
@@ -745,6 +732,84 @@ ion-card {
 .provider-card ion-card-title {
   font-size: 1rem;
   font-weight: 600;
+}
+
+/* Minimal provider card look */
+.provider-card.minimal {
+  border-radius: 10px;
+  padding: 8px 0;
+  background: var(--ion-background-color, #fff);
+  box-shadow: none;
+  border: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.provider-title {
+  font-size: 0.96rem;
+  font-weight: 600;
+  padding: 6px 12px;
+}
+
+.provider-content {
+  padding: 8px 12px 12px 12px;
+}
+
+.provider-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.provider-value {
+  font-weight: 700;
+  color: var(--ion-color-primary, #222);
+  font-size: 1rem;
+}
+
+.provider-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tiny-label {
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+
+.icon-btn {
+  color: var(--ion-color-danger, #d9534f);
+}
+
+.provider-row-fields {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.compact-field {
+  flex: 1 1 50%;
+  display: flex;
+  flex-direction: column;
+}
+
+.num-input.small {
+  width: 100%;
+  min-width: 80px;
+}
+
+.provider-notes {
+  margin-top: 8px;
+}
+
+.notes-text {
+  color: var(--ion-text-color, #666);
+  font-size: 0.82rem;
+  display: block;
+  max-height: 3.6em;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Hacer que los inputs numéricos ocupen todo el ancho y alineen a la derecha */
@@ -797,13 +862,14 @@ ion-card {
 
 /* Card vacía para agregar proveedor (estilo similar a la imagen adjunta) */
 .add-provider-card {
-  height: 220px;
+  min-height: 140px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid #111;
+  border: 1px solid rgba(0, 0, 0, 0.08);
   cursor: pointer;
-  background: #fff;
+  background: var(--ion-background-color, #fff);
+  padding: 12px;
 }
 .add-card-content {
   display: flex;
@@ -814,10 +880,31 @@ ion-card {
   padding: 0;
 }
 .add-card-plus {
-  font-size: 72px;
-  color: #ffec3b; /* amarillo */
+  font-size: 48px;
+  color: var(--ion-color-primary, #ffec3b);
   line-height: 1;
   user-select: none;
+}
+
+/* Evitar que el label se parta en dos líneas y forzar disposición vertical en compact fields */
+.compact-field ion-label,
+.compact-field label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 6px;
+  font-size: 0.88rem;
+}
+
+/* Alineado derecho para inputs numéricos dentro de compact-field */
+.compact-field ion-input ::slotted(input),
+.compact-field ion-input input {
+  text-align: right;
+}
+
+.provider-title,
+.provider-value {
+  word-break: break-word;
 }
 
 /* Evitar márgenes/paddings extra que desplacen visualmente el encabezado de la lista */
