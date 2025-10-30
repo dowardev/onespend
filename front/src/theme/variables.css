@@ -23,3 +23,18 @@ ion-card.no-shadow {
 ion-item.transparent {
   --background: transparent;
 }
+
+ion-list.transparent {
+  --background: transparent;
+}
+
+ion-list > div.content {
+  border: 1px solid var(--ion-background-color-step-300);
+  border-radius: 4px;
+  margin: 10px;
+  background: var(--background-contrast) !important;
+}
+
+ion-button.no-shadow {
+  --box-shadow: none !important;
+}
