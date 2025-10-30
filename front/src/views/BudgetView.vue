@@ -223,6 +223,7 @@
       <ion-popover
         :is-open="popovers.date.open"
         :event="popovers.date.event"
+        :keep-contents-mounted="true"
         @didDismiss="onPopoverDidDismiss"
       >
         <ion-content>
@@ -231,8 +232,13 @@
             presentation="date"
             display-format="DD/MM/YYYY"
             picker-format="DD/MM/YYYY"
-            style="margin-left: 12px"
-          ></ion-datetime>
+          >
+            <ion-buttons slot="buttons">
+              <ion-button color="primary" @click="resetToToday()">
+                Hoy
+              </ion-button>
+            </ion-buttons>
+          </ion-datetime>
         </ion-content>
       </ion-popover>
       <!-- end popover -->
@@ -703,10 +709,14 @@ function onPopoverDidDismiss() {
   popovers.date.event = null;
 }
 
-// --- Mobile tap handlers: add temporary class 'touch-active' on pointerdown so
-// cards show the primary border when tapped on touch devices. The class is
-// removed on pointerup / pointercancel. We keep a short delay removal so the
-// visual feedback is noticeable.
+function resetToToday() {
+  try {
+    selectedDate.value = new Date().toISOString();
+  } catch (e) {
+    /* noop */
+  }
+}
+
 function handlePointerDown(e: PointerEvent | TouchEvent) {
   try {
     const target = e.target as HTMLElement | null;
