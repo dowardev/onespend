@@ -1,5 +1,23 @@
 # Changelog
 
+## [v0.1.6] - 2025-10-30
+
+- Add a responsive split-pane layout and side menu in `App.vue` using `VITE_APP_NAME` for the menu title.
+- Register a new `/templates` route and include a new `TemplatesView` component for template management.
+- Add `TemplatesView.vue` with a simple UI to list, create, and apply templates.
+- Theme tweaks in `src/theme/variables.css`: transparent lists, content card border, and a no-shadow button utility.
+- Add project environment file `.env` (VITE_APP_NAME).
+- Remove obsolete backup/view file `src/views/BudgetView.bak.vue`.
+
+**Files changed for this release**
+
+- `.env`
+- `src/App.vue`
+- `src/router/index.ts`
+- `src/theme/variables.css`
+- `src/views/TemplatesView.vue`
+- `src/views/BudgetView.bak.vue` (deleted)
+
 ## [v0.1.5] - 2025-10-30
 
 - Improve date popover UX in `BudgetView`: add a dedicated "Today" button to quickly reset the selected date.
