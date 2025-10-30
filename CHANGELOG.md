@@ -1,5 +1,16 @@
 # Changelog
 
+## [v0.1.5] - 2025-10-30
+
+- Improve date popover UX in `BudgetView`: add a dedicated "Today" button to quickly reset the selected date.
+- Keep the popover contents mounted to avoid re-render flicker and retain state during open/close cycles.
+- Remove ad-hoc inline styling from `ion-datetime` and rely on consistent layout/styling.
+- Minor template cleanups in the popover block.
+
+**Files changed for this release**
+
+- `src/views/BudgetView.vue`
+
 ## [v0.1.4] - 2025-10-29
 
 - Adjust layout and responsive column sizing in `BudgetView` to improve spacing on medium and large screens.
