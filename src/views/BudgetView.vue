@@ -286,10 +286,7 @@ import {
 import { addOutline, calendarOutline, trashOutline } from "ionicons/icons";
 
 // controllers
-import {
-  backupBudgetViewData,
-  getLatestBackupForDate,
-} from "../controllers/backupController";
+import dixieController from "../controllers/dixie";
 // end controllers
 
 // vars
@@ -597,10 +594,20 @@ async function onBackupClick() {
       ingresosCount: payload.ingresos.length,
     });
 
-    const res = await backupBudgetViewData(payload);
-    console.log("Backup guardado:", res);
+    const payloadToSave = {
+      component: "BudgetView",
+      data: payload,
+      createdAt: Date.now(),
+    };
+
+    try {
+      const id = await dixieController.putBackup(payloadToSave);
+      console.log("Backup guardado id=", id);
+    } catch (err) {
+      console.error("Error al guardar backup:", err);
+    }
   } catch (err) {
-    console.error("Error al guardar backup:", err);
+    console.error("Error al preparar backup:", err);
   }
 }
 
@@ -651,7 +658,24 @@ watch(
 
 async function loadDataForDate(dateISO: string) {
   try {
-    const b = await getLatestBackupForDate(dateISO);
+    // Use dixieController.listBackups directly (backupController removed)
+    const all = (await dixieController.listBackups()) as any[];
+    let b: any = null;
+    if (all && all.length) {
+      const target = dateISO.slice(0, 10);
+      const matches = all
+        .filter(
+          (x) =>
+            x &&
+            x.component === "BudgetView" &&
+            x.data &&
+            x.data.selectedDate &&
+            x.data.selectedDate.slice(0, 10) === target
+        )
+        .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      if (matches.length) b = matches[0];
+    }
+
     if (b && b.data) {
       const d = b.data;
       // Reemplazar arrays reactivos; asegurar ids estables en ingresos
