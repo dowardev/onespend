@@ -53,7 +53,7 @@
               size="small"
               color="danger"
               fill="clear"
-              @click="applyTemplate({ t })"
+              @click="confirmDelete({ t })"
             >
               <ion-icon :icon="trashOutline"></ion-icon>
             </ion-button>
@@ -68,7 +68,7 @@
       </ion-list>
 
       <!-- modals -->
-      <ion-modal v-model:is-open="showModal">
+      <ion-modal v-model:is-open="showModal" @did-dismiss="showModal = false">
         <ion-header class="ion-no-border" mode="ios">
           <ion-toolbar>
             <ion-buttons slot="start">
@@ -108,7 +108,7 @@
 
             <div class="content">
               <ion-item
-                v-for="(p, idx) in form.providers"
+                v-for="(_, idx) in form.providers"
                 :key="idx"
                 class="transparent"
               >
@@ -116,11 +116,12 @@
                   v-model="form.providers[idx]"
                   placeholder="Nombre del proveedor"
                 ></ion-input>
+
                 <ion-button
                   slot="end"
                   fill="clear"
                   size="small"
-                  @click="removeProvider(idx)"
+                  @click="removeProvider({ idx })"
                   title="Eliminar proveedor"
                 >
                   <ion-icon color="danger" :icon="trashOutline"></ion-icon>
@@ -139,7 +140,26 @@
         :message="alertMessage"
         :buttons="['OK']"
       ></ion-alert>
+
+      <ion-alert
+        v-model:is-open="showConfirm"
+        @did-dismiss="onConfirmDismiss"
+        header="Confirmar"
+        :message="confirmMessage"
+        :buttons="[
+          { text: 'Cancelar', role: 'cancel' },
+          { text: 'Eliminar', role: 'destructive', handler: proceedDelete },
+        ]"
+      ></ion-alert>
       <!-- end alerts -->
+
+      <!-- toast -->
+      <ion-toast
+        v-model:is-open="toast.open"
+        :message="toast.message"
+        duration="2000"
+      ></ion-toast>
+      <!-- end toast-->
     </ion-content>
   </ion-page>
 </template>
@@ -159,6 +179,7 @@ import {
   IonModal,
   IonInput,
   IonAlert,
+  IonToast,
   IonIcon,
 } from "@ionic/vue";
 import {
@@ -169,7 +190,7 @@ import {
   saveOutline,
   checkmarkOutline,
 } from "ionicons/icons";
-import { reactive, ref } from "vue";
+import { reactive, ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 
 // interface
@@ -180,26 +201,33 @@ type TemplateSummary = {
 };
 // end interface
 
+// controllers
+import TemplateController from "../controllers/TempalteController";
+// end controllers
+
 // main
 const router = useRouter();
 // end main
 
+// life
+onMounted(() => {
+  loadTemplates();
+});
+// end life
+
 // vars
-const templates = reactive<TemplateSummary[]>([
-  {
-    id: 1,
-    name: "Día base",
-    description: "Estructura inicial de proveedores e ingresos",
-  },
-  {
-    id: 2,
-    name: "Día con visita",
-    description: "Marcado para visitas y estimaciones típicas",
-  },
-]);
+const templates = reactive<TemplateSummary[]>([]);
 const showModal = ref(false);
 const showAlert = ref(false);
 const alertMessage = ref("");
+const showConfirm = ref(false);
+const confirmMessage = ref("");
+const confirmTargetId = ref<number | string | null>(null);
+const toast = reactive({
+  open: false,
+  message: "",
+  color: "success",
+});
 const form = reactive({
   name: "",
   providers: [""],
@@ -211,7 +239,8 @@ function addProvider() {
   form.providers.push("");
 }
 
-function removeProvider(idx: number) {
+function removeProvider(params: { idx: number }) {
+  const { idx } = params;
   if (form.providers.length > 1) form.providers.splice(idx, 1);
 }
 
@@ -220,7 +249,7 @@ function resetForm() {
   form.providers.splice(0, form.providers.length, "");
 }
 
-function submitTemplate() {
+async function submitTemplate() {
   if (!form.name.trim()) {
     alertMessage.value = "Por favor ingresa el nombre del template";
     showAlert.value = true;
@@ -229,22 +258,92 @@ function submitTemplate() {
 
   const cleanedProviders = form.providers.map((p) => p.trim()).filter((p) => p);
 
-  // Creamos un template simple; descripción puede contener los proveedores
-  const newTemplate: TemplateSummary = {
-    id: Date.now(),
-    name: form.name.trim(),
-    description: cleanedProviders.length
-      ? `Proveedores: ${cleanedProviders.join(", ")}`
-      : undefined,
-  };
+  // description may contain the providers
+  const description = cleanedProviders.length
+    ? `Proveedores: ${cleanedProviders.join(", ")}`
+    : undefined;
 
-  templates.push(newTemplate);
-  resetForm();
-  showModal.value = false;
+  try {
+    await TemplateController.saveTemplate({
+      t: {
+        name: form.name.trim(),
+        description,
+      },
+    });
+    await loadTemplates();
+    resetForm();
+    showModal.value = false;
+
+    // show success toast
+    toast.message = "Template guardado";
+    toast.open = true;
+  } catch (e) {
+    console.error("submitTemplate error", e);
+    alertMessage.value = "Error al guardar el template";
+    showAlert.value = true;
+  }
 }
 
-function applyTemplate(params: { t: TemplateSummary }) {
-  const { t } = params;
+function applyTemplate(params: any) {
+  const { t } = params as { t: TemplateSummary };
+  if (!t || !t.id) return;
   router.push({ name: "Budget", query: { template: String(t.id) } });
+}
+
+async function confirmDelete(params: { t: TemplateSummary }) {
+  const { t } = params;
+  if (!t || !t.id) {
+    alertMessage.value = "Template inválido";
+    showAlert.value = true;
+    return;
+  }
+
+  // store only the id of the target to delete
+  confirmTargetId.value = t.id;
+  confirmMessage.value = `¿Eliminar template "${t.name}"? Esta acción no se puede deshacer.`;
+  showConfirm.value = true;
+}
+
+async function proceedDelete() {
+  const id = confirmTargetId.value;
+  if (!id) return;
+
+  try {
+    await TemplateController.deleteTemplate({ id: id as any });
+    // reset target and hide confirm
+    confirmTargetId.value = null;
+    showConfirm.value = false;
+    await loadTemplates();
+
+    // show success toast
+    toast.message = "Template eliminado";
+    toast.open = true;
+  } catch (e) {
+    console.error("proceedDelete error", e);
+    alertMessage.value = "Error al eliminar el template";
+    showAlert.value = true;
+  }
+}
+
+function onConfirmDismiss() {
+  confirmTargetId.value = null;
+  showConfirm.value = false;
+}
+
+async function loadTemplates() {
+  try {
+    const list = await TemplateController.listTemplates();
+    templates.splice(
+      0,
+      templates.length,
+      ...list.map((t) => ({
+        id: t.id || "",
+        name: t.name,
+        description: t.description,
+      })),
+    );
+  } catch (e) {
+    console.error("loadTemplates error", e);
+  }
 }
 </script>
