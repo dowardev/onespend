@@ -1,5 +1,20 @@
 # Changelog
 
+## [v0.1.7] - 2025-10-31
+
+- Add Templates controller and update Templates view.
+- Improve local IndexedDB backup wrapper logging and error handling in `dixie.ts`.
+- Remove obsolete UI store file.
+
+**Files changed for this release**
+
+- `src/controllers/TempalteController.ts`
+- `src/controllers/dixie.ts`
+- `src/views/TemplatesView.vue`
+- `src/stores/ui.ts`
+
+
+
 ## [v0.1.6] - 2025-10-30
 
 - Add a responsive split-pane layout and side menu in `App.vue` using `VITE_APP_NAME` for the menu title.
