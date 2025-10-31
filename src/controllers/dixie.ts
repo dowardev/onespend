@@ -80,6 +80,29 @@ export async function getBackup(id: IDBValidKey) {
   });
 }
 
+export async function deleteBackup(id: IDBValidKey) {
+  try {
+    console.log("dixie.deleteBackup: called with id", id, "(type:", typeof id, ")");
+  } catch (e) {
+    /* ignore */
+  }
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction("backups", "readwrite");
+    const store = tx.objectStore("backups");
+    const req = store.delete(id as any);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+    tx.oncomplete = () => {
+      try {
+        db.close();
+      } catch (e) {
+        /* noop */
+      }
+    };
+  });
+}
+
 export async function listBackups() {
   const db = await openDB();
   return new Promise((resolve, reject) => {
