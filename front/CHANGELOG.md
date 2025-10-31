@@ -1,5 +1,21 @@
 # Changelog
 
+## [v0.1.8] - 2025-10-31
+
+- Fix filename typo in Templates controller and improve template management logic.
+- Improve IndexedDB backup wrapper logging and error handling in `src/controllers/dixie.ts`.
+- Update backup controller API/behavior in `src/controllers/backupController.ts`.
+- Minor UI/UX fixes and tweaks in `src/views/BudgetView.vue`.
+
+**Files changed for this release**
+
+- `src/controllers/TempalteController.ts`
+- `src/controllers/backupController.ts`
+- `src/controllers/dixie.ts`
+- `src/views/BudgetView.vue`
+
+
+
 ## [v0.1.7] - 2025-10-31
 
 - Add Templates controller and update Templates view.
