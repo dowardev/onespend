@@ -1,5 +1,24 @@
 # Changelog
 
+## [v0.1.9] - 2025-11-01
+
+- Rename and improve backup API: replace putBackup with addEntry in the Dixie controller and expose BackupController.saveBackup. Improve logging and error handling in the IndexedDB helpers.
+- Refactor TemplateController API: rename parameter from `t` to `template`, use dixie.addEntry when saving templates, improve listTemplates typing and payload mapping, and tighten deleteTemplate ID type.
+- Fix event/parameter naming and template bindings in BudgetView and TemplatesView; apply various TypeScript typing and code-style cleanups.
+- Minor UI/UX and internationalization tweaks and comment clarifications across App.vue, BudgetView.vue and TemplatesView.vue.
+
+**Files changed for this release**
+
+- `src/App.vue`
+- `src/controllers/TempalteController.ts`
+- `src/controllers/backupController.ts`
+- `src/controllers/dixie.ts`
+- `src/views/BudgetView.vue`
+- `src/views/TemplatesView.vue`
+
+
+
+
 ## [v0.1.8] - 2025-10-31
 
 - Fix filename typo in Templates controller and improve template management logic.
