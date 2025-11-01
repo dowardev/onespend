@@ -20,21 +20,21 @@
 
         <div class="content" v-if="templates.length">
           <ion-item
-            v-for="t in templates"
-            :key="t.id"
+            v-for="(tmpl, index) in templates"
+            :key="tmpl.id ?? index"
             lines="full"
             class="transparent"
           >
             <ion-label>
-              <h2>{{ t.name }}</h2>
-              <p>{{ t.description }}</p>
+              <h2>{{ tmpl.name }}</h2>
+              <p>{{ tmpl.description }}</p>
             </ion-label>
 
             <ion-button
               class="no-shadow"
               slot="end"
               size="small"
-              @click="applyTemplate({ t })"
+              @click="applyTemplate({ tmpl })"
             >
               <ion-icon :icon="checkmarkOutline"></ion-icon>
             </ion-button>
@@ -43,7 +43,7 @@
               slot="end"
               size="small"
               fill="clear"
-              @click="applyTemplate({ t })"
+              @click="applyTemplate({ tmpl })"
             >
               <ion-icon :icon="createOutline"></ion-icon>
             </ion-button>
@@ -53,7 +53,7 @@
               size="small"
               color="danger"
               fill="clear"
-              @click="confirmDelete({ t })"
+              @click="confirmDelete({ tmpl })"
             >
               <ion-icon :icon="trashOutline"></ion-icon>
             </ion-button>
@@ -195,7 +195,7 @@ import { useRouter } from "vue-router";
 
 // interface
 type TemplateSummary = {
-  id: string | number;
+  id: string | number | null;
   name: string;
   description?: string;
 };
@@ -265,7 +265,7 @@ async function submitTemplate() {
 
   try {
     await TemplateController.saveTemplate({
-      t: {
+      template: {
         name: form.name.trim(),
         description,
       },
@@ -284,23 +284,23 @@ async function submitTemplate() {
   }
 }
 
-function applyTemplate(params: any) {
-  const { t } = params as { t: TemplateSummary };
-  if (!t || !t.id) return;
-  router.push({ name: "Budget", query: { template: String(t.id) } });
+function applyTemplate(params: { tmpl: TemplateSummary }) {
+  const { tmpl } = params as { tmpl: TemplateSummary };
+  if (!tmpl || !tmpl.id) return;
+  router.push({ name: "Budget", query: { template: String(tmpl.id) } });
 }
 
-async function confirmDelete(params: { t: TemplateSummary }) {
-  const { t } = params;
-  if (!t || !t.id) {
+async function confirmDelete(params: { tmpl: TemplateSummary }) {
+  const { tmpl } = params;
+  if (!tmpl || !tmpl.id) {
     alertMessage.value = "Template inválido";
     showAlert.value = true;
     return;
   }
 
   // store only the id of the target to delete
-  confirmTargetId.value = t.id;
-  confirmMessage.value = `¿Eliminar template "${t.name}"? Esta acción no se puede deshacer.`;
+  confirmTargetId.value = tmpl.id;
+  confirmMessage.value = `¿Eliminar template "${tmpl.name}"? Esta acción no se puede deshacer.`;
   showConfirm.value = true;
 }
 
@@ -309,7 +309,7 @@ async function proceedDelete() {
   if (!id) return;
 
   try {
-    await TemplateController.deleteTemplate({ id: id as any });
+    await TemplateController.deleteTemplate({ id: id as IDBValidKey });
     // reset target and hide confirm
     confirmTargetId.value = null;
     showConfirm.value = false;

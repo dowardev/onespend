@@ -14,15 +14,15 @@ class TemplateController {
     this.dixie = dixie;
   }
 
-  async saveTemplate(params: { t: Omit<TemplateRecord, "createdAt" | "id"> }) {
-    const { t } = params;
+  async saveTemplate(params: { template: Omit<TemplateRecord, "createdAt" | "id"> }) {
+    const { template } = params;
     const entry: TemplateRecord = {
-      ...t,
+      ...template,
       createdAt: Date.now(),
     };
 
     try {
-      const key = await this.dixie.putBackup({
+      const key = await this.dixie.addEntry({
         type: "template",
         payload: entry,
       });
@@ -35,10 +35,15 @@ class TemplateController {
 
   async listTemplates() {
     try {
-      const all = (await this.dixie.listBackups()) as any[];
+      const all = (await this.dixie.listBackups()) as Array<
+        Record<string, unknown> & { id?: IDBValidKey; type?: string; payload?: unknown }
+      >;
       const templates = (all || [])
         .filter((x) => x && x.type === "template")
-        .map((x) => ({ ...(x.payload || {}), id: x.id }));
+        .map((x) => {
+          const payload = x.payload && typeof x.payload === "object" ? (x.payload as Record<string, unknown>) : {};
+          return { ...(payload as Record<string, unknown>), id: String(x.id) };
+        });
       return templates as TemplateRecord[];
     } catch (e) {
       console.error("TemplateController.listTemplates error", e);
@@ -46,7 +51,7 @@ class TemplateController {
     }
   }
 
-  async deleteTemplate(params: { id: number | string }) {
+  async deleteTemplate(params: { id: IDBValidKey }) {
     const { id } = params;
     try {
       console.log(
@@ -56,7 +61,7 @@ class TemplateController {
         typeof id,
         ")",
       );
-      await this.dixie.deleteBackup(id as any);
+      await this.dixie.deleteBackup(id);
       return true;
     } catch (e) {
       console.error("TemplateController.deleteTemplate error", e);

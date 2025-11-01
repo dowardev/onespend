@@ -54,7 +54,7 @@ import {
 } from "@ionic/vue";
 import { computed } from "vue";
 import { useRouter, useRoute } from "vue-router";
-const appName = (import.meta as any).env?.VITE_APP_NAME || "Menú";
+const appName = (import.meta as unknown as { env?: Record<string, string | undefined> }).env?.VITE_APP_NAME || "Menú";
 const router = useRouter();
 const route = useRoute();
 const isBudget = computed(() => route.path === "/budget");
@@ -62,7 +62,7 @@ const isTemplates = computed(() => route.path === "/templates");
 </script>
 
 <style>
-/* Minimalista: indicador de menú activo (borde izquierdo sutil + fondo tenue) */
+/* Minimal: active menu indicator (subtle left border + soft background) */
 .menu-active {
   border-left: 4px solid var(--ion-color-primary);
   /* reducir contraste manteniendo legibilidad */
