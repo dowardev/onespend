@@ -131,6 +131,47 @@
           </ion-list>
         </ion-content>
       </ion-modal>
+
+      <!-- modal aplicar template -->
+      <ion-modal
+        :keep-contents-mounted="true"
+        v-model:is-open="showApplyModal"
+        @did-dismiss="cancelApply"
+      >
+        <ion-header class="ion-no-border" mode="ios">
+          <ion-toolbar>
+            <ion-buttons slot="start">
+              <ion-button fill="clear" @click="cancelApply">
+                <ion-icon :icon="closeOutline"></ion-icon>
+              </ion-button>
+            </ion-buttons>
+
+            <ion-title>Aplicar template</ion-title>
+
+            <ion-buttons slot="end">
+              <ion-button @click="confirmApply">
+                <ion-icon :icon="checkmarkOutline"></ion-icon>
+              </ion-button>
+            </ion-buttons>
+          </ion-toolbar>
+        </ion-header>
+
+        <ion-content class="ion-padding">
+          <div v-if="applyTargetTemplate">
+            <h2>{{ applyTargetTemplate.name }}</h2>
+            <p>{{ applyTargetTemplate.description }}</p>
+          </div>
+
+          <ion-item>
+            <ion-label>Fecha</ion-label>
+            <ion-datetime
+              v-model="applySelectedDate"
+              presentation="date"
+            ></ion-datetime>
+          </ion-item>
+        </ion-content>
+      </ion-modal>
+
       <!-- end modals -->
 
       <!-- alerts -->
@@ -181,6 +222,7 @@ import {
   IonAlert,
   IonToast,
   IonIcon,
+  IonDatetime,
 } from "@ionic/vue";
 import {
   createOutline,
@@ -193,6 +235,11 @@ import {
 import { reactive, ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 
+// controllers
+import TemplateController from "../controllers/TempalteController";
+import backupController from "../controllers/backupController";
+// end controllers
+
 // interface
 type TemplateSummary = {
   id: string | number | null;
@@ -201,9 +248,8 @@ type TemplateSummary = {
 };
 // end interface
 
-// controllers
-import TemplateController from "../controllers/TempalteController";
-// end controllers
+// constants
+const STORAGE_KEY = "budget:selectedDate";
 
 // main
 const router = useRouter();
@@ -232,6 +278,11 @@ const form = reactive({
   name: "",
   providers: [""],
 });
+
+// apply modal state
+const showApplyModal = ref(false);
+const applySelectedDate = ref(new Date().toISOString());
+const applyTargetTemplate = ref<TemplateSummary | null>(null);
 // end vars
 
 // functions
@@ -284,10 +335,108 @@ async function submitTemplate() {
   }
 }
 
+// Open the apply modal instead of navigating directly
 function applyTemplate(params: { tmpl: TemplateSummary }) {
   const { tmpl } = params as { tmpl: TemplateSummary };
-  if (!tmpl || !tmpl.id) return;
-  router.push({ name: "Budget", query: { template: String(tmpl.id) } });
+  console.log("applyTemplate called", tmpl);
+  // small toast to help debug UI flow
+  try {
+    toast.message = `Aplicando template: ${tmpl?.name || "n/a"}`;
+    toast.open = true;
+  } catch (e) {
+    /* noop */
+  }
+
+  if (!tmpl) return;
+  applyTargetTemplate.value = tmpl;
+  applySelectedDate.value = new Date().toISOString();
+  // ensure modal flag is set explicitly
+  showApplyModal.value = true;
+  console.log("showApplyModal set to true");
+}
+
+function cancelApply() {
+  applyTargetTemplate.value = null;
+  showApplyModal.value = false;
+}
+
+function parseProvidersFromDescription(desc?: string): string[] {
+  if (!desc) return [];
+  const prefix = "Proveedores:";
+  const i = desc.indexOf(prefix);
+  if (i === -1) return [];
+  const rest = desc.slice(i + prefix.length).trim();
+  if (!rest) return [];
+  return rest
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => s);
+}
+
+async function confirmApply() {
+  const tmpl = applyTargetTemplate.value;
+  const dateISO = applySelectedDate.value;
+  if (!tmpl || !dateISO) return;
+
+  // build proveedores from template description
+  const providerNames = parseProvidersFromDescription(tmpl.description);
+  const proveedores = (providerNames || []).map((name) => ({
+    id: Date.now() + Math.random(),
+    name,
+    date: dateISO,
+    estimated: 0,
+    dollar: 0,
+    notes: "",
+    visited: false,
+  }));
+
+  const payload = {
+    ingresos: [],
+    proveedores,
+    newIngreso: { name: "", amount: 0, date: dateISO },
+    newProveedor: { name: "", estimated: 0, dollar: 0, notes: "" },
+    selectedDate: dateISO,
+    totals: {
+      totalIngresos: 0,
+      totalProviders: proveedores.reduce(
+        (s, p) => s + (Number(p.dollar || 0) || Number(p.estimated || 0)),
+        0,
+      ),
+      totalVisitedProviders: 0,
+    },
+  };
+
+  const payloadToSave = {
+    component: "BudgetView",
+    data: payload,
+    createdAt: Date.now(),
+  };
+
+  try {
+    await backupController.saveBackup(payloadToSave);
+    // persist selected date so BudgetView picks it up
+    try {
+      localStorage.setItem(STORAGE_KEY, dateISO);
+    } catch (e) {
+      /* noop */
+    }
+
+    // close modal and navigate to Budget
+    showApplyModal.value = false;
+    applyTargetTemplate.value = null;
+
+    toast.message = "Template aplicado";
+    toast.open = true;
+
+    router.push({
+      name: "Budget",
+      query: { refresh: String(Date.now()), date: dateISO },
+    });
+  } catch (e) {
+    console.error("confirmApply error", e);
+    alertMessage.value = "Error al aplicar el template";
+    showAlert.value = true;
+  }
 }
 
 async function confirmDelete(params: { tmpl: TemplateSummary }) {
