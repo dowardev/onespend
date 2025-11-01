@@ -6,7 +6,7 @@
 
         <ion-buttons slot="end">
           <ion-button
-            @click="openDatePopover({ e: $event })"
+            @click="openDatePopover({ event: $event })"
             title="Seleccionar fecha"
           >
             <ion-icon :icon="calendarOutline"></ion-icon>
@@ -18,7 +18,7 @@
     <ion-content>
       <ion-grid>
         <ion-row>
-          <!-- Izquierda: resumen + ingresos -->
+          <!-- Left: summary + incomes -->
           <ion-col size="12" size-md="5" size-lg="4">
             <ion-list class="main">
               <ion-list-header>
@@ -103,7 +103,7 @@
             </ion-list>
           </ion-col>
 
-          <!-- Derecha: proveedores + inesperados -->
+          <!-- Right: providers + unexpected -->
           <ion-col size="12" size-md="7" size-lg="8">
             <ion-list class="providers-list main">
               <ion-list-header>
@@ -200,7 +200,7 @@
                       </ion-card>
                     </ion-col>
 
-                    <!-- Card vacía para agregar un nuevo proveedor (botón + centrado) -->
+                    <!-- Empty card to add new provider -->
                     <ion-col size="12" size-lg="6">
                       <ion-card
                         class="no-shadow add-provider-card"
@@ -247,7 +247,7 @@
 </template>
 
 <script setup lang="ts">
-// imports
+// Imports
 import {
   IonPage,
   IonHeader,
@@ -282,14 +282,15 @@ import {
   onMounted,
   onUnmounted,
   watch,
+  ComponentPublicInstance,
 } from "vue";
 import { addOutline, calendarOutline, trashOutline } from "ionicons/icons";
 
-// controllers
+// Controllers
 import dixieController from "../controllers/dixie";
-// end controllers
+import backupController from "../controllers/backupController";
 
-// vars
+// State
 const ingresos = reactive([
   {
     id: Date.now() + Math.random(),
@@ -309,7 +310,7 @@ const ingresos = reactive([
     amount: 0,
     date: new Date().toISOString(),
   },
-]);
+]) as Income[];
 const newIngreso = reactive({
   name: "",
   amount: 0,
@@ -337,38 +338,78 @@ const proveedores = reactive(
     notes: "",
     visited: false,
     _justAdded: false,
-  }))
+  })),
 );
 const newProveedor = reactive({ name: "", estimated: 0, dollar: 0, notes: "" });
-const nameInputRefs = reactive({} as Record<string | number, any>);
+type Provider = {
+  id: string | number;
+  name: string;
+  date: string;
+  estimated: number;
+  dollar: number;
+  notes: string;
+  visited: boolean;
+  _justAdded?: boolean;
+};
+
+type Income = {
+  id: string | number;
+  name: string;
+  amount: number;
+  date: string;
+};
+
+type FocusableRef =
+  | Element
+  | ComponentPublicInstance
+  | {
+      setFocus?: () => void;
+      $el?: { setFocus?: () => void };
+      focus?: () => void;
+    };
+const nameInputRefs = reactive(
+  {} as Record<string | number, FocusableRef | null>,
+);
+
+// Type guards to safely detect focus/setFocus methods on refs
+function hasSetFocus(x: unknown): x is { setFocus: () => void } {
+  return !!x && typeof (x as any).setFocus === "function";
+}
+
+function has$elSetFocus(x: unknown): x is { $el: { setFocus: () => void } } {
+  return (
+    !!x && !!(x as any).$el && typeof (x as any).$el.setFocus === "function"
+  );
+}
+
+function hasFocusMethod(x: unknown): x is { focus: () => void } {
+  return !!x && typeof (x as any).focus === "function";
+}
 const STORAGE_KEY = "budget:selectedDate";
 const selectedDate = ref(new Date().toISOString());
 const popovers = reactive({
-  date: { open: false, event: null as any },
+  date: { open: false, event: null as unknown },
 });
 const providersBodyRef = ref<HTMLElement | null>(null);
 
-// end vars
 
-// life
+// Lifecycle
 onMounted(() => {
   const saved = localStorage.getItem(STORAGE_KEY);
   if (saved) {
     selectedDate.value = saved;
   }
-  // cargar datos para la fecha actual/seleccionada
-  loadDataForDate(selectedDate.value);
-  // Referencias a funciones/variables que pueden parecer no usadas para evitar errores de lint/TS
-  // (se usan en la plantilla o en handlers dinámicos en runtime)
+    // load data for the selected date
+    loadDataForDate(selectedDate.value);
+    // keep references to avoid unused warnings
   void addIngreso;
   void onIngresoIonInput;
   void onNewIngresoNameInput;
   void onNewIngresoAmountInput;
   void addProveedor;
 });
-// end life
 
-// watch
+// Watchers
 watch(
   selectedDate,
   (v) => {
@@ -379,24 +420,22 @@ watch(
     }
     loadDataForDate(v);
   },
-  { immediate: false }
+  { immediate: false },
 );
-// watch
 
-// computed
+// Computed
 const totalIngresos = computed(() =>
-  ingresos.reduce((s, i) => s + Number(i.amount || 0), 0)
+  ingresos.reduce((s, i) => s + Number(i.amount || 0), 0),
 );
 const totalProviders = computed(() =>
-  proveedores.reduce((s, p) => s + valueToConsider(p), 0)
+  proveedores.reduce((s, p) => s + valueToConsider(p), 0),
 );
 // Total of providers that have been visited (checked)
 const totalVisitedProviders = computed(() =>
-  proveedores.reduce((s, p) => s + (p.visited ? valueToConsider(p) : 0), 0)
+  proveedores.reduce((s, p) => s + (p.visited ? valueToConsider(p) : 0), 0),
 );
-// end computed
 
-// functions
+// Methods
 function addIngreso(params: { name?: string; amount?: number } = {}) {
   const { name, amount } = params;
   const n = name ?? newIngreso.name;
@@ -413,7 +452,7 @@ function addIngreso(params: { name?: string; amount?: number } = {}) {
 }
 
 function addIngresoField() {
-  // Adds a new empty income field to the ingresos array so the user can enter a new ingreso inline
+  // Add empty income field
   ingresos.push({
     id: Date.now() + Math.random(),
     name: "",
@@ -422,26 +461,26 @@ function addIngresoField() {
   });
 }
 
-function updateIngresoAmount(params: { value: any; idx: number }) {
-  const { value, idx } = params;
-  ingresos[idx].amount = Number(value) || 0;
+function updateIngresoAmount(params: { value: any; index: number }) {
+  const { value, index } = params;
+  ingresos[index].amount = Number(value) || 0;
 }
 
 async function removeIngreso(id: string | number) {
   const idx = ingresos.findIndex((i: any) => i.id === id);
   if (idx >= 0) {
     ingresos.splice(idx, 1);
-    // esperar a que Vue actualice el DOM/reactividad; el auto-guardado lo maneja el watcher debounced
+      // wait for Vue update; watcher auto-saves
     try {
       await nextTick();
       console.log(
         "removeIngreso: ingreso eliminado, auto-guardado por watcher",
-        id
+        id,
       );
     } catch (e) {
       console.error(
         "removeIngreso: error en nextTick después de eliminar ingreso",
-        e
+        e,
       );
     }
   }
@@ -456,12 +495,12 @@ async function removeProveedor(id: string | number) {
       await nextTick();
       console.log(
         "removeProveedor: proveedor eliminado, auto-guardado por watcher",
-        id
+        id,
       );
     } catch (e) {
       console.error(
         "removeProveedor: error en nextTick después de eliminar proveedor",
-        e
+        e,
       );
     }
   }
@@ -482,9 +521,9 @@ function formatCurrency(params: { v: number }) {
 }
 
 // template-friendly wrappers (avoid implicit any in template lambdas)
-function onIngresoIonInput(params: { e: any; idx: number }) {
-  const { e, idx } = params;
-  updateIngresoAmount({ value: e?.detail?.value, idx });
+function onIngresoIonInput(params: { event: any; index: number }) {
+  const { event, index } = params;
+  updateIngresoAmount({ value: event?.detail?.value, index });
 }
 
 function onNewIngresoNameInput(params: { e: any }) {
@@ -503,7 +542,7 @@ function addProveedor(
     estimated?: number;
     dollar?: number;
     notes?: string;
-  } = {}
+  } = {},
 ) {
   const { name, estimated, dollar, notes } = params;
   const n = name ?? newProveedor.name;
@@ -511,7 +550,7 @@ function addProveedor(
   const d = dollar ?? newProveedor.dollar;
   const nt = notes ?? newProveedor.notes;
   if (!n) return;
-  // crear con id y marcar como recién agregado para animación
+  // create with id and mark as new for animation
   const newItem = {
     id: Date.now() + Math.random(),
     date: selectedDate.value,
@@ -523,7 +562,7 @@ function addProveedor(
     _justAdded: true,
   } as any;
   proveedores.push(newItem);
-  // quitar la marca después de la animación
+  // remove new-mark after animation
   setTimeout(() => (newItem._justAdded = false), 400);
   newProveedor.name = "";
   newProveedor.estimated = 0;
@@ -542,7 +581,7 @@ function toggleVisited(p: any) {
   p.visited = !p.visited;
 }
 
-// Añade una card vacía (rápida) al final para poder editar/agregar un proveedor
+// Add empty provider card
 function addBlankProvider() {
   const newItem = {
     id: Date.now() + Math.random(),
@@ -555,15 +594,15 @@ function addBlankProvider() {
     _justAdded: true,
   } as any;
   proveedores.push(newItem);
-  // esperar a que Vue renderice el input, luego enfocarlo
+  // wait for render and focus input
   nextTick(() => {
     const el = nameInputRefs[newItem.id];
     try {
-      if (el && typeof el.setFocus === "function") {
+      if (hasSetFocus(el)) {
         el.setFocus();
-      } else if (el && el.$el && typeof el.$el.setFocus === "function") {
+      } else if (has$elSetFocus(el)) {
         el.$el.setFocus();
-      } else if (el && typeof el.focus === "function") {
+      } else if (hasFocusMethod(el)) {
         el.focus();
       }
     } catch (e) {
@@ -573,7 +612,7 @@ function addBlankProvider() {
   setTimeout(() => (newItem._justAdded = false), 400);
 }
 
-// Recolecta los datos relevantes del componente y pide al controller que los guarde en dixie
+// Collect component data and ask controller to save it
 async function onBackupClick() {
   try {
     const payload = {
@@ -601,7 +640,7 @@ async function onBackupClick() {
     };
 
     try {
-      const id = await dixieController.putBackup(payloadToSave);
+      const id = await backupController.saveBackup(payloadToSave);
       console.log("Backup guardado id=", id);
     } catch (err) {
       console.error("Error al guardar backup:", err);
@@ -611,10 +650,9 @@ async function onBackupClick() {
   }
 }
 
-// (debugListBackups removed)
+// debug removed
 
-// --- Auto-save debounced ---
-// Debounce simple para evitar escrituras excesivas al storage/controller
+// Auto-save (debounced)
 function debounce<T extends (...args: any[]) => any>(fn: T, wait = 800) {
   let t: ReturnType<typeof setTimeout> | null = null;
   return (...args: Parameters<T>) => {
@@ -639,13 +677,13 @@ const autoSave = debounce(async () => {
   }
 }, 800);
 
-// Watchers deep que disparan el auto-guardado al cambiar datos importantes
+// Deep watchers to trigger auto-save
 watch(
   ingresos,
   () => {
     autoSave();
   },
-  { deep: true }
+  { deep: true },
 );
 
 watch(
@@ -653,12 +691,12 @@ watch(
   () => {
     autoSave();
   },
-  { deep: true }
+  { deep: true },
 );
 
 async function loadDataForDate(dateISO: string) {
   try {
-    // Use dixieController.listBackups directly (backupController removed)
+    // Load backups via dixieController
     const all = (await dixieController.listBackups()) as any[];
     let b: any = null;
     if (all && all.length) {
@@ -670,7 +708,7 @@ async function loadDataForDate(dateISO: string) {
             x.component === "BudgetView" &&
             x.data &&
             x.data.selectedDate &&
-            x.data.selectedDate.slice(0, 10) === target
+            x.data.selectedDate.slice(0, 10) === target,
         )
         .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
       if (matches.length) b = matches[0];
@@ -678,28 +716,28 @@ async function loadDataForDate(dateISO: string) {
 
     if (b && b.data) {
       const d = b.data;
-      // Reemplazar arrays reactivos; asegurar ids estables en ingresos
+      // Replace reactive arrays; ensure stable ids for ingresos
       ingresos.splice(
         0,
         ingresos.length,
         ...(d.ingresos || []).map((i: any) => ({
           id: i.id ?? Date.now() + Math.random(),
           ...i,
-        }))
+        })),
       );
       proveedores.splice(0, proveedores.length, ...(d.proveedores || []));
       // Reemplazar objetos
       Object.assign(
         newIngreso,
-        d.newIngreso || { name: "", amount: 0, date: dateISO }
+        d.newIngreso || { name: "", amount: 0, date: dateISO },
       );
       Object.assign(
         newProveedor,
-        d.newProveedor || { name: "", estimated: 0, dollar: 0, notes: "" }
+        d.newProveedor || { name: "", estimated: 0, dollar: 0, notes: "" },
       );
       console.log("Datos cargados para", dateISO, b);
     } else {
-      // No hay backup para esa fecha: inicializar vacío pero con fecha
+      // No backup: initialize empty data for date
       ingresos.splice(0, ingresos.length);
       proveedores.splice(0, proveedores.length);
       Object.assign(newIngreso, { name: "", amount: 0, date: dateISO });
@@ -716,11 +754,11 @@ async function loadDataForDate(dateISO: string) {
   }
 }
 
-function openDatePopover(params: { e: any }) {
-  const { e } = params;
-  // assign event first, then open after small delay to avoid timing issues with dismiss animation
-  console.log("openDatePopover: event=", e);
-  popovers.date.event = e;
+function openDatePopover(params: { event: any }) {
+  const { event } = params;
+  // Assign event then open popover
+  console.log("openDatePopover: event=", event);
+  popovers.date.event = event;
   setTimeout(() => {
     popovers.date.open = true;
     console.log("openDatePopover: popover opened, event=", popovers.date.event);
@@ -791,7 +829,9 @@ onUnmounted(() => {
 ion-card {
   margin-bottom: 16px;
   border: 1px solid transparent;
-  transition: border-color 160ms ease, box-shadow 160ms ease;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
 }
 
 .providers-list ion-card.shadow1:active {

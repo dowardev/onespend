@@ -11,14 +11,14 @@ class DixieController {
     const name = this.name;
     const storeName = this.storeName;
 
-    // Abrir sin versión para obtener la DB existente (evita DOMException por versión alta)
+    // Open without version to obtain the existing DB (avoids DOMException due to higher version)
     const db = (await new Promise<IDBDatabase>((resolve, reject) => {
       const req = indexedDB.open(name);
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => reject(req.error);
     })) as IDBDatabase;
 
-    // Si la objectStore ya existe, devolvemos la DB
+    // If the objectStore already exists, return the DB
     if (db.objectStoreNames.contains(storeName)) {
       return db;
     }
@@ -43,13 +43,13 @@ class DixieController {
     });
   }
 
-  async putBackup(entry: any): Promise<IDBValidKey> {
+  async addEntry(entry: unknown): Promise<IDBValidKey> {
     const db = await this.openDB();
     return new Promise((resolve, reject) => {
       const tx = db.transaction(this.storeName, "readwrite");
       const store = tx.objectStore(this.storeName);
       try {
-        console.log("DixieController.putBackup: adding entry (shallow):", {
+        console.log("DixieController.addEntry: adding entry (shallow):", {
           keys: Object.keys(entry || {}),
         });
       } catch (e) {
@@ -59,17 +59,17 @@ class DixieController {
       req.onsuccess = () => {
         resolve(req.result);
       };
-      req.onerror = (ev: any) => {
+      req.onerror = (ev: unknown) => {
         console.error(
-          "DixieController.putBackup: request.onerror",
+          "DixieController.addEntry: request.onerror",
           ev,
           req.error,
         );
         reject(req.error || ev);
       };
-      tx.onerror = (ev: any) => {
+      tx.onerror = (ev: unknown) => {
         console.error(
-          "DixieController.putBackup: transaction.onerror",
+          "DixieController.addEntry: transaction.onerror",
           ev,
           tx.error,
         );
@@ -113,7 +113,7 @@ class DixieController {
     return new Promise((resolve, reject) => {
       const tx = db.transaction(this.storeName, "readwrite");
       const store = tx.objectStore(this.storeName);
-      const req = store.delete(id as any);
+      const req = store.delete(id as IDBValidKey);
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => reject(req.error);
       tx.oncomplete = () => {
