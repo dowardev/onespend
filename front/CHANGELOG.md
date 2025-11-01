@@ -1,5 +1,20 @@
 # Changelog
 
+## [v0.1.10] - 2025-11-01
+
+- Add "Apply template" modal in TemplatesView: allow selecting a date to apply a template; build provider payload from the template description and save it as a BudgetView backup for the selected date.
+- Add confirm/cancel flow for applying templates, persist selected date to localStorage, and navigate to Budget view with a refresh query parameter so the Budget view reloads the applied data.
+- Introduce pointer event handlers on BudgetView's providers list (pointerdown/pointerup/pointercancel) with proper registration and cleanup (onMounted/onUnmounted) to provide touch visual feedback.
+- Improve watchers and reactivity in BudgetView: clarify watcher parameter names, support refresh via route query (TemplatesView -> BudgetView), and reorganize focus helper types for maintainability.
+- Minor TypeScript typing and code-organization refactors in BudgetView and TemplatesView.
+
+**Files changed for this release**
+
+- `src/views/BudgetView.vue`
+- `src/views/TemplatesView.vue`
+
+
+
 ## [v0.1.9] - 2025-11-01
 
 - Rename and improve backup API: replace putBackup with addEntry in the Dixie controller and expose BackupController.saveBackup. Improve logging and error handling in the IndexedDB helpers.

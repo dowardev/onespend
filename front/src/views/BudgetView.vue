@@ -285,6 +285,24 @@ import {
   ComponentPublicInstance,
 } from "vue";
 import { addOutline, calendarOutline, trashOutline } from "ionicons/icons";
+import { useRoute } from "vue-router";
+
+// interface
+type Income = {
+  id: string | number;
+  name: string;
+  amount: number;
+  date: string;
+};
+
+type FocusableRef =
+  | Element
+  | ComponentPublicInstance
+  | {
+      setFocus?: () => void;
+      $el?: { setFocus?: () => void };
+      focus?: () => void;
+    };
 
 // Controllers
 import dixieController from "../controllers/dixie";
@@ -341,57 +359,17 @@ const proveedores = reactive(
   })),
 );
 const newProveedor = reactive({ name: "", estimated: 0, dollar: 0, notes: "" });
-type Provider = {
-  id: string | number;
-  name: string;
-  date: string;
-  estimated: number;
-  dollar: number;
-  notes: string;
-  visited: boolean;
-  _justAdded?: boolean;
-};
-
-type Income = {
-  id: string | number;
-  name: string;
-  amount: number;
-  date: string;
-};
-
-type FocusableRef =
-  | Element
-  | ComponentPublicInstance
-  | {
-      setFocus?: () => void;
-      $el?: { setFocus?: () => void };
-      focus?: () => void;
-    };
 const nameInputRefs = reactive(
   {} as Record<string | number, FocusableRef | null>,
 );
 
-// Type guards to safely detect focus/setFocus methods on refs
-function hasSetFocus(x: unknown): x is { setFocus: () => void } {
-  return !!x && typeof (x as any).setFocus === "function";
-}
-
-function has$elSetFocus(x: unknown): x is { $el: { setFocus: () => void } } {
-  return (
-    !!x && !!(x as any).$el && typeof (x as any).$el.setFocus === "function"
-  );
-}
-
-function hasFocusMethod(x: unknown): x is { focus: () => void } {
-  return !!x && typeof (x as any).focus === "function";
-}
 const STORAGE_KEY = "budget:selectedDate";
 const selectedDate = ref(new Date().toISOString());
+const route = useRoute();
 const popovers = reactive({
   date: { open: false, event: null as unknown },
 });
 const providersBodyRef = ref<HTMLElement | null>(null);
-
 
 // Lifecycle
 onMounted(() => {
@@ -399,9 +377,9 @@ onMounted(() => {
   if (saved) {
     selectedDate.value = saved;
   }
-    // load data for the selected date
-    loadDataForDate(selectedDate.value);
-    // keep references to avoid unused warnings
+  // load data for the selected date
+  loadDataForDate(selectedDate.value);
+  // keep references to avoid unused warnings
   void addIngreso;
   void onIngresoIonInput;
   void onNewIngresoNameInput;
@@ -409,18 +387,75 @@ onMounted(() => {
   void addProveedor;
 });
 
+onMounted(() => {
+  const el = providersBodyRef.value as HTMLElement | null;
+  if (el && typeof el.addEventListener === "function") {
+    el.addEventListener("pointerdown", handlePointerDown, { passive: true });
+    el.addEventListener("pointerup", handlePointerUp);
+    el.addEventListener("pointercancel", handlePointerUp);
+  }
+});
+
+onUnmounted(() => {
+  const el = providersBodyRef.value as HTMLElement | null;
+  if (el && typeof el.removeEventListener === "function") {
+    el.removeEventListener("pointerdown", handlePointerDown as any);
+    el.removeEventListener("pointerup", handlePointerUp as any);
+    el.removeEventListener("pointercancel", handlePointerUp as any);
+  }
+});
+
 // Watchers
 watch(
   selectedDate,
-  (v) => {
+  (newSelectedDate) => {
     try {
-      localStorage.setItem(STORAGE_KEY, v);
-    } catch (e) {
+      localStorage.setItem(STORAGE_KEY, newSelectedDate);
+    } catch (error) {
       /* noop */
     }
-    loadDataForDate(v);
+    loadDataForDate(newSelectedDate);
   },
   { immediate: false },
+);
+
+// Watch for query param used to force refresh from other views (TemplatesView pushes ?refresh=timestamp)
+watch(
+  () => route.query.refresh,
+  () => {
+    try {
+      // Prefer the date provided in the URL query (if any) and update selectedDate accordingly
+      const parsedDateFromRouteISO = (function parseIsoDateFromString(
+        dateString?: string,
+      ) {
+        if (!dateString) return null;
+        const parsedDate = new Date(dateString);
+        return isNaN(parsedDate.getTime()) ? null : parsedDate.toISOString();
+      })(route.query.date as string | undefined);
+      if (parsedDateFromRouteISO) selectedDate.value = parsedDateFromRouteISO;
+      loadDataForDate(selectedDate.value);
+    } catch (error) {
+      /* noop */
+    }
+  },
+  { immediate: true },
+);
+
+// Deep watchers to trigger auto-save
+watch(
+  ingresos,
+  () => {
+    autoSave();
+  },
+  { deep: true },
+);
+
+watch(
+  proveedores,
+  () => {
+    autoSave();
+  },
+  { deep: true },
 );
 
 // Computed
@@ -470,7 +505,7 @@ async function removeIngreso(id: string | number) {
   const idx = ingresos.findIndex((i: any) => i.id === id);
   if (idx >= 0) {
     ingresos.splice(idx, 1);
-      // wait for Vue update; watcher auto-saves
+    // wait for Vue update; watcher auto-saves
     try {
       await nextTick();
       console.log(
@@ -677,23 +712,6 @@ const autoSave = debounce(async () => {
   }
 }, 800);
 
-// Deep watchers to trigger auto-save
-watch(
-  ingresos,
-  () => {
-    autoSave();
-  },
-  { deep: true },
-);
-
-watch(
-  proveedores,
-  () => {
-    autoSave();
-  },
-  { deep: true },
-);
-
 async function loadDataForDate(dateISO: string) {
   try {
     // Load backups via dixieController
@@ -806,23 +824,19 @@ function handlePointerUp(e: PointerEvent | TouchEvent) {
   }
 }
 
-onMounted(() => {
-  const el = providersBodyRef.value as HTMLElement | null;
-  if (el && typeof el.addEventListener === "function") {
-    el.addEventListener("pointerdown", handlePointerDown, { passive: true });
-    el.addEventListener("pointerup", handlePointerUp);
-    el.addEventListener("pointercancel", handlePointerUp);
-  }
-});
+function hasSetFocus(x: unknown): x is { setFocus: () => void } {
+  return !!x && typeof (x as any).setFocus === "function";
+}
 
-onUnmounted(() => {
-  const el = providersBodyRef.value as HTMLElement | null;
-  if (el && typeof el.removeEventListener === "function") {
-    el.removeEventListener("pointerdown", handlePointerDown as any);
-    el.removeEventListener("pointerup", handlePointerUp as any);
-    el.removeEventListener("pointercancel", handlePointerUp as any);
-  }
-});
+function has$elSetFocus(x: unknown): x is { $el: { setFocus: () => void } } {
+  return (
+    !!x && !!(x as any).$el && typeof (x as any).$el.setFocus === "function"
+  );
+}
+
+function hasFocusMethod(x: unknown): x is { focus: () => void } {
+  return !!x && typeof (x as any).focus === "function";
+}
 </script>
 
 <style scoped>
