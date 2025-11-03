@@ -1,5 +1,19 @@
 # Changelog
 
+## [v0.1.11] - 2025-11-03
+
+- UI: Display selected date in Budget header and add a "Today" quick button in the date popover; make the date selector background transparent and improve date-change handling.
+- Templates: Use ion-datetime-button to open the date picker for applying templates and keep modal contents mounted; stop click propagation on end-slot action buttons to avoid triggering item row clicks.
+- Styles: Reorganize ion-card, ion-item and ion-button utility CSS, adjust card shadows and background contrast for better visual consistency.
+
+**Files changed for this release**
+
+- `src/theme/variables.css`
+- `src/views/BudgetView.vue`
+- `src/views/TemplatesView.vue`
+
+
+
 ## [v0.1.10] - 2025-11-01
 
 - Add "Apply template" modal in TemplatesView: allow selecting a date to apply a template; build provider payload from the template description and save it as a BudgetView backup for the selected date.
