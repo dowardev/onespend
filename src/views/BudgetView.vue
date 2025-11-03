@@ -2,7 +2,7 @@
   <ion-page>
     <ion-header class="ion-no-border" mode="ios">
       <ion-toolbar>
-        <ion-title>Presupuesto</ion-title>
+        <ion-title>Presupuesto({{ selectedDate }})</ion-title>
 
         <ion-buttons slot="end">
           <ion-button
@@ -228,17 +228,23 @@
       >
         <ion-content>
           <ion-datetime
+            style="background: transparent"
             v-model="selectedDate"
             presentation="date"
-            display-format="DD/MM/YYYY"
-            picker-format="DD/MM/YYYY"
-          >
-            <ion-buttons slot="buttons">
-              <ion-button color="primary" @click="resetToToday()">
-                Hoy
-              </ion-button>
-            </ion-buttons>
-          </ion-datetime>
+            @ionChange="(e) => (selectedDate = String(e?.detail?.value))"
+          ></ion-datetime>
+
+          <ion-item>
+            <ion-button
+              fill="clear"
+              slot="end"
+              class="no-shadow"
+              color="primary"
+              size="small"
+              @click="resetToToday()"
+              >Hoy</ion-button
+            >
+          </ion-item>
         </ion-content>
       </ion-popover>
       <!-- end popover -->
@@ -362,7 +368,6 @@ const newProveedor = reactive({ name: "", estimated: 0, dollar: 0, notes: "" });
 const nameInputRefs = reactive(
   {} as Record<string | number, FocusableRef | null>,
 );
-
 const STORAGE_KEY = "budget:selectedDate";
 const selectedDate = ref(new Date().toISOString());
 const route = useRoute();

@@ -24,6 +24,8 @@
             :key="tmpl.id ?? index"
             lines="full"
             class="transparent"
+            button
+            @click="applyTemplate({ tmpl })"
           >
             <ion-label>
               <h2>{{ tmpl.name }}</h2>
@@ -31,19 +33,10 @@
             </ion-label>
 
             <ion-button
-              class="no-shadow"
-              slot="end"
-              size="small"
-              @click="applyTemplate({ tmpl })"
-            >
-              <ion-icon :icon="checkmarkOutline"></ion-icon>
-            </ion-button>
-
-            <ion-button
               slot="end"
               size="small"
               fill="clear"
-              @click="applyTemplate({ tmpl })"
+              @click.stop="applyTemplate({ tmpl })"
             >
               <ion-icon :icon="createOutline"></ion-icon>
             </ion-button>
@@ -53,7 +46,7 @@
               size="small"
               color="danger"
               fill="clear"
-              @click="confirmDelete({ tmpl })"
+              @click.stop="confirmDelete({ tmpl })"
             >
               <ion-icon :icon="trashOutline"></ion-icon>
             </ion-button>
@@ -164,10 +157,11 @@
 
           <ion-item>
             <ion-label>Fecha</ion-label>
-            <ion-datetime
-              v-model="applySelectedDate"
-              presentation="date"
-            ></ion-datetime>
+
+            <ion-datetime-button
+              slot="end"
+              datetime="datetime"
+            ></ion-datetime-button>
           </ion-item>
         </ion-content>
       </ion-modal>
@@ -201,6 +195,16 @@
         duration="2000"
       ></ion-toast>
       <!-- end toast-->
+
+      <!-- modal -->
+      <ion-modal :keep-contents-mounted="true">
+        <ion-datetime
+          v-model="applySelectedDate"
+          presentation="date"
+          id="datetime"
+        ></ion-datetime>
+      </ion-modal>
+      <!-- end modal -->
     </ion-content>
   </ion-page>
 </template>
@@ -248,9 +252,6 @@ type TemplateSummary = {
 };
 // end interface
 
-// constants
-const STORAGE_KEY = "budget:selectedDate";
-
 // main
 const router = useRouter();
 // end main
@@ -262,6 +263,7 @@ onMounted(() => {
 // end life
 
 // vars
+const STORAGE_KEY = "budget:selectedDate";
 const templates = reactive<TemplateSummary[]>([]);
 const showModal = ref(false);
 const showAlert = ref(false);
@@ -279,7 +281,6 @@ const form = reactive({
   providers: [""],
 });
 
-// apply modal state
 const showApplyModal = ref(false);
 const applySelectedDate = ref(new Date().toISOString());
 const applyTargetTemplate = ref<TemplateSummary | null>(null);
@@ -496,3 +497,22 @@ async function loadTemplates() {
   }
 }
 </script>
+
+<style scoped>
+/* Hide action buttons by default on non-touch devices */
+.content ion-item.transparent ion-button[slot="end"] {
+  display: none !important;
+}
+
+/* Show when hovering the ion-item */
+.content ion-item.transparent:hover ion-button[slot="end"] {
+  display: inline-flex !important;
+}
+
+/* On touch devices (no hover), show buttons always */
+@media (hover: none), (pointer: coarse) {
+  .content ion-item.transparent ion-button[slot="end"] {
+    display: inline-flex !important;
+  }
+}
+</style>
