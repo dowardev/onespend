@@ -36,7 +36,7 @@
               slot="end"
               size="small"
               fill="clear"
-              @click.stop="applyTemplate({ tmpl })"
+              @click.stop="editTemplate({ tmpl })"
             >
               <ion-icon :icon="createOutline"></ion-icon>
             </ion-button>
@@ -70,7 +70,7 @@
               </ion-button>
             </ion-buttons>
 
-            <ion-title>Nuevo template</ion-title>
+            <ion-title>{{ isEditMode ? 'Editar template' : 'Nuevo template' }}</ion-title>
 
             <ion-buttons slot="end">
               <ion-button @click="submitTemplate()">
@@ -284,6 +284,8 @@ const form = reactive({
 const showApplyModal = ref(false);
 const applySelectedDate = ref(new Date().toISOString());
 const applyTargetTemplate = ref<TemplateSummary | null>(null);
+const isEditMode = ref(false);
+const editingTemplateId = ref<string | number | null>(null);
 // end vars
 
 // functions
@@ -299,6 +301,27 @@ function removeProvider(params: { idx: number }) {
 function resetForm() {
   form.name = '';
   form.providers.splice(0, form.providers.length, '');
+  isEditMode.value = false;
+  editingTemplateId.value = null;
+}
+
+function editTemplate(params: { tmpl: TemplateSummary }) {
+  const { tmpl } = params;
+  if (!tmpl) return;
+
+  // Parse providers from description
+  const providers = parseProvidersFromDescription(tmpl.description);
+
+  // Fill form with template data
+  form.name = tmpl.name;
+  form.providers.splice(0, form.providers.length, ...(providers.length ? providers : ['']));
+
+  // Set edit mode
+  isEditMode.value = true;
+  editingTemplateId.value = tmpl.id;
+
+  // Open modal
+  showModal.value = true;
 }
 
 async function submitTemplate() {
@@ -316,18 +339,25 @@ async function submitTemplate() {
     : undefined;
 
   try {
+    const payloadTemplate: any = {
+      name: form.name.trim(),
+      description,
+    };
+
+    if (isEditMode.value && editingTemplateId.value) {
+      payloadTemplate.id = editingTemplateId.value;
+    }
+
     await TemplateController.saveTemplate({
-      template: {
-        name: form.name.trim(),
-        description,
-      },
+      template: payloadTemplate,
     });
+
     await loadTemplates();
     resetForm();
     showModal.value = false;
 
     // show success toast
-    toast.message = 'Template guardado';
+    toast.message = isEditMode.value ? 'Template actualizado' : 'Template guardado';
     toast.open = true;
   } catch (e) {
     console.error('submitTemplate error', e);

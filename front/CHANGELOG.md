@@ -1,5 +1,18 @@
 # Changelog
 
+## [v0.1.13] - 2025-11-04
+
+- Templates: Add edit/save flow to update existing templates from the UI. When editing, providers are parsed from the template description and prefilled. Fix modal title and button behavior for edit mode. Show distinct success toast messages for create vs update.
+- Dixie: Add putEntry method to support updating existing IndexedDB entries via objectStore.put.
+- TemplateController: Update saveTemplate to accept an optional id and use putEntry when updating templates; preserve createdAt and coerce string IDs to numeric when possible.
+
+**Files changed in this release**
+
+- `src/controllers/dixie.ts`
+- `src/controllers/TempalteController.ts`
+- `src/views/TemplatesView.vue`
+
+
 ## [v0.1.12] - 2025-11-04
 
 - **Setup:** Added Prettier configuration (`.prettierrc.cjs`), introduced new ESLint configurations for better linting enforcement (
@@ -45,7 +58,7 @@
 - Fix event/parameter naming and template bindings in BudgetView and TemplatesView; apply various TypeScript typing and code-style cleanups.
 - Minor UI/UX and internationalization tweaks and comment clarifications across App.vue, BudgetView.vue and TemplatesView.vue.
 
-**Files changed for this release**
+**Files changed in this release**
 
 - `src/App.vue`
 - `src/controllers/TempalteController.ts`
@@ -61,7 +74,7 @@
 - Update backup controller API/behavior in `src/controllers/backupController.ts`.
 - Minor UI/UX fixes and tweaks in `src/views/BudgetView.vue`.
 
-**Files changed for this release**
+**Files changed in this release**
 
 - `src/controllers/TempalteController.ts`
 - `src/controllers/backupController.ts`
@@ -74,7 +87,7 @@
 - Improve local IndexedDB backup wrapper logging and error handling in `dixie.ts`.
 - Remove obsolete UI store file.
 
-**Files changed for this release**
+**Files changed in this release**
 
 - `src/controllers/TempalteController.ts`
 - `src/controllers/dixie.ts`
@@ -139,7 +152,6 @@
 - Add a small IndexedDB wrapper at `src/controllers/dixie.ts` to store local backups.
 - Add `src/controllers/backupController.ts` to provide backup/restore helpers (put/list and latest-for-date).
 - Integrate backup persistence into `BudgetView` with manual backup, debounced auto-save on data changes, and loading the latest backup for the selected date.
-- UI/UX improvements around income/provider handling: stable IDs for income entries, add/remove actions, auto-focus for new provider card, provider entrance animation, currency formatting and computed totals.
 
 <!-- NOTE: This changelog entry was generated from unstaged changes in src/controllers/dixie.ts, src/controllers/backupController.ts and src/views/BudgetView.vue -->
 

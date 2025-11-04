@@ -85,6 +85,40 @@ class DixieController {
     });
   }
 
+  async putEntry(entry: unknown): Promise<IDBValidKey> {
+    const db = await this.openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(this.storeName, 'readwrite');
+      const store = tx.objectStore(this.storeName);
+      try {
+        console.log('DixieController.putEntry: putting entry (shallow):', {
+          keys: Object.keys(entry || {}),
+        });
+      } catch (e) {
+        /* noop */
+      }
+      const req = store.put(entry);
+      req.onsuccess = () => {
+        resolve(req.result);
+      };
+      req.onerror = (ev: unknown) => {
+        console.error('DixieController.putEntry: request.onerror', ev, req.error);
+        reject(req.error || ev);
+      };
+      tx.onerror = (ev: unknown) => {
+        console.error('DixieController.putEntry: transaction.onerror', ev, tx.error);
+        reject(tx.error || ev);
+      };
+      tx.oncomplete = () => {
+        try {
+          db.close();
+        } catch (e) {
+          /* noop */
+        }
+      };
+    });
+  }
+
   async getBackup(id: IDBValidKey) {
     const db = await this.openDB();
     return new Promise((resolve, reject) => {
