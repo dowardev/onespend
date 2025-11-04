@@ -70,7 +70,9 @@
               </ion-button>
             </ion-buttons>
 
-            <ion-title>{{ isEditMode ? 'Editar template' : 'Nuevo template' }}</ion-title>
+            <ion-title>{{
+              isEditMode ? 'Editar template' : 'Nuevo template'
+            }}</ion-title>
 
             <ion-buttons slot="end">
               <ion-button @click="submitTemplate()">
@@ -90,36 +92,54 @@
             ></ion-input>
           </ion-card>
 
+          <!-- Suppliers selection: search + multi-select -->
           <ion-list class="transparent">
             <ion-list-header>
               <ion-label>Proveedores</ion-label>
 
-              <ion-button @click="addProvider">
+              <ion-button @click="loadSuppliers">
                 <ion-icon :icon="addOutline"></ion-icon>
               </ion-button>
             </ion-list-header>
 
             <div class="content">
-              <ion-item
-                v-for="(_, idx) in form.providers"
-                :key="idx"
-                class="transparent"
-              >
-                <ion-input
-                  v-model="form.providers[idx]"
-                  placeholder="Nombre del proveedor"
-                ></ion-input>
+              <ion-searchbar
+                v-model="supplierQuery"
+                debounce="300"
+                placeholder="Buscar proveedores"
+                show-cancel-button="focus"
+              ></ion-searchbar>
 
-                <ion-button
-                  slot="end"
-                  fill="clear"
-                  size="small"
-                  title="Eliminar proveedor"
-                  @click="removeProvider({ idx })"
+              <ion-list>
+                <ion-item
+                  v-for="s in filteredSuppliers"
+                  :key="s.id"
+                  button
+                  @click="toggleSupplierSelection(s)"
                 >
-                  <ion-icon color="danger" :icon="trashOutline"></ion-icon>
-                </ion-button>
-              </ion-item>
+                  <ion-label>{{ s.name }}</ion-label>
+                  <ion-checkbox
+                    slot="end"
+                    :checked="form.supplierIds.includes(s.id)"
+                  ></ion-checkbox>
+                </ion-item>
+              </ion-list>
+
+              <div style="margin-top:12px">
+                <ion-label>Seleccionados:</ion-label>
+                <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">
+                  <ion-chip
+                    v-for="id in form.supplierIds"
+                    :key="id"
+                    outline
+                  >
+                    <ion-label>{{ getSupplierNameById(id) }}</ion-label>
+                    <ion-button fill="clear" size="small" @click="removeSupplierId(id)">
+                      <ion-icon :icon="closeOutline"></ion-icon>
+                    </ion-button>
+                  </ion-chip>
+                </div>
+              </div>
             </div>
           </ion-list>
         </ion-content>
@@ -227,6 +247,9 @@ import {
   IonToast,
   IonIcon,
   IonDatetime,
+  IonSearchbar,
+  IonCheckbox,
+  IonChip,
 } from '@ionic/vue';
 import {
   createOutline,
@@ -235,13 +258,15 @@ import {
   trashOutline,
   saveOutline,
   checkmarkOutline,
+  closeOutline as closeIcon,
 } from 'ionicons/icons';
-import { reactive, ref, onMounted } from 'vue';
+import { reactive, ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 
 // controllers
 import TemplateController from '../controllers/TempalteController';
 import backupController from '../controllers/backupController';
+import suppliersController, { Supplier } from '../controllers/suppliersController';
 // end controllers
 
 // interface
@@ -249,6 +274,7 @@ type TemplateSummary = {
   id: string | number | null;
   name: string;
   description?: string;
+  suppliers?: IDBValidKey[];
 };
 // end interface
 
@@ -259,6 +285,7 @@ const router = useRouter();
 // life
 onMounted(() => {
   loadTemplates();
+  loadSuppliers();
 });
 // end life
 
@@ -278,8 +305,11 @@ const toast = reactive({
 });
 const form = reactive({
   name: '',
-  providers: [''],
+  supplierIds: [] as IDBValidKey[],
 });
+
+const suppliers = reactive<Supplier[]>([]);
+const supplierQuery = ref('');
 
 const showApplyModal = ref(false);
 const applySelectedDate = ref(new Date().toISOString());
@@ -288,33 +318,70 @@ const isEditMode = ref(false);
 const editingTemplateId = ref<string | number | null>(null);
 // end vars
 
+// computed
+const filteredSuppliers = computed(() => {
+  const q = (supplierQuery.value || '').toLowerCase().trim();
+  if (!q) return suppliers.slice();
+  return suppliers.filter(s => (s.name || '').toLowerCase().includes(q));
+});
+// end computed
+
 // functions
-function addProvider() {
-  form.providers.push('');
+async function loadSuppliers() {
+  try {
+    const list = await suppliersController.listSuppliers();
+    suppliers.splice(0, suppliers.length, ...list);
+  } catch (e) {
+    console.error('loadSuppliers error', e);
+  }
 }
 
-function removeProvider(params: { idx: number }) {
-  const { idx } = params;
-  if (form.providers.length > 1) form.providers.splice(idx, 1);
+function toggleSupplierSelection(s: Supplier) {
+  const id = s.id as IDBValidKey;
+  const idx = form.supplierIds.indexOf(id);
+  if (idx === -1) {
+    form.supplierIds.push(id);
+  } else {
+    form.supplierIds.splice(idx, 1);
+  }
+}
+
+function removeSupplierId(id: IDBValidKey) {
+  const idx = form.supplierIds.indexOf(id);
+  if (idx !== -1) form.supplierIds.splice(idx, 1);
+}
+
+function getSupplierNameById(id: IDBValidKey) {
+  const s = suppliers.find(x => x.id === id);
+  return s ? s.name : String(id);
 }
 
 function resetForm() {
   form.name = '';
-  form.providers.splice(0, form.providers.length, '');
+  form.supplierIds.splice(0, form.supplierIds.length);
   isEditMode.value = false;
   editingTemplateId.value = null;
 }
 
-function editTemplate(params: { tmpl: TemplateSummary }) {
+async function editTemplate(params: { tmpl: TemplateSummary }) {
   const { tmpl } = params;
   if (!tmpl) return;
 
-  // Parse providers from description
-  const providers = parseProvidersFromDescription(tmpl.description);
+  // If template has supplier ids stored, use them. Otherwise try to parse names from description.
+  if (tmpl.suppliers && Array.isArray(tmpl.suppliers) && tmpl.suppliers.length) {
+    form.supplierIds.splice(0, form.supplierIds.length, ...tmpl.suppliers);
+  } else {
+    // parse names from description and try to match to suppliers by name
+    const names = parseProvidersFromDescription(tmpl.description);
+    const matchedIds = (names || [])
+      .map(n => suppliers.find(s => s.name === n))
+      .filter(Boolean)
+      .map(s => s!.id as IDBValidKey);
+    form.supplierIds.splice(0, form.supplierIds.length, ...(matchedIds.length ? matchedIds : []));
+  }
 
-  // Fill form with template data
-  form.name = tmpl.name;
-  form.providers.splice(0, form.providers.length, ...(providers.length ? providers : ['']));
+  // Fill name
+  form.name = tmpl.name || '';
 
   // Set edit mode
   isEditMode.value = true;
@@ -331,17 +398,20 @@ async function submitTemplate() {
     return;
   }
 
-  const cleanedProviders = form.providers.map(p => p.trim()).filter(p => p);
+  // build description from selected supplier names for backward compatibility
+  const selectedNames = form.supplierIds
+    .map(id => getSupplierNameById(id))
+    .filter(n => n && String(n).trim()) as string[];
 
-  // description may contain the providers
-  const description = cleanedProviders.length
-    ? `Proveedores: ${cleanedProviders.join(', ')}`
+  const description = selectedNames.length
+    ? `Proveedores: ${selectedNames.join(', ')}`
     : undefined;
 
   try {
     const payloadTemplate: any = {
       name: form.name.trim(),
       description,
+      suppliers: form.supplierIds.slice(),
     };
 
     if (isEditMode.value && editingTemplateId.value) {
@@ -409,8 +479,14 @@ async function confirmApply() {
   const dateISO = applySelectedDate.value;
   if (!tmpl || !dateISO) return;
 
-  // build proveedores from template description
-  const providerNames = parseProvidersFromDescription(tmpl.description);
+  // build proveedores from template suppliers (resolve names) if available
+  let providerNames: string[] = [];
+  if (tmpl.suppliers && Array.isArray(tmpl.suppliers) && tmpl.suppliers.length) {
+    providerNames = tmpl.suppliers.map(id => getSupplierNameById(id));
+  } else {
+    providerNames = parseProvidersFromDescription(tmpl.description);
+  }
+
   const proveedores = (providerNames || []).map(name => ({
     id: Date.now() + Math.random(),
     name,
@@ -520,6 +596,7 @@ async function loadTemplates() {
         id: t.id || '',
         name: t.name,
         description: t.description,
+        suppliers: (t as any).suppliers || [],
       }))
     );
   } catch (e) {

@@ -1,5 +1,15 @@
 # Changelog
 
+## [v0.1.16] - 2025-11-04
+
+- Templates: Add supplier selection to TemplatesView. Replace free-text providers with a searchable suppliers list, multi-select checkboxes, and chips for selected suppliers. Add suppliersController usage to load supplier list, store supplier IDs on template save, and preserve backward compatibility by parsing supplier names from template descriptions when necessary. Update apply-template flow to prefer stored supplier IDs and resolve names when applying templates.
+
+**Files changed in this release**
+
+- `src/views/TemplatesView.vue`
+- `src/controllers/suppliersController.ts`
+
+
 ## [v0.1.15] - 2025-11-04
 
 - Suppliers: Add edit supplier flow and improve supplier list UI. SuppliersPage now displays contact, phone and email for each supplier, adds an Edit action that opens the modal in edit mode, and supports updating existing suppliers. Refactor to use a supplier store instance (updateSupplier) and introduce selectedId and an edit handler; unify payload handling for create vs update.
@@ -7,7 +17,6 @@
 **Files changed in this release**
 
 - `src/views/SuppliersPage.vue`
-
 
 ## [v0.1.14] - 2025-11-04
 
@@ -21,8 +30,6 @@
 - `src/router/index.ts`
 - `src/App.vue`
 
-
-
 ## [v0.1.13] - 2025-11-04
 
 - Templates: Add edit/save flow to update existing templates from the UI. When editing, providers are parsed from the template description and prefilled. Fix modal title and button behavior for edit mode. Show distinct success toast messages for create vs update.
@@ -34,7 +41,6 @@
 - `src/controllers/dixie.ts`
 - `src/controllers/TempalteController.ts`
 - `src/views/TemplatesView.vue`
-
 
 ## [v0.1.12] - 2025-11-04
 
