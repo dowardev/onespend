@@ -15,15 +15,32 @@ class TemplateController {
   }
 
   async saveTemplate(params: {
-    template: Omit<TemplateRecord, 'createdAt' | 'id'>;
+    template: Partial<Omit<TemplateRecord, 'createdAt'>> & { id?: IDBValidKey };
   }) {
     const { template } = params;
+
     const entry: TemplateRecord = {
-      ...template,
+      ...(template as Omit<TemplateRecord, 'createdAt'>),
       createdAt: Date.now(),
     };
 
     try {
+      if (template && template.id) {
+        // existing template -> update
+        // keep id as numeric when possible
+        const numericId =
+          typeof template.id === 'string' && !Number.isNaN(Number(template.id))
+            ? Number(template.id)
+            : template.id;
+
+        const key = await this.dixie.putEntry({
+          id: numericId,
+          type: 'template',
+          payload: entry,
+        });
+        return key;
+      }
+
       const key = await this.dixie.addEntry({
         type: 'template',
         payload: entry,
