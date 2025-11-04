@@ -3,6 +3,7 @@ import { RouteRecordRaw } from 'vue-router';
 import HomePage from '../views/HomePage.vue';
 import BudgetView from '../views/BudgetView.vue';
 import TemplatesView from '../views/TemplatesView.vue';
+import SuppliersPage from '../views/SuppliersPage.vue';
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -23,6 +24,11 @@ const routes: Array<RouteRecordRaw> = [
     path: '/templates',
     name: 'Templates',
     component: TemplatesView,
+  },
+  {
+    path: '/suppliers',
+    name: 'SuppliersPage',
+    component: SuppliersPage,
   },
 ];
 

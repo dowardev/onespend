@@ -29,6 +29,16 @@
             >
               <ion-label>Templates</ion-label>
             </ion-item>
+
+            <ion-item
+              button
+              lines="full"
+              :class="{ 'menu-active': isSuppliers }"
+              :aria-current="isSuppliers ? 'page' : undefined"
+              @click="router.push('/suppliers')"
+            >
+              <ion-label>Provedores</ion-label>
+            </ion-item>
           </ion-list>
         </ion-content>
       </ion-menu>
@@ -61,6 +71,7 @@ const router = useRouter();
 const route = useRoute();
 const isBudget = computed(() => route.path === '/budget');
 const isTemplates = computed(() => route.path === '/templates');
+const isSuppliers = computed(() => route.path === '/suppliers');
 </script>
 
 <style>
