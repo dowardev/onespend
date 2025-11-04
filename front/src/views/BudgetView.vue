@@ -6,8 +6,8 @@
 
         <ion-buttons slot="end">
           <ion-button
-            @click="openDatePopover({ event: $event })"
             title="Seleccionar fecha"
+            @click="openDatePopover({ event: $event })"
           >
             <ion-icon :icon="calendarOutline"></ion-icon>
           </ion-button>
@@ -41,14 +41,14 @@
                         <ion-col>
                           <ion-item v-for="inc in ingresos" :key="inc.id">
                             <ion-input
-                              placeholder="Nombre"
                               v-model="inc.name"
+                              placeholder="Nombre"
                             ></ion-input>
 
                             <ion-input
-                              type="number"
                               slot="end"
                               v-model.number="inc.amount"
+                              type="number"
                               class="num-input"
                             ></ion-input>
 
@@ -56,8 +56,8 @@
                               slot="end"
                               fill="clear"
                               size="small"
-                              @click="removeIngreso(inc.id)"
                               title="Eliminar ingreso"
+                              @click="removeIngreso(inc.id)"
                             >
                               <ion-icon :icon="trashOutline"></ion-icon>
                             </ion-button>
@@ -114,7 +114,7 @@
                 >
               </ion-list-header>
 
-              <div class="providers-list-body" ref="providersBodyRef">
+              <div ref="providersBodyRef" class="providers-list-body">
                 <ion-grid>
                   <ion-row>
                     <ion-col
@@ -134,7 +134,7 @@
 
                           <template v-else>
                             <ion-input
-                              :ref="(el) => (nameInputRefs[p.id] = el)"
+                              :ref="el => (nameInputRefs[p.id] = el)"
                               v-model="p.name"
                               placeholder="Nombre proveedor"
                             ></ion-input>
@@ -166,9 +166,9 @@
                               <ion-button
                                 fill="clear"
                                 size="small"
-                                @click.stop="removeProveedor(p.id)"
                                 title="Eliminar proveedor"
                                 class="icon-btn"
+                                @click.stop="removeProveedor(p.id)"
                               >
                                 <ion-icon :icon="trashOutline"></ion-icon>
                               </ion-button>
@@ -177,23 +177,23 @@
 
                           <div class="provider-row-fields">
                             <ion-input
+                              v-model.number="p.estimated"
                               label="Estimado"
                               label-placement="floating"
                               type="number"
-                              v-model.number="p.estimated"
                               class="num-input small"
                             ></ion-input>
 
                             <ion-input
+                              v-model.number="p.dollar"
                               label="$"
                               label-placement="floating"
                               type="number"
-                              v-model.number="p.dollar"
                               class="num-input small"
                             ></ion-input>
                           </div>
 
-                          <div class="provider-notes" v-if="p.notes">
+                          <div v-if="p.notes" class="provider-notes">
                             <small class="notes-text">{{ p.notes }}</small>
                           </div>
                         </ion-card-content>
@@ -224,20 +224,20 @@
         :is-open="popovers.date.open"
         :event="popovers.date.event"
         :keep-contents-mounted="true"
-        @didDismiss="onPopoverDidDismiss"
+        @did-dismiss="onPopoverDidDismiss"
       >
         <ion-content>
           <ion-datetime
-            style="background: transparent"
             v-model="selectedDate"
+            style="background: transparent"
             presentation="date"
-            @ionChange="(e) => (selectedDate = String(e?.detail?.value))"
+            @ion-change="e => (selectedDate = String(e?.detail?.value))"
           ></ion-datetime>
 
           <ion-item>
             <ion-button
-              fill="clear"
               slot="end"
+              fill="clear"
               class="no-shadow"
               color="primary"
               size="small"
@@ -279,7 +279,7 @@ import {
   IonButton,
   IonDatetime,
   IonPopover,
-} from "@ionic/vue";
+} from '@ionic/vue';
 import {
   reactive,
   computed,
@@ -289,9 +289,9 @@ import {
   onUnmounted,
   watch,
   ComponentPublicInstance,
-} from "vue";
-import { addOutline, calendarOutline, trashOutline } from "ionicons/icons";
-import { useRoute } from "vue-router";
+} from 'vue';
+import { addOutline, calendarOutline, trashOutline } from 'ionicons/icons';
+import { useRoute } from 'vue-router';
 
 // interface
 type Income = {
@@ -311,64 +311,64 @@ type FocusableRef =
     };
 
 // Controllers
-import dixieController from "../controllers/dixie";
-import backupController from "../controllers/backupController";
+import dixieController from '../controllers/dixie';
+import backupController from '../controllers/backupController';
 
 // State
 const ingresos = reactive([
   {
     id: Date.now() + Math.random(),
-    name: "Inicio",
+    name: 'Inicio',
     amount: 0,
     date: new Date().toISOString(),
   },
   {
     id: Date.now() + Math.random(),
-    name: "Corte",
+    name: 'Corte',
     amount: 0,
     date: new Date().toISOString(),
   },
   {
     id: Date.now() + Math.random(),
-    name: "Jesus",
+    name: 'Jesus',
     amount: 0,
     date: new Date().toISOString(),
   },
 ]) as Income[];
 const newIngreso = reactive({
-  name: "",
+  name: '',
   amount: 0,
   date: new Date().toISOString(),
 });
 const proveedores = reactive(
   [
-    "Agua",
-    "Bolsas",
-    "Chicharron",
-    "Gamesa",
-    "Lala",
-    "Queso",
-    "Semillas",
-    "Soñador",
-    "Tm20",
-    "Tm24",
-    "Zaragoza",
-  ].map((n) => ({
+    'Agua',
+    'Bolsas',
+    'Chicharron',
+    'Gamesa',
+    'Lala',
+    'Queso',
+    'Semillas',
+    'Soñador',
+    'Tm20',
+    'Tm24',
+    'Zaragoza',
+  ].map(n => ({
     id: Date.now() + Math.random(),
     name: n,
     date: new Date().toISOString(),
     estimated: 0,
     dollar: 0,
-    notes: "",
+    notes: '',
     visited: false,
     _justAdded: false,
-  })),
+  }))
 );
-const newProveedor = reactive({ name: "", estimated: 0, dollar: 0, notes: "" });
+const newProveedor = reactive({ name: '', estimated: 0, dollar: 0, notes: '' });
 const nameInputRefs = reactive(
-  {} as Record<string | number, FocusableRef | null>,
+  {} as Record<string | number, FocusableRef | null>
 );
-const STORAGE_KEY = "budget:selectedDate";
+const STORAGE_KEY = 'budget:selectedDate';
 const selectedDate = ref(new Date().toISOString());
 const route = useRoute();
 const popovers = reactive({
@@ -394,26 +394,26 @@ onMounted(() => {
 
 onMounted(() => {
   const el = providersBodyRef.value as HTMLElement | null;
-  if (el && typeof el.addEventListener === "function") {
-    el.addEventListener("pointerdown", handlePointerDown, { passive: true });
-    el.addEventListener("pointerup", handlePointerUp);
-    el.addEventListener("pointercancel", handlePointerUp);
+  if (el && typeof el.addEventListener === 'function') {
+    el.addEventListener('pointerdown', handlePointerDown, { passive: true });
+    el.addEventListener('pointerup', handlePointerUp);
+    el.addEventListener('pointercancel', handlePointerUp);
   }
 });
 
 onUnmounted(() => {
   const el = providersBodyRef.value as HTMLElement | null;
-  if (el && typeof el.removeEventListener === "function") {
-    el.removeEventListener("pointerdown", handlePointerDown as any);
-    el.removeEventListener("pointerup", handlePointerUp as any);
-    el.removeEventListener("pointercancel", handlePointerUp as any);
+  if (el && typeof el.removeEventListener === 'function') {
+    el.removeEventListener('pointerdown', handlePointerDown as any);
+    el.removeEventListener('pointerup', handlePointerUp as any);
+    el.removeEventListener('pointercancel', handlePointerUp as any);
   }
 });
 
 // Watchers
 watch(
   selectedDate,
-  (newSelectedDate) => {
+  newSelectedDate => {
     try {
       localStorage.setItem(STORAGE_KEY, newSelectedDate);
     } catch (error) {
@@ -421,7 +421,7 @@ watch(
     }
     loadDataForDate(newSelectedDate);
   },
-  { immediate: false },
+  { immediate: false }
 );
 
 // Watch for query param used to force refresh from other views (TemplatesView pushes ?refresh=timestamp)
@@ -431,7 +431,7 @@ watch(
     try {
       // Prefer the date provided in the URL query (if any) and update selectedDate accordingly
       const parsedDateFromRouteISO = (function parseIsoDateFromString(
-        dateString?: string,
+        dateString?: string
       ) {
         if (!dateString) return null;
         const parsedDate = new Date(dateString);
@@ -443,7 +443,7 @@ watch(
       /* noop */
     }
   },
-  { immediate: true },
+  { immediate: true }
 );
 
 // Deep watchers to trigger auto-save
@@ -452,7 +452,7 @@ watch(
   () => {
     autoSave();
   },
-  { deep: true },
+  { deep: true }
 );
 
 watch(
@@ -460,19 +460,19 @@ watch(
   () => {
     autoSave();
   },
-  { deep: true },
+  { deep: true }
 );
 
 // Computed
 const totalIngresos = computed(() =>
-  ingresos.reduce((s, i) => s + Number(i.amount || 0), 0),
+  ingresos.reduce((s, i) => s + Number(i.amount || 0), 0)
 );
 const totalProviders = computed(() =>
-  proveedores.reduce((s, p) => s + valueToConsider(p), 0),
+  proveedores.reduce((s, p) => s + valueToConsider(p), 0)
 );
 // Total of providers that have been visited (checked)
 const totalVisitedProviders = computed(() =>
-  proveedores.reduce((s, p) => s + (p.visited ? valueToConsider(p) : 0), 0),
+  proveedores.reduce((s, p) => s + (p.visited ? valueToConsider(p) : 0), 0)
 );
 
 // Methods
@@ -487,7 +487,7 @@ function addIngreso(params: { name?: string; amount?: number } = {}) {
     amount: Number(a) || 0,
     date: selectedDate.value,
   });
-  newIngreso.name = "";
+  newIngreso.name = '';
   newIngreso.amount = 0;
 }
 
@@ -495,7 +495,7 @@ function addIngresoField() {
   // Add empty income field
   ingresos.push({
     id: Date.now() + Math.random(),
-    name: "",
+    name: '',
     amount: 0,
     date: selectedDate.value,
   });
@@ -514,13 +514,13 @@ async function removeIngreso(id: string | number) {
     try {
       await nextTick();
       console.log(
-        "removeIngreso: ingreso eliminado, auto-guardado por watcher",
-        id,
+        'removeIngreso: ingreso eliminado, auto-guardado por watcher',
+        id
       );
     } catch (e) {
       console.error(
-        "removeIngreso: error en nextTick después de eliminar ingreso",
-        e,
+        'removeIngreso: error en nextTick después de eliminar ingreso',
+        e
       );
     }
   }
@@ -534,13 +534,13 @@ async function removeProveedor(id: string | number) {
     try {
       await nextTick();
       console.log(
-        "removeProveedor: proveedor eliminado, auto-guardado por watcher",
-        id,
+        'removeProveedor: proveedor eliminado, auto-guardado por watcher',
+        id
       );
     } catch (e) {
       console.error(
-        "removeProveedor: error en nextTick después de eliminar proveedor",
-        e,
+        'removeProveedor: error en nextTick después de eliminar proveedor',
+        e
       );
     }
   }
@@ -554,9 +554,9 @@ function updateNewIngreso(params: { name?: string; amount?: number } = {}) {
 
 function formatCurrency(params: { v: number }) {
   const { v } = params;
-  return new Intl.NumberFormat("es-MX", {
-    style: "currency",
-    currency: "MXN",
+  return new Intl.NumberFormat('es-MX', {
+    style: 'currency',
+    currency: 'MXN',
   }).format(v || 0);
 }
 
@@ -568,7 +568,7 @@ function onIngresoIonInput(params: { event: any; index: number }) {
 
 function onNewIngresoNameInput(params: { e: any }) {
   const { e } = params;
-  updateNewIngreso({ name: e?.detail?.value || "" });
+  updateNewIngreso({ name: e?.detail?.value || '' });
 }
 
 function onNewIngresoAmountInput(params: { e: any }) {
@@ -582,7 +582,7 @@ function addProveedor(
     estimated?: number;
     dollar?: number;
     notes?: string;
-  } = {},
+  } = {}
 ) {
   const { name, estimated, dollar, notes } = params;
   const n = name ?? newProveedor.name;
@@ -597,17 +597,17 @@ function addProveedor(
     name: n,
     estimated: Number(e) || 0,
     dollar: Number(d) || 0,
-    notes: nt || "",
+    notes: nt || '',
     visited: false,
     _justAdded: true,
   } as any;
   proveedores.push(newItem);
   // remove new-mark after animation
   setTimeout(() => (newItem._justAdded = false), 400);
-  newProveedor.name = "";
+  newProveedor.name = '';
   newProveedor.estimated = 0;
   newProveedor.dollar = 0;
-  newProveedor.notes = "";
+  newProveedor.notes = '';
 }
 
 function valueToConsider(p: any) {
@@ -626,10 +626,10 @@ function addBlankProvider() {
   const newItem = {
     id: Date.now() + Math.random(),
     date: selectedDate.value,
-    name: "",
+    name: '',
     estimated: 0,
     dollar: 0,
-    notes: "",
+    notes: '',
     visited: false,
     _justAdded: true,
   } as any;
@@ -668,25 +668,25 @@ async function onBackupClick() {
       },
     };
 
-    console.log("onBackupClick: payload summary", {
+    console.log('onBackupClick: payload summary', {
       selectedDate: payload.selectedDate,
       ingresosCount: payload.ingresos.length,
     });
 
     const payloadToSave = {
-      component: "BudgetView",
+      component: 'BudgetView',
       data: payload,
       createdAt: Date.now(),
     };
 
     try {
       const id = await backupController.saveBackup(payloadToSave);
-      console.log("Backup guardado id=", id);
+      console.log('Backup guardado id=', id);
     } catch (err) {
-      console.error("Error al guardar backup:", err);
+      console.error('Error al guardar backup:', err);
     }
   } catch (err) {
-    console.error("Error al preparar backup:", err);
+    console.error('Error al preparar backup:', err);
   }
 }
 
@@ -713,7 +713,7 @@ const autoSave = debounce(async () => {
   try {
     await onBackupClick();
   } catch (e) {
-    console.error("autoSave error:", e);
+    console.error('autoSave error:', e);
   }
 }, 800);
 
@@ -726,12 +726,12 @@ async function loadDataForDate(dateISO: string) {
       const target = dateISO.slice(0, 10);
       const matches = all
         .filter(
-          (x) =>
+          x =>
             x &&
-            x.component === "BudgetView" &&
+            x.component === 'BudgetView' &&
             x.data &&
             x.data.selectedDate &&
-            x.data.selectedDate.slice(0, 10) === target,
+            x.data.selectedDate.slice(0, 10) === target
         )
         .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
       if (matches.length) b = matches[0];
@@ -746,50 +746,50 @@ async function loadDataForDate(dateISO: string) {
         ...(d.ingresos || []).map((i: any) => ({
           id: i.id ?? Date.now() + Math.random(),
           ...i,
-        })),
+        }))
       );
       proveedores.splice(0, proveedores.length, ...(d.proveedores || []));
       // Reemplazar objetos
       Object.assign(
         newIngreso,
-        d.newIngreso || { name: "", amount: 0, date: dateISO },
+        d.newIngreso || { name: '', amount: 0, date: dateISO }
       );
       Object.assign(
         newProveedor,
-        d.newProveedor || { name: "", estimated: 0, dollar: 0, notes: "" },
+        d.newProveedor || { name: '', estimated: 0, dollar: 0, notes: '' }
       );
-      console.log("Datos cargados para", dateISO, b);
+      console.log('Datos cargados para', dateISO, b);
     } else {
       // No backup: initialize empty data for date
       ingresos.splice(0, ingresos.length);
       proveedores.splice(0, proveedores.length);
-      Object.assign(newIngreso, { name: "", amount: 0, date: dateISO });
+      Object.assign(newIngreso, { name: '', amount: 0, date: dateISO });
       Object.assign(newProveedor, {
-        name: "",
+        name: '',
         estimated: 0,
         dollar: 0,
-        notes: "",
+        notes: '',
       });
-      console.log("No se encontró backup para", dateISO);
+      console.log('No se encontró backup para', dateISO);
     }
   } catch (err) {
-    console.error("Error cargando datos para fecha", dateISO, err);
+    console.error('Error cargando datos para fecha', dateISO, err);
   }
 }
 
 function openDatePopover(params: { event: any }) {
   const { event } = params;
   // Assign event then open popover
-  console.log("openDatePopover: event=", event);
+  console.log('openDatePopover: event=', event);
   popovers.date.event = event;
   setTimeout(() => {
     popovers.date.open = true;
-    console.log("openDatePopover: popover opened, event=", popovers.date.event);
+    console.log('openDatePopover: popover opened, event=', popovers.date.event);
   }, 50);
 }
 
 function onPopoverDidDismiss() {
-  console.log("onPopoverDidDismiss");
+  console.log('onPopoverDidDismiss');
   popovers.date.open = false;
   popovers.date.event = null;
 }
@@ -806,9 +806,9 @@ function handlePointerDown(e: PointerEvent | TouchEvent) {
   try {
     const target = e.target as HTMLElement | null;
     if (!target) return;
-    const card = target.closest("ion-card.shadow1") as HTMLElement | null;
+    const card = target.closest('ion-card.shadow1') as HTMLElement | null;
     if (card) {
-      card.classList.add("touch-active");
+      card.classList.add('touch-active');
     }
   } catch (err) {
     /* noop */
@@ -819,10 +819,10 @@ function handlePointerUp(e: PointerEvent | TouchEvent) {
   try {
     const target = e.target as HTMLElement | null;
     if (!target) return;
-    const card = target.closest("ion-card.shadow1") as HTMLElement | null;
+    const card = target.closest('ion-card.shadow1') as HTMLElement | null;
     if (card) {
       // remove after a short delay so the user sees the feedback
-      setTimeout(() => card.classList.remove("touch-active"), 250);
+      setTimeout(() => card.classList.remove('touch-active'), 250);
     }
   } catch (err) {
     /* noop */
@@ -830,17 +830,17 @@ function handlePointerUp(e: PointerEvent | TouchEvent) {
 }
 
 function hasSetFocus(x: unknown): x is { setFocus: () => void } {
-  return !!x && typeof (x as any).setFocus === "function";
+  return !!x && typeof (x as any).setFocus === 'function';
 }
 
 function has$elSetFocus(x: unknown): x is { $el: { setFocus: () => void } } {
   return (
-    !!x && !!(x as any).$el && typeof (x as any).$el.setFocus === "function"
+    !!x && !!(x as any).$el && typeof (x as any).$el.setFocus === 'function'
   );
 }
 
 function hasFocusMethod(x: unknown): x is { focus: () => void } {
-  return !!x && typeof (x as any).focus === "function";
+  return !!x && typeof (x as any).focus === 'function';
 }
 </script>
 

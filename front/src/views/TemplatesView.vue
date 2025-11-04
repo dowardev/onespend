@@ -18,7 +18,7 @@
           <ion-label>Templates</ion-label>
         </ion-list-header>
 
-        <div class="content" v-if="templates.length">
+        <div v-if="templates.length" class="content">
           <ion-item
             v-for="(tmpl, index) in templates"
             :key="tmpl.id ?? index"
@@ -83,9 +83,9 @@
         <ion-content>
           <ion-card class="shadow1 ion-padding-start">
             <ion-input
+              v-model="form.name"
               label="Nombre del template"
               label-placement="floating"
-              v-model="form.name"
               placeholder="Ej: Día base"
             ></ion-input>
           </ion-card>
@@ -114,8 +114,8 @@
                   slot="end"
                   fill="clear"
                   size="small"
-                  @click="removeProvider({ idx })"
                   title="Eliminar proveedor"
+                  @click="removeProvider({ idx })"
                 >
                   <ion-icon color="danger" :icon="trashOutline"></ion-icon>
                 </ion-button>
@@ -127,8 +127,8 @@
 
       <!-- modal aplicar template -->
       <ion-modal
-        :keep-contents-mounted="true"
         v-model:is-open="showApplyModal"
+        :keep-contents-mounted="true"
         @did-dismiss="cancelApply"
       >
         <ion-header class="ion-no-border" mode="ios">
@@ -178,13 +178,13 @@
 
       <ion-alert
         v-model:is-open="showConfirm"
-        @did-dismiss="onConfirmDismiss"
         header="Confirmar"
         :message="confirmMessage"
         :buttons="[
           { text: 'Cancelar', role: 'cancel' },
           { text: 'Eliminar', role: 'destructive', handler: proceedDelete },
         ]"
+        @did-dismiss="onConfirmDismiss"
       ></ion-alert>
       <!-- end alerts -->
 
@@ -199,9 +199,9 @@
       <!-- modal -->
       <ion-modal :keep-contents-mounted="true">
         <ion-datetime
+          id="datetime"
           v-model="applySelectedDate"
           presentation="date"
-          id="datetime"
         ></ion-datetime>
       </ion-modal>
       <!-- end modal -->
@@ -227,7 +227,7 @@ import {
   IonToast,
   IonIcon,
   IonDatetime,
-} from "@ionic/vue";
+} from '@ionic/vue';
 import {
   createOutline,
   addOutline,
@@ -235,13 +235,13 @@ import {
   trashOutline,
   saveOutline,
   checkmarkOutline,
-} from "ionicons/icons";
-import { reactive, ref, onMounted } from "vue";
-import { useRouter } from "vue-router";
+} from 'ionicons/icons';
+import { reactive, ref, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 
 // controllers
-import TemplateController from "../controllers/TempalteController";
-import backupController from "../controllers/backupController";
+import TemplateController from '../controllers/TempalteController';
+import backupController from '../controllers/backupController';
 // end controllers
 
 // interface
@@ -263,22 +263,22 @@ onMounted(() => {
 // end life
 
 // vars
-const STORAGE_KEY = "budget:selectedDate";
+const STORAGE_KEY = 'budget:selectedDate';
 const templates = reactive<TemplateSummary[]>([]);
 const showModal = ref(false);
 const showAlert = ref(false);
-const alertMessage = ref("");
+const alertMessage = ref('');
 const showConfirm = ref(false);
-const confirmMessage = ref("");
+const confirmMessage = ref('');
 const confirmTargetId = ref<number | string | null>(null);
 const toast = reactive({
   open: false,
-  message: "",
-  color: "success",
+  message: '',
+  color: 'success',
 });
 const form = reactive({
-  name: "",
-  providers: [""],
+  name: '',
+  providers: [''],
 });
 
 const showApplyModal = ref(false);
@@ -288,7 +288,7 @@ const applyTargetTemplate = ref<TemplateSummary | null>(null);
 
 // functions
 function addProvider() {
-  form.providers.push("");
+  form.providers.push('');
 }
 
 function removeProvider(params: { idx: number }) {
@@ -297,22 +297,22 @@ function removeProvider(params: { idx: number }) {
 }
 
 function resetForm() {
-  form.name = "";
-  form.providers.splice(0, form.providers.length, "");
+  form.name = '';
+  form.providers.splice(0, form.providers.length, '');
 }
 
 async function submitTemplate() {
   if (!form.name.trim()) {
-    alertMessage.value = "Por favor ingresa el nombre del template";
+    alertMessage.value = 'Por favor ingresa el nombre del template';
     showAlert.value = true;
     return;
   }
 
-  const cleanedProviders = form.providers.map((p) => p.trim()).filter((p) => p);
+  const cleanedProviders = form.providers.map(p => p.trim()).filter(p => p);
 
   // description may contain the providers
   const description = cleanedProviders.length
-    ? `Proveedores: ${cleanedProviders.join(", ")}`
+    ? `Proveedores: ${cleanedProviders.join(', ')}`
     : undefined;
 
   try {
@@ -327,11 +327,11 @@ async function submitTemplate() {
     showModal.value = false;
 
     // show success toast
-    toast.message = "Template guardado";
+    toast.message = 'Template guardado';
     toast.open = true;
   } catch (e) {
-    console.error("submitTemplate error", e);
-    alertMessage.value = "Error al guardar el template";
+    console.error('submitTemplate error', e);
+    alertMessage.value = 'Error al guardar el template';
     showAlert.value = true;
   }
 }
@@ -339,10 +339,10 @@ async function submitTemplate() {
 // Open the apply modal instead of navigating directly
 function applyTemplate(params: { tmpl: TemplateSummary }) {
   const { tmpl } = params as { tmpl: TemplateSummary };
-  console.log("applyTemplate called", tmpl);
+  console.log('applyTemplate called', tmpl);
   // small toast to help debug UI flow
   try {
-    toast.message = `Aplicando template: ${tmpl?.name || "n/a"}`;
+    toast.message = `Aplicando template: ${tmpl?.name || 'n/a'}`;
     toast.open = true;
   } catch (e) {
     /* noop */
@@ -353,7 +353,7 @@ function applyTemplate(params: { tmpl: TemplateSummary }) {
   applySelectedDate.value = new Date().toISOString();
   // ensure modal flag is set explicitly
   showApplyModal.value = true;
-  console.log("showApplyModal set to true");
+  console.log('showApplyModal set to true');
 }
 
 function cancelApply() {
@@ -363,15 +363,15 @@ function cancelApply() {
 
 function parseProvidersFromDescription(desc?: string): string[] {
   if (!desc) return [];
-  const prefix = "Proveedores:";
+  const prefix = 'Proveedores:';
   const i = desc.indexOf(prefix);
   if (i === -1) return [];
   const rest = desc.slice(i + prefix.length).trim();
   if (!rest) return [];
   return rest
-    .split(",")
-    .map((s) => s.trim())
-    .filter((s) => s);
+    .split(',')
+    .map(s => s.trim())
+    .filter(s => s);
 }
 
 async function confirmApply() {
@@ -381,34 +381,34 @@ async function confirmApply() {
 
   // build proveedores from template description
   const providerNames = parseProvidersFromDescription(tmpl.description);
-  const proveedores = (providerNames || []).map((name) => ({
+  const proveedores = (providerNames || []).map(name => ({
     id: Date.now() + Math.random(),
     name,
     date: dateISO,
     estimated: 0,
     dollar: 0,
-    notes: "",
+    notes: '',
     visited: false,
   }));
 
   const payload = {
     ingresos: [],
     proveedores,
-    newIngreso: { name: "", amount: 0, date: dateISO },
-    newProveedor: { name: "", estimated: 0, dollar: 0, notes: "" },
+    newIngreso: { name: '', amount: 0, date: dateISO },
+    newProveedor: { name: '', estimated: 0, dollar: 0, notes: '' },
     selectedDate: dateISO,
     totals: {
       totalIngresos: 0,
       totalProviders: proveedores.reduce(
         (s, p) => s + (Number(p.dollar || 0) || Number(p.estimated || 0)),
-        0,
+        0
       ),
       totalVisitedProviders: 0,
     },
   };
 
   const payloadToSave = {
-    component: "BudgetView",
+    component: 'BudgetView',
     data: payload,
     createdAt: Date.now(),
   };
@@ -426,16 +426,16 @@ async function confirmApply() {
     showApplyModal.value = false;
     applyTargetTemplate.value = null;
 
-    toast.message = "Template aplicado";
+    toast.message = 'Template aplicado';
     toast.open = true;
 
     router.push({
-      name: "Budget",
+      name: 'Budget',
       query: { refresh: String(Date.now()), date: dateISO },
     });
   } catch (e) {
-    console.error("confirmApply error", e);
-    alertMessage.value = "Error al aplicar el template";
+    console.error('confirmApply error', e);
+    alertMessage.value = 'Error al aplicar el template';
     showAlert.value = true;
   }
 }
@@ -443,7 +443,7 @@ async function confirmApply() {
 async function confirmDelete(params: { tmpl: TemplateSummary }) {
   const { tmpl } = params;
   if (!tmpl || !tmpl.id) {
-    alertMessage.value = "Template inválido";
+    alertMessage.value = 'Template inválido';
     showAlert.value = true;
     return;
   }
@@ -466,11 +466,11 @@ async function proceedDelete() {
     await loadTemplates();
 
     // show success toast
-    toast.message = "Template eliminado";
+    toast.message = 'Template eliminado';
     toast.open = true;
   } catch (e) {
-    console.error("proceedDelete error", e);
-    alertMessage.value = "Error al eliminar el template";
+    console.error('proceedDelete error', e);
+    alertMessage.value = 'Error al eliminar el template';
     showAlert.value = true;
   }
 }
@@ -486,32 +486,32 @@ async function loadTemplates() {
     templates.splice(
       0,
       templates.length,
-      ...list.map((t) => ({
-        id: t.id || "",
+      ...list.map(t => ({
+        id: t.id || '',
         name: t.name,
         description: t.description,
-      })),
+      }))
     );
   } catch (e) {
-    console.error("loadTemplates error", e);
+    console.error('loadTemplates error', e);
   }
 }
 </script>
 
 <style scoped>
 /* Hide action buttons by default on non-touch devices */
-.content ion-item.transparent ion-button[slot="end"] {
+.content ion-item.transparent ion-button[slot='end'] {
   display: none !important;
 }
 
 /* Show when hovering the ion-item */
-.content ion-item.transparent:hover ion-button[slot="end"] {
+.content ion-item.transparent:hover ion-button[slot='end'] {
   display: inline-flex !important;
 }
 
 /* On touch devices (no hover), show buttons always */
 @media (hover: none), (pointer: coarse) {
-  .content ion-item.transparent ion-button[slot="end"] {
+  .content ion-item.transparent ion-button[slot='end'] {
     display: inline-flex !important;
   }
 }
