@@ -1,4 +1,4 @@
-import dixieController, { DixieController } from "./dixie";
+import dixieController, { DixieController } from './dixie';
 
 export type TemplateRecord = {
   id?: number | string;
@@ -14,7 +14,9 @@ class TemplateController {
     this.dixie = dixie;
   }
 
-  async saveTemplate(params: { template: Omit<TemplateRecord, "createdAt" | "id"> }) {
+  async saveTemplate(params: {
+    template: Omit<TemplateRecord, 'createdAt' | 'id'>;
+  }) {
     const { template } = params;
     const entry: TemplateRecord = {
       ...template,
@@ -23,12 +25,12 @@ class TemplateController {
 
     try {
       const key = await this.dixie.addEntry({
-        type: "template",
+        type: 'template',
         payload: entry,
       });
       return key;
     } catch (e) {
-      console.error("TemplateController.saveTemplate error", e);
+      console.error('TemplateController.saveTemplate error', e);
       throw e;
     }
   }
@@ -36,17 +38,24 @@ class TemplateController {
   async listTemplates() {
     try {
       const all = (await this.dixie.listBackups()) as Array<
-        Record<string, unknown> & { id?: IDBValidKey; type?: string; payload?: unknown }
+        Record<string, unknown> & {
+          id?: IDBValidKey;
+          type?: string;
+          payload?: unknown;
+        }
       >;
       const templates = (all || [])
-        .filter((x) => x && x.type === "template")
-        .map((x) => {
-          const payload = x.payload && typeof x.payload === "object" ? (x.payload as Record<string, unknown>) : {};
+        .filter(x => x && x.type === 'template')
+        .map(x => {
+          const payload =
+            x.payload && typeof x.payload === 'object'
+              ? (x.payload as Record<string, unknown>)
+              : {};
           return { ...(payload as Record<string, unknown>), id: String(x.id) };
         });
       return templates as TemplateRecord[];
     } catch (e) {
-      console.error("TemplateController.listTemplates error", e);
+      console.error('TemplateController.listTemplates error', e);
       return [] as TemplateRecord[];
     }
   }
@@ -55,16 +64,16 @@ class TemplateController {
     const { id } = params;
     try {
       console.log(
-        "TemplateController.deleteTemplate: deleting id",
+        'TemplateController.deleteTemplate: deleting id',
         id,
-        "(type:",
+        '(type:',
         typeof id,
-        ")",
+        ')'
       );
       await this.dixie.deleteBackup(id);
       return true;
     } catch (e) {
-      console.error("TemplateController.deleteTemplate error", e);
+      console.error('TemplateController.deleteTemplate error', e);
       throw e;
     }
   }

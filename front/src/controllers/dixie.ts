@@ -3,8 +3,8 @@ class DixieController {
   private storeName: string;
 
   constructor(opts: { name?: string; storeName?: string } = {}) {
-    this.name = opts.name || "ABOgazDB";
-    this.storeName = opts.storeName || "backups";
+    this.name = opts.name || 'ABOgazDB';
+    this.storeName = opts.storeName || 'backups';
   }
 
   async openDB(): Promise<IDBDatabase> {
@@ -33,7 +33,7 @@ class DixieController {
         const d = req.result;
         if (!d.objectStoreNames.contains(storeName)) {
           d.createObjectStore(storeName, {
-            keyPath: "id",
+            keyPath: 'id',
             autoIncrement: true,
           });
         }
@@ -46,10 +46,10 @@ class DixieController {
   async addEntry(entry: unknown): Promise<IDBValidKey> {
     const db = await this.openDB();
     return new Promise((resolve, reject) => {
-      const tx = db.transaction(this.storeName, "readwrite");
+      const tx = db.transaction(this.storeName, 'readwrite');
       const store = tx.objectStore(this.storeName);
       try {
-        console.log("DixieController.addEntry: adding entry (shallow):", {
+        console.log('DixieController.addEntry: adding entry (shallow):', {
           keys: Object.keys(entry || {}),
         });
       } catch (e) {
@@ -61,17 +61,17 @@ class DixieController {
       };
       req.onerror = (ev: unknown) => {
         console.error(
-          "DixieController.addEntry: request.onerror",
+          'DixieController.addEntry: request.onerror',
           ev,
-          req.error,
+          req.error
         );
         reject(req.error || ev);
       };
       tx.onerror = (ev: unknown) => {
         console.error(
-          "DixieController.addEntry: transaction.onerror",
+          'DixieController.addEntry: transaction.onerror',
           ev,
-          tx.error,
+          tx.error
         );
         reject(tx.error || ev);
       };
@@ -88,7 +88,7 @@ class DixieController {
   async getBackup(id: IDBValidKey) {
     const db = await this.openDB();
     return new Promise((resolve, reject) => {
-      const tx = db.transaction(this.storeName, "readonly");
+      const tx = db.transaction(this.storeName, 'readonly');
       const store = tx.objectStore(this.storeName);
       const req = store.get(id as any);
       req.onsuccess = () => resolve(req.result);
@@ -100,18 +100,18 @@ class DixieController {
   async deleteBackup(id: IDBValidKey) {
     try {
       console.log(
-        "DixieController.deleteBackup: called with id",
+        'DixieController.deleteBackup: called with id',
         id,
-        "(type:",
+        '(type:',
         typeof id,
-        ")",
+        ')'
       );
     } catch (e) {
       /* ignore */
     }
     const db = await this.openDB();
     return new Promise((resolve, reject) => {
-      const tx = db.transaction(this.storeName, "readwrite");
+      const tx = db.transaction(this.storeName, 'readwrite');
       const store = tx.objectStore(this.storeName);
       const req = store.delete(id as IDBValidKey);
       req.onsuccess = () => resolve(req.result);
@@ -129,7 +129,7 @@ class DixieController {
   async listBackups() {
     const db = await this.openDB();
     return new Promise((resolve, reject) => {
-      const tx = db.transaction(this.storeName, "readonly");
+      const tx = db.transaction(this.storeName, 'readonly');
       const store = tx.objectStore(this.storeName);
       const req = store.getAll();
       req.onsuccess = () => resolve(req.result);

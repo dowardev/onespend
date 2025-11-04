@@ -1,27 +1,27 @@
-import { createRouter, createWebHistory } from "@ionic/vue-router";
-import { RouteRecordRaw } from "vue-router";
-import HomePage from "../views/HomePage.vue";
-import BudgetView from "../views/BudgetView.vue";
-import TemplatesView from "../views/TemplatesView.vue";
+import { createRouter, createWebHistory } from '@ionic/vue-router';
+import { RouteRecordRaw } from 'vue-router';
+import HomePage from '../views/HomePage.vue';
+import BudgetView from '../views/BudgetView.vue';
+import TemplatesView from '../views/TemplatesView.vue';
 
 const routes: Array<RouteRecordRaw> = [
   {
-    path: "/",
-    redirect: "/budget",
+    path: '/',
+    redirect: '/budget',
   },
   {
-    path: "/home",
-    name: "Home",
+    path: '/home',
+    name: 'Home',
     component: HomePage,
   },
   {
-    path: "/budget",
-    name: "Budget",
+    path: '/budget',
+    name: 'Budget',
     component: BudgetView,
   },
   {
-    path: "/templates",
-    name: "Templates",
+    path: '/templates',
+    name: 'Templates',
     component: TemplatesView,
   },
 ];
