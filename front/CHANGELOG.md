@@ -1,5 +1,14 @@
 # Changelog
 
+## [v0.1.15] - 2025-11-04
+
+- Suppliers: Add edit supplier flow and improve supplier list UI. SuppliersPage now displays contact, phone and email for each supplier, adds an Edit action that opens the modal in edit mode, and supports updating existing suppliers. Refactor to use a supplier store instance (updateSupplier) and introduce selectedId and an edit handler; unify payload handling for create vs update.
+
+**Files changed in this release**
+
+- `src/views/SuppliersPage.vue`
+
+
 ## [v0.1.14] - 2025-11-04
 
 - Suppliers: Add suppliers management UI and data layer. Includes SuppliersPage (view) with create/delete modal and list, suppliersController for IndexedDB persistence, and a useSuppliers store for reactive access. Registered `/suppliers` route and added a menu entry in App.vue.
@@ -117,7 +126,7 @@
 - Add project environment file `.env` (VITE_APP_NAME).
 - Remove obsolete backup/view file `src/views/BudgetView.bak.vue`.
 
-**Files changed for this release**
+**Files changed in this release**
 
 - `.env`
 - `src/App.vue`
