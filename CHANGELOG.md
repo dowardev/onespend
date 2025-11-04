@@ -1,5 +1,18 @@
 # Changelog
 
+## [v0.1.12] - 2025-11-04
+
+- **Setup:** Added Prettier configuration (`.prettierrc.cjs`), introduced new ESLint configurations for better linting enforcement (
+  including removal of `.eslintrc.cjs` and integrations via `eslint.config.js`).
+- **Utilities:** Included new Prettier and Prettier plugin dependencies for formatting support in `package.json`.
+- **Refactoring:** Replaced all double quotes with single quotes, structured imports for cleanliness, and switched event handlers to camel-case format.
+
+**Files changed in this release**
+
+- `.prettierrc.cjs`
+- `.prettierignore`
+- ESLint configurational files `eslint.config.js`
+
 ## [v0.1.11] - 2025-11-03
 
 - UI: Display selected date in Budget header and add a "Today" quick button in the date popover; make the date selector background transparent and improve date-change handling.
@@ -11,8 +24,6 @@
 - `src/theme/variables.css`
 - `src/views/BudgetView.vue`
 - `src/views/TemplatesView.vue`
-
-
 
 ## [v0.1.10] - 2025-11-01
 
@@ -26,8 +37,6 @@
 
 - `src/views/BudgetView.vue`
 - `src/views/TemplatesView.vue`
-
-
 
 ## [v0.1.9] - 2025-11-01
 
@@ -45,9 +54,6 @@
 - `src/views/BudgetView.vue`
 - `src/views/TemplatesView.vue`
 
-
-
-
 ## [v0.1.8] - 2025-10-31
 
 - Fix filename typo in Templates controller and improve template management logic.
@@ -62,8 +68,6 @@
 - `src/controllers/dixie.ts`
 - `src/views/BudgetView.vue`
 
-
-
 ## [v0.1.7] - 2025-10-31
 
 - Add Templates controller and update Templates view.
@@ -76,8 +80,6 @@
 - `src/controllers/dixie.ts`
 - `src/views/TemplatesView.vue`
 - `src/stores/ui.ts`
-
-
 
 ## [v0.1.6] - 2025-10-30
 
