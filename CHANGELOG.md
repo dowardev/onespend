@@ -1,5 +1,19 @@
 # Changelog
 
+## [v0.1.14] - 2025-11-04
+
+- Suppliers: Add suppliers management UI and data layer. Includes SuppliersPage (view) with create/delete modal and list, suppliersController for IndexedDB persistence, and a useSuppliers store for reactive access. Registered `/suppliers` route and added a menu entry in App.vue.
+
+**Files changed in this release**
+
+- `src/views/SuppliersPage.vue`
+- `src/controllers/suppliersController.ts`
+- `src/stores/useSuppliers.ts`
+- `src/router/index.ts`
+- `src/App.vue`
+
+
+
 ## [v0.1.13] - 2025-11-04
 
 - Templates: Add edit/save flow to update existing templates from the UI. When editing, providers are parsed from the template description and prefilled. Fix modal title and button behavior for edit mode. Show distinct success toast messages for create vs update.
