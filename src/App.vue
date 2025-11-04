@@ -12,20 +12,20 @@
           <ion-list>
             <ion-item
               button
-              @click="router.push('/budget')"
               lines="full"
               :class="{ 'menu-active': isBudget }"
               :aria-current="isBudget ? 'page' : undefined"
+              @click="router.push('/budget')"
             >
               <ion-label>Presupuesto</ion-label>
             </ion-item>
 
             <ion-item
               button
-              @click="router.push('/templates')"
               lines="full"
               :class="{ 'menu-active': isTemplates }"
               :aria-current="isTemplates ? 'page' : undefined"
+              @click="router.push('/templates')"
             >
               <ion-label>Templates</ion-label>
             </ion-item>
@@ -51,14 +51,16 @@ import {
   IonList,
   IonItem,
   IonLabel,
-} from "@ionic/vue";
-import { computed } from "vue";
-import { useRouter, useRoute } from "vue-router";
-const appName = (import.meta as unknown as { env?: Record<string, string | undefined> }).env?.VITE_APP_NAME || "Menú";
+} from '@ionic/vue';
+import { computed } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
+const appName =
+  (import.meta as unknown as { env?: Record<string, string | undefined> }).env
+    ?.VITE_APP_NAME || 'Menú';
 const router = useRouter();
 const route = useRoute();
-const isBudget = computed(() => route.path === "/budget");
-const isTemplates = computed(() => route.path === "/templates");
+const isBudget = computed(() => route.path === '/budget');
+const isTemplates = computed(() => route.path === '/templates');
 </script>
 
 <style>
