@@ -5,8 +5,8 @@
         <ion-title>Templates</ion-title>
 
         <ion-buttons slot="end">
-          <ion-button @click="showModal = true">
-            <ion-icon :icon="createOutline"></ion-icon>
+          <ion-button @click="openNewTemplate()">
+            <ion-icon :icon="addOutline"></ion-icon>
           </ion-button>
         </ion-buttons>
       </ion-toolbar>
@@ -492,9 +492,20 @@ function resetForm() {
   editingTemplateId.value = null;
 }
 
+// Open new template modal ensuring supplier list is up-to-date
+async function openNewTemplate() {
+  // reload suppliers to reflect latest names before opening modal
+  await loadSuppliers();
+  resetForm();
+  showModal.value = true;
+}
+
 async function editTemplate(params: { tmpl: TemplateSummary }) {
   const { tmpl } = params;
   if (!tmpl) return;
+
+  // Ensure suppliers are fresh so names reflect recent edits
+  await loadSuppliers();
 
   // If template has supplier ids stored, use them. Otherwise try to parse names from description.
   if (
