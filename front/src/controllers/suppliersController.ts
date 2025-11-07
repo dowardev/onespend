@@ -1,4 +1,4 @@
-import dixieController, { DixieController } from './dixie';
+import { DixieController } from './dixie';
 
 export type Supplier = {
   id?: IDBValidKey;
@@ -11,19 +11,7 @@ export type Supplier = {
 };
 
 class SuppliersController {
-  private dixie: DixieController;
-
-  constructor(dixie: DixieController = dixieController) {
-    this.dixie = dixie;
-    // Ensure dixie uses a suppliers store
-  }
-
-  async ensureStoreExists() {
-    // The underlying DixieController constructor chooses the store name by default.
-    // We create a new DixieController instance pointing to a "suppliers" store.
-    // However, dixieController is a singleton configured for 'backups'. So for
-    // suppliers we'll create a dedicated instance when needed.
-  }
+  // We don't keep a long-lived dixie instance here; create per-operation controllers
 
   private getController(): DixieController {
     // Create a new controller instance configured for suppliers object store
@@ -39,6 +27,16 @@ class SuppliersController {
       updatedAt: now,
     };
     const id = await ctrl.addEntry(entry);
+
+    // Try to sync Pinia store lazily
+    try {
+      const mod = await import('../stores/suppliersStore');
+      const store = mod.useSuppliersStore();
+      await store.loadAll();
+    } catch (e) {
+      /* ignore */
+    }
+
     return { ...(entry as any), id } as Supplier;
   }
 
@@ -50,19 +48,47 @@ class SuppliersController {
       updatedAt: Date.now(),
     };
     await ctrl.putEntry(entry);
+
+    try {
+      const mod = await import('../stores/suppliersStore');
+      const store = mod.useSuppliersStore();
+      await store.loadAll();
+    } catch (e) {
+      /* ignore */
+    }
+
     return entry;
   }
 
   async deleteSupplier(id: IDBValidKey) {
     const ctrl = this.getController();
     await ctrl.deleteBackup(id);
+
+    try {
+      const mod = await import('../stores/suppliersStore');
+      const store = mod.useSuppliersStore();
+      await store.loadAll();
+    } catch (e) {
+      /* ignore */
+    }
   }
 
   async listSuppliers() {
     const ctrl = this.getController();
     const all = (await ctrl.listBackups()) as Supplier[];
     // sort by createdAt descending
-    return (all || []).slice().sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    const sorted = (all || []).slice().sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+    // Try to sync Pinia store lazily
+    try {
+      const mod = await import('../stores/suppliersStore');
+      const store = mod.useSuppliersStore();
+      store.suppliers.splice(0, store.suppliers.length, ...sorted);
+    } catch (e) {
+      /* ignore */
+    }
+
+    return sorted;
   }
 }
 

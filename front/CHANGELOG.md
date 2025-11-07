@@ -1,5 +1,17 @@
 # Changelog
 
+## [v0.1.18] - 2025-11-07
+
+- Suppliers: Refactor SuppliersController to create a per-operation DixieController instead of holding a long-lived singleton. Simplify imports and instantiate dedicated controller instances for suppliers operations.
+- Suppliers: Add a Pinia suppliers store (useSuppliersStore) that provides reactive suppliers state and actions to load, create, update and delete suppliers. The controller now lazily synchronizes the store after add/update/delete/list operations to keep UI state in sync.
+
+**Files changed in this release**
+
+- `src/controllers/suppliersController.ts`
+- `src/stores/suppliersStore.ts`
+
+
+
 ## [v0.1.17] - 2025-11-06
 
 - Templates: Improve TemplatesView by adding suppliersSnapshot (preserve supplier names at save time), resolve supplier names more robustly when applying templates, and provide helpers to detect/remove deleted suppliers. Use ion-card for template preview and refine the apply-template UI to show supplier status (deleted/exists) and actions.
@@ -167,9 +179,9 @@
 - Adjust layout and responsive column sizing in `BudgetView` to improve spacing on medium and large screens.
 - Move and fix add/remove income button behavior and tidy the incomes section markup for clarity.
 - Add touch visual feedback for provider cards (temporary `.touch-active` class) and register/unregister pointer event handlers using a new `providersBodyRef` to improve mobile UX.
-- Introduce `onUnmounted` cleanup for the added listeners and several small accessibility/responsive CSS adjustments for provider cards (hover/focus/touch states).
+- Introduce onUnmounted cleanup for the added listeners and several small accessibility/responsive CSS adjustments for provider cards (hover/focus/touch states).
 
-**Files changed for this release**
+**Files changed in this release**
 
 - `src/views/BudgetView.vue`
 
@@ -181,7 +193,7 @@
 - Minor script updates: add `toggleVisited` helper and small template-friendly wrappers; reorganize some template markup and imports for clarity.
 - Minor CSS cleanup: add `.transparent` ion-item background variable to `src/theme/variables.css` and consolidate several style refinements.
 
-**Files changed for this release**
+**Files changed in this release**
 
 - `src/views/BudgetView.vue`
 - `src/theme/variables.css`
