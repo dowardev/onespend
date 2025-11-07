@@ -713,7 +713,7 @@ async function confirmDelete(params: { tmpl: TemplateSummary }) {
 
   // store only the id of the target to delete
   confirmTargetId.value = tmpl.id;
-  confirmMessage.value = `¿Eliminar template "${tmpl.name}"? Esta acción no se puede deshacer.`;
+  confirmMessage.value = `¿Eliminar template \"${tmpl.name}\"? Esta acción no se puede deshacer.`;
   showConfirm.value = true;
 }
 
