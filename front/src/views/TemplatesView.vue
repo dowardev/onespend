@@ -18,7 +18,7 @@
           <ion-label>Templates</ion-label>
         </ion-list-header>
 
-        <div v-if="templates.length" class="content">
+        <div v-if="templates.length" class="templates-content">
           <ion-item
             v-for="(tmpl, index) in templates"
             :key="tmpl.id ?? index"
@@ -102,7 +102,7 @@
               </ion-button>
             </ion-list-header>
 
-            <div class="content">
+            <div class="list-content">
               <ion-searchbar
                 v-model="supplierQuery"
                 debounce="300"
@@ -125,16 +125,23 @@
                 </ion-item>
               </ion-list>
 
-              <div style="margin-top:12px">
+              <div style="margin-top: 12px">
                 <ion-label>Seleccionados:</ion-label>
-                <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">
-                  <ion-chip
-                    v-for="id in form.supplierIds"
-                    :key="id"
-                    outline
-                  >
+                <div
+                  style="
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 6px;
+                    margin-top: 6px;
+                  "
+                >
+                  <ion-chip v-for="id in form.supplierIds" :key="id" outline>
                     <ion-label>{{ getSupplierNameById(id) }}</ion-label>
-                    <ion-button fill="clear" size="small" @click="removeSupplierId(id)">
+                    <ion-button
+                      fill="clear"
+                      size="small"
+                      @click="removeSupplierId(id)"
+                    >
                       <ion-icon :icon="closeOutline"></ion-icon>
                     </ion-button>
                   </ion-chip>
@@ -171,18 +178,87 @@
 
         <ion-content class="ion-padding">
           <div v-if="applyTargetTemplate">
-            <h2>{{ applyTargetTemplate.name }}</h2>
-            <p>{{ applyTargetTemplate.description }}</p>
+            <ion-card class="shadow1">
+              <ion-card-header>
+                <ion-card-title>{{ applyTargetTemplate.name }}</ion-card-title>
+              </ion-card-header>
+
+              <ion-card-content>
+                <ion-item class="transparent">
+                  <ion-label>Fecha</ion-label>
+
+                  <ion-datetime-button
+                    slot="end"
+                    datetime="datetime"
+                  ></ion-datetime-button>
+                </ion-item>
+
+                <ion-list class="transparent">
+                  <ion-list-header>
+                    <ion-label>Proveedores</ion-label>
+                  </ion-list-header>
+
+                  <div class="content">
+                    <!-- Si el template tiene IDs -->
+                    <template
+                      v-if="
+                        applyTargetTemplate.suppliers &&
+                        applyTargetTemplate.suppliers.length
+                      "
+                    >
+                      <ion-item
+                        v-for="(id, idx) in applyTargetTemplate.suppliers"
+                        :key="String(id) + '_' + idx"
+                        class="transparent"
+                        lines="full"
+                      >
+                        <ion-label>
+                          {{ supplierDisplayName(id) }}
+                        </ion-label>
+
+                        <template v-if="!supplierExists(id)">
+                          <ion-chip slot="end" color="danger">
+                            Eliminado
+                          </ion-chip>
+
+                          <ion-button
+                            slot="end"
+                            color="primary"
+                            fill="clear"
+                            @click="removeDeletedSupplier(id)"
+                          >
+                            <ion-icon :icon="closeOutline"> </ion-icon>
+                          </ion-button>
+                        </template>
+
+                        <ion-button
+                          v-if="supplierExists(id)"
+                          slot="end"
+                          fill="clear"
+                          color="danger"
+                        >
+                          Eliminar
+                        </ion-button>
+                      </ion-item>
+                    </template>
+
+                    <!-- Si el template solo tiene description -> mostrar parsed names -->
+                    <template v-else>
+                      <ion-item
+                        v-for="(name, idx) in parseProvidersFromDescription(
+                          applyTargetTemplate.description
+                        )"
+                        :key="idx"
+                        lines="none"
+                      >
+                        <ion-label>{{ name }}</ion-label>
+                      </ion-item>
+                    </template>
+                  </div>
+                </ion-list>
+              </ion-card-content>
+            </ion-card>
           </div>
-
-          <ion-item>
-            <ion-label>Fecha</ion-label>
-
-            <ion-datetime-button
-              slot="end"
-              datetime="datetime"
-            ></ion-datetime-button>
-          </ion-item>
         </ion-content>
       </ion-modal>
 
@@ -250,6 +326,11 @@ import {
   IonSearchbar,
   IonCheckbox,
   IonChip,
+  IonCard,
+  IonCardHeader,
+  IonCardTitle,
+  IonCardContent,
+  IonDatetimeButton,
 } from '@ionic/vue';
 import {
   createOutline,
@@ -258,7 +339,6 @@ import {
   trashOutline,
   saveOutline,
   checkmarkOutline,
-  closeOutline as closeIcon,
 } from 'ionicons/icons';
 import { reactive, ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
@@ -266,7 +346,9 @@ import { useRouter } from 'vue-router';
 // controllers
 import TemplateController from '../controllers/TempalteController';
 import backupController from '../controllers/backupController';
-import suppliersController, { Supplier } from '../controllers/suppliersController';
+import suppliersController, {
+  Supplier,
+} from '../controllers/suppliersController';
 // end controllers
 
 // interface
@@ -275,6 +357,7 @@ type TemplateSummary = {
   name: string;
   description?: string;
   suppliers?: IDBValidKey[];
+  suppliersSnapshot?: { id: IDBValidKey; name?: string }[];
 };
 // end interface
 
@@ -291,7 +374,7 @@ onMounted(() => {
 
 // vars
 const STORAGE_KEY = 'budget:selectedDate';
-const templates = reactive<TemplateSummary[]>([]);
+const templates = ref<TemplateSummary[]>([]);
 const showModal = ref(false);
 const showAlert = ref(false);
 const alertMessage = ref('');
@@ -351,9 +434,55 @@ function removeSupplierId(id: IDBValidKey) {
   if (idx !== -1) form.supplierIds.splice(idx, 1);
 }
 
-function getSupplierNameById(id: IDBValidKey) {
+function getSupplierNameById(id: IDBValidKey): string | null {
   const s = suppliers.find(x => x.id === id);
-  return s ? s.name : String(id);
+  return s ? s.name : null;
+}
+
+function supplierExists(id: IDBValidKey): boolean {
+  return suppliers.some(x => x.id === id);
+}
+
+function supplierDisplayName(id: IDBValidKey): string {
+  // Prefer current supplier name if it exists
+  const s = suppliers.find(x => x.id === id);
+  if (s && s.name) return s.name;
+
+  // Fallback to the suppliersSnapshot stored in the template being applied (if any)
+  const snapshotList = applyTargetTemplate.value?.suppliersSnapshot || [];
+  const snap = (snapshotList as { id: IDBValidKey; name?: string }[]).find(
+    ss => ss.id === id
+  );
+  if (snap && snap.name) return snap.name || String(id);
+
+  // Last resort: return the id as string
+  return String(id);
+}
+
+/**
+ * Remove a supplier that no longer exists from the template being applied.
+ * This will remove the id from applyTargetTemplate.suppliers (if present)
+ * and also remove any entry in suppliersSnapshot that matches the id.
+ */
+function removeDeletedSupplier(id: IDBValidKey) {
+  const tmpl = applyTargetTemplate.value;
+  if (!tmpl) return;
+
+  // Remove from suppliers array
+  if (Array.isArray(tmpl.suppliers)) {
+    const idx = tmpl.suppliers.indexOf(id);
+    if (idx !== -1) {
+      tmpl.suppliers.splice(idx, 1);
+    }
+  }
+
+  // Remove from suppliersSnapshot array
+  if (Array.isArray(tmpl.suppliersSnapshot)) {
+    const snapIdx = tmpl.suppliersSnapshot.findIndex(s => s.id === id);
+    if (snapIdx !== -1) {
+      tmpl.suppliersSnapshot.splice(snapIdx, 1);
+    }
+  }
 }
 
 function resetForm() {
@@ -368,16 +497,24 @@ async function editTemplate(params: { tmpl: TemplateSummary }) {
   if (!tmpl) return;
 
   // If template has supplier ids stored, use them. Otherwise try to parse names from description.
-  if (tmpl.suppliers && Array.isArray(tmpl.suppliers) && tmpl.suppliers.length) {
+  if (
+    tmpl.suppliers &&
+    Array.isArray(tmpl.suppliers) &&
+    tmpl.suppliers.length
+  ) {
     form.supplierIds.splice(0, form.supplierIds.length, ...tmpl.suppliers);
   } else {
     // parse names from description and try to match to suppliers by name
     const names = parseProvidersFromDescription(tmpl.description);
     const matchedIds = (names || [])
-      .map(n => suppliers.find(s => s.name === n))
-      .filter(Boolean)
-      .map(s => s!.id as IDBValidKey);
-    form.supplierIds.splice(0, form.supplierIds.length, ...(matchedIds.length ? matchedIds : []));
+      .map((n: string) => suppliers.find(s => s.name === n))
+      .filter((x): x is Supplier => !!x)
+      .map((s: Supplier) => s.id as IDBValidKey);
+    form.supplierIds.splice(
+      0,
+      form.supplierIds.length,
+      ...(matchedIds.length ? matchedIds : [])
+    );
   }
 
   // Fill name
@@ -400,8 +537,8 @@ async function submitTemplate() {
 
   // build description from selected supplier names for backward compatibility
   const selectedNames = form.supplierIds
-    .map(id => getSupplierNameById(id))
-    .filter(n => n && String(n).trim()) as string[];
+    .map((id: IDBValidKey) => getSupplierNameById(id))
+    .filter((n): n is string => !!(n && String(n).trim()));
 
   const description = selectedNames.length
     ? `Proveedores: ${selectedNames.join(', ')}`
@@ -412,6 +549,10 @@ async function submitTemplate() {
       name: form.name.trim(),
       description,
       suppliers: form.supplierIds.slice(),
+      suppliersSnapshot: form.supplierIds.map((id: IDBValidKey) => ({
+        id,
+        name: getSupplierNameById(id) || '',
+      })),
     };
 
     if (isEditMode.value && editingTemplateId.value) {
@@ -427,7 +568,9 @@ async function submitTemplate() {
     showModal.value = false;
 
     // show success toast
-    toast.message = isEditMode.value ? 'Template actualizado' : 'Template guardado';
+    toast.message = isEditMode.value
+      ? 'Template actualizado'
+      : 'Template guardado';
     toast.open = true;
   } catch (e) {
     console.error('submitTemplate error', e);
@@ -481,8 +624,22 @@ async function confirmApply() {
 
   // build proveedores from template suppliers (resolve names) if available
   let providerNames: string[] = [];
-  if (tmpl.suppliers && Array.isArray(tmpl.suppliers) && tmpl.suppliers.length) {
-    providerNames = tmpl.suppliers.map(id => getSupplierNameById(id));
+  if (
+    tmpl.suppliers &&
+    Array.isArray(tmpl.suppliers) &&
+    tmpl.suppliers.length
+  ) {
+    // Resolve names and skip any suppliers that no longer exist
+    const resolved: string[] = [];
+    for (const id of tmpl.suppliers as IDBValidKey[]) {
+      const n = getSupplierNameById(id);
+      if (n) {
+        resolved.push(n);
+      } else {
+        console.warn('confirmApply: supplier id missing, skipping', id);
+      }
+    }
+    providerNames = resolved;
   } else {
     providerNames = parseProvidersFromDescription(tmpl.description);
   }
@@ -589,14 +746,15 @@ function onConfirmDismiss() {
 async function loadTemplates() {
   try {
     const list = await TemplateController.listTemplates();
-    templates.splice(
+    templates.value.splice(
       0,
-      templates.length,
-      ...list.map(t => ({
+      templates.value.length,
+      ...list.map((t: any) => ({
         id: t.id || '',
         name: t.name,
         description: t.description,
         suppliers: (t as any).suppliers || [],
+        suppliersSnapshot: (t as any).suppliersSnapshot || [],
       }))
     );
   } catch (e) {
@@ -607,18 +765,18 @@ async function loadTemplates() {
 
 <style scoped>
 /* Hide action buttons by default on non-touch devices */
-.content ion-item.transparent ion-button[slot='end'] {
+.list-content ion-item.transparent ion-button[slot='end'] {
   display: none !important;
 }
 
 /* Show when hovering the ion-item */
-.content ion-item.transparent:hover ion-button[slot='end'] {
+.list-content ion-item.transparent:hover ion-button[slot='end'] {
   display: inline-flex !important;
 }
 
 /* On touch devices (no hover), show buttons always */
 @media (hover: none), (pointer: coarse) {
-  .content ion-item.transparent ion-button[slot='end'] {
+  .list-content ion-item.transparent ion-button[slot='end'] {
     display: inline-flex !important;
   }
 }

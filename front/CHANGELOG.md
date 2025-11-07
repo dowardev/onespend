@@ -1,5 +1,16 @@
 # Changelog
 
+## [v0.1.17] - 2025-11-06
+
+- Templates: Improve TemplatesView by adding suppliersSnapshot (preserve supplier names at save time), resolve supplier names more robustly when applying templates, and provide helpers to detect/remove deleted suppliers. Use ion-card for template preview and refine the apply-template UI to show supplier status (deleted/exists) and actions.
+- Styles: Update list styling and class names (use .list-content), make transparent ion-list background explicit, and adjust related CSS for hover/touch behavior.
+- Refactor: Switch templates container to a ref, tighten TypeScript typings for supplier mapping, reorganize imports (IonCard / IonDatetimeButton), and improve form/description generation to include supplier snapshots.
+
+**Files changed in this release**
+
+- `src/views/TemplatesView.vue`
+- `src/theme/variables.css`
+
 ## [v0.1.16] - 2025-11-04
 
 - Templates: Add supplier selection to TemplatesView. Replace free-text providers with a searchable suppliers list, multi-select checkboxes, and chips for selected suppliers. Add suppliersController usage to load supplier list, store supplier IDs on template save, and preserve backward compatibility by parsing supplier names from template descriptions when necessary. Update apply-template flow to prefer stored supplier IDs and resolve names when applying templates.
@@ -8,7 +19,6 @@
 
 - `src/views/TemplatesView.vue`
 - `src/controllers/suppliersController.ts`
-
 
 ## [v0.1.15] - 2025-11-04
 
