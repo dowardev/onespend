@@ -31,10 +31,10 @@ ion-item.transparent {
 
 /* ion list */
 ion-list.transparent {
-  --background: transparent;
+  background: transparent;
 }
 
-ion-list > div.content {
+ion-list > div.list-content {
   border: 1px solid var(--ion-background-color-step-300);
   border-radius: 4px;
   margin: 10px;
