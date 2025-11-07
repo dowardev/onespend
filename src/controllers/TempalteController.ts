@@ -1,4 +1,5 @@
 import dixieController, { DixieController } from './dixie';
+// import store lazily to avoid calling useTemplatesStore before Pinia is initialized
 
 export type TemplateRecord = {
   id?: number | string;
@@ -25,6 +26,7 @@ class TemplateController {
     };
 
     try {
+      let key: IDBValidKey;
       if (template && template.id) {
         // existing template -> update
         // keep id as numeric when possible
@@ -33,18 +35,30 @@ class TemplateController {
             ? Number(template.id)
             : template.id;
 
-        const key = await this.dixie.putEntry({
+        key = await this.dixie.putEntry({
           id: numericId,
           type: 'template',
           payload: entry,
         });
-        return key;
+      } else {
+        key = await this.dixie.addEntry({
+          type: 'template',
+          payload: entry,
+        });
       }
 
-      const key = await this.dixie.addEntry({
-        type: 'template',
-        payload: entry,
-      });
+      // After saving to DB, refresh the Pinia store (controller is the center)
+      try {
+        // Lazy-import the store so we don't call useTemplatesStore before Pinia is ready
+        const mod = await import('../stores/templatesStore');
+        const store = mod.useTemplatesStore();
+        // trigger a reload from the DB to ensure store is in sync
+        await this.listTemplates();
+      } catch (e) {
+        // If the store can't be used (e.g. before app init), ignore
+        // The DB still has the saved template.
+      }
+
       return key;
     } catch (e) {
       console.error('TemplateController.saveTemplate error', e);
@@ -69,8 +83,24 @@ class TemplateController {
               ? (x.payload as Record<string, unknown>)
               : {};
           return { ...(payload as Record<string, unknown>), id: String(x.id) };
-        });
-      return templates as TemplateRecord[];
+        }) as TemplateRecord[];
+
+      // Update Pinia store if available (lazy import to avoid using Pinia before init)
+      try {
+        const mod = await import('../stores/templatesStore');
+        const store = mod.useTemplatesStore();
+        store.templates.splice(0, store.templates.length, ...templates.map(t => ({
+          id: t.id || '',
+          name: t.name,
+          description: t.description,
+          suppliers: (t as any).suppliers || [],
+          suppliersSnapshot: (t as any).suppliersSnapshot || [],
+        })));
+      } catch (e) {
+        // ignore pinia errors (e.g. store not initialized yet)
+      }
+
+      return templates;
     } catch (e) {
       console.error('TemplateController.listTemplates error', e);
       return [] as TemplateRecord[];
@@ -88,6 +118,14 @@ class TemplateController {
         ')'
       );
       await this.dixie.deleteBackup(id);
+
+      // Refresh Pinia store
+      try {
+        await this.listTemplates();
+      } catch (e) {
+        /* noop */
+      }
+
       return true;
     } catch (e) {
       console.error('TemplateController.deleteTemplate error', e);
