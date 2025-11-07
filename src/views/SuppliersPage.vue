@@ -26,19 +26,11 @@
           </ion-label>
 
           <ion-buttons slot="end">
-            <ion-button
-              color="primary"
-              fill="clear"
-              @click="edit(s)"
-            >
+            <ion-button color="primary" fill="clear" @click="edit(s)">
               Editar
             </ion-button>
 
-            <ion-button
-              color="danger"
-              fill="clear"
-              @click="remove(s.id)"
-            >
+            <ion-button color="danger" fill="clear" @click="remove(s.id)">
               Eliminar
             </ion-button>
           </ion-buttons>
@@ -54,7 +46,9 @@
               </ion-button>
             </ion-buttons>
 
-            <ion-title>{{ selectedId ? 'Editar Proveedor' : 'Crear Proveedor' }}</ion-title>
+            <ion-title>{{
+              selectedId ? 'Editar Proveedor' : 'Crear Proveedor'
+            }}</ion-title>
 
             <ion-buttons slot="end">
               <ion-button @click="onSubmit">
@@ -92,11 +86,7 @@ import {
   IonModal,
 } from '@ionic/vue';
 import { useSuppliers } from '../stores/useSuppliers';
-import {
-  addOutline,
-  closeOutline,
-  saveOutline,
-} from 'ionicons/icons';
+import { addOutline, closeOutline, saveOutline } from 'ionicons/icons';
 
 const supplierStore = useSuppliers();
 const suppliers = supplierStore.suppliers;

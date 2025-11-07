@@ -1,3 +1,16 @@
+## [v0.1.19] - 2025-11-07
+
+- Templates: Reload suppliers when opening the template creation or edit modal so updated supplier names are reflected immediately in the UI. Added openNewTemplate() helper which reloads suppliers before opening the create modal, and call loadSuppliers() at the start of editTemplate() to refresh supplier names for edit flow.
+- Templates: Replace direct modal toggles with openNewTemplate() for the new-template button and minor code cleanups in TemplatesView.
+- Suppliers: Small formatting and import consolidation cleanup in SuppliersPage.vue.
+
+**Files changed in this release**
+
+- `src/views/TemplatesView.vue`
+- `src/views/SuppliersPage.vue`
+
+
+
 # Changelog
 
 ## [v0.1.18] - 2025-11-07
