@@ -1,11 +1,17 @@
 import { DixieController } from './dixie';
 
+export type Product = {
+  name: string;
+  price: number;
+};
+
 export type Supplier = {
   id?: IDBValidKey;
   name: string;
   contact?: string;
   phone?: string;
   email?: string;
+  products?: Product[];
   createdAt?: number;
   updatedAt?: number;
 };
@@ -21,11 +27,17 @@ class SuppliersController {
   async addSupplier(s: Omit<Supplier, 'id' | 'createdAt' | 'updatedAt'>) {
     const ctrl = this.getController();
     const now = Date.now();
+
+    // Ensure we are not passing Vue reactive Proxy objects to IndexedDB (structured clone fails on Proxy)
+    // Create a deep plain clone of the incoming object
+    const clean = JSON.parse(JSON.stringify(s)) as any;
+
     const entry: Supplier = {
-      ...s,
+      ...clean,
       createdAt: now,
       updatedAt: now,
     };
+
     const id = await ctrl.addEntry(entry);
 
     // Try to sync Pinia store lazily
@@ -43,10 +55,16 @@ class SuppliersController {
   async updateSupplier(s: Supplier) {
     if (s.id == null) throw new Error('Supplier must have id to be updated');
     const ctrl = this.getController();
+
+    // Ensure we don't send Vue reactive Proxy objects to IndexedDB
+    const clean = JSON.parse(JSON.stringify(s)) as Supplier;
+
     const entry: Supplier = {
-      ...s,
+      ...clean,
+      id: s.id,
       updatedAt: Date.now(),
     };
+
     await ctrl.putEntry(entry);
 
     try {
@@ -83,7 +101,7 @@ class SuppliersController {
     try {
       const mod = await import('../stores/suppliersStore');
       const store = mod.useSuppliersStore();
-      store.suppliers.splice(0, store.suppliers.length, ...sorted);
+      store.suppliers.splice(0, store.suppliers.length, ...(sorted as any));
     } catch (e) {
       /* ignore */
     }

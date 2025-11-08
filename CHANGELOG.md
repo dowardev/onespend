@@ -1,3 +1,19 @@
+## [v0.1.20] - 2025-11-08
+
+- Suppliers: Refactor persistence and add product management UI
+  - Controllers: Instantiate a per-operation DixieController for suppliers instead of keeping a long-lived instance.
+  - Controllers: Deep-clone incoming supplier payloads to avoid passing Vue Proxy objects to IndexedDB (structured-clone issues).
+  - Controllers: Add createdAt and updatedAt timestamps on create/update operations and sort supplier listings by createdAt descending.
+  - Controllers: Lazily synchronize the Pinia suppliers store after add/update/delete/list to keep UI state consistent.
+  - UI: SuppliersPage.vue: add product management inside the supplier modal (add/edit/remove products), product editing state, numeric price handling, and improved form reset/validation logic.
+
+**Files changed in this release**
+
+- `src/controllers/suppliersController.ts`
+- `src/views/SuppliersPage.vue`
+
+
+
 ## [v0.1.19] - 2025-11-07
 
 - Templates: Reload suppliers when opening the template creation or edit modal so updated supplier names are reflected immediately in the UI. Added openNewTemplate() helper which reloads suppliers before opening the create modal, and call loadSuppliers() at the start of editTemplate() to refresh supplier names for edit flow.
