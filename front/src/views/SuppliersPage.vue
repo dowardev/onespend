@@ -63,6 +63,71 @@
             <ion-label position="stacked">Nombre</ion-label>
             <ion-input v-model="form.name" required></ion-input>
           </ion-item>
+
+          <ion-item>
+            <ion-label position="stacked">Contacto</ion-label>
+            <ion-input v-model="form.contact"></ion-input>
+          </ion-item>
+
+          <ion-item>
+            <ion-label position="stacked">Teléfono</ion-label>
+            <ion-input v-model="form.phone"></ion-input>
+          </ion-item>
+
+          <ion-item>
+            <ion-label position="stacked">Email</ion-label>
+            <ion-input v-model="form.email"></ion-input>
+          </ion-item>
+
+          <ion-list>
+            <ion-list-header>
+              <ion-label>Productos</ion-label>
+            </ion-list-header>
+
+            <ion-item v-for="(p, idx) in form.products" :key="idx">
+              <template v-if="editingIndex !== idx">
+                <ion-label>
+                  <h3>{{ p.name }}</h3>
+                  <p v-if="p.price">Precio: {{ p.price }}</p>
+                </ion-label>
+
+                <ion-buttons slot="end">
+                  <ion-button fill="clear" @click="editProduct(idx)">
+                    Editar
+                  </ion-button>
+
+                  <ion-button fill="clear" color="danger" @click="removeProduct(idx)">
+                    <ion-icon :icon="trashOutline"></ion-icon>
+                  </ion-button>
+                </ion-buttons>
+              </template>
+
+              <template v-else>
+                <ion-label position="stacked">Nombre</ion-label>
+                <ion-input v-model="editProductCopy.name"></ion-input>
+
+                <ion-label position="stacked">Precio</ion-label>
+                <ion-input type="number" v-model.number="editProductCopy.price"></ion-input>
+
+                <ion-buttons slot="end">
+                  <ion-button @click="saveProduct(idx)">Guardar</ion-button>
+                  <ion-button color="medium" @click="cancelEditProduct">Cancelar</ion-button>
+                </ion-buttons>
+              </template>
+            </ion-item>
+
+            <ion-item>
+              <ion-label position="stacked">Producto - Nombre</ion-label>
+              <ion-input v-model="newProduct.name"></ion-input>
+            </ion-item>
+
+            <ion-item>
+              <ion-label position="stacked">Producto - Precio</ion-label>
+              <ion-input type="number" v-model.number="newProduct.price"></ion-input>
+            </ion-item>
+
+            <ion-button expand="full" @click="addProduct">Agregar producto</ion-button>
+          </ion-list>
         </ion-content>
       </ion-modal>
     </ion-content>
@@ -86,7 +151,7 @@ import {
   IonModal,
 } from '@ionic/vue';
 import { useSuppliers } from '../stores/useSuppliers';
-import { addOutline, closeOutline, saveOutline } from 'ionicons/icons';
+import { addOutline, closeOutline, saveOutline, trashOutline } from 'ionicons/icons';
 
 const supplierStore = useSuppliers();
 const suppliers = supplierStore.suppliers;
@@ -95,9 +160,16 @@ const createSupplier = supplierStore.createSupplier;
 const updateSupplier = supplierStore.updateSupplier;
 const deleteSupplier = supplierStore.deleteSupplier;
 
-const form = reactive({ name: '', contact: '', phone: '', email: '' });
+type Product = { name: string; price: number };
+
+const form = reactive({ name: '', contact: '', phone: '', email: '', products: [] as Product[] });
+const newProduct = reactive({ name: '', price: 0 });
 const showModal = ref(false);
 const selectedId = ref<any>(null);
+
+// editing state for products
+const editingIndex = ref<number | null>(null);
+const editProductCopy = reactive({ name: '', price: 0 });
 
 function openModal() {
   // abrir modal en modo creación
@@ -106,6 +178,13 @@ function openModal() {
   form.contact = '';
   form.phone = '';
   form.email = '';
+  form.products = [];
+  newProduct.name = '';
+  newProduct.price = 0;
+  // reset product editing state
+  editingIndex.value = null;
+  editProductCopy.name = '';
+  editProductCopy.price = 0;
   showModal.value = true;
 }
 
@@ -116,6 +195,13 @@ function edit(s: any) {
   form.contact = s.contact || '';
   form.phone = s.phone || '';
   form.email = s.email || '';
+  form.products = s.products ? JSON.parse(JSON.stringify(s.products)) : [];
+  newProduct.name = '';
+  newProduct.price = 0;
+  // reset product editing state
+  editingIndex.value = null;
+  editProductCopy.name = '';
+  editProductCopy.price = 0;
   showModal.value = true;
 }
 
@@ -127,6 +213,53 @@ function cancelModal() {
   form.contact = '';
   form.phone = '';
   form.email = '';
+  form.products = [];
+  newProduct.name = '';
+  newProduct.price = 0;
+  // reset product editing state
+  editingIndex.value = null;
+  editProductCopy.name = '';
+  editProductCopy.price = 0;
+}
+
+function addProduct() {
+  if (!newProduct.name) return;
+  form.products.push({ name: newProduct.name, price: Number(newProduct.price) });
+  newProduct.name = '';
+  newProduct.price = 0;
+}
+
+function removeProduct(idx: number) {
+  form.products.splice(idx, 1);
+  // if we were editing this product, cancel editing
+  if (editingIndex.value === idx) {
+    editingIndex.value = null;
+    editProductCopy.name = '';
+    editProductCopy.price = 0;
+  }
+}
+
+function editProduct(idx: number) {
+  const p = form.products[idx];
+  if (!p) return;
+  editingIndex.value = idx;
+  editProductCopy.name = p.name || '';
+  editProductCopy.price = Number(p.price) || 0;
+}
+
+function saveProduct(idx: number) {
+  if (editingIndex.value !== idx) return;
+  if (!editProductCopy.name) return;
+  form.products.splice(idx, 1, { name: editProductCopy.name, price: Number(editProductCopy.price) });
+  editingIndex.value = null;
+  editProductCopy.name = '';
+  editProductCopy.price = 0;
+}
+
+function cancelEditProduct() {
+  editingIndex.value = null;
+  editProductCopy.name = '';
+  editProductCopy.price = 0;
 }
 
 onMounted(() => {
@@ -141,6 +274,7 @@ async function onSubmit() {
     contact: form.contact || undefined,
     phone: form.phone || undefined,
     email: form.email || undefined,
+    products: form.products && form.products.length ? form.products : undefined,
   } as any;
 
   if (selectedId.value == null) {
