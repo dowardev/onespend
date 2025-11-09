@@ -163,6 +163,7 @@
                                 <ion-label class="tiny-label">Visita</ion-label>
                               </ion-item>
 
+                              <!-- button open products -->
                               <ion-button
                                 v-if="hasProductsFor(p)"
                                 fill="clear"
@@ -263,79 +264,21 @@
           </ion-item>
         </ion-content>
       </ion-popover>
+      <!-- end popover -->
 
       <!-- products modal -->
       <ion-modal
-        :is-open="popovers.products.open"
+        :is-open="modals.products.open"
         :keep-contents-mounted="true"
         @did-dismiss="onProductsModalDidDismiss"
       >
-        <ion-header>
-          <ion-toolbar>
-            <ion-title>{{ popovers.products.title }}</ion-title>
-            <ion-buttons slot="end">
-              <ion-button
-                fill="clear"
-                size="small"
-                @click="onProductsModalDidDismiss"
-                >Cerrar</ion-button
-              >
-            </ion-buttons>
-          </ion-toolbar>
-        </ion-header>
-        <ion-content>
-          <ion-list
-            v-if="
-              popovers.products.products && popovers.products.products.length
-            "
-          >
-            <ion-item
-              v-for="(prod, idx) in popovers.products.products"
-              :key="prod.id ?? idx"
-            >
-              <ion-label>
-                <h3>
-                  {{
-                    prod.name || prod.productName || prod.title || 'Producto'
-                  }}
-                </h3>
-                <p v-if="prod.price || prod.amount">
-                  {{
-                    formatCurrency({
-                      v: Number(prod.price || prod.amount || 0),
-                    })
-                  }}
-                </p>
-              </ion-label>
-
-              <ion-input
-                slot="end"
-                v-model.number="popovers.products.quantities[prod.id ?? idx]"
-                type="number"
-                class="num-input small"
-                placeholder="Cantidad"
-              ></ion-input>
-            </ion-item>
-          </ion-list>
-
-          <div v-else class="ion-padding">No hay productos</div>
-        </ion-content>
-
-        <ion-footer>
-          <ion-toolbar>
-            <ion-buttons slot="end">
-              <ion-button
-                fill="clear"
-                size="small"
-                @click="onProductsModalDidDismiss"
-                >Cancelar</ion-button
-              >
-              <ion-button color="primary" @click="saveProductsModal"
-                >Guardar</ion-button
-              >
-            </ion-buttons>
-          </ion-toolbar>
-        </ion-footer>
+        <ProductsModalComponent
+          :products="modals.products.products"
+          :quantities="modals.products.quantities"
+          :title="modals.products.title"
+          @save="payload => handleProductsModalSave(payload)"
+          @dismiss="onProductsModalDidDismiss"
+        />
       </ion-modal>
       <!-- end modal -->
     </ion-content>
@@ -406,11 +349,16 @@ type FocusableRef =
     };
 
 // Controllers
-import dixieController from '../controllers/dixie';
-import backupController from '../controllers/backupController';
-import suppliersController from '../controllers/suppliersController';
+import dixieController from '@/controllers/dixie';
+import backupController from '@/controllers/backupController';
+import suppliersController from '@/controllers/suppliersController';
+// end components
 
-// State
+// components
+import ProductsModalComponent from './modals/PoductsModalComponent.vue';
+// end components
+
+// vars
 const ingresos = reactive([
   {
     id: Date.now() + Math.random(),
@@ -469,21 +417,23 @@ const selectedDate = ref(new Date().toISOString());
 const route = useRoute();
 const popovers = reactive({
   date: { open: false, event: null as unknown },
+});
+const modals = reactive({
   products: {
     open: false,
     event: null as unknown,
     products: [] as any[],
-    // quantities per product id (or index) while modal is open
     quantities: {} as Record<string | number, number>,
-    // id of provider for which the modal is open (used when saving quantities)
     providerId: null as string | number | null,
     title: '' as string,
   },
 });
+
 const providersBodyRef = ref<HTMLElement | null>(null);
 
 // Map of supplier name -> products loaded from suppliers DB
 const suppliersProducts = reactive({} as Record<string, any[]>);
+// end vars
 
 // Lifecycle
 onMounted(() => {
@@ -527,7 +477,7 @@ watch(
   newSelectedDate => {
     try {
       localStorage.setItem(STORAGE_KEY, newSelectedDate);
-    } catch (error) {
+    } catch (_e) {
       /* noop */
     }
     loadDataForDate(newSelectedDate);
@@ -550,7 +500,7 @@ watch(
       })(route.query.date as string | undefined);
       if (parsedDateFromRouteISO) selectedDate.value = parsedDateFromRouteISO;
       loadDataForDate(selectedDate.value);
-    } catch (error) {
+    } catch (_e) {
       /* noop */
     }
   },
@@ -756,7 +706,7 @@ function addBlankProvider() {
       } else if (hasFocusMethod(el)) {
         el.focus();
       }
-    } catch (e) {
+    } catch (_e) {
       /* noop */
     }
   });
@@ -812,7 +762,7 @@ function debounce<T extends (...args: any[]) => any>(fn: T, wait = 800) {
       t = null;
       try {
         fn(...args);
-      } catch (e) {
+      } catch (_e) {
         /* noop */
       }
     }, wait);
@@ -908,7 +858,7 @@ function onPopoverDidDismiss() {
 function resetToToday() {
   try {
     selectedDate.value = new Date().toISOString();
-  } catch (e) {
+  } catch (_e) {
     /* noop */
   }
 }
@@ -921,7 +871,7 @@ function handlePointerDown(e: PointerEvent | TouchEvent) {
     if (card) {
       card.classList.add('touch-active');
     }
-  } catch (err) {
+  } catch (_e) {
     /* noop */
   }
 }
@@ -935,7 +885,7 @@ function handlePointerUp(e: PointerEvent | TouchEvent) {
       // remove after a short delay so the user sees the feedback
       setTimeout(() => card.classList.remove('touch-active'), 250);
     }
-  } catch (err) {
+  } catch (_e) {
     /* noop */
   }
 }
@@ -950,7 +900,7 @@ function normalizeName(name: string | undefined | null) {
       .normalize('NFD')
       .replace(/\p{Diacritic}/gu, '')
       .replace(/\s+/g, ' ');
-  } catch (e) {
+  } catch (_e) {
     return String(name).trim().toLowerCase();
   }
 }
@@ -965,7 +915,7 @@ async function loadSuppliersProducts() {
       try {
         const res = await (suppliersController as any).listSuppliers();
         if (Array.isArray(res)) suppliersList = res;
-      } catch (e) {
+      } catch (_e) {
         // ignore and try fallback below
       }
     }
@@ -982,7 +932,7 @@ async function loadSuppliersProducts() {
               suppliersList = res;
               break;
             }
-          } catch (e) {
+          } catch (_e) {
             // ignore and try next
           }
         }
@@ -1016,7 +966,7 @@ function hasProductsFor(p: any) {
   try {
     const key = normalizeName(p?.name || '');
     return !!(key && suppliersProducts[key] && suppliersProducts[key].length);
-  } catch (e) {
+  } catch (_e) {
     return false;
   }
 }
@@ -1025,19 +975,19 @@ async function openProductsPopover(params: { provider: any; event: any }) {
   const { provider, event } = params;
   try {
     // Save the event and provider id so the modal knows which provider we're editing
-    popovers.products.event = event;
-    popovers.products.providerId = provider?.id ?? null;
-    popovers.products.title = provider?.name || '';
+    modals.products.event = event;
+    modals.products.providerId = provider?.id ?? null;
+    modals.products.title = provider?.name || '';
     // Load products for provider
     const prods = suppliersProducts[normalizeName(provider?.name || '')] || [];
-    popovers.products.products = prods;
+    modals.products.products = prods;
 
     // Initialize quantities map for the currently shown products (keep existing values if present)
     for (let idx = 0; idx < prods.length; idx++) {
       const prod = prods[idx];
       const key = prod?.id ?? idx;
-      if (popovers.products.quantities[key] === undefined) {
-        popovers.products.quantities[key] = 0;
+      if (modals.products.quantities[key] === undefined) {
+        modals.products.quantities[key] = 0;
       }
     }
 
@@ -1065,43 +1015,51 @@ async function openProductsPopover(params: { provider: any; event: any }) {
           const prod = prods[idx];
           const key = prod?.id ?? idx;
           if (savedQuantities[key] !== undefined) {
-            popovers.products.quantities[key] = Number(
-              savedQuantities[key] || 0
-            );
+            modals.products.quantities[key] = Number(savedQuantities[key] || 0);
           }
         }
       }
-    } catch (e) {
+    } catch (_e) {
       /* ignore preload errors */
     }
 
-    setTimeout(() => (popovers.products.open = true), 50);
+    setTimeout(() => (modals.products.open = true), 50);
   } catch (err) {
     console.error('openProductsPopover error:', err);
   }
 }
 
-function onProductsPopoverDidDismiss() {
-  popovers.products.open = false;
-  popovers.products.event = null;
-  popovers.products.products = [];
-  popovers.products.title = '';
-}
-
 // Modal dismiss handler (kept separate to make intent explicit and satisfy template bindings)
 function onProductsModalDidDismiss() {
-  popovers.products.open = false;
-  popovers.products.event = null;
-  popovers.products.products = [];
-  popovers.products.quantities = {};
-  popovers.products.title = '';
+  modals.products.open = false;
+  modals.products.event = null;
+  modals.products.products = [];
+  modals.products.quantities = {};
+  modals.products.title = '';
+}
+
+// Handler called from the ProductsModalComponent's @save event. Receives the quantities payload
+// and applies them to the modal state, then delegates to saveProductsModal to compute and persist.
+async function handleProductsModalSave(payload: {
+  quantities: Record<string | number, number>;
+}) {
+  try {
+    // Merge/replace modal quantities with the ones received from the modal component
+    modals.products.quantities = {
+      ...(payload && payload.quantities ? payload.quantities : {}),
+    } as Record<string | number, number>;
+    // Let the existing save logic compute totals, assign provider estimated and persist selections
+    await saveProductsModal();
+  } catch (err) {
+    console.error('handleProductsModalSave error:', err);
+  }
 }
 
 // Save handler for the products modal: compute total (price * quantity) and assign it to the provider's estimated value.
 async function saveProductsModal() {
   try {
-    const quantities = popovers.products.quantities || {};
-    const prods = popovers.products.products || [];
+    const quantities = modals.products.quantities || {};
+    const prods = modals.products.products || [];
     let totalEstimate = 0;
 
     // Calculate total by iterating the displayed products and using the key used for quantities
@@ -1116,7 +1074,7 @@ async function saveProductsModal() {
     }
 
     // Assign the computed estimate to the provider's estimated field (if providerId present)
-    const pid = popovers.products.providerId;
+    const pid = modals.products.providerId;
     if (pid != null) {
       const prov = proveedores.find((p: any) => p.id === pid);
       if (prov) {
@@ -1155,12 +1113,12 @@ async function saveProductsModal() {
     console.error('saveProductsModal error:', err);
   } finally {
     // Close and clear modal state
-    popovers.products.open = false;
-    popovers.products.event = null;
-    popovers.products.products = [];
-    popovers.products.quantities = {};
-    popovers.products.providerId = null;
-    popovers.products.title = '';
+    modals.products.open = false;
+    modals.products.event = null;
+    modals.products.products = [];
+    modals.products.quantities = {};
+    modals.products.providerId = null;
+    modals.products.title = '';
   }
 }
 

@@ -1,3 +1,16 @@
+## [v0.1.22] - 2025-11-09
+
+- Budget: Move BudgetView into a sub-folder and extract a reusable Products modal component
+  - UI: Extract products modal into ProductsModalComponent and wire it into BudgetView, replacing the previous popover/modal inline implementation.
+  - Data: Switch BudgetView to use a `modals.products` reactive structure and pass products/quantities/title to the new component; provide a handler to receive saved quantities and apply them back to provider estimates.
+  - Files: Add `src/views/budget/modals/PoductsModalComponent.vue` and move `BudgetView.vue` into `src/views/budget/` while updating imports and cleanup variable names.
+
+**Files changed in this release**
+
+- `src/views/budget/BudgetView.vue`
+- `src/views/budget/modals/PoductsModalComponent.vue`
+
+
 ## [v0.1.21] - 2025-11-09
 
 - Budget: Add products modal and product-quantity selection per provider/date
