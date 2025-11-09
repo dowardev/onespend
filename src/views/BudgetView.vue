@@ -164,6 +164,22 @@
                               </ion-item>
 
                               <ion-button
+                                v-if="hasProductsFor(p)"
+                                fill="clear"
+                                size="small"
+                                title="Ver productos"
+                                class="icon-btn"
+                                @click.stop="
+                                  openProductsPopover({
+                                    provider: p,
+                                    event: $event,
+                                  })
+                                "
+                              >
+                                <ion-icon :icon="listOutline"></ion-icon>
+                              </ion-button>
+
+                              <ion-button
                                 fill="clear"
                                 size="small"
                                 title="Eliminar proveedor"
@@ -247,7 +263,81 @@
           </ion-item>
         </ion-content>
       </ion-popover>
-      <!-- end popover -->
+
+      <!-- products modal -->
+      <ion-modal
+        :is-open="popovers.products.open"
+        :keep-contents-mounted="true"
+        @did-dismiss="onProductsModalDidDismiss"
+      >
+        <ion-header>
+          <ion-toolbar>
+            <ion-title>{{ popovers.products.title }}</ion-title>
+            <ion-buttons slot="end">
+              <ion-button
+                fill="clear"
+                size="small"
+                @click="onProductsModalDidDismiss"
+                >Cerrar</ion-button
+              >
+            </ion-buttons>
+          </ion-toolbar>
+        </ion-header>
+        <ion-content>
+          <ion-list
+            v-if="
+              popovers.products.products && popovers.products.products.length
+            "
+          >
+            <ion-item
+              v-for="(prod, idx) in popovers.products.products"
+              :key="prod.id ?? idx"
+            >
+              <ion-label>
+                <h3>
+                  {{
+                    prod.name || prod.productName || prod.title || 'Producto'
+                  }}
+                </h3>
+                <p v-if="prod.price || prod.amount">
+                  {{
+                    formatCurrency({
+                      v: Number(prod.price || prod.amount || 0),
+                    })
+                  }}
+                </p>
+              </ion-label>
+
+              <ion-input
+                slot="end"
+                v-model.number="popovers.products.quantities[prod.id ?? idx]"
+                type="number"
+                class="num-input small"
+                placeholder="Cantidad"
+              ></ion-input>
+            </ion-item>
+          </ion-list>
+
+          <div v-else class="ion-padding">No hay productos</div>
+        </ion-content>
+
+        <ion-footer>
+          <ion-toolbar>
+            <ion-buttons slot="end">
+              <ion-button
+                fill="clear"
+                size="small"
+                @click="onProductsModalDidDismiss"
+                >Cancelar</ion-button
+              >
+              <ion-button color="primary" @click="saveProductsModal"
+                >Guardar</ion-button
+              >
+            </ion-buttons>
+          </ion-toolbar>
+        </ion-footer>
+      </ion-modal>
+      <!-- end modal -->
     </ion-content>
   </ion-page>
 </template>
@@ -290,7 +380,12 @@ import {
   watch,
   ComponentPublicInstance,
 } from 'vue';
-import { addOutline, calendarOutline, trashOutline } from 'ionicons/icons';
+import {
+  addOutline,
+  calendarOutline,
+  trashOutline,
+  listOutline,
+} from 'ionicons/icons';
 import { useRoute } from 'vue-router';
 
 // interface
@@ -313,6 +408,7 @@ type FocusableRef =
 // Controllers
 import dixieController from '../controllers/dixie';
 import backupController from '../controllers/backupController';
+import suppliersController from '../controllers/suppliersController';
 
 // State
 const ingresos = reactive([
@@ -373,8 +469,21 @@ const selectedDate = ref(new Date().toISOString());
 const route = useRoute();
 const popovers = reactive({
   date: { open: false, event: null as unknown },
+  products: {
+    open: false,
+    event: null as unknown,
+    products: [] as any[],
+    // quantities per product id (or index) while modal is open
+    quantities: {} as Record<string | number, number>,
+    // id of provider for which the modal is open (used when saving quantities)
+    providerId: null as string | number | null,
+    title: '' as string,
+  },
 });
 const providersBodyRef = ref<HTMLElement | null>(null);
+
+// Map of supplier name -> products loaded from suppliers DB
+const suppliersProducts = reactive({} as Record<string, any[]>);
 
 // Lifecycle
 onMounted(() => {
@@ -384,6 +493,8 @@ onMounted(() => {
   }
   // load data for the selected date
   loadDataForDate(selectedDate.value);
+  // load suppliers/products map used to decide if a provider has products
+  void loadSuppliersProducts();
   // keep references to avoid unused warnings
   void addIngreso;
   void onIngresoIonInput;
@@ -826,6 +937,230 @@ function handlePointerUp(e: PointerEvent | TouchEvent) {
     }
   } catch (err) {
     /* noop */
+  }
+}
+
+function normalizeName(name: string | undefined | null) {
+  if (!name) return '';
+  try {
+    // trim, lowercase and remove common diacritics for more robust matching
+    return String(name)
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/\p{Diacritic}/gu, '')
+      .replace(/\s+/g, ' ');
+  } catch (e) {
+    return String(name).trim().toLowerCase();
+  }
+}
+
+// Load suppliers products map by loading suppliers and using their products[] field
+async function loadSuppliersProducts() {
+  try {
+    // Prefer the explicit listSuppliers method which returns suppliers with products
+    let suppliersList: any[] | null = null;
+
+    if (typeof (suppliersController as any).listSuppliers === 'function') {
+      try {
+        const res = await (suppliersController as any).listSuppliers();
+        if (Array.isArray(res)) suppliersList = res;
+      } catch (e) {
+        // ignore and try fallback below
+      }
+    }
+
+    // Fallback: try a few other method names that may return suppliers
+    if (!Array.isArray(suppliersList)) {
+      const candidates = ['list', 'listAll', 'getAll', 'getSuppliers'];
+      for (const name of candidates) {
+        const fn = (suppliersController as any)[name];
+        if (typeof fn === 'function') {
+          try {
+            const res = await fn();
+            if (Array.isArray(res)) {
+              suppliersList = res;
+              break;
+            }
+          } catch (e) {
+            // ignore and try next
+          }
+        }
+      }
+    }
+
+    if (!Array.isArray(suppliersList)) {
+      // Nothing we can do; bail out gracefully
+      return;
+    }
+
+    // Clear existing map
+    for (const k of Object.keys(suppliersProducts)) delete suppliersProducts[k];
+
+    // Build a map of normalized supplier name -> products[] (if present)
+    for (const s of suppliersList) {
+      const rawName = s?.name || s?.provider || s?.supplierName || '';
+      if (!rawName) continue;
+      const key = normalizeName(rawName);
+      if (!key) continue;
+      suppliersProducts[key] = Array.isArray(s.products)
+        ? s.products.slice()
+        : [];
+    }
+  } catch (err) {
+    console.error('loadSuppliersProducts error:', err);
+  }
+}
+
+function hasProductsFor(p: any) {
+  try {
+    const key = normalizeName(p?.name || '');
+    return !!(key && suppliersProducts[key] && suppliersProducts[key].length);
+  } catch (e) {
+    return false;
+  }
+}
+
+async function openProductsPopover(params: { provider: any; event: any }) {
+  const { provider, event } = params;
+  try {
+    // Save the event and provider id so the modal knows which provider we're editing
+    popovers.products.event = event;
+    popovers.products.providerId = provider?.id ?? null;
+    popovers.products.title = provider?.name || '';
+    // Load products for provider
+    const prods = suppliersProducts[normalizeName(provider?.name || '')] || [];
+    popovers.products.products = prods;
+
+    // Initialize quantities map for the currently shown products (keep existing values if present)
+    for (let idx = 0; idx < prods.length; idx++) {
+      const prod = prods[idx];
+      const key = prod?.id ?? idx;
+      if (popovers.products.quantities[key] === undefined) {
+        popovers.products.quantities[key] = 0;
+      }
+    }
+
+    // Try to preload previously saved quantities for this provider+date
+    try {
+      const all = (await dixieController.listBackups()) as any[];
+      const target = (selectedDate.value || '').slice(0, 10);
+      const matches = (all || [])
+        .filter(
+          b =>
+            b &&
+            b.component === 'BudgetProducts' &&
+            b.data &&
+            b.data.selectedDate &&
+            (b.data.selectedDate as string).slice(0, 10) === target &&
+            b.data.providerId === provider?.id
+        )
+        .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      if (matches.length) {
+        const latest = matches[0];
+        const savedQuantities =
+          (latest.data && (latest.data.quantities || {})) || {};
+        // Assign saved quantities for keys present in current product list
+        for (let idx = 0; idx < prods.length; idx++) {
+          const prod = prods[idx];
+          const key = prod?.id ?? idx;
+          if (savedQuantities[key] !== undefined) {
+            popovers.products.quantities[key] = Number(
+              savedQuantities[key] || 0
+            );
+          }
+        }
+      }
+    } catch (e) {
+      /* ignore preload errors */
+    }
+
+    setTimeout(() => (popovers.products.open = true), 50);
+  } catch (err) {
+    console.error('openProductsPopover error:', err);
+  }
+}
+
+function onProductsPopoverDidDismiss() {
+  popovers.products.open = false;
+  popovers.products.event = null;
+  popovers.products.products = [];
+  popovers.products.title = '';
+}
+
+// Modal dismiss handler (kept separate to make intent explicit and satisfy template bindings)
+function onProductsModalDidDismiss() {
+  popovers.products.open = false;
+  popovers.products.event = null;
+  popovers.products.products = [];
+  popovers.products.quantities = {};
+  popovers.products.title = '';
+}
+
+// Save handler for the products modal: compute total (price * quantity) and assign it to the provider's estimated value.
+async function saveProductsModal() {
+  try {
+    const quantities = popovers.products.quantities || {};
+    const prods = popovers.products.products || [];
+    let totalEstimate = 0;
+
+    // Calculate total by iterating the displayed products and using the key used for quantities
+    for (let idx = 0; idx < prods.length; idx++) {
+      const prod = prods[idx];
+      const key = prod?.id ?? idx;
+      const q = Number(quantities[key] || 0);
+      const price = Number(prod?.price ?? prod?.amount ?? 0) || 0;
+      if (q > 0 && price > 0) {
+        totalEstimate += price * q;
+      }
+    }
+
+    // Assign the computed estimate to the provider's estimated field (if providerId present)
+    const pid = popovers.products.providerId;
+    if (pid != null) {
+      const prov = proveedores.find((p: any) => p.id === pid);
+      if (prov) {
+        prov.estimated = Number(totalEstimate) || 0;
+        console.log(
+          'saveProductsModal: set provider estimated',
+          pid,
+          prov.estimated
+        );
+      } else {
+        console.warn('saveProductsModal: provider not found', pid);
+      }
+    } else {
+      console.warn('saveProductsModal: no providerId set');
+    }
+
+    // Persist the quantities selection to the database so they can be reloaded for the same date
+    try {
+      // Build a clean payload to store: component to identify, data with providerId, selectedDate and quantities
+      const payloadToSave = {
+        component: 'BudgetProducts',
+        data: {
+          providerId: pid,
+          selectedDate: selectedDate.value,
+          quantities: JSON.parse(JSON.stringify(quantities)),
+        },
+        createdAt: Date.now(),
+      };
+      // Use dixieController with the default store (backups) to store product selections
+      const id = await dixieController.addEntry(payloadToSave);
+      console.log('saveProductsModal: saved products selection id=', id);
+    } catch (e) {
+      console.error('saveProductsModal: error saving products selection', e);
+    }
+  } catch (err) {
+    console.error('saveProductsModal error:', err);
+  } finally {
+    // Close and clear modal state
+    popovers.products.open = false;
+    popovers.products.event = null;
+    popovers.products.products = [];
+    popovers.products.quantities = {};
+    popovers.products.providerId = null;
+    popovers.products.title = '';
   }
 }
 
