@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory } from '@ionic/vue-router';
 import { RouteRecordRaw } from 'vue-router';
 import HomePage from '../views/HomePage.vue';
-import BudgetView from '../views/BudgetView.vue';
+import BudgetView from '../views/budget/BudgetView.vue';
 import TemplatesView from '../views/TemplatesView.vue';
 import SuppliersPage from '../views/SuppliersPage.vue';
 
