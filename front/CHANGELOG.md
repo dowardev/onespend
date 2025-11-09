@@ -1,3 +1,15 @@
+## [v0.1.21] - 2025-11-09
+
+- Budget: Add products modal and product-quantity selection per provider/date
+  - UI: Add a products modal in BudgetView to show supplier products, allow entering quantities per product, and compute a provider estimate from price * quantity.
+  - Data: Load suppliers' products into a suppliersProducts map (normalized by name) and provide helpers to detect providers that have products.
+  - Persistence: Save selected product quantities per provider and selected date so selections can be reloaded when opening the modal for the same provider/date.
+
+**Files changed in this release**
+
+- `src/views/BudgetView.vue`
+
+
 ## [v0.1.20] - 2025-11-08
 
 - Suppliers: Refactor persistence and add product management UI
