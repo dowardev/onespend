@@ -30,7 +30,7 @@
               Editar
             </ion-button>
 
-            <ion-button color="danger" fill="clear" @click="remove(s.id)">
+            <ion-button color="danger" fill="clear" @click.stop="confirmRemoveSupplier(s.id, s.name)">
               Eliminar
             </ion-button>
           </ion-buttons>
@@ -130,6 +130,14 @@
           </ion-list>
         </ion-content>
       </ion-modal>
+
+      <!-- Alert para confirmar eliminación -->
+      <ion-alert
+        :is-open="deleteConfirmSupplier.open"
+        :message="`¿Eliminar proveedor ${deleteConfirmSupplier.supplierName}?`"
+        :buttons="getAlertButtonsSupplier()"
+        @did-dismiss="onDeleteAlertDidDismissSupplier"
+      ></ion-alert>
     </ion-content>
   </ion-page>
 </template>
@@ -149,6 +157,7 @@ import {
   IonList,
   IonListHeader,
   IonModal,
+  IonAlert,
 } from '@ionic/vue';
 import { useSuppliers } from '../stores/useSuppliers';
 import { addOutline, closeOutline, saveOutline, trashOutline } from 'ionicons/icons';
@@ -166,6 +175,13 @@ const form = reactive({ name: '', contact: '', phone: '', email: '', products: [
 const newProduct = reactive({ name: '', price: 0 });
 const showModal = ref(false);
 const selectedId = ref<any>(null);
+
+// State used to ask for confirmation before removing a supplier
+const deleteConfirmSupplier = reactive({
+  open: false,
+  supplierId: null as string | number | null,
+  supplierName: '' as string,
+});
 
 // editing state for products
 const editingIndex = ref<number | null>(null);
@@ -260,6 +276,49 @@ function cancelEditProduct() {
   editingIndex.value = null;
   editProductCopy.name = '';
   editProductCopy.price = 0;
+}
+
+// Confirmation flow for deleting a supplier
+function confirmRemoveSupplier(id: string | number | null | undefined, name?: string) {
+  deleteConfirmSupplier.open = true;
+  deleteConfirmSupplier.supplierId = id ?? null;
+  deleteConfirmSupplier.supplierName = name ?? '';
+}
+
+function getAlertButtonsSupplier() {
+  return [
+    {
+      text: 'Cancelar',
+      role: 'cancel',
+      handler: () => {
+        // alert will close
+      },
+    },
+    {
+      text: 'Eliminar',
+      role: 'destructive',
+      handler: () => {
+        void removeSupplierConfirmed();
+      },
+    },
+  ];
+}
+
+async function removeSupplierConfirmed() {
+  const id = deleteConfirmSupplier.supplierId;
+  // close alert and reset
+  deleteConfirmSupplier.open = false;
+  deleteConfirmSupplier.supplierId = null;
+  deleteConfirmSupplier.supplierName = '';
+
+  if (id == null) return;
+  await remove(id as any);
+}
+
+function onDeleteAlertDidDismissSupplier() {
+  deleteConfirmSupplier.open = false;
+  deleteConfirmSupplier.supplierId = null;
+  deleteConfirmSupplier.supplierName = '';
 }
 
 onMounted(() => {

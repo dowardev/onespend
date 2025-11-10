@@ -185,7 +185,7 @@
                                 size="small"
                                 title="Eliminar proveedor"
                                 class="icon-btn"
-                                @click.stop="removeProveedor(p.id)"
+                                @click.stop="confirmRemoveProveedor(p.id, p.name)"
                               >
                                 <ion-icon :icon="trashOutline"></ion-icon>
                               </ion-button>
@@ -266,6 +266,16 @@
       </ion-popover>
       <!-- end popover -->
 
+      <!-- confirmation alert -->
+      <ion-alert
+        :is-open="deleteConfirm.open"
+        header="Confirmar eliminación"
+        :message="`¿Eliminar proveedor «${deleteConfirm.providerName}»? Esta acción no se puede deshacer.`"
+        :buttons="getAlertButtons()"
+        @did-dismiss="onDeleteAlertDidDismiss"
+      ></ion-alert>
+      <!-- end confirmation alert -->
+
       <!-- products modal -->
       <ion-modal
         :is-open="modals.products.open"
@@ -311,6 +321,7 @@ import {
   IonCheckbox,
   IonButton,
   IonDatetime,
+  IonAlert,
   IonPopover,
 } from '@ionic/vue';
 import {
@@ -427,6 +438,13 @@ const modals = reactive({
     providerId: null as string | number | null,
     title: '' as string,
   },
+});
+
+// State used to ask for confirmation before removing a provider
+const deleteConfirm = reactive({
+  open: false,
+  providerId: null as string | number | null,
+  providerName: '' as string,
 });
 
 const providersBodyRef = ref<HTMLElement | null>(null);
@@ -604,6 +622,76 @@ async function removeProveedor(id: string | number) {
         e
       );
     }
+  }
+}
+
+// Show confirmation alert before actually removing a provider
+function confirmRemoveProveedor(id: string | number, name?: string) {
+  try {
+    deleteConfirm.providerId = id;
+    deleteConfirm.providerName = name || '';
+    deleteConfirm.open = true;
+  } catch (_e) {
+    /* noop */
+  }
+}
+
+// Called when the user confirms deletion in the alert
+async function removeProveedorConfirmed() {
+  try {
+    const pid = deleteConfirm.providerId;
+    // close the alert immediately
+    deleteConfirm.open = false;
+    // perform removal if we have an id
+    if (pid != null) {
+      await removeProveedor(pid);
+    }
+  } catch (e) {
+    console.error('removeProveedorConfirmed error:', e);
+  } finally {
+    // reset state
+    deleteConfirm.providerId = null;
+    deleteConfirm.providerName = '';
+    deleteConfirm.open = false;
+  }
+}
+
+// Helper to provide the alert buttons expected by IonAlert
+function getAlertButtons() {
+  return [
+    {
+      text: 'Cancelar',
+      role: 'cancel',
+      cssClass: 'secondary',
+      handler: () => {
+        // simply close the alert and clear selection
+        deleteConfirm.open = false;
+        deleteConfirm.providerId = null;
+        deleteConfirm.providerName = '';
+      },
+    },
+    {
+      text: 'Eliminar',
+      cssClass: 'danger',
+      handler: () => {
+        // call the confirmed removal flow
+        // Note: IonAlert will dismiss the dialog before handler runs in many platforms,
+        // so we don't rely on the did-dismiss event to perform the action.
+        void removeProveedorConfirmed();
+      },
+    },
+  ];
+}
+
+// Handler for the alert did-dismiss event to ensure state is clean
+function onDeleteAlertDidDismiss() {
+  try {
+    deleteConfirm.open = false;
+    // keep providerId/providerName so caller can inspect if needed, but clear to avoid leaks
+    deleteConfirm.providerId = null;
+    deleteConfirm.providerName = '';
+  } catch (_e) {
+    /* noop */
   }
 }
 
