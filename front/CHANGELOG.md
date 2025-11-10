@@ -1,3 +1,16 @@
+## [v0.1.23] - 2025-11-10
+
+- UX: Add confirmation alerts before deleting suppliers and providers
+  - Suppliers: Replace direct delete action with a confirmation flow that opens an IonAlert showing the supplier name; add helpers to build alert buttons and perform the confirmed deletion while keeping alert state reset after dismiss.
+  - Budget: Add a similar confirmation alert before removing a provider (includes provider name in the message) and wire the trash button to the confirmation flow; add robust handlers for confirm/cancel and ensure state is cleaned on dismiss.
+  - General: Improve deletion UX to avoid accidental removals and ensure internal state resets to avoid leaking selection after dismiss.
+
+**Files changed in this release**
+
+- `src/views/SuppliersPage.vue`
+- `src/views/budget/BudgetView.vue`
+
+
 ## [v0.1.22] - 2025-11-09
 
 - Budget: Move BudgetView into a sub-folder and extract a reusable Products modal component
