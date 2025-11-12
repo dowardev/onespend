@@ -126,19 +126,17 @@
                     >
                       <ion-card class="shadow1">
                         <ion-card-header>
-                          <template v-if="p.name">
-                            <ion-card-title class="provider-title">{{
-                              p.name
-                            }}</ion-card-title>
-                          </template>
+                          <ion-card-title v-if="p.name && !p._editing" class="provider-title" @click="startEditing(p)">{{
+                            p.name
+                          }}</ion-card-title>
 
-                          <template v-else>
-                            <ion-input
-                              :ref="el => (nameInputRefs[p.id] = el)"
-                              v-model="p.name"
-                              placeholder="Nombre proveedor"
-                            ></ion-input>
-                          </template>
+                          <ion-input
+                            v-show="p._editing || !p.name"
+                            :ref="el => (nameInputRefs[p.id] = el)"
+                            v-model="p.name"
+                            placeholder="Nombre proveedor"
+                            @blur="stopEditing(p)"
+                          ></ion-input>
                         </ion-card-header>
 
                         <ion-card-content>
@@ -417,6 +415,7 @@ const proveedores = reactive(
     notes: '',
     visited: false,
     _justAdded: false,
+    _editing: false,
   }))
 );
 const newProveedor = reactive({ name: '', estimated: 0, dollar: 0, notes: '' });
@@ -770,6 +769,39 @@ function toggleVisited(p: any) {
   p.visited = !p.visited;
 }
 
+// Enter edit mode for a provider and focus its name input
+function startEditing(p: any) {
+  try {
+    p._editing = true;
+    // wait for DOM update and focus the input
+    nextTick(() => {
+      const el = nameInputRefs[p.id];
+      try {
+        if (hasSetFocus(el)) {
+          el.setFocus();
+        } else if (has$elSetFocus(el)) {
+          el.$el.setFocus();
+        } else if (hasFocusMethod(el)) {
+          el.focus();
+        }
+      } catch (_e) {
+        /* noop */
+      }
+    });
+  } catch (_e) {
+    /* noop */
+  }
+}
+
+// Exit edit mode for a provider
+function stopEditing(p: any) {
+  try {
+    p._editing = false;
+  } catch (_e) {
+    /* noop */
+  }
+}
+
 // Add empty provider card
 function addBlankProvider() {
   const newItem = {
@@ -781,6 +813,7 @@ function addBlankProvider() {
     notes: '',
     visited: false,
     _justAdded: true,
+    _editing: true,
   } as any;
   proveedores.push(newItem);
   // wait for render and focus input
@@ -897,7 +930,21 @@ async function loadDataForDate(dateISO: string) {
           ...i,
         }))
       );
-      proveedores.splice(0, proveedores.length, ...(d.proveedores || []));
+
+      // Normalize providers loaded from backup to ensure editor state fields exist
+      const normalizedProviders = (d.proveedores || []).map((p: any) => ({
+        id: p.id ?? Date.now() + Math.random(),
+        name: p.name ?? '',
+        date: p.date ?? dateISO,
+        estimated: Number(p.estimated || 0),
+        dollar: Number(p.dollar || 0),
+        notes: p.notes || '',
+        visited: !!p.visited,
+        _justAdded: !!p._justAdded,
+        // Always clear editing state when loading from storage
+        _editing: false,
+      }));
+      proveedores.splice(0, proveedores.length, ...normalizedProviders);
       // Reemplazar objetos
       Object.assign(
         newIngreso,
