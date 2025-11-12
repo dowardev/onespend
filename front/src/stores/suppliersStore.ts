@@ -8,11 +8,16 @@ export const useSuppliersStore = defineStore('suppliers', {
   actions: {
     async loadAll() {
       try {
-        const list = (await suppliersController.listSuppliers()) as Supplier[];
-        this.suppliers.splice(0, this.suppliers.length, ...list);
+        const list = (await suppliersController.listSuppliers()) as unknown as any[];
+        // Avoid deep type instantiation by treating list/items as any
+        this.suppliers.length = 0;
+        for (const it of list) {
+          (this.suppliers as any).push(it);
+        }
       } catch (e) {
         console.error('suppliersStore.loadAll error', e);
-        this.suppliers.splice(0, this.suppliers.length);
+        // Clear safely
+        this.suppliers.length = 0;
       }
     },
 

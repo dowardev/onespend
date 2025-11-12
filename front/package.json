@@ -7,12 +7,23 @@
     "dev": "vite",
     "build": "vue-tsc && vite build",
     "preview": "vite preview",
+    "start": "ionic s",
     "test:e2e": "cypress run",
     "test:unit": "vitest",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write \"src/**/*.{js,ts,vue,json,css,scss,md}\"",
-    "format:check": "prettier --check \"src/**/*.{js,ts,vue,json,css,scss,md}\""
+    "format:check": "prettier --check \"src/**/*.{js,ts,vue,json,css,scss,md}\"",
+    "electron:dev": "concurrently -k -n VITE,ELECTRON -c blue,green \"vite\" \"wait-on tcp:5173 && ELECTRON_START_URL=http://localhost:5173 electron ./electron/main.mjs\"",
+    "electron:attach": "wait-on tcp:5173 && ELECTRON_START_URL=http://localhost:5173 electron ./electron/main.mjs",
+    "electron:attach-ionic": "wait-on tcp:8100 && ELECTRON_START_URL=http://localhost:8100 electron ./electron/main.mjs",
+    "electron:dev-ionic": "concurrently -k -n IONIC,ELECTRON -c blue,green \"ionic s\" \"pnpm run electron:attach-ionic\"",
+    "icons": "node scripts/generate-icons.mjs",
+    "electron:build": "pnpm run icons && pnpm run build && electron-builder",
+    "build:linux": "pnpm run icons && pnpm run build && electron-builder --linux --x64 --publish never",
+    "build:win": "pnpm run icons && pnpm run build && electron-builder --win --x64 --publish never",
+    "build:mac": "pnpm run icons && pnpm run build && electron-builder --mac --x64 --publish never",
+    "build:all": "pnpm run icons && pnpm run build && electron-builder --linux --win --mac --x64 --publish never"
   },
   "dependencies": {
     "@fsouza/prettierd": "^0.26.2",
@@ -22,7 +33,7 @@
     "ionicons": "^7.0.0",
     "vue": "^3.3.0",
     "vue-router": "^4.2.0",
-        "pinia": "^2.0.34"
+    "pinia": "^2.0.34"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
@@ -43,10 +54,62 @@
     "typescript-eslint": "^8.46.3",
     "vite": "~5.2.0",
     "vitest": "^0.34.6",
-    "vue-tsc": "^2.1.10"
+    "vue-tsc": "^2.1.10",
+    "concurrently": "^9.1.2",
+    "wait-on": "^8.0.2",
+    "electron": "^33.2.0",
+    "electron-builder": "24.13.3",
+    "asar": "^3.2.0",
+    "pngjs": "^7.0.0"
   },
   "overrides": {
     "rollup": "4.44.0"
   },
-  "description": "An Ionic project"
+  "description": "An Ionic project",
+  "main": "electron/main.mjs",
+  "build": {
+    "appId": "com.dowardev.puntoclick",
+    "productName": "PuntoClick",
+    "executableName": "puntoclick",
+    "artifactName": "${name}-${version}-${arch}.${ext}",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**",
+      "electron/**",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "build/icons",
+        "to": "icons"
+      }
+    ],
+    "linux": {
+      "target": [
+        "AppImage",
+        "rpm"
+      ],
+      "category": "Utility",
+      "icon": "build/icons"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "build/icons/icon.ico"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": false
+    }
+  },
+  "author": {
+    "name": "DowarDev",
+    "email": "gonzalo@dowar.xyz"
+  },
+  "homepage": "https://dowar.xyz"
 }
