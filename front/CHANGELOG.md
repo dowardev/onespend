@@ -1,3 +1,18 @@
+## [v0.1.25] - 2025-11-12
+
+- Build: Use relative base and hash routing for static deployments
+  - index.html: change base href from '/' to './' so the app can be served from a relative path.
+  - Router: switch from createWebHistory to createWebHashHistory to avoid server-side history fallback requirements.
+  - Vite: export defineConfig as a function and set base to './' when building so asset paths are correct for relative deployments.
+
+**Files changed in this release**
+
+- `index.html`
+- `src/router/index.ts`
+- `vite.config.ts`
+- `CHANGELOG.md`
+
+
 ## [v0.0.1] - 2025-11-12
 
 - Packaging: Add RPM packaging support and helper scripts to build RPM artifacts for the Electron app using fpm.
@@ -68,8 +83,7 @@
   - Data: Load suppliers' products into a suppliersProducts map (normalized by name) and provide helpers to detect providers that have products.
   - Persistence: Save selected product quantities per provider and selected date so selections can be reloaded when opening the modal for the same provider/date.
 
-**Files changed in this release**
-
+**Files changed in this release**n
 - `src/views/BudgetView.vue`
 
 
@@ -131,8 +145,7 @@
 
 - Templates: Add supplier selection to TemplatesView. Replace free-text providers with a searchable suppliers list, multi-select checkboxes, and chips for selected suppliers. Add suppliersController usage to load supplier list, store supplier IDs on template save, and preserve backward compatibility by parsing supplier names from template descriptions when necessary. Update apply-template flow to prefer stored supplier IDs and resolve names when applying templates.
 
-**Files changed in this release**
-
+**Files changed in this release**n
 - `src/views/TemplatesView.vue`
 - `src/controllers/suppliersController.ts`
 
@@ -201,8 +214,7 @@
 - Improve watchers and reactivity in BudgetView: clarify watcher parameter names, support refresh via route query (TemplatesView -> BudgetView), and reorganize focus helper types for maintainability.
 - Minor TypeScript typing and code-organization refactors in BudgetView and TemplatesView.
 
-**Files changed for this release**
-
+**Files changed for this release**n
 - `src/views/BudgetView.vue`
 - `src/views/TemplatesView.vue`
 
@@ -213,7 +225,7 @@
 - Fix event/parameter naming and template bindings in BudgetView and TemplatesView; apply various TypeScript typing and code-style cleanups.
 - Minor UI/UX and internationalization tweaks and comment clarifications across App.vue, BudgetView.vue and TemplatesView.vue.
 
-**Files changed in this release**
+**Files changed for this release**
 
 - `src/App.vue`
 - `src/controllers/TempalteController.ts`
@@ -274,7 +286,7 @@
 - Remove ad-hoc inline styling from `ion-datetime` and rely on consistent layout/styling.
 - Minor template cleanups in the popover block.
 
-**Files changed for this release**
+**Files changed in this release**
 
 - `src/views/BudgetView.vue`
 
