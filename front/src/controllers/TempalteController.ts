@@ -89,13 +89,17 @@ class TemplateController {
       try {
         const mod = await import('../stores/templatesStore');
         const store = mod.useTemplatesStore();
-        store.templates.splice(0, store.templates.length, ...templates.map(t => ({
-          id: t.id || '',
-          name: t.name,
-          description: t.description,
-          suppliers: (t as any).suppliers || [],
-          suppliersSnapshot: (t as any).suppliersSnapshot || [],
-        })));
+        // Clear existing templates and push items individually to avoid deep type instantiation
+        store.templates.length = 0;
+        for (const t of templates) {
+          (store.templates as any).push({
+            id: t.id || '',
+            name: t.name,
+            description: t.description,
+            suppliers: (t as any).suppliers || [],
+            suppliersSnapshot: (t as any).suppliersSnapshot || [],
+          });
+        }
       } catch (e) {
         // ignore pinia errors (e.g. store not initialized yet)
       }

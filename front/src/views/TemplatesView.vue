@@ -21,7 +21,7 @@
         <div v-if="templates.length" class="templates-content">
           <ion-item
             v-for="(tmpl, index) in templates"
-            :key="tmpl.id ?? index"
+            :key="String(tmpl.id ?? index)"
             lines="full"
             class="transparent"
             button
@@ -105,7 +105,7 @@
             <div class="list-content">
               <ion-searchbar
                 v-model="supplierQuery"
-                debounce="300"
+                :debounce="300"
                 placeholder="Buscar proveedores"
                 show-cancel-button="focus"
               ></ion-searchbar>
@@ -113,7 +113,7 @@
               <ion-list>
                 <ion-item
                   v-for="s in filteredSuppliers"
-                  :key="s.id"
+                  :key="String(s.id)"
                   button
                   @click="toggleSupplierSelection(s)"
                 >
@@ -346,9 +346,7 @@ import { useRouter } from 'vue-router';
 // controllers
 import TemplateController from '../controllers/TempalteController';
 import backupController from '../controllers/backupController';
-import suppliersController, {
-  Supplier,
-} from '../controllers/suppliersController';
+import suppliersController from '../controllers/suppliersController';
 // end controllers
 
 // interface
@@ -356,10 +354,14 @@ type TemplateSummary = {
   id: string | number | null;
   name: string;
   description?: string;
-  suppliers?: IDBValidKey[];
-  suppliersSnapshot?: { id: IDBValidKey; name?: string }[];
+  suppliers?: any[];
+  suppliersSnapshot?: any[];
 };
 // end interface
+
+// Local lightweight Supplier alias to avoid heavy TypeScript instantiation in this view
+// We prefer unknown/any here to prevent "Type instantiation is excessively deep" errors
+type Supplier = any;
 
 // main
 const router = useRouter();
@@ -388,7 +390,7 @@ const toast = reactive({
 });
 const form = reactive({
   name: '',
-  supplierIds: [] as IDBValidKey[],
+  supplierIds: [] as any[],
 });
 
 const suppliers = reactive<Supplier[]>([]);
@@ -404,16 +406,37 @@ const editingTemplateId = ref<string | number | null>(null);
 // computed
 const filteredSuppliers = computed(() => {
   const q = (supplierQuery.value || '').toLowerCase().trim();
-  if (!q) return suppliers.slice();
-  return suppliers.filter(s => (s.name || '').toLowerCase().includes(q));
+  const out: any[] = [];
+
+  // Work with a shallow any-typed copy to avoid deep TypeScript instantiation
+  const list = (suppliers as any[]) || [];
+
+  // If no query provided, return a shallow copy
+  if (!q) {
+    for (const s of list) out.push(s);
+    return out;
+  }
+
+  for (const s of list) {
+    const name = (s && (s as any).name) || '';
+    try {
+      if (String(name).toLowerCase().includes(q)) out.push(s);
+    } catch (e) {
+      // ignore malformed names
+    }
+  }
+
+  return out;
 });
 // end computed
 
 // functions
 async function loadSuppliers() {
   try {
-    const list = await suppliersController.listSuppliers();
-    suppliers.splice(0, suppliers.length, ...list);
+    const list = (await suppliersController.listSuppliers()) as unknown as any[];
+    // Avoid deep type instantiation by treating items as any
+    suppliers.length = 0;
+    for (const it of list) (suppliers as any).push(it);
   } catch (e) {
     console.error('loadSuppliers error', e);
   }
@@ -421,7 +444,11 @@ async function loadSuppliers() {
 
 function toggleSupplierSelection(s: Supplier) {
   const id = s.id as IDBValidKey;
-  const idx = form.supplierIds.indexOf(id);
+  let idx = -1;
+    const _ids = form.supplierIds as any;
+    for (let i = 0; i < (_ids as any).length; i++) {
+      if ((_ids as any)[i] === id) { idx = i; break; }
+    }
   if (idx === -1) {
     form.supplierIds.push(id);
   } else {
@@ -430,7 +457,7 @@ function toggleSupplierSelection(s: Supplier) {
 }
 
 function removeSupplierId(id: IDBValidKey) {
-  const idx = form.supplierIds.indexOf(id);
+  const idx = (form.supplierIds as any).indexOf(id);
   if (idx !== -1) form.supplierIds.splice(idx, 1);
 }
 
@@ -513,7 +540,11 @@ async function editTemplate(params: { tmpl: TemplateSummary }) {
     Array.isArray(tmpl.suppliers) &&
     tmpl.suppliers.length
   ) {
-    form.supplierIds.splice(0, form.supplierIds.length, ...tmpl.suppliers);
+    // Avoid deep type instantiation by clearing and pushing individually
+    form.supplierIds.length = 0;
+    for (const id of tmpl.suppliers as IDBValidKey[]) {
+      form.supplierIds.push(id);
+    }
   } else {
     // parse names from description and try to match to suppliers by name
     const names = parseProvidersFromDescription(tmpl.description);
@@ -549,7 +580,7 @@ async function submitTemplate() {
   // build description from selected supplier names for backward compatibility
   const selectedNames = form.supplierIds
     .map((id: IDBValidKey) => getSupplierNameById(id))
-    .filter((n): n is string => !!(n && String(n).trim()));
+    .filter((n: unknown): n is string => !!(typeof n === 'string' && n.trim()));
 
   const description = selectedNames.length
     ? `Proveedores: ${selectedNames.join(', ')}`
@@ -624,8 +655,8 @@ function parseProvidersFromDescription(desc?: string): string[] {
   if (!rest) return [];
   return rest
     .split(',')
-    .map(s => s.trim())
-    .filter(s => s);
+      .map((s: string) => s.trim())
+      .filter((s: string) => s);
 }
 
 async function confirmApply() {
@@ -757,17 +788,16 @@ function onConfirmDismiss() {
 async function loadTemplates() {
   try {
     const list = await TemplateController.listTemplates();
-    templates.value.splice(
-      0,
-      templates.value.length,
-      ...list.map((t: any) => ({
-        id: t.id || '',
-        name: t.name,
-        description: t.description,
-        suppliers: (t as any).suppliers || [],
-        suppliersSnapshot: (t as any).suppliersSnapshot || [],
-      }))
-    );
+    const mapped = list.map((t: any) => ({
+      id: t.id || '',
+      name: t.name,
+      description: t.description,
+      suppliers: (t as any).suppliers || [],
+      suppliersSnapshot: (t as any).suppliersSnapshot || [],
+    }));
+
+    templates.value.length = 0;
+    for (const it of mapped) templates.value.push(it);
   } catch (e) {
     console.error('loadTemplates error', e);
   }
