@@ -1,3 +1,20 @@
+## [v0.0.1] - 2025-11-12
+
+- Packaging: Add RPM packaging support and helper scripts to build RPM artifacts for the Electron app using fpm.
+  - Add build-rpm.sh: shell helper that assembles a staging tree, generates a .desktop file and icon mappings, and calls fpm to build an RPM package.
+  - Add electron/build-rpm.mjs: Node launcher that invokes build-rpm.sh from the project root.
+- Desktop: Add a desktop entry (build/abogaz.desktop) and include icon assets under the hicolor/pixmaps locations.
+- Build: Update package.json to add an electron:build-rpm script and adjust build metadata (appId, productName, executableName) for the desktop build.
+- Assets: Add public/PuntoClick.png icon resource used by packaging.
+
+**Files changed in this release**
+
+- `build-rpm.sh`
+- `build/abogaz.desktop`
+- `electron/build-rpm.mjs`
+- `package.json`
+- `public/PuntoClick.png`
+
 ## [v0.1.24] - 2025-11-11
 
 - Platform: Add initial Electron support and packaging helpers
