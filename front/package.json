@@ -23,7 +23,8 @@
     "build:linux": "pnpm run icons && pnpm run build && electron-builder --linux --x64 --publish never",
     "build:win": "pnpm run icons && pnpm run build && electron-builder --win --x64 --publish never",
     "build:mac": "pnpm run icons && pnpm run build && electron-builder --mac --x64 --publish never",
-    "build:all": "pnpm run icons && pnpm run build && electron-builder --linux --win --mac --x64 --publish never"
+    "build:all": "pnpm run icons && pnpm run build && electron-builder --linux --win --mac --x64 --publish never",
+    "electron:build-rpm": "node electron/build-rpm.mjs"
   },
   "dependencies": {
     "@fsouza/prettierd": "^0.26.2",
@@ -68,9 +69,9 @@
   "description": "An Ionic project",
   "main": "electron/main.mjs",
   "build": {
-    "appId": "com.dowardev.puntoclick",
-    "productName": "PuntoClick",
-    "executableName": "puntoclick",
+    "appId": "com.dowardev.abogaz",
+    "productName": "AbOgaz",
+    "executableName": "abogaz",
     "artifactName": "${name}-${version}-${arch}.${ext}",
     "directories": {
       "output": "release",
