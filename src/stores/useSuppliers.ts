@@ -1,5 +1,7 @@
 import { ref, computed } from 'vue';
-import suppliersController, { SuppliersController, Supplier } from '../controllers/suppliersController';
+import suppliersController, { SuppliersController } from '../controllers/suppliersController';
+// Use a lightweight local Supplier alias to avoid deep TypeScript instantiation
+type Supplier = any;
 
 const suppliers = ref<Supplier[]>([]);
 const loading = ref(false);

@@ -17,17 +17,17 @@ export const useTemplatesStore = defineStore('templates', {
     async loadTemplates() {
       try {
         const list = (await TemplateController.listTemplates()) as any[];
-        this.templates.splice(
-          0,
-          this.templates.length,
-          ...list.map((t: any) => ({
+        // Clear current templates and push items individually to avoid deep instantiation
+        this.templates.length = 0;
+        for (const t of list) {
+          (this.templates as any).push({
             id: t.id || '',
             name: t.name,
             description: t.description,
             suppliers: (t as any).suppliers || [],
             suppliersSnapshot: (t as any).suppliersSnapshot || [],
-          }))
-        );
+          });
+        }
       } catch (e) {
         console.error('templatesStore.loadTemplates error', e);
         this.templates.splice(0, this.templates.length);

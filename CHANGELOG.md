@@ -1,3 +1,23 @@
+## [v0.1.24] - 2025-11-11
+
+- Platform: Add initial Electron support and packaging helpers
+  - Electron: integrate main and preload processes, add packaging/build scripts and basic native build configuration to support desktop apps.
+  - Icons: add an icon generator and packaging resources to produce platform-specific icons.
+- Build: Update package.json and pnpm lockfiles to add required dependencies and scripts for the new Electron workflows.
+- Repo: Update .gitignore to exclude new build artifacts and generated files from the packaging process.
+- Refactor: Small refactors in the Templates store and minor housekeeping changes across build scripts.
+
+**Files changed in this release**
+
+- `.gitignore`
+- `package.json`
+- `pnpm-lock.yaml` and other pnpm lockfiles
+- `build-all.js`, `build-rpm.sh` (build/packaging helpers)
+- `scripts/` (icon generator and packaging helpers)
+- `src/electron/` (electron integration files)
+- `src/stores/Templates*`
+
+
 ## [v0.1.23] - 2025-11-10
 
 - UX: Add confirmation alerts before deleting suppliers and providers
