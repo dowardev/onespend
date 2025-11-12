@@ -1,4 +1,4 @@
-## [v0.1.25] - 2025-11-12
+## [v0.1.26] - 2025-11-12
 
 - Build: Use relative base and hash routing for static deployments
   - index.html: change base href from '/' to './' so the app can be served from a relative path.
@@ -13,7 +13,7 @@
 - `CHANGELOG.md`
 
 
-## [v0.0.1] - 2025-11-12
+## [v0.1.25] - 2025-11-11
 
 - Packaging: Add RPM packaging support and helper scripts to build RPM artifacts for the Electron app using fpm.
   - Add build-rpm.sh: shell helper that assembles a staging tree, generates a .desktop file and icon mappings, and calls fpm to build an RPM package.
