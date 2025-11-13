@@ -1,3 +1,21 @@
+## [v0.1.28] - 2025-11-13
+
+- Build / Packaging: add Electron and packaging-related dev dependencies (electron, electron-builder, asar, pngjs, concurrently) and update pnpm lock to include new packages.
+- Dependencies: add date-fns for date formatting and adjust dependency ordering (Pinia / vue-router adjustments).
+- Budget: use date-fns to display a formatted selected date in the budget title; refactor provider card markup and provider name editing behavior (use ion-blur, adjust input refs); tweak provider removal handler and related CSS adjustments.
+- Templates: minor import reordering and small placeholder comment for future Ionic changes.
+- Suppliers: add IonButtons and IonIcon imports in SuppliersPage.
+
+**Files changed in this release**
+
+- package.json
+- pnpm-lock.yaml
+- src/views/SuppliersPage.vue
+- src/views/TemplatesView.vue
+- src/views/budget/BudgetView.vue
+
+
+
 ## [v0.1.27] - 2025-11-12
 
 - Budget: enable inline editing of provider names with dedicated edit mode and focus handling

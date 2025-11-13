@@ -2,7 +2,7 @@
   <ion-page>
     <ion-header class="ion-no-border" mode="ios">
       <ion-toolbar>
-        <ion-title>Presupuesto({{ selectedDate }})</ion-title>
+        <ion-title>Presupuesto ({{ formattedSelectedDate }})</ion-title>
 
         <ion-buttons slot="end">
           <ion-button
@@ -125,19 +125,26 @@
                       size-lg="6"
                     >
                       <ion-card class="shadow1">
-                        <ion-card-header>
-                          <ion-card-title v-if="p.name && !p._editing" class="provider-title" @click="startEditing(p)">{{
-                            p.name
-                          }}</ion-card-title>
+                        <ion-item
+                          button
+                          class="transparent"
+                          lines="none"
+                          @click="startEditing(p)"
+                        >
+                          <ion-card-title
+                            v-if="p.name && !p._editing"
+                            slot="start"
+                            >{{ p.name }}</ion-card-title
+                          >
 
                           <ion-input
                             v-show="p._editing || !p.name"
                             :ref="el => (nameInputRefs[p.id] = el)"
                             v-model="p.name"
                             placeholder="Nombre proveedor"
-                            @blur="stopEditing(p)"
+                            @ion-blur="stopEditing(p)"
                           ></ion-input>
-                        </ion-card-header>
+                        </ion-item>
 
                         <ion-card-content>
                           <div class="provider-top">
@@ -183,7 +190,9 @@
                                 size="small"
                                 title="Eliminar proveedor"
                                 class="icon-btn"
-                                @click.stop="confirmRemoveProveedor(p.id, p.name)"
+                                @click.stop="
+                                  confirmRemoveProveedor(p.id, p.name)
+                                "
                               >
                                 <ion-icon :icon="trashOutline"></ion-icon>
                               </ion-button>
@@ -319,6 +328,7 @@ import {
   IonCheckbox,
   IonButton,
   IonDatetime,
+  IonDatetimeButton,
   IonAlert,
   IonPopover,
 } from '@ionic/vue';
@@ -339,6 +349,8 @@ import {
   listOutline,
 } from 'ionicons/icons';
 import { useRoute } from 'vue-router';
+import { format, parseISO } from 'date-fns';
+import { es as esLocale } from 'date-fns/locale';
 
 // interface
 type Income = {
@@ -552,6 +564,27 @@ const totalProviders = computed(() =>
 const totalVisitedProviders = computed(() =>
   proveedores.reduce((s, p) => s + (p.visited ? valueToConsider(p) : 0), 0)
 );
+
+// Formatted date for display using date-fns with Spanish locale
+const formattedSelectedDate = computed(() => {
+  try {
+    const v = selectedDate.value;
+    if (!v) return '';
+    // parseISO accepts ISO strings; if parse fails, fall back to Date constructor
+    let d: Date;
+    try {
+      d = parseISO(String(v));
+      if (isNaN(d.getTime())) throw new Error('invalid');
+    } catch (_e) {
+      d = new Date(String(v));
+      if (isNaN(d.getTime())) return String(v);
+    }
+    // Example format: "mar 11 nov" or use a longer form like "11 de noviembre de 2025"
+    return format(d, "d 'de' MMMM 'de' yyyy", { locale: esLocale });
+  } catch (_e) {
+    return String(selectedDate.value);
+  }
+});
 
 // Methods
 function addIngreso(params: { name?: string; amount?: number } = {}) {
@@ -1329,11 +1362,11 @@ ion-card {
   border: 1px solid rgba(0, 0, 0, 0.04);
 }
 
-.provider-title {
-  font-size: 0.96rem;
-  font-weight: 600;
-  padding: 6px 12px;
-}
+/* .provider-title { */
+/*   font-size: 0.96rem; */
+/*   font-weight: 600; */
+/*   padding: 6px 12px; */
+/* } */
 
 .provider-content {
   padding: 8px 12px 12px 12px;
@@ -1488,7 +1521,6 @@ ion-card {
   text-align: right;
 }
 
-.provider-title,
 .provider-value {
   word-break: break-word;
 }
