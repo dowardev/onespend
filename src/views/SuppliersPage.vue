@@ -158,6 +158,8 @@ import {
   IonListHeader,
   IonModal,
   IonAlert,
+  IonButtons,
+  IonIcon,
 } from '@ionic/vue';
 import { useSuppliers } from '../stores/useSuppliers';
 import { addOutline, closeOutline, saveOutline, trashOutline } from 'ionicons/icons';

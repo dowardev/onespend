@@ -323,14 +323,12 @@ import {
   IonToast,
   IonIcon,
   IonDatetime,
-  IonSearchbar,
-  IonCheckbox,
-  IonChip,
+  IonDatetimeButton,
   IonCard,
   IonCardHeader,
   IonCardTitle,
-  IonCardContent,
-  IonDatetimeButton,
+  IonSearchbar,
+  IonCheckbox,
 } from '@ionic/vue';
 import {
   createOutline,
@@ -340,7 +338,7 @@ import {
   saveOutline,
   checkmarkOutline,
 } from 'ionicons/icons';
-import { reactive, ref, onMounted, computed } from 'vue';
+import { reactive, ref, onMounted, computed } from 'vue'; // Placeholder comment for further Ionic changes.
 import { useRouter } from 'vue-router';
 
 // controllers
