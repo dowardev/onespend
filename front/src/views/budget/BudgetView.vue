@@ -329,6 +329,7 @@ import {
   IonButton,
   IonDatetime,
   IonDatetimeButton,
+  IonModal,
   IonAlert,
   IonPopover,
 } from '@ionic/vue';
