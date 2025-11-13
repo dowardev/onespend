@@ -167,35 +167,6 @@
 
                                 <ion-label class="tiny-label">Visita</ion-label>
                               </ion-item>
-
-                              <!-- button open products -->
-                              <ion-button
-                                v-if="hasProductsFor(p)"
-                                fill="clear"
-                                size="small"
-                                title="Ver productos"
-                                class="icon-btn"
-                                @click.stop="
-                                  openProductsPopover({
-                                    provider: p,
-                                    event: $event,
-                                  })
-                                "
-                              >
-                                <ion-icon :icon="listOutline"></ion-icon>
-                              </ion-button>
-
-                              <ion-button
-                                fill="clear"
-                                size="small"
-                                title="Eliminar proveedor"
-                                class="icon-btn"
-                                @click.stop="
-                                  confirmRemoveProveedor(p.id, p.name)
-                                "
-                              >
-                                <ion-icon :icon="trashOutline"></ion-icon>
-                              </ion-button>
                             </div>
                           </div>
 
@@ -221,6 +192,45 @@
                             <small class="notes-text">{{ p.notes }}</small>
                           </div>
                         </ion-card-content>
+
+                        <ion-item lines="none">
+                          <!-- button open products -->
+                          <ion-button
+                            v-if="hasProductsFor(p)"
+                            fill="clear"
+                            size="small"
+                            title="Ver productos"
+                            class="icon-btn"
+                            @click.stop="
+                              openProductsPopover({
+                                provider: p,
+                                event: $event,
+                              })
+                            "
+                          >
+                            <ion-icon :icon="listOutline"></ion-icon>
+                          </ion-button>
+
+                          <!-- button notes -->
+                          <ion-button
+                            fill="clear"
+                            @click.stop="openNotesModal(p)"
+                          >
+                            <ion-icon :icon="bookOutline"></ion-icon>
+                          </ion-button>
+
+                          <!-- button delete provider -->
+                          <ion-button
+                            slot="end"
+                            fill="clear"
+                            size="small"
+                            title="Eliminar proveedor"
+                            class="icon-btn"
+                            @click.stop="confirmRemoveProveedor(p.id, p.name)"
+                          >
+                            <ion-icon :icon="trashOutline"></ion-icon>
+                          </ion-button>
+                        </ion-item>
                       </ion-card>
                     </ion-col>
 
@@ -273,6 +283,7 @@
       </ion-popover>
       <!-- end popover -->
 
+      <!-- alerts -->
       <!-- confirmation alert -->
       <ion-alert
         :is-open="deleteConfirm.open"
@@ -282,7 +293,9 @@
         @did-dismiss="onDeleteAlertDidDismiss"
       ></ion-alert>
       <!-- end confirmation alert -->
+      <!-- end alerts -->
 
+      <!-- modals -->
       <!-- products modal -->
       <ion-modal
         :is-open="modals.products.open"
@@ -296,6 +309,42 @@
           @save="payload => handleProductsModalSave(payload)"
           @dismiss="onProductsModalDidDismiss"
         />
+      </ion-modal>
+
+      <ion-modal
+        :is-open="modals.notes.open"
+        @did-dismiss="onNotesModalDidDismiss"
+      >
+        <ion-header class="ion-no-border" mode="ios">
+          <ion-toolbar>
+            <ion-buttons>
+              <ion-button @click="onNotesModalDidDismiss()">
+                <ion-icon :icon="closeOutline"></ion-icon>
+              </ion-button>
+            </ion-buttons>
+
+            <ion-title>Notas</ion-title>
+
+            <ion-buttons slot="end">
+              <ion-button @click="saveNotes()">
+                <ion-icon :icon="saveOutline"></ion-icon>
+              </ion-button>
+            </ion-buttons>
+          </ion-toolbar>
+        </ion-header>
+
+        <ion-content>
+          <ion-card class="shadow1">
+            <ion-card-content>
+              <ion-textarea
+                v-model="modals.notes.content"
+                label="Notas"
+                label-placement="floating"
+                :auto-grow="true"
+              ></ion-textarea>
+            </ion-card-content>
+          </ion-card>
+        </ion-content>
       </ion-modal>
       <!-- end modal -->
     </ion-content>
@@ -328,10 +377,10 @@ import {
   IonCheckbox,
   IonButton,
   IonDatetime,
-  IonDatetimeButton,
   IonModal,
   IonAlert,
   IonPopover,
+  IonTextarea,
 } from '@ionic/vue';
 import {
   reactive,
@@ -348,6 +397,9 @@ import {
   calendarOutline,
   trashOutline,
   listOutline,
+  bookOutline,
+  closeOutline,
+  saveOutline,
 } from 'ionicons/icons';
 import { useRoute } from 'vue-router';
 import { format, parseISO } from 'date-fns';
@@ -449,6 +501,11 @@ const modals = reactive({
     quantities: {} as Record<string | number, number>,
     providerId: null as string | number | null,
     title: '' as string,
+  },
+  notes: {
+    open: false,
+    providerId: null as string | number | null,
+    content: '' as string,
   },
 });
 
@@ -1303,6 +1360,142 @@ function has$elSetFocus(x: unknown): x is { $el: { setFocus: () => void } } {
 
 function hasFocusMethod(x: unknown): x is { focus: () => void } {
   return !!x && typeof (x as any).focus === 'function';
+}
+
+// Notes modal: open, save and dismiss handlers
+async function openNotesModal(p: any) {
+  try {
+    modals.notes.providerId = p?.id ?? null;
+    // prefer in-memory note but allow persisted note to override
+    modals.notes.content = p?.notes ?? '';
+
+    // Try to load persisted note for this provider+date
+    try {
+      const all = (await dixieController.listBackups()) as any[];
+      const target = (selectedDate.value || '').slice(0, 10);
+      const matches = (all || [])
+        .filter(
+          b =>
+            b &&
+            b.component === 'BudgetNotes' &&
+            b.data &&
+            b.data.selectedDate &&
+            (b.data.selectedDate as string).slice(0, 10) === target &&
+            b.data.providerId === modals.notes.providerId
+        )
+        .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      if (matches.length) {
+        const latest = matches[0];
+        modals.notes.content =
+          latest.data && latest.data.content
+            ? String(latest.data.content)
+            : modals.notes.content;
+      }
+    } catch (_e) {
+      /* noop */
+    }
+
+    setTimeout(() => (modals.notes.open = true), 50);
+  } catch (err) {
+    console.error('openNotesModal error:', err);
+  }
+}
+
+async function saveNotes() {
+  try {
+    const pid = modals.notes.providerId;
+    const content = String(modals.notes.content ?? '');
+
+    console.log('saveNotes: start', {
+      pid,
+      content,
+      selectedDate: selectedDate.value,
+    });
+
+    if (pid == null) {
+      console.warn('saveNotes: no providerId set');
+      // keep modal open so user can retry/inspect
+      return;
+    }
+
+    // Update in-memory provider notes immediately so the UI reflects the change
+    const prov = proveedores.find((p: any) => p.id === pid);
+    if (prov) prov.notes = content;
+
+    // Normalize providerId to avoid string/number mismatch when querying later
+    const normalizedPid: number | string =
+      typeof pid === 'string' && !isNaN(Number(pid)) ? Number(pid) : pid;
+
+    // Build payload to persist
+    const payloadToSave = {
+      component: 'BudgetNotes',
+      data: {
+        providerId: normalizedPid,
+        selectedDate: selectedDate.value,
+        content,
+      },
+      createdAt: Date.now(),
+    } as any;
+
+    // Try addEntry first; if it fails, try putEntry as a fallback (some environments
+    // may reject add() due to constraints while put() can succeed)
+    let savedId: any = null;
+
+    try {
+      savedId = await dixieController.addEntry(payloadToSave);
+      console.log('saveNotes: addEntry succeeded', {
+        savedId,
+        pid: normalizedPid,
+      });
+    } catch (addErr) {
+      console.warn(
+        'saveNotes: addEntry failed, attempting putEntry as fallback',
+        addErr
+      );
+      try {
+        savedId = await dixieController.putEntry(payloadToSave);
+        console.log('saveNotes: putEntry succeeded as fallback', {
+          savedId,
+          pid: normalizedPid,
+        });
+      } catch (putErr) {
+        console.error('saveNotes: putEntry also failed', putErr, {
+          payloadToSave,
+        });
+      }
+    }
+
+    if (savedId == null) {
+      // Persist failed: keep modal open and inform via console (optionally show a toast)
+      console.warn(
+        'saveNotes: failed to persist note for provider',
+        normalizedPid
+      );
+      return;
+    }
+
+    // Success: close modal and clear providerId
+    modals.notes.open = false;
+    modals.notes.providerId = null;
+    console.log(
+      'saveNotes: note saved for provider',
+      normalizedPid,
+      'id=',
+      savedId
+    );
+  } catch (err) {
+    console.error('saveNotes error:', err);
+  }
+}
+
+function onNotesModalDidDismiss() {
+  try {
+    modals.notes.open = false;
+    modals.notes.providerId = null;
+    // keep modals.notes.content so the in-memory provider keeps it until explicitly changed
+  } catch (_e) {
+    /* noop */
+  }
 }
 </script>
 
