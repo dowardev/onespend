@@ -55,26 +55,103 @@ class DixieController {
       } catch (e) {
         /* noop */
       }
-      const req = store.add(entry);
+
+      let req: IDBRequest;
+      try {
+        req = store.add(entry);
+      } catch (syncErr) {
+        console.error('DixieController.addEntry: synchronous error calling store.add', syncErr, { entry });
+        try {
+          db.close();
+        } catch (e) {
+          /* noop */
+        }
+        reject(syncErr);
+        return;
+      }
+
       req.onsuccess = () => {
         resolve(req.result);
       };
+
       req.onerror = (ev: unknown) => {
-        console.error(
-          'DixieController.addEntry: request.onerror',
-          ev,
-          req.error
-        );
+        try {
+          console.error('DixieController.addEntry: request.onerror', {
+            event: ev,
+            reqError: req.error,
+            name: (req.error as any)?.name,
+            message: (req.error as any)?.message,
+          });
+        } catch (e) {
+          console.error('DixieController.addEntry: request.onerror (fallback log)', ev, req.error);
+        }
+        // store last error for easier diagnosis
+        try {
+          const payload = {
+            time: new Date().toISOString(),
+            fn: 'addEntry',
+            phase: 'request.onerror',
+            error: {
+              name: (req.error as any)?.name || 'UnknownError',
+              message: (req.error as any)?.message || String(req.error || ev),
+            },
+            entryPreview: (entry && typeof entry === 'object') ? JSON.parse(JSON.stringify(entry, Object.keys(entry).slice(0,10))) : String(entry),
+          };
+          localStorage.setItem('dixie:lastError', JSON.stringify(payload));
+        } catch (_e) {
+          /* noop */
+        }
         reject(req.error || ev);
       };
-      tx.onerror = (ev: unknown) => {
-        console.error(
-          'DixieController.addEntry: transaction.onerror',
-          ev,
-          tx.error
-        );
+
+      tx.onabort = (ev: unknown) => {
+        try {
+          console.error('DixieController.addEntry: transaction.onabort', { event: ev, txError: tx.error });
+        } catch (_e) {
+          /* noop */
+        }
+        try {
+          const payload = {
+            time: new Date().toISOString(),
+            fn: 'addEntry',
+            phase: 'transaction.onabort',
+            error: {
+              name: (tx.error as any)?.name || 'UnknownError',
+              message: (tx.error as any)?.message || String(tx.error || ev),
+            },
+            entryPreview: (entry && typeof entry === 'object') ? JSON.parse(JSON.stringify(entry, Object.keys(entry).slice(0,10))) : String(entry),
+          };
+          localStorage.setItem('dixie:lastError', JSON.stringify(payload));
+        } catch (_e) {
+          /* noop */
+        }
         reject(tx.error || ev);
       };
+
+      tx.onerror = (ev: unknown) => {
+        try {
+          console.error('DixieController.addEntry: transaction.onerror', { event: ev, txError: tx.error });
+        } catch (_e) {
+          /* noop */
+        }
+        try {
+          const payload = {
+            time: new Date().toISOString(),
+            fn: 'addEntry',
+            phase: 'transaction.onerror',
+            error: {
+              name: (tx.error as any)?.name || 'UnknownError',
+              message: (tx.error as any)?.message || String(tx.error || ev),
+            },
+            entryPreview: (entry && typeof entry === 'object') ? JSON.parse(JSON.stringify(entry, Object.keys(entry).slice(0,10))) : String(entry),
+          };
+          localStorage.setItem('dixie:lastError', JSON.stringify(payload));
+        } catch (_e) {
+          /* noop */
+        }
+        reject(tx.error || ev);
+      };
+
       tx.oncomplete = () => {
         try {
           db.close();

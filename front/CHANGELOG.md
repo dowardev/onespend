@@ -1,3 +1,22 @@
+## [v0.1.29] - 2025-11-13
+
+- Dixie: Improve addEntry robustness and diagnostics
+  - Catch synchronous errors when calling IndexedDB store.add and reject early with a clear error path.
+  - Improve logging for request and transaction errors, including safer structured logging (name/message) and fallback logging paths.
+  - Persist a brief last-error payload to localStorage (`dixie:lastError`) to aid offline diagnosis of failing addEntry operations.
+  - Add transaction onabort handler to capture and persist abort details.
+
+- Budget: Add Notes modal and related save/load logic
+  - Add a Notes modal to BudgetView to view and edit provider notes per-provider and per-date.
+  - Persist notes via dixieController (with addEntry/putEntry fallback) and update in-memory provider notes immediately when saving.
+  - Move provider action buttons into the card footer and tidy imports for modal/textarea/icons.
+
+**Files changed in this release**
+
+- `src/controllers/dixie.ts`
+- `src/views/budget/BudgetView.vue`
+
+
 ## [v0.1.28] - 2025-11-13
 
 - Build / Packaging: add Electron and packaging-related dev dependencies (electron, electron-builder, asar, pngjs, concurrently) and update pnpm lock to include new packages.
