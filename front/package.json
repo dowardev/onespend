@@ -30,11 +30,12 @@
     "@fsouza/prettierd": "^0.26.2",
     "@ionic/vue": "^8.0.0",
     "@ionic/vue-router": "^8.0.0",
+    "date-fns": "^4.1.0",
     "eslint_d": "^14.3.0",
     "ionicons": "^7.0.0",
+    "pinia": "^2.0.34",
     "vue": "^3.3.0",
-    "vue-router": "^4.2.0",
-    "pinia": "^2.0.34"
+    "vue-router": "^4.2.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
@@ -43,12 +44,17 @@
     "@vitejs/plugin-legacy": "^5.0.0",
     "@vitejs/plugin-vue": "^4.0.0",
     "@vue/test-utils": "^2.3.0",
+    "asar": "^3.2.0",
+    "concurrently": "^9.1.2",
     "cypress": "^13.5.0",
+    "electron": "^33.2.0",
+    "electron-builder": "24.13.3",
     "eslint": "^9.39.1",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.4",
     "eslint-plugin-vue": "^9.0.0",
     "jsdom": "^22.1.0",
+    "pngjs": "^7.0.0",
     "prettier": "^3.6.2",
     "terser": "^5.4.0",
     "typescript": "~5.6.2",
@@ -56,12 +62,7 @@
     "vite": "~5.2.0",
     "vitest": "^0.34.6",
     "vue-tsc": "^2.1.10",
-    "concurrently": "^9.1.2",
-    "wait-on": "^8.0.2",
-    "electron": "^33.2.0",
-    "electron-builder": "24.13.3",
-    "asar": "^3.2.0",
-    "pngjs": "^7.0.0"
+    "wait-on": "^8.0.2"
   },
   "overrides": {
     "rollup": "4.44.0"
