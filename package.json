@@ -1,7 +1,7 @@
 {
   "name": "AbOgaz",
   "private": true,
-  "version": "0.1.29",
+  "version": "0.1.41",
   "type": "module",
   "scripts": {
     "dev": "vite",
