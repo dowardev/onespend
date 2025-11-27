@@ -2,6 +2,10 @@
   <ion-page>
     <ion-header class="ion-no-border" mode="ios">
       <ion-toolbar>
+        <ion-buttons slot="start">
+          <ion-menu-button :mode="designMode" />
+        </ion-buttons>
+
         <ion-title>Templates</ion-title>
 
         <ion-buttons slot="end">
@@ -13,143 +17,81 @@
     </ion-header>
 
     <ion-content>
-      <ion-list>
-        <ion-list-header>
-          <ion-label>Templates</ion-label>
-        </ion-list-header>
+      <ion-card class="shadow1 main-card-content">
+        <ion-card-content>
+          <ion-list class="transparent">
+            <div v-if="templates.length" class="templates-content">
+              <template v-for="group in groupedTemplates" :key="group.letter">
+                <ion-item-group>
+                  <ion-item-divider sticky>
+                    <ion-label>{{ group.letter }}</ion-label>
+                  </ion-item-divider>
 
-        <div v-if="templates.length" class="templates-content">
-          <ion-item
-            v-for="(tmpl, index) in templates"
-            :key="String(tmpl.id ?? index)"
-            lines="full"
-            class="transparent"
-            button
-            @click="applyTemplate({ tmpl })"
-          >
-            <ion-label>
-              <h2>{{ tmpl.name }}</h2>
-              <p>{{ tmpl.description }}</p>
-            </ion-label>
+                  <ion-item
+                    v-for="(tmpl, index) in group.items"
+                    :key="String(tmpl.id ?? index)"
+                    lines="full"
+                    class="transparent"
+                    button
+                    @click="applyTemplate({ tmpl })"
+                  >
+                    <ion-label>
+                      <h2>{{ tmpl.name }}</h2>
+                      <p>{{ tmpl.description }}</p>
+                    </ion-label>
 
-            <ion-button
-              slot="end"
-              size="small"
-              fill="clear"
-              @click.stop="editTemplate({ tmpl })"
-            >
-              <ion-icon :icon="createOutline"></ion-icon>
-            </ion-button>
+                    <ion-button
+                      slot="end"
+                      size="small"
+                      fill="clear"
+                      @click.stop="editTemplate({ tmpl })"
+                    >
+                      <ion-icon :icon="createOutline"></ion-icon>
+                    </ion-button>
 
-            <ion-button
-              slot="end"
-              size="small"
-              color="danger"
-              fill="clear"
-              @click.stop="confirmDelete({ tmpl })"
-            >
-              <ion-icon :icon="trashOutline"></ion-icon>
-            </ion-button>
-          </ion-item>
-        </div>
+                    <ion-button
+                      slot="end"
+                      size="small"
+                      color="danger"
+                      fill="clear"
+                      @click.stop="confirmDelete({ tmpl })"
+                    >
+                      <ion-icon :icon="trashOutline"></ion-icon>
+                    </ion-button>
+                  </ion-item>
+                </ion-item-group>
+              </template>
+            </div>
 
-        <template v-else>
-          <ion-item lines="none" class="transparent">
-            <ion-label>No hay templates aún</ion-label>
-          </ion-item>
-        </template>
-      </ion-list>
+            <template v-else>
+              <ion-item lines="none" class="transparent">
+                <ion-label>No hay templates aún</ion-label>
+              </ion-item>
+            </template>
+          </ion-list>
+        </ion-card-content>
+      </ion-card>
 
       <!-- modals -->
-      <ion-modal v-model:is-open="showModal" @did-dismiss="showModal = false">
-        <ion-header class="ion-no-border" mode="ios">
-          <ion-toolbar>
-            <ion-buttons slot="start">
-              <ion-button fill="clear" @click="showModal = false">
-                <ion-icon :icon="closeOutline"></ion-icon>
-              </ion-button>
-            </ion-buttons>
-
-            <ion-title>{{
-              isEditMode ? 'Editar template' : 'Nuevo template'
-            }}</ion-title>
-
-            <ion-buttons slot="end">
-              <ion-button @click="submitTemplate()">
-                <ion-icon :icon="saveOutline"></ion-icon>
-              </ion-button>
-            </ion-buttons>
-          </ion-toolbar>
-        </ion-header>
-
-        <ion-content>
-          <ion-card class="shadow1 ion-padding-start">
-            <ion-input
-              v-model="form.name"
-              label="Nombre del template"
-              label-placement="floating"
-              placeholder="Ej: Día base"
-            ></ion-input>
-          </ion-card>
-
-          <!-- Suppliers selection: search + multi-select -->
-          <ion-list class="transparent">
-            <ion-list-header>
-              <ion-label>Proveedores</ion-label>
-
-              <ion-button @click="loadSuppliers">
-                <ion-icon :icon="addOutline"></ion-icon>
-              </ion-button>
-            </ion-list-header>
-
-            <div class="list-content">
-              <ion-searchbar
-                v-model="supplierQuery"
-                :debounce="300"
-                placeholder="Buscar proveedores"
-                show-cancel-button="focus"
-              ></ion-searchbar>
-
-              <ion-list>
-                <ion-item
-                  v-for="s in filteredSuppliers"
-                  :key="String(s.id)"
-                  button
-                  @click="toggleSupplierSelection(s)"
-                >
-                  <ion-label>{{ s.name }}</ion-label>
-                  <ion-checkbox
-                    slot="end"
-                    :checked="form.supplierIds.includes(s.id)"
-                  ></ion-checkbox>
-                </ion-item>
-              </ion-list>
-
-              <div style="margin-top: 12px">
-                <ion-label>Seleccionados:</ion-label>
-                <div
-                  style="
-                    display: flex;
-                    flex-wrap: wrap;
-                    gap: 6px;
-                    margin-top: 6px;
-                  "
-                >
-                  <ion-chip v-for="id in form.supplierIds" :key="id" outline>
-                    <ion-label>{{ getSupplierNameById(id) }}</ion-label>
-                    <ion-button
-                      fill="clear"
-                      size="small"
-                      @click="removeSupplierId(id)"
-                    >
-                      <ion-icon :icon="closeOutline"></ion-icon>
-                    </ion-button>
-                  </ion-chip>
-                </div>
-              </div>
-            </div>
-          </ion-list>
-        </ion-content>
+      <ion-modal
+        v-model:is-open="showModal"
+        class="suppliers__modal"
+        @did-dismiss="showModal = false"
+      >
+        <AddTemplateComponent
+          :editing-tmpl="
+            editingTemplateId != null
+              ? templates.find(t => t.id === editingTemplateId)
+              : null
+          "
+          @saved="onAddTemplateSaved"
+          @close="
+            () => {
+              showModal = false;
+              resetForm();
+            }
+          "
+        />
       </ion-modal>
 
       <!-- modal aplicar template -->
@@ -158,108 +100,14 @@
         :keep-contents-mounted="true"
         @did-dismiss="cancelApply"
       >
-        <ion-header class="ion-no-border" mode="ios">
-          <ion-toolbar>
-            <ion-buttons slot="start">
-              <ion-button fill="clear" @click="cancelApply">
-                <ion-icon :icon="closeOutline"></ion-icon>
-              </ion-button>
-            </ion-buttons>
-
-            <ion-title>Aplicar template</ion-title>
-
-            <ion-buttons slot="end">
-              <ion-button @click="confirmApply">
-                <ion-icon :icon="checkmarkOutline"></ion-icon>
-              </ion-button>
-            </ion-buttons>
-          </ion-toolbar>
-        </ion-header>
-
-        <ion-content class="ion-padding">
-          <div v-if="applyTargetTemplate">
-            <ion-card class="shadow1">
-              <ion-card-header>
-                <ion-card-title>{{ applyTargetTemplate.name }}</ion-card-title>
-              </ion-card-header>
-
-              <ion-card-content>
-                <ion-item class="transparent">
-                  <ion-label>Fecha</ion-label>
-
-                  <ion-datetime-button
-                    slot="end"
-                    datetime="datetime"
-                  ></ion-datetime-button>
-                </ion-item>
-
-                <ion-list class="transparent">
-                  <ion-list-header>
-                    <ion-label>Proveedores</ion-label>
-                  </ion-list-header>
-
-                  <div class="content">
-                    <!-- Si el template tiene IDs -->
-                    <template
-                      v-if="
-                        applyTargetTemplate.suppliers &&
-                        applyTargetTemplate.suppliers.length
-                      "
-                    >
-                      <ion-item
-                        v-for="(id, idx) in applyTargetTemplate.suppliers"
-                        :key="String(id) + '_' + idx"
-                        class="transparent"
-                        lines="full"
-                      >
-                        <ion-label>
-                          {{ supplierDisplayName(id) }}
-                        </ion-label>
-
-                        <template v-if="!supplierExists(id)">
-                          <ion-chip slot="end" color="danger">
-                            Eliminado
-                          </ion-chip>
-
-                          <ion-button
-                            slot="end"
-                            color="primary"
-                            fill="clear"
-                            @click="removeDeletedSupplier(id)"
-                          >
-                            <ion-icon :icon="closeOutline"> </ion-icon>
-                          </ion-button>
-                        </template>
-
-                        <ion-button
-                          v-if="supplierExists(id)"
-                          slot="end"
-                          fill="clear"
-                          color="danger"
-                        >
-                          Eliminar
-                        </ion-button>
-                      </ion-item>
-                    </template>
-
-                    <!-- Si el template solo tiene description -> mostrar parsed names -->
-                    <template v-else>
-                      <ion-item
-                        v-for="(name, idx) in parseProvidersFromDescription(
-                          applyTargetTemplate.description
-                        )"
-                        :key="idx"
-                        lines="none"
-                      >
-                        <ion-label>{{ name }}</ion-label>
-                      </ion-item>
-                    </template>
-                  </div>
-                </ion-list>
-              </ion-card-content>
-            </ion-card>
-          </div>
-        </ion-content>
+        <ApplyTemplateComponent
+          v-model:apply-selected-date="applySelectedDate"
+          :apply-target-template="applyTargetTemplate"
+          :suppliers="suppliers"
+          @confirm="confirmApply"
+          @cancel="cancelApply"
+          @remove-deleted-supplier="removeDeletedSupplier"
+        />
       </ion-modal>
 
       <!-- end modals -->
@@ -313,39 +161,41 @@ import {
   IonTitle,
   IonContent,
   IonList,
-  IonListHeader,
   IonItem,
   IonLabel,
   IonButton,
   IonModal,
-  IonInput,
   IonAlert,
   IonToast,
   IonIcon,
   IonDatetime,
-  IonDatetimeButton,
   IonCard,
-  IonCardHeader,
-  IonCardTitle,
+  IonCardContent,
+  IonButtons,
+  IonMenuButton,
+  IonItemGroup,
+  IonItemDivider,
   IonSearchbar,
-  IonCheckbox,
 } from '@ionic/vue';
 import {
   createOutline,
   addOutline,
-  closeOutline,
   trashOutline,
-  saveOutline,
-  checkmarkOutline,
 } from 'ionicons/icons';
-import { reactive, ref, onMounted, computed } from 'vue'; // Placeholder comment for further Ionic changes.
+import { reactive, ref, onMounted, computed, unref, nextTick } from 'vue'; // Placeholder comment for further Ionic changes.
 import { useRouter } from 'vue-router';
 
 // controllers
-import TemplateController from '../controllers/TempalteController';
-import backupController from '../controllers/backupController';
-import suppliersController from '../controllers/suppliersController';
+import TemplateController from '@/controllers/TempalteController';
+import backupController from '@/controllers/backupController';
+import suppliersController from '@/controllers/suppliersController';
+import systemController from '@/controllers/systemConfigController';
 // end controllers
+
+// conponents
+import AddTemplateComponent from '@/views/templates/modals/AddTemplateComponent.vue';
+import ApplyTemplateComponent from '@/views/templates/modals/ApplyTemplateComponent.vue';
+// end components
 
 // interface
 type TemplateSummary = {
@@ -392,46 +242,49 @@ const form = reactive({
 });
 
 const suppliers = reactive<Supplier[]>([]);
-const supplierQuery = ref('');
-
 const showApplyModal = ref(false);
 const applySelectedDate = ref(new Date().toISOString());
 const applyTargetTemplate = ref<TemplateSummary | null>(null);
 const isEditMode = ref(false);
 const editingTemplateId = ref<string | number | null>(null);
+// References the searchbar element so we can focus it when opening the search
+const supplierSearchbar = ref<InstanceType<typeof IonSearchbar> | null>(null);
+const searchVisible = ref(false);
+const supplierQuery = ref('');
 // end vars
 
 // computed
-const filteredSuppliers = computed(() => {
-  const q = (supplierQuery.value || '').toLowerCase().trim();
-  const out: any[] = [];
+const designMode = computed(() => systemController.getDesignMode());
 
-  // Work with a shallow any-typed copy to avoid deep TypeScript instantiation
-  const list = (suppliers as any[]) || [];
+// Group templates by the first letter of their name and sort groups and items alphabetically
+const groupedTemplates = computed(() => {
+  const list = (unref(templates) || []).slice();
+  // sort templates by name
+  list.sort((a: any, b: any) => {
+    const na = (a.name || '').toString().toLowerCase();
+    const nb = (b.name || '').toString().toLowerCase();
+    return na.localeCompare(nb);
+  });
 
-  // If no query provided, return a shallow copy
-  if (!q) {
-    for (const s of list) out.push(s);
-    return out;
-  }
+  const map = new Map<string, any[]>();
+  list.forEach((t: any) => {
+    const name = (t.name || '').toString().trim();
+    const letter = name ? name[0].toUpperCase() : '#';
+    if (!map.has(letter)) map.set(letter, []);
+    map.get(letter)!.push(t);
+  });
 
-  for (const s of list) {
-    const name = (s && (s as any).name) || '';
-    try {
-      if (String(name).toLowerCase().includes(q)) out.push(s);
-    } catch (e) {
-      // ignore malformed names
-    }
-  }
-
-  return out;
+  return Array.from(map.keys())
+    .sort()
+    .map(letter => ({ letter, items: map.get(letter) || [] }));
 });
 // end computed
 
 // functions
 async function loadSuppliers() {
   try {
-    const list = (await suppliersController.listSuppliers()) as unknown as any[];
+    const list =
+      (await suppliersController.listSuppliers()) as unknown as any[];
     // Avoid deep type instantiation by treating items as any
     suppliers.length = 0;
     for (const it of list) (suppliers as any).push(it);
@@ -440,13 +293,38 @@ async function loadSuppliers() {
   }
 }
 
+
+function openSearch() {
+  // show the searchbar and focus it on nextTick so it's present in DOM
+  searchVisible.value = true;
+  nextTick(() => {
+    try {
+      const el: any = supplierSearchbar.value as any;
+      if (el && typeof el.setFocus === 'function') {
+        el.setFocus();
+      }
+    } catch (e) {
+      // ignore focus errors
+    }
+  });
+}
+
+function onSearchCancel() {
+  // hide the searchbar and clear the query
+  supplierQuery.value = '';
+  searchVisible.value = false;
+}
+
 function toggleSupplierSelection(s: Supplier) {
   const id = s.id as IDBValidKey;
   let idx = -1;
-    const _ids = form.supplierIds as any;
-    for (let i = 0; i < (_ids as any).length; i++) {
-      if ((_ids as any)[i] === id) { idx = i; break; }
+  const _ids = form.supplierIds as any;
+  for (let i = 0; i < (_ids as any).length; i++) {
+    if ((_ids as any)[i] === id) {
+      idx = i;
+      break;
     }
+  }
   if (idx === -1) {
     form.supplierIds.push(id);
   } else {
@@ -575,6 +453,33 @@ async function submitTemplate() {
     return;
   }
 
+  // Prevent creating or saving a template with a duplicate name (case-insensitive).
+  // When editing, allow keeping the same name for the template being edited.
+  const newName = form.name.trim();
+  try {
+    const exists = (templates.value || []).some((t: any) => {
+      const tName = t && t.name ? String(t.name).trim().toLowerCase() : '';
+      const compareId = t.id == null ? '' : String(t.id);
+      const editingId =
+        editingTemplateId.value == null ? '' : String(editingTemplateId.value);
+      return (
+        tName && tName === newName.toLowerCase() && compareId !== editingId
+      );
+    });
+
+    if (exists) {
+      alertMessage.value = 'Ya existe un template con ese nombre';
+      // Force re-opening the alert even if the message didn't change by toggling the v-model
+      showAlert.value = false;
+      await nextTick();
+      showAlert.value = true;
+      return;
+    }
+  } catch (e) {
+    // If some unexpected error happens during duplicate check, log and continue to attempt save
+    console.warn('duplicate name check failed', e);
+  }
+
   // build description from selected supplier names for backward compatibility
   const selectedNames = form.supplierIds
     .map((id: IDBValidKey) => getSupplierNameById(id))
@@ -586,7 +491,7 @@ async function submitTemplate() {
 
   try {
     const payloadTemplate: any = {
-      name: form.name.trim(),
+      name: newName,
       description,
       suppliers: form.supplierIds.slice(),
       suppliersSnapshot: form.supplierIds.map((id: IDBValidKey) => ({
@@ -620,6 +525,20 @@ async function submitTemplate() {
 }
 
 // Open the apply modal instead of navigating directly
+async function onAddTemplateSaved() {
+  // After a template is saved from the modal component, refresh the list,
+  // reset the form state and close the modal, then show a confirmation toast.
+  try {
+    await loadTemplates();
+  } catch (e) {
+    console.error('onAddTemplateSaved: failed to reload templates', e);
+  }
+  resetForm();
+  showModal.value = false;
+  toast.message = 'Template guardado';
+  toast.open = true;
+}
+
 function applyTemplate(params: { tmpl: TemplateSummary }) {
   const { tmpl } = params as { tmpl: TemplateSummary };
   console.log('applyTemplate called', tmpl);
@@ -653,8 +572,8 @@ function parseProvidersFromDescription(desc?: string): string[] {
   if (!rest) return [];
   return rest
     .split(',')
-      .map((s: string) => s.trim())
-      .filter((s: string) => s);
+    .map((s: string) => s.trim())
+    .filter((s: string) => s);
 }
 
 async function confirmApply() {
@@ -753,7 +672,7 @@ async function confirmDelete(params: { tmpl: TemplateSummary }) {
 
   // store only the id of the target to delete
   confirmTargetId.value = tmpl.id;
-  confirmMessage.value = `¿Eliminar template \"${tmpl.name}\"? Esta acción no se puede deshacer.`;
+  confirmMessage.value = `¿Eliminar template "${tmpl.name}"? Esta acción no se puede deshacer.`;
   showConfirm.value = true;
 }
 
@@ -813,10 +732,46 @@ async function loadTemplates() {
   display: inline-flex !important;
 }
 
+.templates__suppliers-list {
+  height: calc(100% - 82px);
+}
+
+.templates__suppliers-content {
+  height: calc(100% - 53px);
+}
+
 /* On touch devices (no hover), show buttons always */
 @media (hover: none), (pointer: coarse) {
   .list-content ion-item.transparent ion-button[slot='end'] {
     display: inline-flex !important;
+  }
+}
+
+/* Large phones / small tablets (portrait) */
+@media (min-width: 426px) and (max-width: 768px) {
+  /* .suppliers__modal { */
+  /*   --height: 60dvh; */
+  /* } */
+}
+
+/* Tablets / small desktop */
+@media (min-width: 769px) and (max-width: 1024px) {
+  /* .suppliers__modal { */
+  /*   --height: 60dvh; */
+  /* } */
+}
+
+/* Desktop */
+@media (min-width: 1025px) and (max-width: 1440px) {
+  .suppliers__modal {
+    --height: 80dvh;
+  }
+}
+
+/* Large desktop / wide screens */
+@media (min-width: 1441px) {
+  .suppliers__modal {
+    --height: 80dvh;
   }
 }
 </style>

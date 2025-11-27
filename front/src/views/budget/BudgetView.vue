@@ -2,43 +2,60 @@
   <ion-page>
     <ion-header class="ion-no-border" mode="ios">
       <ion-toolbar>
-        <ion-title>Presupuesto ({{ formattedSelectedDate }})</ion-title>
+        <ion-buttons slot="start">
+          <ion-menu-button :mode="designMode"></ion-menu-button>
+        </ion-buttons>
+
+        <ion-title>Presupuesto</ion-title>
 
         <ion-buttons slot="end">
+          <ion-button title="Retroceder un día" @click="changeDate(-1)">
+            <ion-icon :icon="chevronBackOutline"></ion-icon>
+          </ion-button>
+
+          <ion-button title="Avanzar un día" @click="changeDate(1)">
+            <ion-icon :icon="chevronForwardOutline"></ion-icon>
+          </ion-button>
+
           <ion-button
             title="Seleccionar fecha"
             @click="openDatePopover({ event: $event })"
           >
-            <ion-icon :icon="calendarOutline"></ion-icon>
+            {{ formattedSelectedDate }}
           </ion-button>
         </ion-buttons>
       </ion-toolbar>
     </ion-header>
 
     <ion-content>
-      <ion-grid>
-        <ion-row>
-          <!-- Left: summary + incomes -->
-          <ion-col size="12" size-md="5" size-lg="4">
-            <ion-list class="main">
-              <ion-list-header>
-                <ion-label> Presupuesto </ion-label>
-              </ion-list-header>
-
-              <div>
-                <ion-card class="shadow1">
-                  <ion-card-header>
-                    <ion-card-title
-                      >Ingresos ({{
-                        formatCurrency({ v: totalIngresos })
-                      }})</ion-card-title
+      <ion-card class="shadow1 main-card-content">
+        <ion-grid style="height: 100%">
+          <ion-row style="height: 100%">
+            <ion-col size="12" size-md="7" size-lg="4" style="height: 100%">
+              <ion-grid style="height: 100%">
+                <ion-row style="height: 100%">
+                  <ion-col size="12" style="max-height: 50%">
+                    <ion-list
+                      style="height: 100%; max-height: 100%"
+                      class="transparent"
                     >
-                  </ion-card-header>
+                      <ion-list-header>
+                        <ion-label
+                          >Ingresos ({{
+                            formatCurrency({ v: totalIngresos })
+                          }})</ion-label
+                        >
 
-                  <ion-card-content>
-                    <ion-grid>
-                      <ion-row>
-                        <ion-col>
+                        <ion-button @click="addIngresoField()">
+                          <ion-icon :icon="addOutline"></ion-icon>
+                        </ion-button>
+                      </ion-list-header>
+
+                      <div
+                        class="list-content"
+                        style="height: calc(100% - 64px); overflow: auto"
+                      >
+                        <template v-if="ingresos.length > 0">
                           <ion-item v-for="inc in ingresos" :key="inc.id">
                             <ion-input
                               v-model="inc.name"
@@ -46,12 +63,26 @@
                             ></ion-input>
 
                             <ion-input
-                              slot="end"
                               v-model.number="inc.amount"
                               type="number"
                               class="num-input"
                             ></ion-input>
 
+                            <!-- type mony -->
+                            <ion-select
+                              aria-label="Tipo de pago"
+                              interface="popover"
+                              v-model="inc.paymentType"
+                            >
+                              <ion-select-option value="cash"
+                                >Efectivo</ion-select-option
+                              >
+                              <ion-select-option value="digital"
+                                >Digital</ion-select-option
+                              >
+                            </ion-select>
+
+                            <!-- button delete money -->
                             <ion-button
                               slot="end"
                               fill="clear"
@@ -62,196 +93,346 @@
                               <ion-icon :icon="trashOutline"></ion-icon>
                             </ion-button>
                           </ion-item>
+                        </template>
 
-                          <ion-button
-                            fill="clear"
-                            expand="full"
-                            @click="addIngresoField()"
-                          >
-                            <ion-icon :icon="addOutline"> </ion-icon>
-                          </ion-button>
-                        </ion-col>
-                      </ion-row>
-                    </ion-grid>
-                  </ion-card-content>
-                </ion-card>
+                        <template v-else>
+                          <ion-item>
+                            <ion-label
+                              >Pulsa el botón «+» para agregar un nuevo
+                              ingreso</ion-label
+                            >
+                          </ion-item>
+                        </template>
+                      </div>
+                    </ion-list>
+                  </ion-col>
 
-                <ion-card class="shadow1">
-                  <ion-card-header>
-                    <ion-card-title>Resumen</ion-card-title>
-                  </ion-card-header>
+                  <ion-col size="12" style="height: 100%">
+                    <ion-list class="transparent">
+                      <ion-list-header>
+                        <ion-label>Resumen</ion-label>
+                      </ion-list-header>
 
-                  <ion-card-content>
-                    <ion-item class="transparent">
-                      <ion-label>Presupuesto después de(estimacion)</ion-label>
-                      <ion-note slot="end">{{
-                        formatCurrency({ v: totalIngresos - totalProviders })
-                      }}</ion-note>
-                    </ion-item>
+                      <div class="list-content">
+                        <ion-accordion-group>
+                          <ion-accordion value="first">
+                            <ion-item slot="header">
+                              <ion-label>Se requiere</ion-label>
 
-                    <ion-item class="transparent">
-                      <ion-label>Presupuesto después de(real)</ion-label>
-                      <ion-note slot="end">{{
-                        formatCurrency({
-                          v: totalIngresos - totalVisitedProviders,
-                        })
-                      }}</ion-note>
-                    </ion-item>
-                  </ion-card-content>
-                </ion-card>
-              </div>
-            </ion-list>
-          </ion-col>
+                              <ion-note slot="end">
+                                <div style="display: flex">
+                                  <div>
+                                    {{
+                                      formatCurrency({
+                                        v: totalEstimacionEfectivoTarjeta,
+                                      })
+                                    }}
+                                  </div>
 
-          <!-- Right: providers + unexpected -->
-          <ion-col size="12" size-md="7" size-lg="8">
-            <ion-list class="providers-list main">
-              <ion-list-header>
-                <ion-label
-                  >Proveedores ({{
-                    formatCurrency({ v: totalProviders })
-                  }})</ion-label
-                >
-              </ion-list-header>
+                                  <div
+                                    v-if="faltante < 0"
+                                    style="color: var(--ion-color-danger)"
+                                  >
+                                    ({{ formatCurrency({ v: faltante }) }})
+                                  </div>
+                                </div>
+                              </ion-note>
+                            </ion-item>
 
-              <div ref="providersBodyRef" class="providers-list-body">
-                <ion-grid>
-                  <ion-row>
-                    <ion-col
-                      v-for="p in proveedores"
-                      :key="p.id"
-                      :class="{ 'provider-just-added': p._justAdded }"
-                      size="12"
-                      size-lg="6"
-                    >
-                      <ion-card class="shadow1">
-                        <ion-item
-                          button
-                          class="transparent"
-                          lines="none"
-                          @click="startEditing(p)"
-                        >
-                          <ion-card-title
-                            v-if="p.name && !p._editing"
-                            slot="start"
-                            >{{ p.name }}</ion-card-title
-                          >
+                            <div slot="content">
+                              <!-- cash -->
+                              <ion-item>
+                                <ion-label>Efectivo:</ion-label>
+                                <ion-note slot="end">
+                                  <div style="display: flex">
+                                    <div>
+                                      {{
+                                        formatCurrency({
+                                          v: totalEstimacionEfectivo,
+                                        })
+                                      }}
+                                    </div>
 
-                          <ion-input
-                            v-show="p._editing || !p.name"
-                            :ref="el => (nameInputRefs[p.id] = el)"
-                            v-model="p.name"
-                            placeholder="Nombre proveedor"
-                            @ion-blur="stopEditing(p)"
-                          ></ion-input>
-                        </ion-item>
+                                    <div
+                                      v-if="faltanteEfectivo < 0"
+                                      style="color: var(--ion-color-danger)"
+                                    >
+                                      ({{
+                                        formatCurrency({ v: faltanteEfectivo })
+                                      }})
+                                    </div>
+                                  </div>
+                                </ion-note>
+                              </ion-item>
 
-                        <ion-card-content>
-                          <div class="provider-top">
-                            <div class="provider-value">
-                              {{ formatCurrency({ v: valueToConsider(p) }) }}
-                            </div>
+                              <!-- card -->
+                              <ion-item>
+                                <ion-label>Digital:</ion-label>
+                                <ion-note slot="end">
+                                  <div style="display: flex">
+                                    <div>
+                                      {{
+                                        formatCurrency({
+                                          v: totalEstimacionDigital,
+                                        })
+                                      }}
+                                    </div>
 
-                            <div class="provider-actions">
-                              <ion-item
-                                class="transparent"
-                                lines="none"
-                                button
-                                @click="toggleVisited(p)"
-                              >
-                                <ion-checkbox
-                                  slot="start"
-                                  v-model="p.visited"
-                                  @click.stop
-                                ></ion-checkbox>
-
-                                <ion-label class="tiny-label">Visita</ion-label>
+                                    <div
+                                      v-if="faltanteDigital < 0"
+                                      style="color: var(--ion-color-danger)"
+                                    >
+                                      ({{
+                                        formatCurrency({ v: faltanteDigital })
+                                      }})
+                                    </div>
+                                  </div>
+                                </ion-note>
                               </ion-item>
                             </div>
-                          </div>
+                          </ion-accordion>
 
-                          <div class="provider-row-fields">
-                            <ion-input
-                              v-model.number="p.estimated"
-                              label="Estimado"
-                              label-placement="floating"
-                              type="number"
-                              class="num-input small"
-                            ></ion-input>
+                          <ion-accordion value="second">
+                            <ion-item slot="header" color="light">
+                              <ion-label> Contamos con </ion-label>
+                              <ion-note slot="end">{{
+                                formatCurrency({
+                                  v: nonNegative(
+                                    totalIngresos - totalVisitedProviders
+                                  ),
+                                })
+                              }}</ion-note>
+                            </ion-item>
 
-                            <ion-input
-                              v-model.number="p.dollar"
-                              label="$"
-                              label-placement="floating"
-                              type="number"
-                              class="num-input small"
-                            ></ion-input>
-                          </div>
+                            <div class="ion-padding" slot="content">
+                              <!-- cash -->
+                              <ion-item>
+                                <ion-label>Efectivo:</ion-label>
+                                <ion-label slot="end">{{
+                                  formatCurrency({
+                                    v: nonNegative(
+                                      totalIngresosEfectivo -
+                                        totalVisitedEfectivo
+                                    ),
+                                  })
+                                }}</ion-label>
+                              </ion-item>
 
-                          <div v-if="p.notes" class="provider-notes">
-                            <small class="notes-text">{{ p.notes }}</small>
-                          </div>
-                        </ion-card-content>
+                              <!-- digital -->
+                              <ion-item>
+                                <ion-label>Digital:</ion-label>
+                                <ion-label slot="end">{{
+                                  formatCurrency({
+                                    v: nonNegative(
+                                      totalIngresosDigital - totalVisitedTarjeta
+                                    ),
+                                  })
+                                }}</ion-label>
+                              </ion-item>
+                            </div>
+                          </ion-accordion>
+                        </ion-accordion-group>
+                      </div>
+                    </ion-list>
+                  </ion-col>
+                </ion-row>
+              </ion-grid>
+            </ion-col>
 
-                        <ion-item lines="none">
-                          <!-- button open products -->
-                          <ion-button
-                            v-if="hasProductsFor(p)"
-                            fill="clear"
-                            size="small"
-                            title="Ver productos"
-                            class="icon-btn"
-                            @click.stop="
-                              openProductsPopover({
-                                provider: p,
-                                event: $event,
-                              })
-                            "
-                          >
-                            <ion-icon :icon="listOutline"></ion-icon>
-                          </ion-button>
+            <!-- Right: providers + unexpected -->
+            <ion-col size="12" size-md="7" size-lg="8" style="height: 100%">
+              <ion-grid style="height: 100%">
+                <ion-row
+                  style="
+                    display: flex;
+                    justify-content: space-evenly;
+                    height: 100%;
+                  "
+                >
+                  <ion-col size-lg="5" style="height: 100%">
+                    <ion-list class="transparent" style="height: 100%">
+                      <ion-list-header>
+                        <ion-label>No asistio</ion-label>
 
-                          <!-- button notes -->
-                          <ion-button
-                            fill="clear"
-                            @click.stop="openNotesModal(p)"
-                          >
-                            <ion-icon :icon="bookOutline"></ion-icon>
-                          </ion-button>
+                        <!-- Add provider card restored inside 'No asistio' column -->
+                        <ion-button @click="addBlankProvider()">
+                          <ion-icon :icon="addOutline"></ion-icon>
+                        </ion-button>
+                      </ion-list-header>
 
-                          <!-- button delete provider -->
-                          <ion-button
-                            slot="end"
-                            fill="clear"
-                            size="small"
-                            title="Eliminar proveedor"
-                            class="icon-btn"
-                            @click.stop="confirmRemoveProveedor(p.id, p.name)"
-                          >
-                            <ion-icon :icon="trashOutline"></ion-icon>
-                          </ion-button>
-                        </ion-item>
-                      </ion-card>
-                    </ion-col>
-
-                    <!-- Empty card to add new provider -->
-                    <ion-col size="12" size-lg="6">
-                      <ion-card
-                        class="no-shadow add-provider-card"
-                        @click="addBlankProvider"
+                      <div
+                        ref="notVisitedList"
+                        class="list-content"
+                        style="height: calc(100% - 73px); overflow: auto"
                       >
-                        <ion-card-content class="add-card-content">
-                          <div class="add-card-plus">+</div>
-                        </ion-card-content>
-                      </ion-card>
-                    </ion-col>
-                  </ion-row>
-                </ion-grid>
-              </div>
-            </ion-list>
-          </ion-col>
-        </ion-row>
-      </ion-grid>
+                        <ProviderCardComponent
+                          v-for="p in notVisitedProviders"
+                          :key="p.id"
+                          :provider="p"
+                          :name-input-refs="nameInputRefs"
+                          :on-visited-changed="onVisitedChanged"
+                          :start-editing="startEditing"
+                          :stop-editing="stopEditing"
+                          :has-products-for="hasProductsFor"
+                          :open-products-popover="openProductsPopover"
+                          :open-notes-modal="openNotesModal"
+                          :confirm-remove-proveedor="confirmRemoveProveedor"
+                          :is-payment-primary="isPaymentPrimary"
+                          :value-to-consider="valueToConsider"
+                          :format-currency="formatCurrency"
+                          @update-provider="handleUpdateProvider"
+                          @register-name-input="handleRegisterNameInput"
+                        />
+                      </div>
+                    </ion-list>
+                  </ion-col>
+
+                  <ion-col size-lg="5" style="height: 100%">
+                    <ion-list class="transparent" style="height: 100%">
+                      <ion-list-header>
+                        <ion-label>Asistio</ion-label>
+
+                        <!-- Add provider card restored inside 'Asistio' column -->
+                        <ion-button @click="addBlankProviderVisited()">
+                          <ion-icon :icon="addOutline"></ion-icon>
+                        </ion-button>
+                      </ion-list-header>
+
+                      <div
+                        ref="visitedList"
+                        class="list-content"
+                        style="height: calc(100% - 73px); overflow: auto"
+                      >
+                        <ion-card
+                          v-for="p in visitedProviders"
+                          :key="p.id"
+                          class="ion-padding-bottom"
+                          :class="[
+                            'shadow2',
+                            { 'provider-just-added': p._justAdded },
+                          ]"
+                        >
+                          <ion-item lines="none" class="transparent">
+                            <ion-checkbox
+                              slot="start"
+                              v-model="p.visited"
+                              @ion-change="onVisitedChanged(p, $event)"
+                            ></ion-checkbox>
+
+                            <div style="width: 100%" @click="startEditing(p)">
+                              <ion-label v-if="p.name && !p._editing">{{
+                                p.name
+                              }}</ion-label>
+
+                              <ion-input
+                                v-show="p._editing || !p.name"
+                                :ref="el => (nameInputRefs[p.id] = el)"
+                                v-model="p.name"
+                                placeholder="Nombre proveedor"
+                                @ion-blur="stopEditing(p)"
+                              ></ion-input>
+                            </div>
+                          </ion-item>
+
+                          <div
+                            style="
+                              display: flex;
+                              justify-content: space-between;
+                            "
+                            class="ion-padding-start ion-padding-end"
+                          >
+                            <ion-input
+                              v-model.number="p.efectivo"
+                              label="Efectivo"
+                              label-placement="floating"
+                              type="number"
+                              class="num-input small"
+                            ></ion-input>
+
+                            <ion-input
+                              v-model.number="p.tarjeta"
+                              label="Tarjeta/Transferencia"
+                              label-placement="floating"
+                              type="number"
+                              class="num-input small"
+                            ></ion-input>
+
+                            <ion-input
+                              v-model.number="p.credito"
+                              label="Credito"
+                              label-placement="floating"
+                              type="number"
+                              class="num-input small"
+                            ></ion-input>
+
+                            <ion-label
+                              :color="
+                                isPaymentPrimary(p) ? 'primary' : undefined
+                              "
+                              @click="
+                                popovers.paymentMethods.event = $event;
+                                popovers.paymentMethods.open = true;
+                              "
+                            >
+                              {{ formatCurrency({ v: valueToConsider(p) }) }}
+                            </ion-label>
+                          </div>
+
+                          <ion-item lines="none">
+                            <!-- button open products -->
+                            <ion-button
+                              v-if="hasProductsFor(p)"
+                              slot="end"
+                              fill="clear"
+                              size="small"
+                              title="Ver productos"
+                              class="icon-btn"
+                              @click.stop="
+                                openProductsPopover({
+                                  provider: p,
+                                  event: $event,
+                                })
+                              "
+                            >
+                              <ion-icon :icon="listOutline"></ion-icon>
+                            </ion-button>
+
+                            <!-- button notes -->
+                            <ion-button
+                              slot="end"
+                              fill="clear"
+                              @click.stop="openNotesModal(p)"
+                            >
+                              <ion-icon :icon="bookOutline"></ion-icon>
+                            </ion-button>
+
+                            <!-- button history -->
+                            <ion-button slot="end" fill="clear">
+                              <ion-icon :icon="timeOutline"></ion-icon>
+                            </ion-button>
+
+                            <!-- button delete provider -->
+                            <ion-button
+                              slot="end"
+                              fill="clear"
+                              size="small"
+                              title="Eliminar proveedor"
+                              class="icon-btn"
+                              @click.stop="confirmRemoveProveedor(p.id, p.name)"
+                            >
+                              <ion-icon :icon="trashOutline"></ion-icon>
+                            </ion-button>
+                          </ion-item>
+                        </ion-card>
+                      </div>
+                    </ion-list>
+                  </ion-col>
+                </ion-row>
+              </ion-grid>
+            </ion-col>
+          </ion-row>
+        </ion-grid>
+      </ion-card>
 
       <!-- popover -->
       <ion-popover
@@ -300,6 +481,7 @@
       <ion-modal
         :is-open="modals.products.open"
         :keep-contents-mounted="true"
+        :backdrop-dismiss="false"
         @did-dismiss="onProductsModalDidDismiss"
       >
         <ProductsModalComponent
@@ -311,8 +493,10 @@
         />
       </ion-modal>
 
+      <!-- modal notes -->
       <ion-modal
         :is-open="modals.notes.open"
+        :backdrop-dismiss="false"
         @did-dismiss="onNotesModalDidDismiss"
       >
         <ion-header class="ion-no-border" mode="ios">
@@ -354,33 +538,36 @@
 <script setup lang="ts">
 // Imports
 import {
-  IonPage,
-  IonHeader,
-  IonToolbar,
-  IonTitle,
+  IonAccordion,
+  IonAlert,
+  IonButton,
   IonButtons,
-  IonIcon,
-  IonGrid,
-  IonRow,
-  IonCol,
+  IonMenuButton,
   IonCard,
-  IonCardHeader,
-  IonCardTitle,
   IonCardContent,
+  IonCheckbox,
+  IonCol,
   IonContent,
-  IonList,
-  IonListHeader,
+  IonDatetime,
+  IonGrid,
+  IonHeader,
+  IonIcon,
+  IonInput,
   IonItem,
   IonLabel,
-  IonNote,
-  IonInput,
-  IonCheckbox,
-  IonButton,
-  IonDatetime,
+  IonList,
+  IonListHeader,
   IonModal,
-  IonAlert,
+  IonNote,
+  IonPage,
   IonPopover,
+  IonRow,
+  IonSelect,
+  IonSelectOption,
   IonTextarea,
+  IonTitle,
+  IonToolbar,
+  IonAccordionGroup,
 } from '@ionic/vue';
 import {
   reactive,
@@ -394,12 +581,14 @@ import {
 } from 'vue';
 import {
   addOutline,
-  calendarOutline,
   trashOutline,
   listOutline,
   bookOutline,
   closeOutline,
   saveOutline,
+  timeOutline,
+  chevronBackOutline,
+  chevronForwardOutline,
 } from 'ionicons/icons';
 import { useRoute } from 'vue-router';
 import { format, parseISO } from 'date-fns';
@@ -411,6 +600,25 @@ type Income = {
   name: string;
   amount: number;
   date: string;
+  paymentType: 'cash' | 'digital';
+};
+
+// Provider type used throughout the component. Fields mirror the objects created
+// for proveedores and the data persisted in backups. Some fields are optional
+// (like _justAdded/_editing) and payment fields are numbers.
+type Provider = {
+  id: string | number;
+  name: string;
+  date: string;
+  estimated: number;
+  dollar: number;
+  efectivo: number;
+  tarjeta: number;
+  credito: number;
+  notes: string;
+  visited: boolean;
+  _justAdded?: boolean;
+  _editing?: boolean;
 };
 
 type FocusableRef =
@@ -426,63 +634,23 @@ type FocusableRef =
 import dixieController from '@/controllers/dixie';
 import backupController from '@/controllers/backupController';
 import suppliersController from '@/controllers/suppliersController';
+import systemController from '@/controllers/systemConfigController';
 // end components
 
 // components
 import ProductsModalComponent from './modals/PoductsModalComponent.vue';
+import ProviderCardComponent from './ProviderCardComponent.vue';
 // end components
 
 // vars
-const ingresos = reactive([
-  {
-    id: Date.now() + Math.random(),
-    name: 'Inicio',
-    amount: 0,
-    date: new Date().toISOString(),
-  },
-  {
-    id: Date.now() + Math.random(),
-    name: 'Corte',
-    amount: 0,
-    date: new Date().toISOString(),
-  },
-  {
-    id: Date.now() + Math.random(),
-    name: 'Jesus',
-    amount: 0,
-    date: new Date().toISOString(),
-  },
-]) as Income[];
+const ingresos = reactive([]) as Income[];
 const newIngreso = reactive({
   name: '',
   amount: 0,
   date: new Date().toISOString(),
+  paymentType: 'cash',
 });
-const proveedores = reactive(
-  [
-    'Agua',
-    'Bolsas',
-    'Chicharron',
-    'Gamesa',
-    'Lala',
-    'Queso',
-    'Semillas',
-    'Soñador',
-    'Tm20',
-    'Tm24',
-    'Zaragoza',
-  ].map(n => ({
-    id: Date.now() + Math.random(),
-    name: n,
-    date: new Date().toISOString(),
-    estimated: 0,
-    dollar: 0,
-    notes: '',
-    visited: false,
-    _justAdded: false,
-    _editing: false,
-  }))
-);
+const proveedores = reactive([]) as Provider[];
 const newProveedor = reactive({ name: '', estimated: 0, dollar: 0, notes: '' });
 const nameInputRefs = reactive(
   {} as Record<string | number, FocusableRef | null>
@@ -492,6 +660,8 @@ const selectedDate = ref(new Date().toISOString());
 const route = useRoute();
 const popovers = reactive({
   date: { open: false, event: null as unknown },
+  paymentMethods: { open: false, event: null as unknown },
+  inforSuppliers: { open: false, event: null as unknown },
 });
 const modals = reactive({
   products: {
@@ -518,11 +688,46 @@ const deleteConfirm = reactive({
 
 const providersBodyRef = ref<HTMLElement | null>(null);
 
+// Refs to the two scrollable lists so we can programmatically scroll them
+const notVisitedList = ref<HTMLElement | null>(null);
+const visitedList = ref<HTMLElement | null>(null);
+
+/**
+ * Scroll the given list ref (or element) to its end. Uses nextTick to ensure DOM updated.
+ */
+function scrollListToEnd(
+  listRef?: { value: HTMLElement | null } | HTMLElement | null
+) {
+  try {
+    nextTick(() => {
+      let el: HTMLElement | null = null;
+      if (!listRef) {
+        el = null;
+      } else if ((listRef as any).value !== undefined) {
+        el = (listRef as any).value as HTMLElement | null;
+      } else if (listRef instanceof HTMLElement) {
+        el = listRef as HTMLElement;
+      }
+      if (!el) return;
+      try {
+        // try smooth scroll when available
+        (el as any).scrollTo?.({ top: el.scrollHeight, behavior: 'smooth' });
+        // fallback
+        el.scrollTop = el.scrollHeight;
+      } catch (_e) {
+        /* noop */
+      }
+    });
+  } catch (_e) {
+    /* noop */
+  }
+}
+
 // Map of supplier name -> products loaded from suppliers DB
 const suppliersProducts = reactive({} as Record<string, any[]>);
 // end vars
 
-// Lifecycle
+// life
 onMounted(() => {
   const saved = localStorage.getItem(STORAGE_KEY);
   if (saved) {
@@ -538,9 +743,7 @@ onMounted(() => {
   void onNewIngresoNameInput;
   void onNewIngresoAmountInput;
   void addProveedor;
-});
 
-onMounted(() => {
   const el = providersBodyRef.value as HTMLElement | null;
   if (el && typeof el.addEventListener === 'function') {
     el.addEventListener('pointerdown', handlePointerDown, { passive: true });
@@ -557,6 +760,7 @@ onUnmounted(() => {
     el.removeEventListener('pointercancel', handlePointerUp as any);
   }
 });
+// end life
 
 // Watchers
 watch(
@@ -610,17 +814,71 @@ watch(
   },
   { deep: true }
 );
+// end watch
 
 // Computed
 const totalIngresos = computed(() =>
   ingresos.reduce((s, i) => s + Number(i.amount || 0), 0)
 );
+
+// Totales de ingresos por método de pago (efectivo / digital)
+const totalIngresosEfectivo = computed(() =>
+  ingresos.reduce(
+    (s, i) => s + (i.paymentType === 'cash' ? Number(i.amount || 0) : 0),
+    0
+  )
+);
+const totalIngresosDigital = computed(() =>
+  ingresos.reduce(
+    (s, i) => s + (i.paymentType === 'digital' ? Number(i.amount || 0) : 0),
+    0
+  )
+);
+
 const totalProviders = computed(() =>
   proveedores.reduce((s, p) => s + valueToConsider(p), 0)
 );
+// Total used for estimation (exclude credito)
+const totalProvidersEstimacion = computed(() =>
+  proveedores.reduce((s, p) => s + valueToConsiderExcludingCredito(p), 0)
+);
 // Total of providers that have been visited (checked)
 const totalVisitedProviders = computed(() =>
-  proveedores.reduce((s, p) => s + (p.visited ? valueToConsider(p) : 0), 0)
+  proveedores.reduce(
+    (s, p) => s + (p.visited ? valueToConsiderExcludingCredito(p) : 0),
+    0
+  )
+);
+// Computed lists split by visited flag
+const visitedProviders = computed(() =>
+  proveedores.filter((p: any) => !!p.visited)
+);
+const notVisitedProviders = computed(() =>
+  proveedores.filter((p: any) => !p.visited)
+);
+
+// Totals by payment method
+const totalEfectivo = computed(() =>
+  proveedores.reduce((s, p) => s + Number(p.efectivo || 0), 0)
+);
+const totalTarjeta = computed(() =>
+  proveedores.reduce((s, p) => s + Number(p.tarjeta || 0), 0)
+);
+
+// Totals by payment method but only for visited providers (used in "real" accordion breakdown)
+const totalVisitedEfectivo = computed(() =>
+  proveedores.reduce((s, p) => s + (p.visited ? Number(p.efectivo || 0) : 0), 0)
+);
+const totalVisitedTarjeta = computed(() =>
+  proveedores.reduce((s, p) => s + (p.visited ? Number(p.tarjeta || 0) : 0), 0)
+);
+
+// Breakdown of estimation totals by payment method (used in the accordion content)
+const totalEstimacionEfectivo = computed(() =>
+  proveedores.reduce((s, p) => s + Number(p.efectivo || 0), 0)
+);
+const totalEstimacionDigital = computed(() =>
+  proveedores.reduce((s, p) => s + Number(p.tarjeta || 0), 0)
 );
 
 // Formatted date for display using date-fns with Spanish locale
@@ -644,7 +902,52 @@ const formattedSelectedDate = computed(() => {
   }
 });
 
-// Methods
+const designMode = computed(() => systemController.getDesignMode());
+
+// Total estimacion considerando exclusivamente efectivo + tarjeta ingresados en proveedores
+const totalEstimacionEfectivoTarjeta = computed(() =>
+  proveedores.reduce(
+    (s, p) => s + Number(p.efectivo || 0) + Number(p.tarjeta || 0),
+    0
+  )
+);
+
+// Faltante: diferencia firmada entre lo disponible y lo requerido (disponible - requerido)
+const faltante = computed(() => {
+  try {
+    const requerido = Number(totalEstimacionEfectivoTarjeta.value) || 0;
+    const disponible = Number(totalIngresos.value) || 0;
+    // signed difference: disponible - requerido
+    return disponible - requerido;
+  } catch (_e) {
+    return 0;
+  }
+});
+
+// Faltante por método de pago: efectivo (disponibleEfectivo - requeridoEfectivo)
+const faltanteEfectivo = computed(() => {
+  try {
+    const requerido = Number(totalEstimacionEfectivo.value) || 0;
+    const disponible = Number(totalIngresosEfectivo.value) || 0;
+    return disponible - requerido;
+  } catch (_e) {
+    return 0;
+  }
+});
+
+// Faltante por método de pago: digital (disponibleDigital - requeridoDigital)
+const faltanteDigital = computed(() => {
+  try {
+    const requerido = Number(totalEstimacionDigital.value) || 0;
+    const disponible = Number(totalIngresosDigital.value) || 0;
+    return disponible - requerido;
+  } catch (_e) {
+    return 0;
+  }
+});
+// end computed
+
+// functions
 function addIngreso(params: { name?: string; amount?: number } = {}) {
   const { name, amount } = params;
   const n = name ?? newIngreso.name;
@@ -655,9 +958,13 @@ function addIngreso(params: { name?: string; amount?: number } = {}) {
     name: n,
     amount: Number(a) || 0,
     date: selectedDate.value,
+    paymentType: (newIngreso.paymentType === 'digital' ? 'digital' : 'cash') as
+      | 'cash'
+      | 'digital',
   });
   newIngreso.name = '';
   newIngreso.amount = 0;
+  newIngreso.paymentType = 'cash';
 }
 
 function addIngresoField() {
@@ -667,7 +974,9 @@ function addIngresoField() {
     name: '',
     amount: 0,
     date: selectedDate.value,
-  });
+    // default payment type for new empty field
+    paymentType: 'cash',
+  } as Income);
 }
 
 function updateIngresoAmount(params: { value: any; index: number }) {
@@ -799,6 +1108,14 @@ function formatCurrency(params: { v: number }) {
   }).format(v || 0);
 }
 
+function nonNegative(v: any) {
+  try {
+    return Math.max(0, Number(v) || 0);
+  } catch (_e) {
+    return 0;
+  }
+}
+
 // template-friendly wrappers (avoid implicit any in template lambdas)
 function onIngresoIonInput(params: { event: any; index: number }) {
   const { event, index } = params;
@@ -836,11 +1153,22 @@ function addProveedor(
     name: n,
     estimated: Number(e) || 0,
     dollar: Number(d) || 0,
+    // Initialize payment fields so they are present in backups and reactive
+    efectivo: 0,
+    tarjeta: 0,
+    credito: 0,
     notes: nt || '',
     visited: false,
     _justAdded: true,
   } as any;
   proveedores.push(newItem);
+  // Scroll the not-visited list to the end so the new provider is visible
+  try {
+    nextTick(() => scrollListToEnd(notVisitedList));
+  } catch (_e) {
+    /* noop */
+  }
+
   // remove new-mark after animation
   setTimeout(() => (newItem._justAdded = false), 400);
   newProveedor.name = '';
@@ -850,14 +1178,76 @@ function addProveedor(
 }
 
 function valueToConsider(p: any) {
+  // Primary: use explicit payment inputs (efectivo + tarjeta + credito) if any provided
+  const efectivo = Number(p.efectivo || 0);
+  const tarjeta = Number(p.tarjeta || 0);
+  const credito = Number(p.credito || 0);
+  const sumPayments = efectivo + tarjeta + credito;
+  if (sumPayments > 0) return sumPayments;
+  // Otherwise fallback to dollar or estimated (existing behavior)
   const d = Number(p.dollar || 0);
   const e = Number(p.estimated || 0);
   return d > 0 ? d : e;
 }
 
+// Helper that excludes credito (used for estimation-only sums)
+function valueToConsiderExcludingCredito(p: any) {
+  try {
+    const efectivo = Number(p.efectivo || 0);
+    const tarjeta = Number(p.tarjeta || 0);
+    const sum = efectivo + tarjeta;
+    if (sum > 0) return sum;
+    const d = Number(p.dollar || 0);
+    const e = Number(p.estimated || 0);
+    return d > 0 ? d : e;
+  } catch (_e) {
+    return 0;
+  }
+}
+
+/**
+ * Decide si el ion-label que muestra el total debería usar el color "primary".
+ * Regla aplicada:
+ *  - Si hay valor en efectivo o en tarjeta (efectivo>0 || tarjeta>0) -> true
+ *  - Si el único pago presente es crédito -> false
+ *  - No se considera "primary" cuando se cae al fallback (dollar/estimated)
+ */
+function isPaymentPrimary(p: any) {
+  try {
+    const efectivo = Number(p?.efectivo || 0);
+    const tarjeta = Number(p?.tarjeta || 0);
+    return efectivo > 0 || tarjeta > 0;
+  } catch (_e) {
+    return false;
+  }
+}
+
 // Toggle visited flag from item click (template-friendly)
 function toggleVisited(p: any) {
   p.visited = !p.visited;
+}
+
+// Handler invoked from the ion-checkbox @ionChange in the template.
+// We set the provider visited flag based on the event payload and log the change
+// to help debug why a provider might disappear when toggled.
+function onVisitedChanged(p: any, event: any) {
+  try {
+    // Ion's change event may expose the checked value in different places
+    const checked = !!(
+      event &&
+      (event.detail?.checked ?? event.detail?.value ?? event.target?.checked)
+    );
+    p.visited = checked;
+    console.log('onVisitedChanged', {
+      id: p?.id,
+      name: p?.name,
+      visited: p?.visited,
+    });
+    // ensure Vue processes reactive updates (no-op nextTick but useful when debugging)
+    nextTick(() => {});
+  } catch (e) {
+    console.error('onVisitedChanged error:', e);
+  }
 }
 
 // Enter edit mode for a provider and focus its name input
@@ -893,6 +1283,42 @@ function stopEditing(p: any) {
   }
 }
 
+// Parent handler for ProviderCard emitted updates: apply field changes to the corresponding provider
+function handleUpdateProvider(payload: { id: string | number; field: string; value: any }) {
+  try {
+    const { id, field, value } = payload || ({} as any);
+    const prov = proveedores.find((x: any) => x.id === id);
+    if (!prov) return;
+    // Apply the value for known fields only to avoid accidental injection
+    // Only allow specific fields to be updated; use a typed union to index Provider safely
+    const allowedFields = ['name', 'efectivo', 'tarjeta', 'credito'] as const;
+    type AllowedField = typeof allowedFields[number];
+    if (allowedFields.includes(field as AllowedField)) {
+      const f = field as AllowedField;
+      // Coerce numeric fields when appropriate
+      if (f === 'efectivo' || f === 'tarjeta' || f === 'credito') {
+        prov[f] = Number(value) || 0;
+      } else {
+        // ensure name is a string
+        prov[f] = String(value ?? '') as any;
+      }
+    }
+  } catch (e) {
+    console.error('handleUpdateProvider error', e);
+  }
+}
+
+// Parent handler to register name input refs emitted by ProviderCard (avoids mutating child props)
+function handleRegisterNameInput(payload: { id: string | number; el: any }) {
+  try {
+    const { id, el } = payload || ({} as any);
+    if (id == null) return;
+    nameInputRefs[id] = el || null;
+  } catch (e) {
+    console.error('handleRegisterNameInput error', e);
+  }
+}
+
 // Add empty provider card
 function addBlankProvider() {
   const newItem = {
@@ -901,6 +1327,10 @@ function addBlankProvider() {
     name: '',
     estimated: 0,
     dollar: 0,
+    // Initialize payment fields so they exist and are reactive
+    efectivo: 0,
+    tarjeta: 0,
+    credito: 0,
     notes: '',
     visited: false,
     _justAdded: true,
@@ -909,6 +1339,55 @@ function addBlankProvider() {
   proveedores.push(newItem);
   // wait for render and focus input
   nextTick(() => {
+    // ensure the not-visited list scrolls so the new provider is visible
+    try {
+      scrollListToEnd(notVisitedList);
+    } catch (_e) {
+      /* noop */
+    }
+
+    const el = nameInputRefs[newItem.id];
+    try {
+      if (hasSetFocus(el)) {
+        el.setFocus();
+      } else if (has$elSetFocus(el)) {
+        el.$el.setFocus();
+      } else if (hasFocusMethod(el)) {
+        el.focus();
+      }
+    } catch (_e) {
+      /* noop */
+    }
+  });
+  setTimeout(() => (newItem._justAdded = false), 400);
+}
+// Add empty provider card and mark it as visited (for the "Asistio" column)
+function addBlankProviderVisited() {
+  const newItem = {
+    id: Date.now() + Math.random(),
+    date: selectedDate.value,
+    name: '',
+    estimated: 0,
+    dollar: 0,
+    // Initialize payment fields so they exist and are reactive
+    efectivo: 0,
+    tarjeta: 0,
+    credito: 0,
+    notes: '',
+    visited: true,
+    _justAdded: true,
+    _editing: true,
+  } as any;
+  proveedores.push(newItem);
+  // wait for render and focus input
+  nextTick(() => {
+    // ensure the visited list scrolls so the new provider is visible
+    try {
+      scrollListToEnd(visitedList);
+    } catch (_e) {
+      /* noop */
+    }
+
     const el = nameInputRefs[newItem.id];
     try {
       if (hasSetFocus(el)) {
@@ -1018,6 +1497,8 @@ async function loadDataForDate(dateISO: string) {
         ingresos.length,
         ...(d.ingresos || []).map((i: any) => ({
           id: i.id ?? Date.now() + Math.random(),
+          // Ensure paymentType exists for backwards compatibility — normalize to 'cash'|'digital'
+          paymentType: i.paymentType === 'digital' ? 'digital' : 'cash',
           ...i,
         }))
       );
@@ -1029,6 +1510,10 @@ async function loadDataForDate(dateISO: string) {
         date: p.date ?? dateISO,
         estimated: Number(p.estimated || 0),
         dollar: Number(p.dollar || 0),
+        // Restore payment fields so values persist after reload
+        efectivo: Number(p.efectivo || 0),
+        tarjeta: Number(p.tarjeta || 0),
+        credito: Number(p.credito || 0),
         notes: p.notes || '',
         visited: !!p.visited,
         _justAdded: !!p._justAdded,
@@ -1084,6 +1569,19 @@ function onPopoverDidDismiss() {
 function resetToToday() {
   try {
     selectedDate.value = new Date().toISOString();
+  } catch (_e) {
+    /* noop */
+  }
+}
+
+function changeDate(days: number) {
+  try {
+    // Parse current selectedDate; fallback to now if invalid
+    let current = new Date(String(selectedDate.value));
+    if (isNaN(current.getTime())) current = new Date();
+    // Advance or retreat by the requested number of days
+    current.setDate(current.getDate() + Number(days || 0));
+    selectedDate.value = current.toISOString();
   } catch (_e) {
     /* noop */
   }
@@ -1508,21 +2006,21 @@ ion-card {
     box-shadow 160ms ease;
 }
 
-.providers-list ion-card.shadow1:active {
+.providers-list ion-card.shadow2:active {
   border-color: var(--ion-color-primary, #3880ff);
   box-shadow: 0 6px 18px rgba(56, 128, 255, 0.06);
 }
 
 /* Mostrar borde solo mientras el puntero está encima en escritorio (puntero fino) */
 @media (hover: hover) and (pointer: fine) {
-  .providers-list ion-card.shadow1:hover {
+  .providers-list ion-card.shadow2:hover {
     border-color: var(--ion-color-primary, #3880ff);
     box-shadow: 0 6px 18px rgba(56, 128, 255, 0.06);
   }
 }
 
 /* Mostrar borde cuando el elemento recibe foco por teclado (accesibilidad) */
-.providers-list ion-card.shadow1:focus-visible {
+.providers-list ion-card.shadow2:focus-visible {
   border-color: var(--ion-color-primary, #3880ff);
   box-shadow: 0 6px 18px rgba(56, 128, 255, 0.06);
 }
