@@ -121,7 +121,15 @@ class TemplateController {
         typeof id,
         ')'
       );
-      await this.dixie.deleteBackup(id);
+
+      // If the id comes as a numeric string (e.g. "123"), coerce it to a number
+      // so IndexedDB deletes the correct entry when the DB uses numeric keys.
+      const numericId =
+        typeof id === 'string' && !Number.isNaN(Number(id))
+          ? Number(id)
+          : id;
+
+      await this.dixie.deleteBackup(numericId as IDBValidKey);
 
       // Refresh Pinia store
       try {

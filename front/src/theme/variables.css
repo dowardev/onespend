@@ -1,6 +1,10 @@
 /* theme */
 @import url('./files/light.css');
 
+.main-card-content {
+  height: calc(100dvh - 80px);
+}
+
 /* ion-card */
 ion-card.shadow1 {
   /* box-shadow: none; */
