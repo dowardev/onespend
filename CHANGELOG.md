@@ -1,3 +1,14 @@
+## [v0.1.42] - 2025-11-27
+
+### Added
+
+- Template apply conflict resolution: when applying a template to a date that already has saved data, the UI now prompts the user to Combine or Overwrite. Handlers were added to merge backups conservatively or overwrite existing data and persist the selected date for BudgetView. Files: src/views/templates/TemplatesView.vue
+
+### Changed
+
+- Improve backup persistence and IndexedDB safety: added a recursive sanitizer and attempted structuredClone fallback to ensure payloads saved to IndexedDB are serializable, with safer logging of error previews. Files: src/controllers/dixie.ts
+- Minor formatting and function signature normalization in the templates store. Files: src/stores/templatesStore.ts
+
 ## [v0.1.41] - 2025-11-26
 
 ### Added
