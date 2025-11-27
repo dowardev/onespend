@@ -2,8 +2,8 @@ import { createRouter, createWebHashHistory } from '@ionic/vue-router';
 import { RouteRecordRaw } from 'vue-router';
 import HomePage from '../views/HomePage.vue';
 import BudgetView from '../views/budget/BudgetView.vue';
-import TemplatesView from '../views/TemplatesView.vue';
-import SuppliersPage from '../views/SuppliersPage.vue';
+import TemplatesView from '../views/templates/TemplatesView.vue';
+import SuppliersPage from '../views/suppliers/SuppliersPage.vue';
 
 const routes: Array<RouteRecordRaw> = [
   {
