@@ -1,5 +1,7 @@
 import { defineStore } from 'pinia';
-import TemplateController, { TemplateRecord } from '../controllers/TempalteController';
+import TemplateController, {
+  TemplateRecord,
+} from '../controllers/TempalteController';
 
 export type TemplateSummary = {
   id: string | number | null;
@@ -34,9 +36,13 @@ export const useTemplatesStore = defineStore('templates', {
       }
     },
 
-    async saveTemplate(params: { template: Partial<TemplateSummary> & { id?: IDBValidKey } }) {
+    async saveTemplate(params: {
+      template: Partial<TemplateSummary> & { id?: IDBValidKey };
+    }) {
       try {
-        await TemplateController.saveTemplate({ template: params.template as any });
+        await TemplateController.saveTemplate({
+          template: params.template as any,
+        });
         await this.loadTemplates();
       } catch (e) {
         console.error('templatesStore.saveTemplate error', e);
@@ -55,4 +61,3 @@ export const useTemplatesStore = defineStore('templates', {
     },
   },
 });
-

@@ -43,14 +43,88 @@ class DixieController {
     });
   }
 
+  /**
+   * Recursively sanitize a value so it becomes safe to store in IndexedDB.
+   * - Converts Date -> ISO string
+   * - Removes functions and symbols
+   * - Preserves primitives and arrays/objects (recursively)
+   * - Detects cycles and replaces with the string "[Circular]"
+   */
+  private sanitizeForIndexedDB(params: {
+    value: unknown;
+    seen?: WeakMap<object, unknown>;
+  }): unknown {
+    const { value, seen = new WeakMap() } = params;
+    try {
+      if (value === null || value === undefined) return value;
+      const t = typeof value;
+      if (t === 'string' || t === 'number' || t === 'boolean') return value;
+      if (t === 'function' || t === 'symbol') return undefined;
+      if (value instanceof Date) return (value as Date).toISOString();
+      if (Array.isArray(value)) {
+        if (seen.has(value)) return '[Circular]';
+        const out: any[] = [];
+        seen.set(value, out);
+        for (let i = 0; i < value.length; i++) {
+          out.push(
+            this.sanitizeForIndexedDB({ value: (value as any)[i], seen })
+          );
+        }
+        return out;
+      }
+      if (t === 'object') {
+        if (seen.has(value)) return '[Circular]';
+        const out: Record<string, unknown> = {};
+        seen.set(value, out);
+        // Only iterate own enumerable string keys
+        try {
+          for (const k of Object.keys(value as object)) {
+            try {
+              const v = (value as any)[k];
+              const sv = this.sanitizeForIndexedDB({ value: v, seen });
+              if (sv !== undefined) out[k] = sv;
+            } catch (_e) {
+              /* skip problematic property */
+            }
+          }
+        } catch (_e) {
+          return String(value);
+        }
+        return out;
+      }
+      // Fallback: stringify
+      return String(value);
+    } catch (_e) {
+      return undefined;
+    }
+  }
+
   async addEntry(entry: unknown): Promise<IDBValidKey> {
     const db = await this.openDB();
     return new Promise((resolve, reject) => {
       const tx = db.transaction(this.storeName, 'readwrite');
       const store = tx.objectStore(this.storeName);
+
+      // Attempt structuredClone if available, otherwise sanitize recursively
+      let safeEntry: unknown = undefined;
+      try {
+        if (typeof (self as any)?.structuredClone === 'function') {
+          try {
+            safeEntry = (self as any).structuredClone(entry);
+          } catch (_e) {
+            // fallback to sanitizer below
+            safeEntry = this.sanitizeForIndexedDB({ value: entry });
+          }
+        } else {
+          safeEntry = this.sanitizeForIndexedDB({ value: entry });
+        }
+      } catch (_e) {
+        safeEntry = this.sanitizeForIndexedDB({ value: entry });
+      }
+
       try {
         console.log('DixieController.addEntry: adding entry (shallow):', {
-          keys: Object.keys(entry || {}),
+          keys: Object.keys((safeEntry as any) || {}),
         });
       } catch (e) {
         /* noop */
@@ -58,9 +132,13 @@ class DixieController {
 
       let req: IDBRequest;
       try {
-        req = store.add(entry);
+        req = store.add(safeEntry);
       } catch (syncErr) {
-        console.error('DixieController.addEntry: synchronous error calling store.add', syncErr, { entry });
+        console.error(
+          'DixieController.addEntry: synchronous error calling store.add',
+          syncErr,
+          { entryPreview: this.sanitizeForIndexedDB({ value: entry }) }
+        );
         try {
           db.close();
         } catch (e) {
@@ -83,7 +161,11 @@ class DixieController {
             message: (req.error as any)?.message,
           });
         } catch (e) {
-          console.error('DixieController.addEntry: request.onerror (fallback log)', ev, req.error);
+          console.error(
+            'DixieController.addEntry: request.onerror (fallback log)',
+            ev,
+            req.error
+          );
         }
         // store last error for easier diagnosis
         try {
@@ -95,7 +177,10 @@ class DixieController {
               name: (req.error as any)?.name || 'UnknownError',
               message: (req.error as any)?.message || String(req.error || ev),
             },
-            entryPreview: (entry && typeof entry === 'object') ? JSON.parse(JSON.stringify(entry, Object.keys(entry).slice(0,10))) : String(entry),
+            entryPreview:
+              entry && typeof entry === 'object'
+                ? this.sanitizeForIndexedDB(entry)
+                : String(entry),
           };
           localStorage.setItem('dixie:lastError', JSON.stringify(payload));
         } catch (_e) {
@@ -106,7 +191,10 @@ class DixieController {
 
       tx.onabort = (ev: unknown) => {
         try {
-          console.error('DixieController.addEntry: transaction.onabort', { event: ev, txError: tx.error });
+          console.error('DixieController.addEntry: transaction.onabort', {
+            event: ev,
+            txError: tx.error,
+          });
         } catch (_e) {
           /* noop */
         }
@@ -119,7 +207,10 @@ class DixieController {
               name: (tx.error as any)?.name || 'UnknownError',
               message: (tx.error as any)?.message || String(tx.error || ev),
             },
-            entryPreview: (entry && typeof entry === 'object') ? JSON.parse(JSON.stringify(entry, Object.keys(entry).slice(0,10))) : String(entry),
+            entryPreview:
+              entry && typeof entry === 'object'
+                ? this.sanitizeForIndexedDB(entry)
+                : String(entry),
           };
           localStorage.setItem('dixie:lastError', JSON.stringify(payload));
         } catch (_e) {
@@ -130,7 +221,10 @@ class DixieController {
 
       tx.onerror = (ev: unknown) => {
         try {
-          console.error('DixieController.addEntry: transaction.onerror', { event: ev, txError: tx.error });
+          console.error('DixieController.addEntry: transaction.onerror', {
+            event: ev,
+            txError: tx.error,
+          });
         } catch (_e) {
           /* noop */
         }
@@ -143,7 +237,10 @@ class DixieController {
               name: (tx.error as any)?.name || 'UnknownError',
               message: (tx.error as any)?.message || String(tx.error || ev),
             },
-            entryPreview: (entry && typeof entry === 'object') ? JSON.parse(JSON.stringify(entry, Object.keys(entry).slice(0,10))) : String(entry),
+            entryPreview:
+              entry && typeof entry === 'object'
+                ? this.sanitizeForIndexedDB(entry)
+                : String(entry),
           };
           localStorage.setItem('dixie:lastError', JSON.stringify(payload));
         } catch (_e) {
@@ -179,11 +276,19 @@ class DixieController {
         resolve(req.result);
       };
       req.onerror = (ev: unknown) => {
-        console.error('DixieController.putEntry: request.onerror', ev, req.error);
+        console.error(
+          'DixieController.putEntry: request.onerror',
+          ev,
+          req.error
+        );
         reject(req.error || ev);
       };
       tx.onerror = (ev: unknown) => {
-        console.error('DixieController.putEntry: transaction.onerror', ev, tx.error);
+        console.error(
+          'DixieController.putEntry: transaction.onerror',
+          ev,
+          tx.error
+        );
         reject(tx.error || ev);
       };
       tx.oncomplete = () => {

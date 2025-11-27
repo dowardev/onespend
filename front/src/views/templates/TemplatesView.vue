@@ -130,6 +130,19 @@
         ]"
         @did-dismiss="onConfirmDismiss"
       ></ion-alert>
+
+      <!-- Alert para conflicto al aplicar template: Combinar/Sobrescribir -->
+      <ion-alert
+        v-model:is-open="showApplyConflict"
+        header="Conflicto de datos"
+        :message="applyConflictMessage"
+        :buttons="[
+          { text: 'Cancelar', role: 'cancel', handler: onApplyConflictDismiss },
+          { text: 'Combinar', handler: handleApplyConflictCombine },
+          { text: 'Sobrescribir', cssClass: 'danger', handler: handleApplyConflictOverwrite },
+        ]"
+        @did-dismiss="onApplyConflictDismiss"
+      ></ion-alert>
       <!-- end alerts -->
 
       <!-- toast -->
@@ -183,6 +196,8 @@ import {
   trashOutline,
 } from 'ionicons/icons';
 import { reactive, ref, onMounted, computed, unref, nextTick } from 'vue'; // Placeholder comment for further Ionic changes.
+import { format, parseISO } from 'date-fns';
+import { es as esLocale } from 'date-fns/locale';
 import { useRouter } from 'vue-router';
 
 // controllers
@@ -251,6 +266,12 @@ const editingTemplateId = ref<string | number | null>(null);
 const supplierSearchbar = ref<InstanceType<typeof IonSearchbar> | null>(null);
 const searchVisible = ref(false);
 const supplierQuery = ref('');
+
+// State to handle apply conflicts when the target date already has content
+const showApplyConflict = ref(false);
+const applyConflictMessage = ref('');
+// pending payload to save when user confirms combine/overwrite
+const pendingApplyPayload = ref<any | null>(null);
 // end vars
 
 // computed
@@ -636,7 +657,39 @@ async function confirmApply() {
   };
 
   try {
-    await backupController.saveBackup(payloadToSave);
+    // Check if there's already data for the selected date and ask the user
+    const existing = await backupController.getLatestBackupForDate(
+      String(dateISO)
+    );
+
+    if (existing && existing.data) {
+      // Ask user whether to combine or overwrite
+      try {
+        const parsedDate = parseISO(String(dateISO));
+        const pretty = isNaN(parsedDate.getTime())
+          ? String(dateISO)
+          : format(parsedDate, "d 'de' MMMM 'de' yyyy", { locale: esLocale });
+        applyConflictMessage.value = `Ya existen datos guardados para ${pretty}. ¿Deseas combinar el template con los datos existentes o sobrescribirlos?`;
+      } catch (_e) {
+        applyConflictMessage.value = `Ya existen datos guardados para la fecha seleccionada. ¿Deseas combinar el template con los datos existentes o sobrescribirlos?`;
+      }
+
+      pendingApplyPayload.value = payloadToSave;
+      showApplyConflict.value = true;
+      return;
+    }
+
+    // No existing data: proceed to save normally
+    try {
+      // sanitize writable payload to avoid IndexedDB DataCloneError (remove proxies, functions, DOM nodes)
+      const cleanPayload = JSON.parse(JSON.stringify(payloadToSave));
+      await backupController.saveBackup(cleanPayload);
+    } catch (saveErr) {
+      // If sanitizing fails for some reason, attempt to save the original payload as a fallback and log error
+      console.warn('confirmApply: save with sanitized payload failed, retrying with original payload', saveErr);
+      await backupController.saveBackup(payloadToSave);
+    }
+
     // persist selected date so BudgetView picks it up
     try {
       localStorage.setItem(STORAGE_KEY, dateISO);
@@ -662,9 +715,144 @@ async function confirmApply() {
   }
 }
 
+function onApplyConflictDismiss() {
+  try {
+    showApplyConflict.value = false;
+    pendingApplyPayload.value = null;
+  } catch (_e) {
+    /* noop */
+  }
+}
+
+async function handleApplyConflictCombine() {
+  try {
+    const payloadToSave = pendingApplyPayload.value;
+    if (!payloadToSave) {
+      onApplyConflictDismiss();
+      return;
+    }
+
+    const dateISO = payloadToSave.data?.selectedDate;
+    const existing = await backupController.getLatestBackupForDate(String(dateISO));
+
+    let mergedData: any = {};
+    if (existing && existing.data) {
+      const existingData: any = existing.data || {};
+      // Merge ingresos and proveedores arrays, avoiding duplicates by name
+      const existingIngresos = Array.isArray(existingData.ingresos) ? existingData.ingresos : [];
+      const existingProveedores = Array.isArray(existingData.proveedores) ? existingData.proveedores : [];
+
+      const newIngresos = Array.isArray(payloadToSave.data.ingresos) ? payloadToSave.data.ingresos : [];
+      const newProveedores = Array.isArray(payloadToSave.data.proveedores) ? payloadToSave.data.proveedores : [];
+
+      // Simple merge: keep existing then append new items that don't match by name
+      const mergedIngresos = existingIngresos.slice();
+      for (const ni of newIngresos) {
+        const exists = mergedIngresos.some((ei: any) => String(ei.name || '').trim() === String(ni.name || '').trim());
+        if (!exists) mergedIngresos.push(ni);
+      }
+
+      const mergedProveedores = existingProveedores.slice();
+      for (const np of newProveedores) {
+        const exists = mergedProveedores.some((ep: any) => String(ep.name || '').trim() === String(np.name || '').trim());
+        if (!exists) mergedProveedores.push(np);
+      }
+
+      // Recompute totals conservatively
+      const totalProviders = mergedProveedores.reduce((s: number, p: any) => {
+        return s + (Number(p.dollar || 0) || Number(p.estimated || 0) || 0);
+      }, 0);
+
+      mergedData = Object.assign({}, existingData, {
+        ingresos: mergedIngresos,
+        proveedores: mergedProveedores,
+        totals: Object.assign({}, existingData.totals || {}, {
+          totalIngresos: (mergedIngresos || []).reduce((s: number, i: any) => s + (Number(i.amount || 0) || 0), 0),
+          totalProviders,
+          totalVisitedProviders: (mergedProveedores || []).reduce((s: number, p: any) => s + (p.visited ? (Number(p.dollar || 0) || Number(p.estimated || 0) || 0) : 0), 0),
+        }),
+        selectedDate: dateISO,
+      });
+    } else {
+      mergedData = payloadToSave.data;
+    }
+
+    const savePayload = {
+      component: 'BudgetView',
+      data: mergedData,
+      createdAt: Date.now(),
+    };
+
+    try {
+      // sanitize payload to avoid IndexedDB DataCloneError
+      const cleanSavePayload = JSON.parse(JSON.stringify(savePayload));
+      await backupController.saveBackup(cleanSavePayload);
+    } catch (saveErr) {
+      console.warn('handleApplyConflictCombine: sanitized save failed, retrying with original payload', saveErr);
+      await backupController.saveBackup(savePayload);
+    }
+
+    // persist selected date
+    try {
+      localStorage.setItem(STORAGE_KEY, String(dateISO));
+    } catch (_e) {
+      /* noop */
+    }
+
+    // close modal and navigate
+    showApplyConflict.value = false;
+    pendingApplyPayload.value = null;
+    showApplyModal.value = false;
+    applyTargetTemplate.value = null;
+
+    toast.message = 'Template combinado y aplicado';
+    toast.open = true;
+
+    router.push({ name: 'Budget', query: { refresh: String(Date.now()), date: String(dateISO) } });
+  } catch (e) {
+    console.error('handleApplyConflictCombine error', e);
+    alertMessage.value = 'Error al combinar templates';
+    showAlert.value = true;
+  }
+}
+
+async function handleApplyConflictOverwrite() {
+  try {
+    const payloadToSave = pendingApplyPayload.value;
+    if (!payloadToSave) {
+      onApplyConflictDismiss();
+      return;
+    }
+
+    await backupController.saveBackup(payloadToSave);
+
+    // persist selected date so BudgetView picks it up
+    try {
+      localStorage.setItem(STORAGE_KEY, String(payloadToSave.data?.selectedDate));
+    } catch (_e) {
+      /* noop */
+    }
+
+    // close modal and navigate
+    showApplyConflict.value = false;
+    pendingApplyPayload.value = null;
+    showApplyModal.value = false;
+    applyTargetTemplate.value = null;
+
+    toast.message = 'Template aplicado (sobrescrito)';
+    toast.open = true;
+
+    router.push({ name: 'Budget', query: { refresh: String(Date.now()), date: String(payloadToSave.data?.selectedDate) } });
+  } catch (e) {
+    console.error('handleApplyConflictOverwrite error', e);
+    alertMessage.value = 'Error al sobrescribir datos';
+    showAlert.value = true;
+  }
+}
+
 async function confirmDelete(params: { tmpl: TemplateSummary }) {
   const { tmpl } = params;
-  if (!tmpl || !tmpl.id) {
+  if (!tmpl || tmpl.id == null) {
     alertMessage.value = 'Template inválido';
     showAlert.value = true;
     return;
