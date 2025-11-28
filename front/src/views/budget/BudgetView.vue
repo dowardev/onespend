@@ -313,127 +313,24 @@
                         class="list-content"
                         style="height: calc(100% - 73px); overflow: auto"
                       >
-                        <ion-card
+                        <ProviderCardComponent
                           v-for="p in visitedProviders"
                           :key="p.id"
-                          class="ion-padding-bottom"
-                          :class="[
-                            'shadow2',
-                            { 'provider-just-added': p._justAdded },
-                          ]"
-                        >
-                          <ion-item lines="none" class="transparent">
-                            <ion-checkbox
-                              slot="start"
-                              v-model="p.visited"
-                              @ion-change="onVisitedChanged(p, $event)"
-                            ></ion-checkbox>
-
-                            <div style="width: 100%" @click="startEditing(p)">
-                              <ion-label v-if="p.name && !p._editing">{{
-                                p.name
-                              }}</ion-label>
-
-                              <ion-input
-                                v-show="p._editing || !p.name"
-                                :ref="el => (nameInputRefs[p.id] = el)"
-                                v-model="p.name"
-                                placeholder="Nombre proveedor"
-                                @ion-blur="stopEditing(p)"
-                              ></ion-input>
-                            </div>
-                          </ion-item>
-
-                          <div
-                            style="
-                              display: flex;
-                              justify-content: space-between;
-                            "
-                            class="ion-padding-start ion-padding-end"
-                          >
-                            <ion-input
-                              v-model.number="p.efectivo"
-                              label="Efectivo"
-                              label-placement="floating"
-                              type="number"
-                              class="num-input small"
-                            ></ion-input>
-
-                            <ion-input
-                              v-model.number="p.tarjeta"
-                              label="Tarjeta/Transferencia"
-                              label-placement="floating"
-                              type="number"
-                              class="num-input small"
-                            ></ion-input>
-
-                            <ion-input
-                              v-model.number="p.credito"
-                              label="Credito"
-                              label-placement="floating"
-                              type="number"
-                              class="num-input small"
-                            ></ion-input>
-
-                            <ion-label
-                              :color="
-                                isPaymentPrimary(p) ? 'primary' : undefined
-                              "
-                              @click="
-                                popovers.paymentMethods.event = $event;
-                                popovers.paymentMethods.open = true;
-                              "
-                            >
-                              {{ formatCurrency({ v: valueToConsider(p) }) }}
-                            </ion-label>
-                          </div>
-
-                          <ion-item lines="none">
-                            <!-- button open products -->
-                            <ion-button
-                              v-if="hasProductsFor(p)"
-                              slot="end"
-                              fill="clear"
-                              size="small"
-                              title="Ver productos"
-                              class="icon-btn"
-                              @click.stop="
-                                openProductsPopover({
-                                  provider: p,
-                                  event: $event,
-                                })
-                              "
-                            >
-                              <ion-icon :icon="listOutline"></ion-icon>
-                            </ion-button>
-
-                            <!-- button notes -->
-                            <ion-button
-                              slot="end"
-                              fill="clear"
-                              @click.stop="openNotesModal(p)"
-                            >
-                              <ion-icon :icon="bookOutline"></ion-icon>
-                            </ion-button>
-
-                            <!-- button history -->
-                            <ion-button slot="end" fill="clear">
-                              <ion-icon :icon="timeOutline"></ion-icon>
-                            </ion-button>
-
-                            <!-- button delete provider -->
-                            <ion-button
-                              slot="end"
-                              fill="clear"
-                              size="small"
-                              title="Eliminar proveedor"
-                              class="icon-btn"
-                              @click.stop="confirmRemoveProveedor(p.id, p.name)"
-                            >
-                              <ion-icon :icon="trashOutline"></ion-icon>
-                            </ion-button>
-                          </ion-item>
-                        </ion-card>
+                          :provider="p"
+                          :name-input-refs="nameInputRefs"
+                          :on-visited-changed="onVisitedChanged"
+                          :start-editing="startEditing"
+                          :stop-editing="stopEditing"
+                          :has-products-for="hasProductsFor"
+                          :open-products-popover="openProductsPopover"
+                          :open-notes-modal="openNotesModal"
+                          :confirm-remove-proveedor="confirmRemoveProveedor"
+                          :is-payment-primary="isPaymentPrimary"
+                          :value-to-consider="valueToConsider"
+                          :format-currency="formatCurrency"
+                          @update-provider="handleUpdateProvider"
+                          @register-name-input="handleRegisterNameInput"
+                        />
                       </div>
                     </ion-list>
                   </ion-col>
@@ -622,6 +519,15 @@
         </ion-content>
       </ion-modal>
       <!-- end modal -->
+
+      <!-- toasts -->
+      <ion-toast
+        :is-open="toast.open"
+        :message="toast.message"
+        :duration="toast.duration"
+        @did-dismiss="() => (toast.open = false)"
+      ></ion-toast>
+      <!-- end toasts -->
     </ion-content>
   </ion-page>
 </template>
@@ -634,7 +540,6 @@ import {
   IonButton,
   IonButtons,
   IonMenuButton,
-  IonCard,
   IonCardContent,
   IonCheckbox,
   IonCol,
@@ -659,6 +564,7 @@ import {
   IonTitle,
   IonToolbar,
   IonAccordionGroup,
+  IonToast,
 } from '@ionic/vue';
 import {
   reactive,
@@ -673,11 +579,8 @@ import {
 import {
   addOutline,
   trashOutline,
-  listOutline,
-  bookOutline,
   closeOutline,
   saveOutline,
-  timeOutline,
   chevronBackOutline,
   chevronForwardOutline,
   ellipsisVerticalOutline,
@@ -794,8 +697,9 @@ const showTemplatesModal = ref(false);
 const showApplyConflictModal = ref(false);
 const applyConflictMessage = ref('');
 const pendingApplyPayload = ref<any | null>(null);
-const applyTargetTemplate = ref<any | null>(null);
 const applySelectedDate = ref(new Date().toISOString());
+// Toast state used to inform the user when an action is prevented (e.g. editing a provider from a template)
+const toast = reactive({ open: false, message: '', duration: 2500 });
 // end vars
 
 // life
@@ -908,10 +812,6 @@ const totalIngresosDigital = computed(() =>
 
 const totalProviders = computed(() =>
   proveedores.reduce((s, p) => s + valueToConsider(p), 0)
-);
-// Total used for estimation (exclude credito)
-const totalProvidersEstimacion = computed(() =>
-  proveedores.reduce((s, p) => s + valueToConsiderExcludingCredito(p), 0)
 );
 // Total of providers that have been visited (checked)
 const totalVisitedProviders = computed(() =>
@@ -1317,6 +1217,25 @@ function onVisitedChanged(p: any, event: any) {
 // Enter edit mode for a provider and focus its name input
 function startEditing(p: any) {
   try {
+    // Do not allow editing providers that were created from a template
+    if (p && p._fromTemplate) {
+      // Show friendly toast to inform the user that editing providers from templates is disabled
+      try {
+        toast.message =
+          'No puedes editar el nombre porque este proveedor proviene de una plantilla.';
+        toast.open = true;
+      } catch (_e) {
+        /* noop */
+      }
+      // For debugging, also log the prevented action
+      console.log(
+        'startEditing: provider from template; edit prevented',
+        p.id,
+        p.name
+      );
+      return;
+    }
+
     p._editing = true;
     // wait for DOM update and focus the input
     nextTick(() => {
@@ -1584,6 +1503,7 @@ async function loadDataForDate(dateISO: string) {
         credito: Number(p.credito || 0),
         notes: p.notes || '',
         visited: !!p.visited,
+        _fromTemplate: !!p._fromTemplate,
         _justAdded: !!p._justAdded,
         // Always clear editing state when loading from storage
         _editing: false,
@@ -2199,6 +2119,7 @@ async function applyTemplateFromModal(tmpl: any) {
       dollar: 0,
       notes: '',
       visited: false,
+      _fromTemplate: true,
     }));
 
     const payload = {
