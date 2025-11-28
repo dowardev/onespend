@@ -1,4 +1,15 @@
-## [v0.1.42] - 2025-11-27
+## [v0.1.43] - 2025-11-27
+
+### Added
+- Accelerated template application: Users can now quickly apply templates directly to the current date for improved workflow efficiency.
+- Enhanced backup serializers with recursive sanitizer methods to manage IndexedDB compatibility issues.
+- Introduced robust conflict resolution handlers for template merges with full UI integration (Combine/Overwrite).
+
+### Changed
+- Improved function formatting consistency within templates store.
+- Modified date handling in controllers to ensure template merges are serialized correctly.
+
+## [v0.1.42] - 2025-11-26
 
 ### Added
 
@@ -102,122 +113,3 @@
 **Files changed in this release**
 
 - src/views/budget/modals/PoductsModalComponent.vue
-
-
-
-## [v0.1.35] - 2025-11-19
-
-### Added
-
-- New ApplyTemplateComponent modal: moved template application UI into a dedicated component (src/views/templates/modals/ApplyTemplateComponent.vue).
-
-### Changed
-
-- Refactored TemplatesView to use ApplyTemplateComponent instead of inline modal markup; simplified imports and removed now-duplicated template UI code.
-- Updated AddSupliersComponent modal imports to explicitly include Ionic components used by the modal.
-
-### Removed
-
-- Removed a large legacy view file (deleted from repository). Review commit for exact file path and content removed.
-
----
-
-## [v0.1.34] - 2025-11-19
-
-### Added
-
-- New modular Suppliers UI: moved SuppliersPage into src/views/suppliers/ and added AddSupliersComponent modal (src/views/suppliers/modals/AddSupliersComponent.vue) to handle supplier creation/editing.
-- New Templates modal component AddTemplateComponent (src/views/templates/modals/AddTemplateComponent.vue) for template creation/editing.
-
-### Changed
-
-- Refactored Suppliers page into a component-based structure and split supplier editor into a dedicated modal component.
-- Refactored TemplatesView to use a modal component and moved templates files into src/views/templates/.
-- Updated router imports to reference new paths for TemplatesView and SuppliersPage.
-
-### Removed
-
-- Removed legacy src/views/SuppliersPage.vue (replaced by modular implementation under src/views/suppliers/).
-
----
-
-## [v0.1.33] - 2025-11-18
-
-### Added
-
-- Grouped supplier list implemented in `SuppliersPage.vue`.
-- Introduced grouped template list functionality in `TemplatesView.vue` categorized by the initial letter.
-
-### Changed
-
-- Reorganized `SuppliersPage.vue`: Enhanced layout with dynamic grouping structure and item divider for grouping.
-- Updated variables in `variables.css` for layout adjustments. Replace `calc d supp query semantics`---io. divis---RecycleLogic template.
-
-## [v0.1.32] - 2025-11-18
-
-### Added
-
-- Product management UI inside Suppliers modal: add, edit and remove products per supplier.
-- Product search within the supplier modal and supplier list search.
-- Icons for actions and responsive action visibility for touch/mouse devices.
-
-### Changed
-
-- Refactor src/views/SuppliersPage.vue: reworked suppliers list to use a filtered/searchable list, redesigned the supplier modal layout, and centralized product state handling.
-- Consolidated product add/edit flow into a single editor (uses `newProduct` and `editingIndex`).
-- Introduced computed helpers for filtering suppliers and supplier products.
-
-### Removed
-
-- Removed contact, phone and email fields from the supplier form (streamlined to name + products).
-
-### Fixes
-
-- Improved delete confirmation flow to pass a structured payload (id and name) to the confirmation dialog.
-
-## [v0.1.31] - 2025-11-15
-
-### Fixed
-
-- Remove commented line in App.vue navigation helper that attempted to close the menu directly; small cleanup to navigation helper.
-
-### Changed
-
-- Minor cleanup in App.vue navigation helper.
-
-## [v0.1.30] - 2025-11-15
-
-### Fixed
-
-- Fix TemplateController behavior: ensure numeric ID coercion for delete/update, consistent add/put flow and safer handling of lazy Pinia store synchronization.
-
-### Changed
-
-- Minor updates to App.vue (layout/structure tweaks).
-
-**Files changed in this release**
-
-- `src/controllers/TempalteController.ts`
-- `src/App.vue`
-
-## [v0.1.29] - 2025-11-14
-
-### Added
-
-- Add systemConfigController and a Pinia store (useSystemConfig) to manage design mode (iOS / Material).
-
-### Changed
-
-- Refactor main views (BudgetView, SuppliersPage, TemplatesView) to a card-based layout and improve responsive behavior.
-- App navigation: replace direct router.push calls in menu items with a navigation helper that closes the Ionic menu (menuController) before navigating.
-- Add IonMenuButton and design-mode awareness to pages for consistent UI across platforms.
-- Budget: improve providers UI (cards, inputs), add products & notes modals, visited flag handling and debounced auto-save/backups.
-- Styling: add .main-card-content and make other layout/style adjustments (variables.css and scoped styles in several views).
-- Add new files: src/controllers/systemConfigController.ts and src/stores/useSystemConfig.ts.
-
-### Notes
-
-- See commit for detailed file-level changes and implementation details.
-  ...
-
-[Full CHANGELOG]
