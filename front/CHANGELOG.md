@@ -1,3 +1,16 @@
+## [v0.1.44] - 2025-11-28
+
+### Added
+- Introduced `ProviderCardComponent`: Enhanced provider management in the budget view with dedicated component for better modularity.
+- Integrated user notification system: Added toast alerts to guide users during interactions with providers.
+
+### Changed
+- Refined `sanitizeForIndexedDB` usage: Enhanced data handling consistency in Dixie Controller.
+- Simplified `BudgetView` template: Replaced inline provider card logic with the new component.
+- General template and dependency clean-up across BudgetView and ProviderCardComponent.
+
+---
+
 ## [v0.1.43] - 2025-11-27
 
 ### Added
