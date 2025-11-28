@@ -179,7 +179,7 @@ class DixieController {
             },
             entryPreview:
               entry && typeof entry === 'object'
-                ? this.sanitizeForIndexedDB(entry)
+                ? this.sanitizeForIndexedDB({ value: entry })
                 : String(entry),
           };
           localStorage.setItem('dixie:lastError', JSON.stringify(payload));
@@ -209,7 +209,7 @@ class DixieController {
             },
             entryPreview:
               entry && typeof entry === 'object'
-                ? this.sanitizeForIndexedDB(entry)
+                ? this.sanitizeForIndexedDB({ value: entry })
                 : String(entry),
           };
           localStorage.setItem('dixie:lastError', JSON.stringify(payload));
@@ -239,7 +239,7 @@ class DixieController {
             },
             entryPreview:
               entry && typeof entry === 'object'
-                ? this.sanitizeForIndexedDB(entry)
+                ? this.sanitizeForIndexedDB({ value: entry })
                 : String(entry),
           };
           localStorage.setItem('dixie:lastError', JSON.stringify(payload));

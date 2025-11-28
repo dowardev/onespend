@@ -17,10 +17,19 @@
 
         <ion-input
           v-show="provider._editing || !provider.name"
-                  :ref="el => emit('register-name-input', { id: provider.id, el })"
-                  :value="provider.name"
-                  @ionInput="e => emit('update-provider', { id: provider.id, field: 'name', value: e?.detail?.value ?? e?.target?.value ?? '' })"
+          :ref="el => emit('register-name-input', { id: provider.id, el })"
+          :value="provider.name"
+          :disabled="provider._fromTemplate"
+          title="Proveedor creado desde plantilla - no editable"
           placeholder="Nombre proveedor"
+          @ion-input="
+            e =>
+              emit('update-provider', {
+                id: provider.id,
+                field: 'name',
+                value: e?.detail?.value ?? e?.target?.value ?? '',
+              })
+          "
           @ion-blur="stopEditing(provider)"
         ></ion-input>
       </div>
@@ -36,7 +45,14 @@
         label-placement="floating"
         type="number"
         class="num-input small"
-        @ionInput="e => emit('update-provider', { id: provider.id, field: 'efectivo', value: Number(e?.detail?.value ?? e?.target?.value ?? 0) })"
+        @ion-input="
+          e =>
+            emit('update-provider', {
+              id: provider.id,
+              field: 'efectivo',
+              value: Number(e?.detail?.value ?? e?.target?.value ?? 0),
+            })
+        "
       ></ion-input>
 
       <ion-input
@@ -45,7 +61,14 @@
         label-placement="floating"
         type="number"
         class="num-input small"
-        @ionInput="e => emit('update-provider', { id: provider.id, field: 'tarjeta', value: Number(e?.detail?.value ?? e?.target?.value ?? 0) })"
+        @ion-input="
+          e =>
+            emit('update-provider', {
+              id: provider.id,
+              field: 'tarjeta',
+              value: Number(e?.detail?.value ?? e?.target?.value ?? 0),
+            })
+        "
       ></ion-input>
 
       <ion-input
@@ -54,7 +77,14 @@
         label-placement="floating"
         type="number"
         class="num-input small"
-        @ionInput="e => emit('update-provider', { id: provider.id, field: 'credito', value: Number(e?.detail?.value ?? e?.target?.value ?? 0) })"
+        @ion-input="
+          e =>
+            emit('update-provider', {
+              id: provider.id,
+              field: 'credito',
+              value: Number(e?.detail?.value ?? e?.target?.value ?? 0),
+            })
+        "
       ></ion-input>
 
       <ion-label
@@ -122,6 +152,7 @@ import {
 } from 'ionicons/icons';
 import { type ComponentPublicInstance } from 'vue';
 
+// interface
 type FocusableRef =
   | Element
   | ComponentPublicInstance
@@ -130,7 +161,9 @@ type FocusableRef =
       $el?: { setFocus?: () => void };
       focus?: () => void;
     };
+// end inteface
 
+// main
 defineProps<{
   provider: any;
   nameInputRefs: Record<string | number, FocusableRef | null>;
@@ -151,13 +184,16 @@ const emit = defineEmits([
   'register-name-input',
   'update-visited',
 ]);
+// end maing
 
+// function
 function openPaymentPopover() {
   // noop placeholder so the label click doesn't error if parent doesn't provide a popover
   // parent components can override by handling the click via the label if needed
   return;
 }
 </script>
+<!-- end function -->
 
 <style scoped>
 .icon-btn {
