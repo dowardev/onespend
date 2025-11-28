@@ -23,6 +23,16 @@
           >
             {{ formattedSelectedDate }}
           </ion-button>
+
+          <!-- button more options -->
+          <ion-button
+            @click="
+              popovers.moreOptions.event = $event;
+              popovers.moreOptions.open = true;
+            "
+          >
+            <ion-icon :icon="ellipsisVerticalOutline"></ion-icon>
+          </ion-button>
         </ion-buttons>
       </ion-toolbar>
     </ion-header>
@@ -462,6 +472,22 @@
           </ion-item>
         </ion-content>
       </ion-popover>
+
+      <!-- popover more options -->
+      <ion-popover
+        :is-open="popovers.moreOptions.open"
+        :event="popovers.moreOptions.event"
+        :keep-contents-mounted="true"
+        :dismiss-on-select="true"
+        @did-dismiss="popovers.moreOptions.open = false"
+      >
+        <ion-content>
+          <!-- Button to open Templates modal -->
+          <ion-item button @click="openTemplatesModal()">
+            <ion-label>Aplicar template</ion-label>
+          </ion-item>
+        </ion-content>
+      </ion-popover>
       <!-- end popover -->
 
       <!-- alerts -->
@@ -474,9 +500,27 @@
         @did-dismiss="onDeleteAlertDidDismiss"
       ></ion-alert>
       <!-- end confirmation alert -->
+
+      <!-- apply conflict alert for templates -->
+      <ion-alert
+        :is-open="showApplyConflictModal"
+        header="Conflicto de datos"
+        :message="applyConflictMessage"
+        :buttons="[
+          { text: 'Cancelar', role: 'cancel', handler: onApplyConflictDismiss },
+          { text: 'Combinar', handler: handleApplyConflictCombine },
+          {
+            text: 'Sobrescribir',
+            cssClass: 'danger',
+            handler: handleApplyConflictOverwrite,
+          },
+        ]"
+        @did-dismiss="onApplyConflictDismiss"
+      ></ion-alert>
       <!-- end alerts -->
 
       <!-- modals -->
+
       <!-- products modal -->
       <ion-modal
         :is-open="modals.products.open"
@@ -527,6 +571,53 @@
                 :auto-grow="true"
               ></ion-textarea>
             </ion-card-content>
+          </ion-card>
+        </ion-content>
+      </ion-modal>
+
+      <!-- templates modal -->
+      <ion-modal
+        v-model:is-open="showTemplatesModal"
+        :keep-contents-mounted="true"
+        @did-dismiss="onTemplatesModalDidDismiss"
+      >
+        <ion-header class="ion-no-border" mode="ios">
+          <ion-toolbar>
+            <ion-buttons>
+              <ion-button @click="onTemplatesModalDidDismiss()">
+                <ion-icon :icon="closeOutline"></ion-icon>
+              </ion-button>
+            </ion-buttons>
+
+            <ion-title>Aplicar template</ion-title>
+          </ion-toolbar>
+        </ion-header>
+
+        <ion-content>
+          <ion-card class="shadow1">
+            <ion-list class="transparent">
+              <div v-if="templatesModalList.length">
+                <ion-item
+                  v-for="tmpl in templatesModalList"
+                  :key="String(tmpl.id || tmpl.name)"
+                  lines="full"
+                  button
+                  class="transparent"
+                  @click.stop="applyTemplateFromModal(tmpl)"
+                >
+                  <ion-label>
+                    <h2>{{ tmpl.name }}</h2>
+                    <p>{{ tmpl.description }}</p>
+                  </ion-label>
+                </ion-item>
+              </div>
+
+              <template v-else>
+                <ion-item>
+                  <ion-label>No hay templates</ion-label>
+                </ion-item>
+              </template>
+            </ion-list>
           </ion-card>
         </ion-content>
       </ion-modal>
@@ -589,6 +680,7 @@ import {
   timeOutline,
   chevronBackOutline,
   chevronForwardOutline,
+  ellipsisVerticalOutline,
 } from 'ionicons/icons';
 import { useRoute } from 'vue-router';
 import { format, parseISO } from 'date-fns';
@@ -635,6 +727,7 @@ import dixieController from '@/controllers/dixie';
 import backupController from '@/controllers/backupController';
 import suppliersController from '@/controllers/suppliersController';
 import systemController from '@/controllers/systemConfigController';
+import TemplateController from '@/controllers/TempalteController';
 // end components
 
 // components
@@ -662,6 +755,7 @@ const popovers = reactive({
   date: { open: false, event: null as unknown },
   paymentMethods: { open: false, event: null as unknown },
   inforSuppliers: { open: false, event: null as unknown },
+  moreOptions: { open: false, event: null as unknown },
 });
 const modals = reactive({
   products: {
@@ -692,39 +786,16 @@ const providersBodyRef = ref<HTMLElement | null>(null);
 const notVisitedList = ref<HTMLElement | null>(null);
 const visitedList = ref<HTMLElement | null>(null);
 
-/**
- * Scroll the given list ref (or element) to its end. Uses nextTick to ensure DOM updated.
- */
-function scrollListToEnd(
-  listRef?: { value: HTMLElement | null } | HTMLElement | null
-) {
-  try {
-    nextTick(() => {
-      let el: HTMLElement | null = null;
-      if (!listRef) {
-        el = null;
-      } else if ((listRef as any).value !== undefined) {
-        el = (listRef as any).value as HTMLElement | null;
-      } else if (listRef instanceof HTMLElement) {
-        el = listRef as HTMLElement;
-      }
-      if (!el) return;
-      try {
-        // try smooth scroll when available
-        (el as any).scrollTo?.({ top: el.scrollHeight, behavior: 'smooth' });
-        // fallback
-        el.scrollTop = el.scrollHeight;
-      } catch (_e) {
-        /* noop */
-      }
-    });
-  } catch (_e) {
-    /* noop */
-  }
-}
-
 // Map of supplier name -> products loaded from suppliers DB
 const suppliersProducts = reactive({} as Record<string, any[]>);
+// --- Templates modal state & handlers ---
+const templatesModalList = reactive([] as any[]);
+const showTemplatesModal = ref(false);
+const showApplyConflictModal = ref(false);
+const applyConflictMessage = ref('');
+const pendingApplyPayload = ref<any | null>(null);
+const applyTargetTemplate = ref<any | null>(null);
+const applySelectedDate = ref(new Date().toISOString());
 // end vars
 
 // life
@@ -762,7 +833,7 @@ onUnmounted(() => {
 });
 // end life
 
-// Watchers
+// watch
 watch(
   selectedDate,
   newSelectedDate => {
@@ -849,20 +920,13 @@ const totalVisitedProviders = computed(() =>
     0
   )
 );
+
 // Computed lists split by visited flag
 const visitedProviders = computed(() =>
   proveedores.filter((p: any) => !!p.visited)
 );
 const notVisitedProviders = computed(() =>
   proveedores.filter((p: any) => !p.visited)
-);
-
-// Totals by payment method
-const totalEfectivo = computed(() =>
-  proveedores.reduce((s, p) => s + Number(p.efectivo || 0), 0)
-);
-const totalTarjeta = computed(() =>
-  proveedores.reduce((s, p) => s + Number(p.tarjeta || 0), 0)
 );
 
 // Totals by payment method but only for visited providers (used in "real" accordion breakdown)
@@ -1284,7 +1348,11 @@ function stopEditing(p: any) {
 }
 
 // Parent handler for ProviderCard emitted updates: apply field changes to the corresponding provider
-function handleUpdateProvider(payload: { id: string | number; field: string; value: any }) {
+function handleUpdateProvider(payload: {
+  id: string | number;
+  field: string;
+  value: any;
+}) {
   try {
     const { id, field, value } = payload || ({} as any);
     const prov = proveedores.find((x: any) => x.id === id);
@@ -1292,7 +1360,7 @@ function handleUpdateProvider(payload: { id: string | number; field: string; val
     // Apply the value for known fields only to avoid accidental injection
     // Only allow specific fields to be updated; use a typed union to index Provider safely
     const allowedFields = ['name', 'efectivo', 'tarjeta', 'credito'] as const;
-    type AllowedField = typeof allowedFields[number];
+    type AllowedField = (typeof allowedFields)[number];
     if (allowedFields.includes(field as AllowedField)) {
       const f = field as AllowedField;
       // Coerce numeric fields when appropriate
@@ -1991,6 +2059,411 @@ function onNotesModalDidDismiss() {
     modals.notes.open = false;
     modals.notes.providerId = null;
     // keep modals.notes.content so the in-memory provider keeps it until explicitly changed
+  } catch (_e) {
+    /* noop */
+  }
+}
+
+async function loadTemplatesForModal() {
+  try {
+    // prefer TemplateController.listTemplates if available
+    if (typeof (TemplateController as any).listTemplates === 'function') {
+      const list = await (TemplateController as any).listTemplates();
+      templatesModalList.splice(0, templatesModalList.length, ...(list || []));
+    } else if (typeof (TemplateController as any).list === 'function') {
+      const list = await (TemplateController as any).list();
+      templatesModalList.splice(0, templatesModalList.length, ...(list || []));
+    } else {
+      templatesModalList.splice(0, templatesModalList.length);
+    }
+  } catch (e) {
+    console.error('loadTemplatesForModal error', e);
+    templatesModalList.splice(0, templatesModalList.length);
+  }
+}
+
+function openTemplatesModal() {
+  try {
+    loadTemplatesForModal();
+    setTimeout(() => (showTemplatesModal.value = true), 50);
+  } catch (e) {
+    console.error('openTemplatesModal error', e);
+  }
+}
+
+function onTemplatesModalDidDismiss() {
+  try {
+    showTemplatesModal.value = false;
+  } catch (_e) {
+    /* noop */
+  }
+}
+
+async function applyTemplateFromModal(tmpl: any) {
+  try {
+    if (!tmpl) return;
+    // Build payload similar to TemplatesView.confirmApply
+    const dateISO = applySelectedDate.value || selectedDate.value;
+
+    let providerNames: string[] = [];
+
+    // Try to load suppliers from suppliersController instead of relying on a local "suppliers" variable
+    let suppliersList: any[] = [];
+    try {
+      const res =
+        typeof (suppliersController as any).listSuppliers === 'function'
+          ? await (suppliersController as any).listSuppliers()
+          : null;
+      if (Array.isArray(res)) suppliersList = res;
+    } catch (_err) {
+      // fallback: try other candidate method names
+      try {
+        const candidates = ['list', 'listAll', 'getAll', 'getSuppliers'];
+        for (const name of candidates) {
+          const fn = (suppliersController as any)[name];
+          if (typeof fn === 'function') {
+            try {
+              const r = await fn();
+              if (Array.isArray(r)) {
+                suppliersList = r;
+                break;
+              }
+            } catch (_e) {
+              // ignore and continue
+            }
+          }
+        }
+      } catch (_e) {
+        /* noop */
+      }
+    }
+
+    if (
+      tmpl.suppliers &&
+      Array.isArray(tmpl.suppliers) &&
+      tmpl.suppliers.length
+    ) {
+      const resolved: string[] = [];
+      for (const id of tmpl.suppliers as IDBValidKey[]) {
+        try {
+          const found = suppliersList.find((s: any) => s && s.id === id);
+          const n = found ? found.name : undefined;
+          if (n) resolved.push(n);
+        } catch (_e) {
+          /* noop */
+        }
+      }
+
+      // If resolution via id failed, fall back to suppliersSnapshot names if present
+      if (
+        resolved.length === 0 &&
+        Array.isArray(tmpl.suppliersSnapshot) &&
+        tmpl.suppliersSnapshot.length
+      ) {
+        for (const snap of tmpl.suppliersSnapshot) {
+          if (snap && snap.name) resolved.push(snap.name);
+        }
+      }
+
+      providerNames = resolved;
+    } else {
+      // Fallback to suppliersSnapshot or description parsing
+      if (
+        Array.isArray(tmpl.suppliersSnapshot) &&
+        tmpl.suppliersSnapshot.length
+      ) {
+        providerNames = tmpl.suppliersSnapshot
+          .map((s: any) => s.name || '')
+          .filter(Boolean);
+      } else if (tmpl.description) {
+        // simple parser
+        const prefix = 'Proveedores:';
+        const i = String(tmpl.description).indexOf(prefix);
+        if (i !== -1) {
+          const rest = String(tmpl.description)
+            .slice(i + prefix.length)
+            .trim();
+          providerNames = rest
+            .split(',')
+            .map((s: string) => s.trim())
+            .filter(Boolean);
+        }
+      }
+    }
+
+    const proveedoresPayload = (providerNames || []).map(name => ({
+      id: Date.now() + Math.random(),
+      name,
+      date: dateISO,
+      estimated: 0,
+      dollar: 0,
+      notes: '',
+      visited: false,
+    }));
+
+    const payload = {
+      ingresos: [],
+      proveedores: proveedoresPayload,
+      newIngreso: { name: '', amount: 0, date: dateISO },
+      newProveedor: { name: '', estimated: 0, dollar: 0, notes: '' },
+      selectedDate: dateISO,
+      totals: {
+        totalIngresos: 0,
+        totalProviders: proveedoresPayload.reduce(
+          (s: number, p: any) =>
+            s + (Number(p.dollar || 0) || Number(p.estimated || 0)),
+          0
+        ),
+        totalVisitedProviders: 0,
+      },
+    };
+
+    const payloadToSave = {
+      component: 'BudgetView',
+      data: payload,
+      createdAt: Date.now(),
+    };
+
+    // Check existing backups for the date via backupController
+    const existing = await backupController.getLatestBackupForDate(
+      String(dateISO)
+    );
+    if (existing && existing.data) {
+      // Ask user whether to combine or overwrite
+      try {
+        const parsedDate = parseISO(String(dateISO));
+        applyConflictMessage.value = `Ya existen datos guardados para ${format(parsedDate, "d 'de' MMMM 'de' yyyy", { locale: esLocale })}. ¿Deseas combinar el template con los datos existentes o sobrescribirlos?`;
+      } catch (_e) {
+        applyConflictMessage.value = `Ya existen datos guardados para la fecha seleccionada. ¿Deseas combinar el template con los datos existentes o sobrescribirlos?`;
+      }
+      pendingApplyPayload.value = payloadToSave;
+      showApplyConflictModal.value = true;
+      return;
+    }
+
+    // No conflict: save directly
+    try {
+      const cleanPayload = JSON.parse(JSON.stringify(payloadToSave));
+      await backupController.saveBackup(cleanPayload);
+    } catch (saveErr) {
+      console.warn(
+        'applyTemplateFromModal: sanitized save failed, retrying',
+        saveErr
+      );
+      await backupController.saveBackup(payloadToSave);
+    }
+
+    // Persist selected date so BudgetView loads it
+    try {
+      localStorage.setItem(STORAGE_KEY, String(dateISO));
+    } catch (_e) {
+      /* noop */
+    }
+
+    // Close modal and navigate/refresh
+    showTemplatesModal.value = false;
+    try {
+      // If we are on the Budget view, reload data for that date. Else, navigate.
+      if ((route.name || '') === 'Budget') {
+        selectedDate.value = dateISO;
+        await loadDataForDate(dateISO);
+      } else {
+        // navigate to Budget view (attempt)
+        // NOTE: router is not imported in this component; using history push via window.location may be used as fallback
+        try {
+          // prefer vue-router if available
+          (await import('vue-router')).useRouter()?.push({
+            name: 'Budget',
+            query: { refresh: String(Date.now()), date: dateISO },
+          });
+        } catch (_e) {
+          // fallback: set localStorage and reload so BudgetView picks it up
+          window.location.href =
+            '#/budget?refresh=' +
+            String(Date.now()) +
+            '&date=' +
+            encodeURIComponent(dateISO);
+        }
+      }
+    } catch (_e) {
+      /* noop */
+    }
+  } catch (e) {
+    console.error('applyTemplateFromModal error', e);
+  }
+}
+
+function onApplyConflictDismiss() {
+  try {
+    showApplyConflictModal.value = false;
+    pendingApplyPayload.value = null;
+  } catch (_e) {
+    /* noop */
+  }
+}
+
+async function handleApplyConflictCombine() {
+  try {
+    const payloadToSave = pendingApplyPayload.value;
+    if (!payloadToSave) return onApplyConflictDismiss();
+
+    const dateISO = payloadToSave.data?.selectedDate;
+    const existing = await backupController.getLatestBackupForDate(
+      String(dateISO)
+    );
+
+    let mergedData: any = {};
+    if (existing && existing.data) {
+      const existingData: any = existing.data || {};
+      const existingIngresos = Array.isArray(existingData.ingresos)
+        ? existingData.ingresos
+        : [];
+      const existingProveedores = Array.isArray(existingData.proveedores)
+        ? existingData.proveedores
+        : [];
+
+      const newIngresos = Array.isArray(payloadToSave.data.ingresos)
+        ? payloadToSave.data.ingresos
+        : [];
+      const newProveedores = Array.isArray(payloadToSave.data.proveedores)
+        ? payloadToSave.data.proveedores
+        : [];
+
+      const mergedIngresos = existingIngresos.slice();
+      for (const ni of newIngresos) {
+        const exists = mergedIngresos.some(
+          (ei: any) =>
+            String(ei.name || '').trim() === String(ni.name || '').trim()
+        );
+        if (!exists) mergedIngresos.push(ni);
+      }
+
+      const mergedProveedores = existingProveedores.slice();
+      for (const np of newProveedores) {
+        const exists = mergedProveedores.some(
+          (ep: any) =>
+            String(ep.name || '').trim() === String(np.name || '').trim()
+        );
+        if (!exists) mergedProveedores.push(np);
+      }
+
+      const totalProviders = mergedProveedores.reduce(
+        (s: number, p: any) =>
+          s + (Number(p.dollar || 0) || Number(p.estimated || 0) || 0),
+        0
+      );
+
+      mergedData = Object.assign({}, existingData, {
+        ingresos: mergedIngresos,
+        proveedores: mergedProveedores,
+        totals: Object.assign({}, existingData.totals || {}, {
+          totalIngresos: (mergedIngresos || []).reduce(
+            (s: number, i: any) => s + (Number(i.amount || 0) || 0),
+            0
+          ),
+          totalProviders,
+          totalVisitedProviders: (mergedProveedores || []).reduce(
+            (s: number, p: any) =>
+              s +
+              (p.visited
+                ? Number(p.dollar || 0) || Number(p.estimated || 0) || 0
+                : 0),
+            0
+          ),
+        }),
+        selectedDate: dateISO,
+      });
+    } else {
+      mergedData = payloadToSave.data;
+    }
+
+    const savePayload = {
+      component: 'BudgetView',
+      data: mergedData,
+      createdAt: Date.now(),
+    };
+    try {
+      const cleanSavePayload = JSON.parse(JSON.stringify(savePayload));
+      await backupController.saveBackup(cleanSavePayload);
+    } catch (saveErr) {
+      console.warn(
+        'handleApplyConflictCombine: sanitized save failed, retrying',
+        saveErr
+      );
+      await backupController.saveBackup(savePayload);
+    }
+
+    try {
+      localStorage.setItem(STORAGE_KEY, String(dateISO));
+    } catch (_e) {
+      /* noop */
+    }
+
+    showApplyConflictModal.value = false;
+    pendingApplyPayload.value = null;
+    showTemplatesModal.value = false;
+
+    // refresh Budget view
+    selectedDate.value = dateISO;
+    await loadDataForDate(dateISO);
+  } catch (e) {
+    console.error('handleApplyConflictCombine error', e);
+  }
+}
+
+async function handleApplyConflictOverwrite() {
+  try {
+    const payloadToSave = pendingApplyPayload.value;
+    if (!payloadToSave) return onApplyConflictDismiss();
+
+    await backupController.saveBackup(payloadToSave);
+    try {
+      localStorage.setItem(
+        STORAGE_KEY,
+        String(payloadToSave.data?.selectedDate)
+      );
+    } catch (_e) {
+      /* noop */
+    }
+
+    showApplyConflictModal.value = false;
+    pendingApplyPayload.value = null;
+    showTemplatesModal.value = false;
+
+    const dateISO = payloadToSave.data?.selectedDate;
+    selectedDate.value = dateISO;
+    await loadDataForDate(dateISO);
+  } catch (e) {
+    console.error('handleApplyConflictOverwrite error', e);
+  }
+}
+
+/**
+ * Scroll the given list ref (or element) to its end. Uses nextTick to ensure DOM updated.
+ */
+function scrollListToEnd(
+  listRef?: { value: HTMLElement | null } | HTMLElement | null
+) {
+  try {
+    nextTick(() => {
+      let el: HTMLElement | null = null;
+      if (!listRef) {
+        el = null;
+      } else if ((listRef as any).value !== undefined) {
+        el = (listRef as any).value as HTMLElement | null;
+      } else if (listRef instanceof HTMLElement) {
+        el = listRef as HTMLElement;
+      }
+      if (!el) return;
+      try {
+        // try smooth scroll when available
+        (el as any).scrollTo?.({ top: el.scrollHeight, behavior: 'smooth' });
+        // fallback
+        el.scrollTop = el.scrollHeight;
+      } catch (_e) {
+        /* noop */
+      }
+    });
   } catch (_e) {
     /* noop */
   }
