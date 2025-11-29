@@ -6,23 +6,24 @@ export type SystemMode = 'ios' | 'md';
 
 export const useSystemConfig = defineStore('systemConfig', () => {
   // storea el modo de diseño actual: 'ios' o 'md'
-  const deisgnMode = ref<SystemMode>(isPlatform('ios') ? 'ios' : 'md');
+  const designMode = ref<SystemMode>(isPlatform('ios') ? 'ios' : 'md');
 
   function init() {
     // inicializa/actualiza el modo según la plataforma
-    deisgnMode.value = isPlatform('ios') ? 'ios' : 'md';
+    designMode.value = isPlatform('ios') ? 'ios' : 'md';
   }
 
-  function setDesignMode(m: SystemMode) {
-    deisgnMode.value = m;
+  function setDesignMode(params: { mode: SystemMode }) {
+    const { mode } = params;
+    designMode.value = mode;
   }
 
   function getDesignMode() {
-    return deisgnMode.value;
+    return designMode.value;
   }
 
   return {
-    deisgnMode,
+    designMode,
     init,
     setDesignMode,
     getDesignMode,

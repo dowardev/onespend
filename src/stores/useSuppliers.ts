@@ -1,5 +1,5 @@
 import { ref, computed } from 'vue';
-import suppliersController, { SuppliersController } from '../controllers/suppliersController';
+import suppliersController from '../controllers/suppliersController';
 // Use a lightweight local Supplier alias to avoid deep TypeScript instantiation
 type Supplier = any;
 
@@ -12,15 +12,18 @@ export function useSuppliers() {
     loading.value = true;
     error.value = null;
     try {
-      suppliers.value = (await suppliersController.listSuppliers()) as Supplier[];
-    } catch (e) {
-      error.value = e as Error;
+      suppliers.value =
+        (await suppliersController.listSuppliers()) as Supplier[];
+    } catch (_e) {
+      error.value = _e as Error;
     } finally {
       loading.value = false;
     }
   }
 
-  async function createSupplier(data: Omit<Supplier, 'id' | 'createdAt' | 'updatedAt'>) {
+  async function createSupplier(
+    data: Omit<Supplier, 'id' | 'createdAt' | 'updatedAt'>
+  ) {
     loading.value = true;
     error.value = null;
     try {
@@ -40,7 +43,9 @@ export function useSuppliers() {
     error.value = null;
     try {
       const updated = await suppliersController.updateSupplier(s);
-      suppliers.value = suppliers.value.map(x => (x.id === updated.id ? updated : x));
+      suppliers.value = suppliers.value.map(x =>
+        x.id === updated.id ? updated : x
+      );
       return updated;
     } catch (e) {
       error.value = e as Error;
@@ -74,4 +79,3 @@ export function useSuppliers() {
     deleteSupplier,
   };
 }
-
