@@ -1,5 +1,7 @@
 import { defineStore } from 'pinia';
-import suppliersController, { Supplier } from '../controllers/suppliersController';
+import suppliersController, {
+  Supplier,
+} from '../controllers/suppliersController';
 
 export const useSuppliersStore = defineStore('suppliers', {
   state: () => ({
@@ -8,20 +10,23 @@ export const useSuppliersStore = defineStore('suppliers', {
   actions: {
     async loadAll() {
       try {
-        const list = (await suppliersController.listSuppliers()) as unknown as any[];
+        const list =
+          (await suppliersController.listSuppliers()) as unknown as any[];
         // Avoid deep type instantiation by treating list/items as any
         this.suppliers.length = 0;
         for (const it of list) {
           (this.suppliers as any).push(it);
         }
-      } catch (e) {
-        console.error('suppliersStore.loadAll error', e);
+      } catch (_e) {
+        console.error('suppliersStore.loadAll error', _e);
         // Clear safely
         this.suppliers.length = 0;
       }
     },
 
-    async createSupplier(data: Omit<Supplier, 'id' | 'createdAt' | 'updatedAt'>) {
+    async createSupplier(
+      data: Omit<Supplier, 'id' | 'createdAt' | 'updatedAt'>
+    ) {
       try {
         await suppliersController.addSupplier(data);
         await this.loadAll();
@@ -52,4 +57,3 @@ export const useSuppliersStore = defineStore('suppliers', {
     },
   },
 });
-

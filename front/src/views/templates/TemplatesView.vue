@@ -139,7 +139,11 @@
         :buttons="[
           { text: 'Cancelar', role: 'cancel', handler: onApplyConflictDismiss },
           { text: 'Combinar', handler: handleApplyConflictCombine },
-          { text: 'Sobrescribir', cssClass: 'danger', handler: handleApplyConflictOverwrite },
+          {
+            text: 'Sobrescribir',
+            cssClass: 'danger',
+            handler: handleApplyConflictOverwrite,
+          },
         ]"
         @did-dismiss="onApplyConflictDismiss"
       ></ion-alert>
@@ -190,12 +194,8 @@ import {
   IonItemDivider,
   IonSearchbar,
 } from '@ionic/vue';
-import {
-  createOutline,
-  addOutline,
-  trashOutline,
-} from 'ionicons/icons';
-import { reactive, ref, onMounted, computed, unref, nextTick } from 'vue'; // Placeholder comment for further Ionic changes.
+import { createOutline, addOutline, trashOutline } from 'ionicons/icons';
+import { reactive, ref, onMounted, computed, unref } from 'vue'; // Placeholder comment for further Ionic changes.
 import { format, parseISO } from 'date-fns';
 import { es as esLocale } from 'date-fns/locale';
 import { useRouter } from 'vue-router';
@@ -263,9 +263,14 @@ const applyTargetTemplate = ref<TemplateSummary | null>(null);
 const isEditMode = ref(false);
 const editingTemplateId = ref<string | number | null>(null);
 // References the searchbar element so we can focus it when opening the search
-const supplierSearchbar = ref<InstanceType<typeof IonSearchbar> | null>(null);
-const searchVisible = ref(false);
-const supplierQuery = ref('');
+const _supplierSearchbar = ref<InstanceType<typeof IonSearchbar> | null>(null);
+const _searchVisible = ref(false);
+const _supplierQuery = ref('');
+
+// Mark intentionally unused variables as used to silence TS/IDE hints
+void _supplierSearchbar;
+void _searchVisible;
+void _supplierQuery;
 
 // State to handle apply conflicts when the target date already has content
 const showApplyConflict = ref(false);
@@ -309,79 +314,21 @@ async function loadSuppliers() {
     // Avoid deep type instantiation by treating items as any
     suppliers.length = 0;
     for (const it of list) (suppliers as any).push(it);
-  } catch (e) {
-    console.error('loadSuppliers error', e);
+  } catch (_e) {
+    console.error('loadSuppliers error', _e);
   }
 }
 
 
-function openSearch() {
-  // show the searchbar and focus it on nextTick so it's present in DOM
-  searchVisible.value = true;
-  nextTick(() => {
-    try {
-      const el: any = supplierSearchbar.value as any;
-      if (el && typeof el.setFocus === 'function') {
-        el.setFocus();
-      }
-    } catch (e) {
-      // ignore focus errors
-    }
-  });
-}
 
-function onSearchCancel() {
-  // hide the searchbar and clear the query
-  supplierQuery.value = '';
-  searchVisible.value = false;
-}
 
-function toggleSupplierSelection(s: Supplier) {
-  const id = s.id as IDBValidKey;
-  let idx = -1;
-  const _ids = form.supplierIds as any;
-  for (let i = 0; i < (_ids as any).length; i++) {
-    if ((_ids as any)[i] === id) {
-      idx = i;
-      break;
-    }
-  }
-  if (idx === -1) {
-    form.supplierIds.push(id);
-  } else {
-    form.supplierIds.splice(idx, 1);
-  }
-}
-
-function removeSupplierId(id: IDBValidKey) {
-  const idx = (form.supplierIds as any).indexOf(id);
-  if (idx !== -1) form.supplierIds.splice(idx, 1);
-}
 
 function getSupplierNameById(id: IDBValidKey): string | null {
   const s = suppliers.find(x => x.id === id);
   return s ? s.name : null;
 }
 
-function supplierExists(id: IDBValidKey): boolean {
-  return suppliers.some(x => x.id === id);
-}
 
-function supplierDisplayName(id: IDBValidKey): string {
-  // Prefer current supplier name if it exists
-  const s = suppliers.find(x => x.id === id);
-  if (s && s.name) return s.name;
-
-  // Fallback to the suppliersSnapshot stored in the template being applied (if any)
-  const snapshotList = applyTargetTemplate.value?.suppliersSnapshot || [];
-  const snap = (snapshotList as { id: IDBValidKey; name?: string }[]).find(
-    ss => ss.id === id
-  );
-  if (snap && snap.name) return snap.name || String(id);
-
-  // Last resort: return the id as string
-  return String(id);
-}
 
 /**
  * Remove a supplier that no longer exists from the template being applied.
@@ -467,83 +414,6 @@ async function editTemplate(params: { tmpl: TemplateSummary }) {
   showModal.value = true;
 }
 
-async function submitTemplate() {
-  if (!form.name.trim()) {
-    alertMessage.value = 'Por favor ingresa el nombre del template';
-    showAlert.value = true;
-    return;
-  }
-
-  // Prevent creating or saving a template with a duplicate name (case-insensitive).
-  // When editing, allow keeping the same name for the template being edited.
-  const newName = form.name.trim();
-  try {
-    const exists = (templates.value || []).some((t: any) => {
-      const tName = t && t.name ? String(t.name).trim().toLowerCase() : '';
-      const compareId = t.id == null ? '' : String(t.id);
-      const editingId =
-        editingTemplateId.value == null ? '' : String(editingTemplateId.value);
-      return (
-        tName && tName === newName.toLowerCase() && compareId !== editingId
-      );
-    });
-
-    if (exists) {
-      alertMessage.value = 'Ya existe un template con ese nombre';
-      // Force re-opening the alert even if the message didn't change by toggling the v-model
-      showAlert.value = false;
-      await nextTick();
-      showAlert.value = true;
-      return;
-    }
-  } catch (e) {
-    // If some unexpected error happens during duplicate check, log and continue to attempt save
-    console.warn('duplicate name check failed', e);
-  }
-
-  // build description from selected supplier names for backward compatibility
-  const selectedNames = form.supplierIds
-    .map((id: IDBValidKey) => getSupplierNameById(id))
-    .filter((n: unknown): n is string => !!(typeof n === 'string' && n.trim()));
-
-  const description = selectedNames.length
-    ? `Proveedores: ${selectedNames.join(', ')}`
-    : undefined;
-
-  try {
-    const payloadTemplate: any = {
-      name: newName,
-      description,
-      suppliers: form.supplierIds.slice(),
-      suppliersSnapshot: form.supplierIds.map((id: IDBValidKey) => ({
-        id,
-        name: getSupplierNameById(id) || '',
-      })),
-    };
-
-    if (isEditMode.value && editingTemplateId.value) {
-      payloadTemplate.id = editingTemplateId.value;
-    }
-
-    await TemplateController.saveTemplate({
-      template: payloadTemplate,
-    });
-
-    await loadTemplates();
-    resetForm();
-    showModal.value = false;
-
-    // show success toast
-    toast.message = isEditMode.value
-      ? 'Template actualizado'
-      : 'Template guardado';
-    toast.open = true;
-  } catch (e) {
-    console.error('submitTemplate error', e);
-    alertMessage.value = 'Error al guardar el template';
-    showAlert.value = true;
-  }
-}
 
 // Open the apply modal instead of navigating directly
 async function onAddTemplateSaved() {
@@ -662,7 +532,11 @@ async function confirmApply() {
       String(dateISO)
     );
 
-    if (existing && existing.data) {
+    if (
+      existing &&
+      existing.data &&
+      hasBackupMeaningfulContent(existing.data)
+    ) {
       // Ask user whether to combine or overwrite
       try {
         const parsedDate = parseISO(String(dateISO));
@@ -683,11 +557,14 @@ async function confirmApply() {
     try {
       // sanitize writable payload to avoid IndexedDB DataCloneError (remove proxies, functions, DOM nodes)
       const cleanPayload = JSON.parse(JSON.stringify(payloadToSave));
-      await backupController.saveBackup(cleanPayload);
+      await backupController.saveBackup({ entry: cleanPayload });
     } catch (saveErr) {
       // If sanitizing fails for some reason, attempt to save the original payload as a fallback and log error
-      console.warn('confirmApply: save with sanitized payload failed, retrying with original payload', saveErr);
-      await backupController.saveBackup(payloadToSave);
+      console.warn(
+        'confirmApply: save with sanitized payload failed, retrying with original payload',
+        saveErr
+      );
+      await backupController.saveBackup({ entry: payloadToSave });
     }
 
     // persist selected date so BudgetView picks it up
@@ -715,6 +592,25 @@ async function confirmApply() {
   }
 }
 
+function hasBackupMeaningfulContent(data: any): boolean {
+  try {
+    if (!data) return false;
+    // Consider backup meaningful if it has ingresos or proveedores entries or positive totals
+    if (Array.isArray(data.ingresos) && data.ingresos.length > 0) return true;
+    if (Array.isArray(data.proveedores) && data.proveedores.length > 0)
+      return true;
+    if (data.totals) {
+      const t: any = data.totals || {};
+      if ((Number(t.totalIngresos) || 0) > 0) return true;
+      if ((Number(t.totalProviders) || 0) > 0) return true;
+      if ((Number(t.totalVisitedProviders) || 0) > 0) return true;
+    }
+    return false;
+  } catch (_e) {
+    return false;
+  }
+}
+
 function onApplyConflictDismiss() {
   try {
     showApplyConflict.value = false;
@@ -733,28 +629,44 @@ async function handleApplyConflictCombine() {
     }
 
     const dateISO = payloadToSave.data?.selectedDate;
-    const existing = await backupController.getLatestBackupForDate(String(dateISO));
+    const existing = await backupController.getLatestBackupForDate(
+      String(dateISO)
+    );
 
     let mergedData: any = {};
     if (existing && existing.data) {
       const existingData: any = existing.data || {};
       // Merge ingresos and proveedores arrays, avoiding duplicates by name
-      const existingIngresos = Array.isArray(existingData.ingresos) ? existingData.ingresos : [];
-      const existingProveedores = Array.isArray(existingData.proveedores) ? existingData.proveedores : [];
+      const existingIngresos = Array.isArray(existingData.ingresos)
+        ? existingData.ingresos
+        : [];
+      const existingProveedores = Array.isArray(existingData.proveedores)
+        ? existingData.proveedores
+        : [];
 
-      const newIngresos = Array.isArray(payloadToSave.data.ingresos) ? payloadToSave.data.ingresos : [];
-      const newProveedores = Array.isArray(payloadToSave.data.proveedores) ? payloadToSave.data.proveedores : [];
+      const newIngresos = Array.isArray(payloadToSave.data.ingresos)
+        ? payloadToSave.data.ingresos
+        : [];
+      const newProveedores = Array.isArray(payloadToSave.data.proveedores)
+        ? payloadToSave.data.proveedores
+        : [];
 
       // Simple merge: keep existing then append new items that don't match by name
       const mergedIngresos = existingIngresos.slice();
       for (const ni of newIngresos) {
-        const exists = mergedIngresos.some((ei: any) => String(ei.name || '').trim() === String(ni.name || '').trim());
+        const exists = mergedIngresos.some(
+          (ei: any) =>
+            String(ei.name || '').trim() === String(ni.name || '').trim()
+        );
         if (!exists) mergedIngresos.push(ni);
       }
 
       const mergedProveedores = existingProveedores.slice();
       for (const np of newProveedores) {
-        const exists = mergedProveedores.some((ep: any) => String(ep.name || '').trim() === String(np.name || '').trim());
+        const exists = mergedProveedores.some(
+          (ep: any) =>
+            String(ep.name || '').trim() === String(np.name || '').trim()
+        );
         if (!exists) mergedProveedores.push(np);
       }
 
@@ -767,9 +679,19 @@ async function handleApplyConflictCombine() {
         ingresos: mergedIngresos,
         proveedores: mergedProveedores,
         totals: Object.assign({}, existingData.totals || {}, {
-          totalIngresos: (mergedIngresos || []).reduce((s: number, i: any) => s + (Number(i.amount || 0) || 0), 0),
+          totalIngresos: (mergedIngresos || []).reduce(
+            (s: number, i: any) => s + (Number(i.amount || 0) || 0),
+            0
+          ),
           totalProviders,
-          totalVisitedProviders: (mergedProveedores || []).reduce((s: number, p: any) => s + (p.visited ? (Number(p.dollar || 0) || Number(p.estimated || 0) || 0) : 0), 0),
+          totalVisitedProviders: (mergedProveedores || []).reduce(
+            (s: number, p: any) =>
+              s +
+              (p.visited
+                ? Number(p.dollar || 0) || Number(p.estimated || 0) || 0
+                : 0),
+            0
+          ),
         }),
         selectedDate: dateISO,
       });
@@ -786,10 +708,13 @@ async function handleApplyConflictCombine() {
     try {
       // sanitize payload to avoid IndexedDB DataCloneError
       const cleanSavePayload = JSON.parse(JSON.stringify(savePayload));
-      await backupController.saveBackup(cleanSavePayload);
+      await backupController.saveBackup({ entry: cleanSavePayload });
     } catch (saveErr) {
-      console.warn('handleApplyConflictCombine: sanitized save failed, retrying with original payload', saveErr);
-      await backupController.saveBackup(savePayload);
+      console.warn(
+        'handleApplyConflictCombine: sanitized save failed, retrying with original payload',
+        saveErr
+      );
+      await backupController.saveBackup({ entry: savePayload });
     }
 
     // persist selected date
@@ -808,7 +733,10 @@ async function handleApplyConflictCombine() {
     toast.message = 'Template combinado y aplicado';
     toast.open = true;
 
-    router.push({ name: 'Budget', query: { refresh: String(Date.now()), date: String(dateISO) } });
+    router.push({
+      name: 'Budget',
+      query: { refresh: String(Date.now()), date: String(dateISO) },
+    });
   } catch (e) {
     console.error('handleApplyConflictCombine error', e);
     alertMessage.value = 'Error al combinar templates';
@@ -828,7 +756,10 @@ async function handleApplyConflictOverwrite() {
 
     // persist selected date so BudgetView picks it up
     try {
-      localStorage.setItem(STORAGE_KEY, String(payloadToSave.data?.selectedDate));
+      localStorage.setItem(
+        STORAGE_KEY,
+        String(payloadToSave.data?.selectedDate)
+      );
     } catch (_e) {
       /* noop */
     }
@@ -842,7 +773,13 @@ async function handleApplyConflictOverwrite() {
     toast.message = 'Template aplicado (sobrescrito)';
     toast.open = true;
 
-    router.push({ name: 'Budget', query: { refresh: String(Date.now()), date: String(payloadToSave.data?.selectedDate) } });
+    router.push({
+      name: 'Budget',
+      query: {
+        refresh: String(Date.now()),
+        date: String(payloadToSave.data?.selectedDate),
+      },
+    });
   } catch (e) {
     console.error('handleApplyConflictOverwrite error', e);
     alertMessage.value = 'Error al sobrescribir datos';

@@ -38,14 +38,14 @@ class SuppliersController {
       updatedAt: now,
     };
 
-    const id = await ctrl.addEntry(entry);
+    const id = await ctrl.addEntry({ entry });
 
     // Try to sync Pinia store lazily
     try {
       const mod = await import('../stores/suppliersStore');
       const store = mod.useSuppliersStore();
       await store.loadAll();
-    } catch (e) {
+    } catch (_e) {
       /* ignore */
     }
 
@@ -65,13 +65,13 @@ class SuppliersController {
       updatedAt: Date.now(),
     };
 
-    await ctrl.putEntry(entry);
+    await ctrl.putEntry({ entry });
 
     try {
       const mod = await import('../stores/suppliersStore');
       const store = mod.useSuppliersStore();
       await store.loadAll();
-    } catch (e) {
+    } catch (_e) {
       /* ignore */
     }
 
@@ -95,7 +95,9 @@ class SuppliersController {
     const ctrl = this.getController();
     const all = (await ctrl.listBackups()) as Supplier[];
     // sort by createdAt descending
-    const sorted = (all || []).slice().sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    const sorted = (all || [])
+      .slice()
+      .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 
     // Try to sync Pinia store lazily
     try {
@@ -113,4 +115,3 @@ class SuppliersController {
 const suppliersController = new SuppliersController();
 export default suppliersController;
 export { SuppliersController };
-

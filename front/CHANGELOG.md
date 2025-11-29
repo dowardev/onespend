@@ -1,3 +1,57 @@
+## [v0.1.46] - 2025-11-29
+
+### Changed
+- Normalize controller and DB API signatures (DixieController.addEntry/putEntry, BackupController.saveBackup) to accept single-object parameters ({ entry }) and update call sites accordingly.
+- Improve error handling and consistency: unify catch parameter names, small formatting and import cleanups across scripts and controllers.
+- Improve template apply and backup flow: better conflict detection and merge handling; sanitize payloads before saving to avoid IndexedDB DataCloneError.
+- Budget view and provider handling improvements:
+  - Make product association resilient to provider name edits by persisting a supplier key (_supplierKey) and mapping normalized names.
+  - Normalize visited/change handlers and ProviderCardComponent interfaces to use parameter objects.
+  - Ensure suppliers/products map and loading order are robust during mount.
+- Small script fixes: generate-icons and electron build script formatting and robustness updates.
+
+### Fixed
+- Avoid IndexedDB DataCloneError by sanitizing payloads and ensuring plain objects are saved.
+
+---
+
+## [v0.1.46] - 2025-11-29
+
+### Changed
+- Normalize controller and DB API signatures and improve error handling across the codebase (DixieController, BackupController, TemplateController, SuppliersController and related stores).
+- Improve template application and supplier-product association in BudgetView:
+  - Preserve supplier keys and normalize supplier names to keep product associations stable when provider names are edited.
+  - Better merging behavior when applying templates and improved conflict handling (combine/overwrite flows).
+- UI and UX improvements:
+  - ProviderCardComponent and Products modal: more robust event handling and focus behavior.
+  - TemplatesView and AddTemplate/ApplyTemplate modals: code cleanup and defensive checks.
+- Scripts & Electron tweaks: formatting and resilience improvements in scripts/generate-icons.mjs and electron build/start scripts.
+
+### Fixed
+- Reduce risk of IndexedDB DataCloneError by sanitizing payloads before saving and using plain objects for DB operations.
+- Multiple defensive-catch fixes (rename unused catch vars to _e) and small bug fixes across views and controllers.
+
+---
+
+## [v0.1.45] - 2025-11-29
+
+### Changed
+- Normalized storage API signatures and call sites:
+  - DixieController.addEntry and DixieController.putEntry now accept a single object parameter { entry }.
+  - BackupController.saveBackup now accepts { entry } and forwards it to the DB layer.
+  - Updated TemplateController and SuppliersController to pass { entry } when calling the Dixie API.
+- Updated BudgetView and TemplatesView to use the new save/add/put signatures (e.g. saveBackup({ entry }), dixieController.addEntry({ entry })) and added a helper (hasBackupMeaningfulContent) to improve template-apply conflict detection and merging.
+- Refactored system configuration API and store:
+  - Renamed variable `deisgnMode` to `designMode` in useSystemConfig.
+  - setDesignMode now accepts an object parameter { mode } and getDesignMode returns the normalized value.
+  - systemConfigController methods now accept parameters as objects and forward them accordingly.
+- Minor formatting and import cleanups across several files.
+
+### Fixed
+- Avoid potential IndexedDB DataCloneError by sanitizing payloads before saving and consistently using plain objects for DB operations.
+
+---
+
 ## [v0.1.44] - 2025-11-28
 
 ### Added
