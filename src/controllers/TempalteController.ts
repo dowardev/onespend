@@ -36,14 +36,15 @@ class TemplateController {
             : template.id;
 
         key = await this.dixie.putEntry({
-          id: numericId,
-          type: 'template',
-          payload: entry,
+          entry: {
+            id: numericId,
+            type: 'template',
+            payload: entry,
+          },
         });
       } else {
         key = await this.dixie.addEntry({
-          type: 'template',
-          payload: entry,
+          entry: { type: 'template', payload: entry },
         });
       }
 
@@ -51,10 +52,10 @@ class TemplateController {
       try {
         // Lazy-import the store so we don't call useTemplatesStore before Pinia is ready
         const mod = await import('../stores/templatesStore');
-        const store = mod.useTemplatesStore();
+        mod.useTemplatesStore();
         // trigger a reload from the DB to ensure store is in sync
         await this.listTemplates();
-      } catch (e) {
+      } catch (_e) {
         // If the store can't be used (e.g. before app init), ignore
         // The DB still has the saved template.
       }
@@ -125,9 +126,7 @@ class TemplateController {
       // If the id comes as a numeric string (e.g. "123"), coerce it to a number
       // so IndexedDB deletes the correct entry when the DB uses numeric keys.
       const numericId =
-        typeof id === 'string' && !Number.isNaN(Number(id))
-          ? Number(id)
-          : id;
+        typeof id === 'string' && !Number.isNaN(Number(id)) ? Number(id) : id;
 
       await this.dixie.deleteBackup(numericId as IDBValidKey);
 

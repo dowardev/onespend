@@ -1,17 +1,12 @@
 import { useSystemConfig } from '../stores/useSystemConfig';
 
 class SystemConfigController {
-  init(params: Record<string, unknown> = {}) {
-    // Destructure named params (none currently used)
-    const {} = params;
-
+  init(_params: Record<string, unknown> = {}) {
     const store = useSystemConfig();
     store.init();
   }
 
-  getDesignMode(params: Record<string, unknown> = {}) {
-    const {} = params;
-
+  getDesignMode(_params: Record<string, unknown> = {}) {
     const store = useSystemConfig();
     return store.getDesignMode();
   }
@@ -20,7 +15,7 @@ class SystemConfigController {
     const { mode } = params;
 
     const store = useSystemConfig();
-    store.setDesignMode(mode);
+    store.setDesignMode({ mode });
   }
 }
 

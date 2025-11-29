@@ -7,10 +7,10 @@
       <ion-checkbox
         slot="start"
         :checked="provider.visited"
-        @ion-change="e => onVisitedChanged(provider, e)"
+        @ion-change="e => onVisitedChanged({ provider, event: e })"
       ></ion-checkbox>
 
-      <div style="width: 100%" @click="startEditing(provider)">
+      <div style="width: 100%" @click="startEditing({ provider })">
         <ion-label v-if="provider.name && !provider._editing">{{
           provider.name
         }}</ion-label>
@@ -19,9 +19,7 @@
           v-show="provider._editing || !provider.name"
           :ref="el => emit('register-name-input', { id: provider.id, el })"
           :value="provider.name"
-          :disabled="provider._fromTemplate"
-          title="Proveedor creado desde plantilla - no editable"
-          placeholder="Nombre proveedor"
+          :placeholder="provider._dbName || 'Nombre proveedor'"
           @ion-input="
             e =>
               emit('update-provider', {
@@ -30,7 +28,7 @@
                 value: e?.detail?.value ?? e?.target?.value ?? '',
               })
           "
-          @ion-blur="stopEditing(provider)"
+          @ion-blur="stopEditing({ provider })"
         ></ion-input>
       </div>
     </ion-item>
@@ -111,7 +109,7 @@
       <ion-button
         slot="end"
         fill="clear"
-        @click.stop="openNotesModal(provider)"
+        @click.stop="openNotesModal({ provider })"
       >
         <ion-icon :icon="bookOutline"></ion-icon>
       </ion-button>
@@ -167,12 +165,15 @@ type FocusableRef =
 defineProps<{
   provider: any;
   nameInputRefs: Record<string | number, FocusableRef | null>;
-  onVisitedChanged: (p: any, e: any) => void;
-  startEditing: (p: any) => void;
-  stopEditing: (p: any) => void;
-  hasProductsFor: (p: any) => boolean;
-  openProductsPopover: (opts: { provider: any; event: any }) => void;
-  openNotesModal: (p: any) => void;
+  // Accept either positional args (p, e) or a single params object { provider, event }
+  onVisitedChanged: (params: { provider?: any; event?: any } | any) => void;
+  // Accept either a provider param or an object { provider }
+  startEditing: (params: { provider?: any } | any) => void;
+  stopEditing: (params: { provider?: any } | any) => void;
+  hasProductsFor: (params: { provider?: any } | any) => boolean;
+  // openProductsPopover already used with an object: keep compatible
+  openProductsPopover: (params: { provider: any; event: any } | any) => void;
+  openNotesModal: (params: { provider?: any } | any) => void;
   confirmRemoveProveedor: (id: string | number, name?: string) => void;
   isPaymentPrimary: (p: any) => boolean;
   valueToConsider: (p: any) => number;

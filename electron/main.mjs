@@ -13,27 +13,27 @@ function createWindow() {
     webPreferences: {
       // Keep these defaults for security; enable if you need nodeIntegration
       nodeIntegration: false,
-      contextIsolation: true
-    }
+      contextIsolation: true,
+    },
   });
 
   const startUrl = process.env.ELECTRON_START_URL || null;
 
   if (startUrl) {
     // Dev: load Vite dev server
-    win.loadURL(startUrl).catch((err) => {
+    win.loadURL(startUrl).catch(err => {
       console.error('Failed to load start URL:', err);
     });
     // Optionally open devtools in dev
     try {
       win.webContents.openDevTools({ mode: 'undocked' });
-    } catch (e) {
+    } catch (_e) {
       // ignore
     }
   } else {
     // Prod: load built index.html from dist
     const indexPath = path.join(__dirname, '..', 'dist', 'index.html');
-    win.loadFile(indexPath).catch((err) => {
+    win.loadFile(indexPath).catch(err => {
       console.error('Failed to load index.html:', err);
     });
   }
@@ -54,7 +54,6 @@ app.on('window-all-closed', () => {
 });
 
 // Basic uncaught exception reporting
-process.on('uncaughtException', (err) => {
+process.on('uncaughtException', err => {
   console.error('Uncaught exception in main process:', err);
 });
-

@@ -7,14 +7,15 @@ class BackupController {
     this.dixie = dixie;
   }
 
-  async saveBackup(entry: unknown): Promise<IDBValidKey> {
+  async saveBackup(params: { entry: unknown }): Promise<IDBValidKey> {
+    const { entry } = params;
     try {
-      const key = await this.dixie.addEntry(entry);
+      const key = await this.dixie.addEntry({ entry });
       console.log('BackupController.saveBackup: saved id=', key);
       return key;
-    } catch (e) {
-      console.error('BackupController.saveBackup error', e);
-      throw e;
+    } catch (_e) {
+      console.error('BackupController.saveBackup error', _e);
+      throw _e;
     }
   }
 
