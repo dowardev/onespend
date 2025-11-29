@@ -190,7 +190,6 @@ import {
   trashOutline,
 } from 'ionicons/icons';
 
-
 // main
 const props = defineProps<{ supplier: any | null }>();
 const emit = defineEmits<{

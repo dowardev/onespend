@@ -80,9 +80,9 @@
 
                             <!-- type mony -->
                             <ion-select
+                              v-model="inc.paymentType"
                               aria-label="Tipo de pago"
                               interface="popover"
-                              v-model="inc.paymentType"
                             >
                               <ion-select-option value="cash"
                                 >Efectivo</ion-select-option
@@ -214,7 +214,7 @@
                               }}</ion-note>
                             </ion-item>
 
-                            <div class="ion-padding" slot="content">
+                            <div slot="content" class="ion-padding">
                               <!-- cash -->
                               <ion-item>
                                 <ion-label>Efectivo:</ion-label>
@@ -541,7 +541,6 @@ import {
   IonButtons,
   IonMenuButton,
   IonCardContent,
-  IonCheckbox,
   IonCol,
   IonContent,
   IonDatetime,
@@ -614,6 +613,10 @@ type Provider = {
   visited: boolean;
   _justAdded?: boolean;
   _editing?: boolean;
+  // Optional persisted supplier key used to reliably map a provider to suppliersProducts
+  _supplierKey?: string;
+  // Flag indicating provider came from a template
+  _fromTemplate?: boolean;
 };
 
 type FocusableRef =
@@ -624,6 +627,7 @@ type FocusableRef =
       $el?: { setFocus?: () => void };
       focus?: () => void;
     };
+// end interface
 
 // Controllers
 import dixieController from '@/controllers/dixie';
@@ -691,6 +695,8 @@ const visitedList = ref<HTMLElement | null>(null);
 
 // Map of supplier name -> products loaded from suppliers DB
 const suppliersProducts = reactive({} as Record<string, any[]>);
+// Map of normalized supplier name -> original supplier name (from suppliers DB)
+const suppliersNames = reactive({} as Record<string, string>);
 // --- Templates modal state & handlers ---
 const templatesModalList = reactive([] as any[]);
 const showTemplatesModal = ref(false);
@@ -703,15 +709,15 @@ const toast = reactive({ open: false, message: '', duration: 2500 });
 // end vars
 
 // life
-onMounted(() => {
+onMounted(async () => {
   const saved = localStorage.getItem(STORAGE_KEY);
   if (saved) {
     selectedDate.value = saved;
   }
-  // load data for the selected date
-  loadDataForDate(selectedDate.value);
   // load suppliers/products map used to decide if a provider has products
-  void loadSuppliersProducts();
+  await loadSuppliersProducts();
+  // load data for the selected date
+  await loadDataForDate(selectedDate.value);
   // keep references to avoid unused warnings
   void addIngreso;
   void onIngresoIonInput;
@@ -1186,27 +1192,44 @@ function isPaymentPrimary(p: any) {
   }
 }
 
-// Toggle visited flag from item click (template-friendly)
-function toggleVisited(p: any) {
-  p.visited = !p.visited;
-}
-
 // Handler invoked from the ion-checkbox @ionChange in the template.
 // We set the provider visited flag based on the event payload and log the change
 // to help debug why a provider might disappear when toggled.
-function onVisitedChanged(p: any, event: any) {
+// Normalize handler signature: accept either (provider, event) or a single { provider, event } object
+function onVisitedChanged(params: any) {
   try {
+    // Support both call styles: positional (provider, event) and object { provider, event }
+    let provider: any = null;
+    let event: any = null;
+
+    if (params && params.provider !== undefined) {
+      provider = params.provider;
+      event = params.event;
+    } else if (arguments.length === 2) {
+      // called as onVisitedChanged(provider, event)
+      provider = arguments[0];
+      event = arguments[1];
+    } else {
+      // fallback: treat params as provider
+      provider = params;
+      event = null;
+    }
+
     // Ion's change event may expose the checked value in different places
     const checked = !!(
       event &&
       (event.detail?.checked ?? event.detail?.value ?? event.target?.checked)
     );
-    p.visited = checked;
-    console.log('onVisitedChanged', {
-      id: p?.id,
-      name: p?.name,
-      visited: p?.visited,
-    });
+
+    if (provider) {
+      provider.visited = checked;
+      console.log('onVisitedChanged', {
+        id: provider?.id,
+        name: provider?.name,
+        visited: provider?.visited,
+      });
+    }
+
     // ensure Vue processes reactive updates (no-op nextTick but useful when debugging)
     nextTick(() => {});
   } catch (e) {
@@ -1217,25 +1240,6 @@ function onVisitedChanged(p: any, event: any) {
 // Enter edit mode for a provider and focus its name input
 function startEditing(p: any) {
   try {
-    // Do not allow editing providers that were created from a template
-    if (p && p._fromTemplate) {
-      // Show friendly toast to inform the user that editing providers from templates is disabled
-      try {
-        toast.message =
-          'No puedes editar el nombre porque este proveedor proviene de una plantilla.';
-        toast.open = true;
-      } catch (_e) {
-        /* noop */
-      }
-      // For debugging, also log the prevented action
-      console.log(
-        'startEditing: provider from template; edit prevented',
-        p.id,
-        p.name
-      );
-      return;
-    }
-
     p._editing = true;
     // wait for DOM update and focus the input
     nextTick(() => {
@@ -1287,7 +1291,26 @@ function handleUpdateProvider(payload: {
         prov[f] = Number(value) || 0;
       } else {
         // ensure name is a string
-        prov[f] = String(value ?? '') as any;
+        const newName = String(value ?? '') as any;
+        prov[f] = newName;
+
+        // Preserve existing _supplierKey. If none exists, try to initialize it based on the new name
+        // only when the normalized name maps to known suppliersProducts. This prevents breaking
+        // the provider->products association when the user edits the visible name.
+        try {
+          if (!prov._supplierKey) {
+            const maybeKey = normalizeName(newName || prov.name || '');
+            if (
+              maybeKey &&
+              suppliersProducts[maybeKey] &&
+              suppliersProducts[maybeKey].length
+            ) {
+              prov._supplierKey = maybeKey;
+            }
+          }
+        } catch (_e) {
+          /* noop */
+        }
       }
     }
   } catch (e) {
@@ -1419,7 +1442,7 @@ async function onBackupClick() {
     };
 
     try {
-      const id = await backupController.saveBackup(payloadToSave);
+      const id = await backupController.saveBackup({ entry: payloadToSave });
       console.log('Backup guardado id=', id);
     } catch (err) {
       console.error('Error al guardar backup:', err);
@@ -1491,23 +1514,30 @@ async function loadDataForDate(dateISO: string) {
       );
 
       // Normalize providers loaded from backup to ensure editor state fields exist
-      const normalizedProviders = (d.proveedores || []).map((p: any) => ({
-        id: p.id ?? Date.now() + Math.random(),
-        name: p.name ?? '',
-        date: p.date ?? dateISO,
-        estimated: Number(p.estimated || 0),
-        dollar: Number(p.dollar || 0),
-        // Restore payment fields so values persist after reload
-        efectivo: Number(p.efectivo || 0),
-        tarjeta: Number(p.tarjeta || 0),
-        credito: Number(p.credito || 0),
-        notes: p.notes || '',
-        visited: !!p.visited,
-        _fromTemplate: !!p._fromTemplate,
-        _justAdded: !!p._justAdded,
-        // Always clear editing state when loading from storage
-        _editing: false,
-      }));
+      const normalizedProviders = (d.proveedores || []).map((p: any) => {
+        const key = normalizeName(p.name ?? '');
+        return {
+          id: p.id ?? Date.now() + Math.random(),
+          name: p.name ?? '',
+          date: p.date ?? dateISO,
+          estimated: Number(p.estimated || 0),
+          dollar: Number(p.dollar || 0),
+          // Persist original DB name to use as placeholder in the child component
+          _dbName: p._dbName ?? p.name ?? '',
+          // Restore payment fields so values persist after reload
+          efectivo: Number(p.efectivo || 0),
+          tarjeta: Number(p.tarjeta || 0),
+          credito: Number(p.credito || 0),
+          notes: p.notes || '',
+          visited: !!p.visited,
+          _fromTemplate: !!p._fromTemplate,
+          _justAdded: !!p._justAdded,
+          // persist supplier key so product association survives name edits
+          _supplierKey: key || undefined,
+          // Always clear editing state when loading from storage
+          _editing: false,
+        };
+      });
       proveedores.splice(0, proveedores.length, ...normalizedProviders);
       // Reemplazar objetos
       Object.assign(
@@ -1656,10 +1686,11 @@ async function loadSuppliersProducts() {
       return;
     }
 
-    // Clear existing map
+    // Clear existing maps
     for (const k of Object.keys(suppliersProducts)) delete suppliersProducts[k];
+    for (const k of Object.keys(suppliersNames)) delete suppliersNames[k];
 
-    // Build a map of normalized supplier name -> products[] (if present)
+    // Build a map of normalized supplier name -> products[] and normalized->original name
     for (const s of suppliersList) {
       const rawName = s?.name || s?.provider || s?.supplierName || '';
       if (!rawName) continue;
@@ -1668,15 +1699,26 @@ async function loadSuppliersProducts() {
       suppliersProducts[key] = Array.isArray(s.products)
         ? s.products.slice()
         : [];
+      // keep original raw name so the UI can show the DB supplier name as placeholder
+      suppliersNames[key] = rawName;
     }
   } catch (err) {
     console.error('loadSuppliersProducts error:', err);
   }
 }
 
-function hasProductsFor(p: any) {
+function hasProductsFor(params: { provider?: any } | any) {
   try {
-    const key = normalizeName(p?.name || '');
+    // Support both named param: { provider } and positional: provider
+    const p =
+      params && params.provider !== undefined ? params.provider : params;
+    // Prefer an explicit supplier key persisted on the provider so product
+    // association survives name edits. Fall back to normalizing the provider
+    // name only when no explicit key is available.
+    const key =
+      p && p._supplierKey
+        ? String(p._supplierKey)
+        : normalizeName(p?.name || '');
     return !!(key && suppliersProducts[key] && suppliersProducts[key].length);
   } catch (_e) {
     return false;
@@ -1690,8 +1732,13 @@ async function openProductsPopover(params: { provider: any; event: any }) {
     modals.products.event = event;
     modals.products.providerId = provider?.id ?? null;
     modals.products.title = provider?.name || '';
-    // Load products for provider
-    const prods = suppliersProducts[normalizeName(provider?.name || '')] || [];
+    // Load products for provider. Prefer persisted supplier key when available so name edits
+    // don't break product association.
+    const prodKey =
+      provider && provider._supplierKey
+        ? String(provider._supplierKey)
+        : normalizeName(provider?.name || '');
+    const prods = suppliersProducts[prodKey] || [];
     modals.products.products = prods;
 
     // Initialize quantities map for the currently shown products (keep existing values if present)
@@ -1816,7 +1863,7 @@ async function saveProductsModal() {
         createdAt: Date.now(),
       };
       // Use dixieController with the default store (backups) to store product selections
-      const id = await dixieController.addEntry(payloadToSave);
+      const id = await dixieController.addEntry({ entry: payloadToSave });
       console.log('saveProductsModal: saved products selection id=', id);
     } catch (e) {
       console.error('saveProductsModal: error saving products selection', e);
@@ -2114,6 +2161,8 @@ async function applyTemplateFromModal(tmpl: any) {
     const proveedoresPayload = (providerNames || []).map(name => ({
       id: Date.now() + Math.random(),
       name,
+      // store original DB name so child component can use it as placeholder
+      _dbName: name,
       date: dateISO,
       estimated: 0,
       dollar: 0,
@@ -2149,7 +2198,11 @@ async function applyTemplateFromModal(tmpl: any) {
     const existing = await backupController.getLatestBackupForDate(
       String(dateISO)
     );
-    if (existing && existing.data) {
+    if (
+      existing &&
+      existing.data &&
+      hasBackupMeaningfulContent(existing.data)
+    ) {
       // Ask user whether to combine or overwrite
       try {
         const parsedDate = parseISO(String(dateISO));
@@ -2165,13 +2218,13 @@ async function applyTemplateFromModal(tmpl: any) {
     // No conflict: save directly
     try {
       const cleanPayload = JSON.parse(JSON.stringify(payloadToSave));
-      await backupController.saveBackup(cleanPayload);
+      await backupController.saveBackup({ entry: cleanPayload });
     } catch (saveErr) {
       console.warn(
         'applyTemplateFromModal: sanitized save failed, retrying',
         saveErr
       );
-      await backupController.saveBackup(payloadToSave);
+      await backupController.saveBackup({ entry: payloadToSave });
     }
 
     // Persist selected date so BudgetView loads it
@@ -2211,6 +2264,25 @@ async function applyTemplateFromModal(tmpl: any) {
     }
   } catch (e) {
     console.error('applyTemplateFromModal error', e);
+  }
+}
+
+function hasBackupMeaningfulContent(data: any): boolean {
+  try {
+    if (!data) return false;
+    // Consider backup meaningful if it has ingresos or proveedores entries or positive totals
+    if (Array.isArray(data.ingresos) && data.ingresos.length > 0) return true;
+    if (Array.isArray(data.proveedores) && data.proveedores.length > 0)
+      return true;
+    if (data.totals) {
+      const t: any = data.totals || {};
+      if ((Number(t.totalIngresos) || 0) > 0) return true;
+      if ((Number(t.totalProviders) || 0) > 0) return true;
+      if ((Number(t.totalVisitedProviders) || 0) > 0) return true;
+    }
+    return false;
+  } catch (_e) {
+    return false;
   }
 }
 
@@ -2311,7 +2383,7 @@ async function handleApplyConflictCombine() {
         'handleApplyConflictCombine: sanitized save failed, retrying',
         saveErr
       );
-      await backupController.saveBackup(savePayload);
+      await backupController.saveBackup({ entry: savePayload });
     }
 
     try {
