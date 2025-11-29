@@ -37,9 +37,15 @@
                   label-placement="floating"
                   :label="`${prod.name || prod.productName || prod.title || 'Producto'}(${formatCurrency({ v: Number(prod.price || prod.amount || 0) })})`"
                   :enterkeyhint="idx < products.length - 1 ? 'next' : 'done'"
-                  @keydown.enter.prevent.stop="handleEnter({ currentIndex: idx, ev: $event })"
-                  @keydown.up.prevent.stop="handleArrowUp({ currentIndex: idx, ev: $event })"
-                  @keydown.down.prevent.stop="handleArrowDown({ currentIndex: idx, ev: $event })"
+                  @keydown.enter.prevent.stop="
+                    handleEnter({ currentIndex: idx, ev: $event })
+                  "
+                  @keydown.up.prevent.stop="
+                    handleArrowUp({ currentIndex: idx, ev: $event })
+                  "
+                  @keydown.down.prevent.stop="
+                    handleArrowDown({ currentIndex: idx, ev: $event })
+                  "
                 ></ion-input>
               </template>
             </div>
@@ -129,7 +135,8 @@ function initLocalQuantities() {
       if (localQuantities[key] === undefined) localQuantities[key] = 0;
     }
   } catch (_e) {
-    /* noop */
+    // intentionally ignore errors
+    void 0;
   }
 }
 // end vars
@@ -165,7 +172,9 @@ async function focusNext(params: { currentIndex: number; ev?: Event }) {
       const e = ev as any;
       e.stopImmediatePropagation?.();
     }
-  } catch (_e) {}
+  } catch (_e) {
+    /* noop */
+  }
 
   const nextIndex = currentIndex + 1;
   const totalProducts = props.products?.length || 0;
@@ -205,8 +214,11 @@ async function focusPrev(params: { currentIndex: number; ev?: Event }) {
   try {
     ev?.preventDefault?.();
     ev?.stopPropagation?.();
-    ev && (ev as any).stopImmediatePropagation?.();
-  } catch (_e) {}
+    if (ev) (ev as any).stopImmediatePropagation?.();
+  } catch (_e) {
+    // intentionally ignore errors
+    void 0;
+  }
 
   const prevIndex = currentIndex - 1;
   if (prevIndex >= 0) {
@@ -223,7 +235,7 @@ async function focusPrev(params: { currentIndex: number; ev?: Event }) {
     }
   } else {
     // If this is the first one, do not blur or allow the event to bubble:
-        // keep focus on the current input to avoid modal scrolling.
+    // keep focus on the current input to avoid modal scrolling.
     const currentElement = document.getElementById(
       `prod-input-${currentIndex}`
     ) as any;
@@ -248,7 +260,10 @@ function handleEnter(params: { currentIndex: number; ev?: Event }) {
       const e = ev as any;
       e.stopImmediatePropagation?.();
     }
-  } catch (_e) {}
+  } catch (_e) {
+    // intentionally ignore errors
+    void 0;
+  }
 
   const total = props.products?.length || 0;
   if (idx < total - 1) {

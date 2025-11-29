@@ -15,7 +15,10 @@ const scriptPath = path.resolve(projectRoot, 'build-rpm.sh');
 console.log(`Invocando script: ${scriptPath}`);
 
 // Execute the script with bash to avoid permission issues (no need for executable bit)
-const child = spawn('bash', [scriptPath], { stdio: 'inherit', cwd: projectRoot });
+const child = spawn('bash', [scriptPath], {
+  stdio: 'inherit',
+  cwd: projectRoot,
+});
 
 child.on('exit', (code, signal) => {
   if (signal) {
@@ -25,8 +28,7 @@ child.on('exit', (code, signal) => {
   process.exit(code === 0 ? 0 : 1);
 });
 
-child.on('error', (err) => {
+child.on('error', err => {
   console.error('Error al ejecutar el script:', err);
   process.exit(1);
 });
-

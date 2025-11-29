@@ -1,7 +1,5 @@
 import { defineStore } from 'pinia';
-import TemplateController, {
-  TemplateRecord,
-} from '../controllers/TempalteController';
+import TemplateController from '../controllers/TempalteController';
 
 export type TemplateSummary = {
   id: string | number | null;
@@ -30,8 +28,8 @@ export const useTemplatesStore = defineStore('templates', {
             suppliersSnapshot: (t as any).suppliersSnapshot || [],
           });
         }
-      } catch (e) {
-        console.error('templatesStore.loadTemplates error', e);
+      } catch (_e) {
+        console.error('templatesStore.loadTemplates error', _e);
         this.templates.splice(0, this.templates.length);
       }
     },

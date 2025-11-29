@@ -92,8 +92,8 @@ async function navigate(params: { path: string }) {
     if (menuRef.value && menuRef.value.$el) {
       await menuRef.value.$el.close();
     }
-  } catch (e) {
-    console.warn('menuController.close() failed:', e);
+  } catch (_e) {
+    console.warn('menuController.close() failed:', _e);
   }
   router.push(path);
 }

@@ -99,7 +99,8 @@ class DixieController {
     }
   }
 
-  async addEntry(entry: unknown): Promise<IDBValidKey> {
+  async addEntry(params: { entry: unknown }): Promise<IDBValidKey> {
+    const { entry } = params;
     const db = await this.openDB();
     return new Promise((resolve, reject) => {
       const tx = db.transaction(this.storeName, 'readwrite');
@@ -126,7 +127,7 @@ class DixieController {
         console.log('DixieController.addEntry: adding entry (shallow):', {
           keys: Object.keys((safeEntry as any) || {}),
         });
-      } catch (e) {
+      } catch (_e) {
         /* noop */
       }
 
@@ -141,7 +142,7 @@ class DixieController {
         );
         try {
           db.close();
-        } catch (e) {
+        } catch (_e) {
           /* noop */
         }
         reject(syncErr);
@@ -259,7 +260,8 @@ class DixieController {
     });
   }
 
-  async putEntry(entry: unknown): Promise<IDBValidKey> {
+  async putEntry(params: { entry: unknown }): Promise<IDBValidKey> {
+    const { entry } = params;
     const db = await this.openDB();
     return new Promise((resolve, reject) => {
       const tx = db.transaction(this.storeName, 'readwrite');

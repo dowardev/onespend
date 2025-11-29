@@ -2,25 +2,32 @@
 // Input: public/PuntoClick.png
 // Output: build/icons/{16,32,48,64,128,256,512}x{size}.png
 /* eslint-disable no-undef */
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
-import { PNG } from "pngjs";
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { PNG } from 'pngjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const srcPathPrimary = path.resolve(__dirname, "..", "public", "PuntoClick.png");
-const srcPathFallback = path.resolve(__dirname, "..", "public", "favicon.png");
+const srcPathPrimary = path.resolve(
+  __dirname,
+  '..',
+  'public',
+  'PuntoClick.png'
+);
+const srcPathFallback = path.resolve(__dirname, '..', 'public', 'favicon.png');
 let srcPath = srcPathPrimary;
 
 // If PuntoClick.png doesn't exist, fall back to favicon.png if available
 if (!fs.existsSync(srcPathPrimary) && fs.existsSync(srcPathFallback)) {
-  console.warn(`PuntoClick.png not found at ${srcPathPrimary}. Using favicon.png as fallback.`);
+  console.warn(
+    `PuntoClick.png not found at ${srcPathPrimary}. Using favicon.png as fallback.`
+  );
   srcPath = srcPathFallback;
 }
 
-const outDir = path.resolve(__dirname, "..", "build", "icons");
+const outDir = path.resolve(__dirname, '..', 'build', 'icons');
 
 // Linux PNG sizes
 const pngSizes = [16, 32, 48, 64, 128, 256, 512];
@@ -59,9 +66,9 @@ function packPngToBuffer(png) {
     const chunks = [];
     png
       .pack()
-      .on("data", (c) => chunks.push(c))
-      .on("end", () => resolve(Buffer.concat(chunks)))
-      .on("error", reject);
+      .on('data', c => chunks.push(c))
+      .on('end', () => resolve(Buffer.concat(chunks)))
+      .on('error', reject);
   });
 }
 
@@ -118,8 +125,8 @@ async function buildIcoFromPngs(entries) {
 async function generate() {
   if (!fs.existsSync(srcPath)) {
     console.error(`Base icon not found at ${srcPath}`);
-    if (typeof process !== "undefined" && process?.exit) process.exit(1);
-    throw new Error("Base icon not found");
+    if (typeof process !== 'undefined' && process?.exit) process.exit(1);
+    throw new Error('Base icon not found');
   }
 
   await ensureDir(outDir);
@@ -127,16 +134,16 @@ async function generate() {
   const srcPng = await new Promise((resolve, reject) => {
     fs.createReadStream(srcPath)
       .pipe(new PNG())
-      .on("parsed", function () {
+      .on('parsed', function () {
         resolve(this);
       })
-      .on("error", reject);
+      .on('error', reject);
   });
 
   // Warn if smaller than 256x256; we'll upscale but electron-builder prefers >=256 if
   if (srcPng.width < 256 || srcPng.height < 256) {
     console.warn(
-      `Warning: base icon is ${srcPng.width}x${srcPng.height}. Up-scaling to required sizes.`,
+      `Warning: base icon is ${srcPng.width}x${srcPng.height}. Up-scaling to required sizes.`
     );
   }
 
@@ -148,8 +155,8 @@ async function generate() {
       dst
         .pack()
         .pipe(fs.createWriteStream(outPath))
-        .on("finish", resolve)
-        .on("error", reject);
+        .on('finish', resolve)
+        .on('error', reject);
     });
   }
 
@@ -162,15 +169,14 @@ async function generate() {
   }
 
   const icoBuffer = await buildIcoFromPngs(icoPngEntries);
-  const icoPath = path.join(outDir, "icon.ico");
+  const icoPath = path.join(outDir, 'icon.ico');
   await fs.promises.writeFile(icoPath, icoBuffer);
 
   console.log(`Icons generated in ${outDir}`);
   console.log(`Windows ICO generated: ${icoPath}`);
 }
 
-generate().catch((err) => {
+generate().catch(err => {
   console.error(err);
-  if (typeof process !== "undefined" && process?.exit) process.exit(1);
+  if (typeof process !== 'undefined' && process?.exit) process.exit(1);
 });
-

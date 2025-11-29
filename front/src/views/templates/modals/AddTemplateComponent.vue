@@ -203,8 +203,8 @@ async function loadSuppliers() {
   try {
     const list = (await suppliersController.listSuppliers()) as any[];
     suppliers.value = list || [];
-  } catch (e) {
-    console.error('AddTemplateComponent.loadSuppliers error', e);
+  } catch (_e) {
+    console.error('AddTemplateComponent.loadSuppliers error', _e);
   }
 }
 
@@ -215,7 +215,7 @@ function openSearch() {
     try {
       const el: any = supplierSearchbar.value;
       if (el && typeof el.setFocus === 'function') el.setFocus();
-    } catch (e) {
+      } catch (_e) {
       // ignore
     }
   }, 0);
@@ -278,8 +278,8 @@ async function submitTemplate() {
       alert('Ya existe un template con ese nombre');
       return;
     }
-  } catch (e) {
-    console.warn('duplicate name check failed', e);
+  } catch (_e) {
+    console.warn('duplicate name check failed', _e);
   }
 
   const selectedNames = form.supplierIds
