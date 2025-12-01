@@ -93,11 +93,20 @@
             <ion-item
               v-for="item in filteredProducts"
               :key="item.originalIndex"
+              lines="full"
               class="transparent"
               button
               @click="editProduct({ idx: item.originalIndex })"
             >
               <template v-if="editingIndex !== item.originalIndex">
+                <ion-thumbnail
+                  v-if="item.product.imageBase64"
+                  slot="start"
+                  style="min-width: 48px; margin-right: 8px"
+                >
+                  <img :src="item.product.imageBase64" alt="product" />
+                </ion-thumbnail>
+
                 <ion-label>
                   <h3>{{ item.product.name }}</h3>
                   <p v-if="item.product.price">
@@ -155,6 +164,37 @@
                 type="number"
               ></ion-input>
             </ion-item>
+
+            <ion-item class="transparent" button @click="openFileDialog">
+              <label class="file-input-label">
+                <input
+                  ref="fileInput"
+                  type="file"
+                  accept="image/*"
+                  style="display: none"
+                  @change="onFileChange"
+                />
+                Adjuntar imagen (opcional)
+              </label>
+
+              <ion-thumbnail
+                v-if="newProduct.imageBase64"
+                slot="end"
+                style="margin-left: 12px"
+              >
+                <img :src="newProduct.imageBase64" alt="preview" />
+              </ion-thumbnail>
+
+              <ion-button
+                v-if="newProduct.imageBase64"
+                slot="end"
+                color="danger"
+                fill="clear"
+                @click.stop="removeImage"
+              >
+                <ion-icon :icon="trashOutline"></ion-icon>
+              </ion-button>
+            </ion-item>
           </template>
         </div>
       </ion-list>
@@ -180,6 +220,7 @@ import {
   IonLabel,
   IonItem,
   IonSearchbar,
+  IonThumbnail,
 } from '@ionic/vue';
 import { reactive, ref, computed, watch } from 'vue';
 import {
@@ -199,18 +240,55 @@ const emit = defineEmits<{
 // end main
 
 // interface
-type Product = { name: string; price: number };
+type Product = { name: string; price: number; imageBase64?: string | null };
 // end interface
 
 // vars
 const form = reactive({ name: '', products: [] as Product[] });
-const newProduct = reactive({ name: '', price: 0 });
+const newProduct = reactive({
+  name: '',
+  price: 0,
+  imageBase64: null as string | null,
+});
 const showNewProductFields = ref(false);
 const editingIndex = ref<number | null>(null);
 const productSearchTerm = ref('');
 const showProductSearch = ref(false);
 const selectedId = computed(() => props.supplier?.id ?? null);
 // end vars
+const fileInput = ref<HTMLInputElement | null>(null);
+
+// file helpers
+async function fileToBase64(file: File): Promise<string> {
+  return await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error('Failed to read file'));
+    reader.readAsDataURL(file);
+  });
+}
+
+function openFileDialog() {
+  fileInput.value?.click();
+}
+
+async function onFileChange(e: Event) {
+  const el = e.target as HTMLInputElement;
+  if (!el || !el.files || !el.files.length) return;
+  const f = el.files[0];
+  try {
+    newProduct.imageBase64 = await fileToBase64(f);
+  } catch (err) {
+    console.error('Failed to read image', err);
+  }
+  // clear native input so the same file can be re-selected if needed
+  if (el) el.value = '';
+}
+
+function removeImage() {
+  newProduct.imageBase64 = null;
+  if (fileInput.value) fileInput.value.value = '';
+}
 
 // watch
 watch(
@@ -267,11 +345,13 @@ function addProduct() {
     form.products.splice(editingIndex.value, 1, {
       name: newProduct.name,
       price: Number(newProduct.price),
+      imageBase64: newProduct.imageBase64 || null,
     });
   } else {
     form.products.push({
       name: newProduct.name,
       price: Number(newProduct.price),
+      imageBase64: newProduct.imageBase64 || null,
     });
   }
   editingIndex.value = null;
