@@ -3,6 +3,8 @@ import { DixieController } from './dixie';
 export type Product = {
   name: string;
   price: number;
+  // Optional base64-encoded image for the product (nullable)
+  imageBase64?: string | null;
 };
 
 export type Supplier = {
