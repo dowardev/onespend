@@ -417,9 +417,9 @@
       <!-- end alerts -->
 
       <!-- modals -->
-
       <!-- products modal -->
       <ion-modal
+        style="--height: 90dvh"
         :is-open="modals.products.open"
         :keep-contents-mounted="true"
         :backdrop-dismiss="false"

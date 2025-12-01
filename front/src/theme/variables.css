@@ -28,7 +28,8 @@ ion-card.no-shadow {
 /* end ion-card */
 
 /* ion-item */
-ion-item.transparent {
+ion-item.transparent,
+ion-item-divider.transparent {
   --background: transparent;
 }
 /* end ion-item */
