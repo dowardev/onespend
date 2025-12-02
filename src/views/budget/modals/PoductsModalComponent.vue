@@ -25,7 +25,7 @@
         class="transparent"
       >
         <ion-list-header>
-          <ion-label>Productos</ion-label>
+          <ion-label>Productos({{ formattedTotal }})</ion-label>
 
           <ion-button v-if="!showSearch" @click="toggleSearch({ ev: $event })">
             <ion-icon :icon="searchOutline"></ion-icon>
@@ -57,7 +57,9 @@
               @ion-input="e => (searchQuery = (e.target as any)?.value || '')"
             ></ion-searchbar>
 
-            <ion-button slot="end" fill="clear" @click="hideSearch">Cerrar</ion-button>
+            <ion-button slot="end" fill="clear" @click="hideSearch"
+              >Cerrar</ion-button
+            >
           </ion-item-divider>
 
           <template
@@ -239,6 +241,22 @@ const searchQuery = ref('');
 /** Ensure that HTMLIonSearchbarElement is properly imported */
 const searchbarRef = ref<HTMLElement | null>(null);
 
+// total calculations: sum of (quantity * price) across products
+const total = computed(() => {
+  try {
+    const list = props.products || [];
+    return list.reduce((acc, prod, idx) => {
+      const key = prod?.id ?? idx;
+      const qty = Number(localQuantities[key] || 0) || 0;
+      const price = Number(prod?.price ?? prod?.amount ?? 0) || 0;
+      return acc + qty * price;
+    }, 0);
+  } catch (_e) {
+    return 0;
+  }
+});
+
+const formattedTotal = computed(() => formatCurrency({ v: total.value }));
 
 function hideSearch() {
   showSearch.value = false;
@@ -449,7 +467,7 @@ async function focusNext(params: { currentIndex: number; ev?: Event }) {
       } else {
         nextElement.setFocus?.();
       }
-                await ensureVisible({ index: nextIndex });
+      await ensureVisible({ index: nextIndex });
     }
   } else {
     const currentElement = document.getElementById(

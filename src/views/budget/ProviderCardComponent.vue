@@ -1,34 +1,42 @@
 <template>
   <ion-card
     class="ion-padding-bottom"
-    :class="['shadow2', { 'provider-just-added': provider._justAdded }]"
+    :class="['shadow2', { 'provider-just-added': props.provider._justAdded }]"
   >
     <ion-item lines="none" class="transparent">
       <ion-checkbox
         slot="start"
-        :checked="provider.visited"
-        @ion-change="e => onVisitedChanged({ provider, event: e })"
+        :checked="props.provider.visited"
+        @ion-change="
+          (e: any) =>
+            emit('visited-changed', { provider: props.provider, event: e })
+        "
       ></ion-checkbox>
 
-      <div style="width: 100%" @click="startEditing({ provider })">
-        <ion-label v-if="provider.name && !provider._editing">{{
-          provider.name
+      <div
+        style="width: 100%"
+        @click="() => emit('start-editing', { provider: props.provider })"
+      >
+        <ion-label v-if="props.provider.name && !props.provider._editing">{{
+          props.provider.name
         }}</ion-label>
 
         <ion-input
-          v-show="provider._editing || !provider.name"
-          :ref="el => emit('register-name-input', { id: provider.id, el })"
-          :value="provider.name"
-          :placeholder="provider._dbName || 'Nombre proveedor'"
+          v-show="props.provider._editing || !props.provider.name"
+          :ref="
+            el => emit('register-name-input', { id: props.provider.id, el })
+          "
+          :value="props.provider.name"
+          :placeholder="props.provider._dbName || 'Nombre proveedor'"
           @ion-input="
-            e =>
+            (e: any) =>
               emit('update-provider', {
-                id: provider.id,
+                id: props.provider.id,
                 field: 'name',
                 value: e?.detail?.value ?? e?.target?.value ?? '',
               })
           "
-          @ion-blur="stopEditing({ provider })"
+          @ion-blur="() => emit('stop-editing', { provider: props.provider })"
         ></ion-input>
       </div>
     </ion-item>
@@ -38,7 +46,7 @@
       class="ion-padding-start ion-padding-end"
     >
       <ion-input
-        :value="provider.efectivo"
+        :value="props.provider.efectivo"
         label="Efectivo"
         label-placement="floating"
         type="number"
@@ -46,7 +54,7 @@
         @ion-input="
           e =>
             emit('update-provider', {
-              id: provider.id,
+              id: props.provider.id,
               field: 'efectivo',
               value: Number(e?.detail?.value ?? e?.target?.value ?? 0),
             })
@@ -54,7 +62,7 @@
       ></ion-input>
 
       <ion-input
-        :value="provider.tarjeta"
+        :value="props.provider.tarjeta"
         label="Tarjeta/Transferencia"
         label-placement="floating"
         type="number"
@@ -70,7 +78,7 @@
       ></ion-input>
 
       <ion-input
-        :value="provider.credito"
+        :value="props.provider.credito"
         label="Credito"
         label-placement="floating"
         type="number"
@@ -86,22 +94,21 @@
       ></ion-input>
 
       <ion-label
-        :color="isPaymentPrimary(provider) ? 'primary' : undefined"
-        @click="openPaymentPopover"
+        :color="props.isPaymentPrimary(props.provider) ? 'primary' : undefined"
       >
-        {{ formatCurrency({ v: valueToConsider(provider) }) }}
+        {{ props.formatCurrency({ v: props.valueToConsider(props.provider) }) }}
       </ion-label>
     </div>
 
     <ion-item lines="none">
       <ion-button
-        v-if="hasProductsFor(provider)"
+        v-if="hasProductsFor && hasProductsFor(provider)"
         slot="end"
         fill="clear"
         size="small"
         title="Ver productos"
         class="icon-btn"
-        @click.stop="openProductsPopover({ provider, event: $event })"
+        @click.stop="emit('open-products-popover', { provider, event: $event })"
       >
         <ion-icon :icon="listOutline"></ion-icon>
       </ion-button>
@@ -109,7 +116,9 @@
       <ion-button
         slot="end"
         fill="clear"
-        @click.stop="openNotesModal({ provider })"
+        @click.stop="
+          (e: any) => emit('open-notes-modal', { provider, event: e })
+        "
       >
         <ion-icon :icon="bookOutline"></ion-icon>
       </ion-button>
@@ -124,7 +133,14 @@
         size="small"
         title="Eliminar proveedor"
         class="icon-btn"
-        @click.stop="confirmRemoveProveedor(provider.id, provider.name)"
+        @click.stop="
+          (e: any) =>
+            emit('confirm-remove-proveedor', {
+              id: provider.id,
+              name: provider.name,
+              event: e,
+            })
+        "
       >
         <ion-icon :icon="trashOutline"></ion-icon>
       </ion-button>
@@ -162,19 +178,10 @@ type FocusableRef =
 // end inteface
 
 // main
-defineProps<{
+const props = defineProps<{
   provider: any;
   nameInputRefs: Record<string | number, FocusableRef | null>;
-  // Accept either positional args (p, e) or a single params object { provider, event }
-  onVisitedChanged: (params: { provider?: any; event?: any } | any) => void;
-  // Accept either a provider param or an object { provider }
-  startEditing: (params: { provider?: any } | any) => void;
-  stopEditing: (params: { provider?: any } | any) => void;
-  hasProductsFor: (params: { provider?: any } | any) => boolean;
-  // openProductsPopover already used with an object: keep compatible
-  openProductsPopover: (params: { provider: any; event: any } | any) => void;
-  openNotesModal: (params: { provider?: any } | any) => void;
-  confirmRemoveProveedor: (id: string | number, name?: string) => void;
+  hasProductsFor?: (params: { provider?: any } | any) => boolean;
   isPaymentPrimary: (p: any) => boolean;
   valueToConsider: (p: any) => number;
   formatCurrency: (params: { v: number }) => string;
@@ -183,18 +190,15 @@ defineProps<{
 const emit = defineEmits([
   'update-provider',
   'register-name-input',
-  'update-visited',
+  'visited-changed',
+  'start-editing',
+  'stop-editing',
+  'open-products-popover',
+  'open-notes-modal',
+  'confirm-remove-proveedor',
 ]);
-// end maing
-
-// function
-function openPaymentPopover() {
-  // noop placeholder so the label click doesn't error if parent doesn't provide a popover
-  // parent components can override by handling the click via the label if needed
-  return;
-}
+// end main
 </script>
-<!-- end function -->
 
 <style scoped>
 .icon-btn {
