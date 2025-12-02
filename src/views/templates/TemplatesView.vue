@@ -268,9 +268,9 @@ const _searchVisible = ref(false);
 const _supplierQuery = ref('');
 
 // Mark intentionally unused variables as used to silence TS/IDE hints
-void _supplierSearchbar;
-void _searchVisible;
-void _supplierQuery;
+void _supplierSearchbar.value;
+void _searchVisible.value;
+void _supplierQuery.value;
 
 // State to handle apply conflicts when the target date already has content
 const showApplyConflict = ref(false);
@@ -319,16 +319,10 @@ async function loadSuppliers() {
   }
 }
 
-
-
-
-
 function getSupplierNameById(id: IDBValidKey): string | null {
   const s = suppliers.find(x => x.id === id);
   return s ? s.name : null;
 }
-
-
 
 /**
  * Remove a supplier that no longer exists from the template being applied.
@@ -413,7 +407,6 @@ async function editTemplate(params: { tmpl: TemplateSummary }) {
   // Open modal
   showModal.value = true;
 }
-
 
 // Open the apply modal instead of navigating directly
 async function onAddTemplateSaved() {
