@@ -132,21 +132,56 @@ class DixieController {
       }
 
       let req: IDBRequest;
+      // Ensure we store a plain, extensible object and remove any existing 'id' so
+      // the object store can generate a key when autoIncrement is enabled.
+      let entryToStore: unknown;
+      if (safeEntry && typeof safeEntry === 'object') {
+        // Shallow copy into a plain object to avoid frozen/non-extensible objects
+        entryToStore = Object.assign({}, safeEntry as any);
+      } else {
+        // Wrap primitives (number/string/boolean/null/undefined) so the object store
+        // can insert a generated key into the stored value.
+        entryToStore = { value: safeEntry };
+      }
       try {
-        req = store.add(safeEntry);
+        if (
+          entryToStore &&
+          typeof entryToStore === 'object' &&
+          Object.prototype.hasOwnProperty.call(entryToStore, 'id')
+        ) {
+          try {
+            delete (entryToStore as any).id;
+          } catch (_e) {
+            /* noop */
+          }
+        }
+      } catch (_e) {
+        /* noop */
+      }
+      try {
+        req = store.add(entryToStore);
       } catch (syncErr) {
-        console.error(
-          'DixieController.addEntry: synchronous error calling store.add',
-          syncErr,
-          { entryPreview: this.sanitizeForIndexedDB({ value: entry }) }
+        // If add throws synchronously, attempt put() as a fallback.
+        console.warn(
+          'DixieController.addEntry: store.add threw synchronously, trying store.put as fallback',
+          syncErr
         );
         try {
-          db.close();
-        } catch (_e) {
-          /* noop */
+          req = store.put(entryToStore);
+        } catch (putSyncErr) {
+          console.error(
+            'DixieController.addEntry: both store.add and store.put failed synchronously',
+            putSyncErr,
+            { entryPreview: this.sanitizeForIndexedDB({ value: entry }) }
+          );
+          try {
+            db.close();
+          } catch (_e) {
+            /* noop */
+          }
+          reject(putSyncErr);
+          return;
         }
-        reject(syncErr);
-        return;
       }
 
       req.onsuccess = () => {
@@ -273,7 +308,16 @@ class DixieController {
       } catch (e) {
         /* noop */
       }
-      const req = store.put(entry);
+      // Ensure we pass a plain, extensible object to put(). If the provided entry
+      // is a primitive or a non-extensible object, wrap or shallow-copy it so
+      // the object store can insert a generated key when necessary.
+      let entryToPut: unknown;
+      if (entry && typeof entry === 'object') {
+        entryToPut = Object.assign({}, entry as any);
+      } else {
+        entryToPut = { value: entry };
+      }
+      const req = store.put(entryToPut);
       req.onsuccess = () => {
         resolve(req.result);
       };
