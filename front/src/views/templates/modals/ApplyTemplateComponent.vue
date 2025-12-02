@@ -18,7 +18,7 @@
       </ion-toolbar>
     </ion-header>
 
-    <ion-content class="ion-padding">
+    <ion-content>
       <div v-if="applyTargetTemplate">
         <ion-card class="shadow1">
           <ion-card-header>
@@ -26,13 +26,13 @@
           </ion-card-header>
 
           <ion-card-content>
-            <ion-item class="transparent">
+            <ion-item
+              class="transparent"
+              button
+              @click="openDatePopover($event)"
+            >
               <ion-label>Fecha</ion-label>
-
-              <ion-datetime-button
-                slot="end"
-                datetime="datetime"
-              ></ion-datetime-button>
+              <ion-label slot="end">{{ formattedApplyDate }}</ion-label>
             </ion-item>
 
             <ion-list class="transparent">
@@ -70,15 +70,6 @@
                         <ion-icon :icon="closeOutline"> </ion-icon>
                       </ion-button>
                     </template>
-
-                    <ion-button
-                      v-if="supplierExists({ id })"
-                      slot="end"
-                      fill="clear"
-                      color="danger"
-                    >
-                      Eliminar
-                    </ion-button>
                   </ion-item>
                 </template>
 
@@ -99,6 +90,23 @@
           </ion-card-content>
         </ion-card>
       </div>
+
+      <!-- popovers -->
+      <ion-popover
+        :is-open="datePopoverOpen"
+        :event="datePopoverEvent"
+        :keep-contents-mounted="true"
+        @did-dismiss="closeDatePopover"
+      >
+        <ion-content>
+          <ion-datetime
+            :value="selectedDate"
+            :presentation="'date'"
+            @ion-change="onDateChange"
+          ></ion-datetime>
+        </ion-content>
+      </ion-popover>
+      <!-- end popovers -->
     </ion-content>
   </ion-page>
 </template>
@@ -119,10 +127,11 @@ import {
   IonItem,
   IonLabel,
   IonChip,
-  IonDatetimeButton,
+  IonPopover,
+  IonDatetime,
 } from '@ionic/vue';
 import { closeOutline, checkmarkOutline } from 'ionicons/icons';
-import { defineProps, defineEmits } from 'vue';
+import { defineProps, defineEmits, ref, computed } from 'vue';
 
 // main
 const props = defineProps<{
@@ -138,7 +147,47 @@ const emit = defineEmits<{
 }>();
 // end main
 
+// vars
+const datePopoverOpen = ref(false);
+const datePopoverEvent = ref<Event | null>(null);
+const selectedDate = ref<string>(
+  props.applySelectedDate || new Date().toISOString()
+);
+// end vars
+
+// computed
+const formattedApplyDate = computed(() => {
+  try {
+    const d = selectedDate.value;
+    if (!d) return '-';
+    const dt = new Date(d);
+    return dt.toLocaleDateString();
+  } catch (_e) {
+    return selectedDate.value || '-';
+  }
+});
+// end computed
+
 // functions
+function openDatePopover(ev: Event) {
+  datePopoverEvent.value = ev;
+  datePopoverOpen.value = true;
+}
+
+function closeDatePopover() {
+  datePopoverOpen.value = false;
+  datePopoverEvent.value = null;
+}
+
+function onDateChange(ev: CustomEvent) {
+  const val =
+    (ev.detail && (ev.detail as any).value) || (ev.target as any)?.value || '';
+  if (!val) return;
+  selectedDate.value = val;
+  // Emit update for v-model style binding
+  emit('update:applySelectedDate', val);
+}
+
 function supplierExists(params: { id: IDBValidKey }): boolean {
   const { id } = params;
   return !!(props.suppliers || []).some((s: any) => s && s.id === id);
@@ -150,7 +199,6 @@ function supplierDisplayName(params: { id: IDBValidKey }): string {
   const s = (props.suppliers || []).find((x: any) => x.id === id);
   if (s && s.name) return s.name;
 
-  // Fallback to the suppliersSnapshot stored in the template being applied (if any)
   const snapshotList = props.applyTargetTemplate?.suppliersSnapshot || [];
   const snap = (snapshotList as { id: IDBValidKey; name?: string }[]).find(
     ss => ss.id === id

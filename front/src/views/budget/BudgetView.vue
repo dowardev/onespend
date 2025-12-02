@@ -9,7 +9,10 @@
         <ion-title>Presupuesto</ion-title>
 
         <ion-buttons slot="end">
-          <ion-button title="Retroceder un día" @click="changeDate(-1)">
+          <ion-button
+            title="Retroceder un día"
+            @click="changeDate({ days: -1 })"
+          >
             <ion-icon :icon="chevronBackOutline"></ion-icon>
           </ion-button>
 
@@ -280,16 +283,16 @@
                           :key="p.id"
                           :provider="p"
                           :name-input-refs="nameInputRefs"
-                          :on-visited-changed="onVisitedChanged"
-                          :start-editing="startEditing"
-                          :stop-editing="stopEditing"
                           :has-products-for="hasProductsFor"
-                          :open-products-popover="openProductsPopover"
-                          :open-notes-modal="openNotesModal"
-                          :confirm-remove-proveedor="confirmRemoveProveedor"
                           :is-payment-primary="isPaymentPrimary"
                           :value-to-consider="valueToConsider"
                           :format-currency="formatCurrency"
+                          @visited-changed="onVisitedChanged"
+                          @start-editing="startEditing"
+                          @stop-editing="stopEditing"
+                          @open-products-popover="openProductsPopover"
+                          @open-notes-modal="openNotesModal"
+                          @confirm-remove-proveedor="confirmRemoveProveedor"
                           @update-provider="handleUpdateProvider"
                           @register-name-input="handleRegisterNameInput"
                         />
@@ -318,16 +321,16 @@
                           :key="p.id"
                           :provider="p"
                           :name-input-refs="nameInputRefs"
-                          :on-visited-changed="onVisitedChanged"
-                          :start-editing="startEditing"
-                          :stop-editing="stopEditing"
                           :has-products-for="hasProductsFor"
-                          :open-products-popover="openProductsPopover"
-                          :open-notes-modal="openNotesModal"
-                          :confirm-remove-proveedor="confirmRemoveProveedor"
                           :is-payment-primary="isPaymentPrimary"
                           :value-to-consider="valueToConsider"
                           :format-currency="formatCurrency"
+                          @visited-changed="onVisitedChanged"
+                          @start-editing="startEditing"
+                          @stop-editing="stopEditing"
+                          @open-products-popover="openProductsPopover"
+                          @open-notes-modal="openNotesModal"
+                          @confirm-remove-proveedor="confirmRemoveProveedor"
                           @update-provider="handleUpdateProvider"
                           @register-name-input="handleRegisterNameInput"
                         />
@@ -397,6 +400,43 @@
         @did-dismiss="onDeleteAlertDidDismiss"
       ></ion-alert>
       <!-- end confirmation alert -->
+
+      <!-- overwrite confirm when products modal would overwrite provider efectivo -->
+      <ion-alert
+        :is-open="overwriteConfirm.open"
+        header="Sobrescribir valor"
+        :message="`El proveedor «${overwriteConfirm.providerName}» ya tiene valores en Efectivo o Tarjeta. ¿Deseas sobrescribir Efectivo con ${formatCurrency({ v: overwriteConfirm.total })}?`"
+        :buttons="[
+          {
+            text: 'Cancelar',
+            role: 'cancel',
+            handler: () => {
+              overwriteConfirm.open = false;
+              overwriteConfirm._resolve?.(false);
+              overwriteConfirm._resolve = null;
+            },
+          },
+          {
+            text: 'Sobrescribir',
+            cssClass: 'danger',
+            handler: () => {
+              overwriteConfirm.open = false;
+              overwriteConfirm._resolve?.(true);
+              overwriteConfirm._resolve = null;
+            },
+          },
+        ]"
+        @did-dismiss="
+          () => {
+            if (overwriteConfirm._resolve) {
+              overwriteConfirm._resolve(false);
+              overwriteConfirm._resolve = null;
+            }
+            overwriteConfirm.open = false;
+          }
+        "
+      ></ion-alert>
+      <!-- end overwrite confirm -->
 
       <!-- apply conflict alert for templates -->
       <ion-alert
@@ -635,7 +675,7 @@ import backupController from '@/controllers/backupController';
 import suppliersController from '@/controllers/suppliersController';
 import systemController from '@/controllers/systemConfigController';
 import TemplateController from '@/controllers/TempalteController';
-// end components
+// end controllers
 
 // components
 import ProductsModalComponent from './modals/PoductsModalComponent.vue';
@@ -660,7 +700,6 @@ const selectedDate = ref(new Date().toISOString());
 const route = useRoute();
 const popovers = reactive({
   date: { open: false, event: null as unknown },
-  paymentMethods: { open: false, event: null as unknown },
   inforSuppliers: { open: false, event: null as unknown },
   moreOptions: { open: false, event: null as unknown },
 });
@@ -703,7 +742,62 @@ const showTemplatesModal = ref(false);
 const showApplyConflictModal = ref(false);
 const applyConflictMessage = ref('');
 const pendingApplyPayload = ref<any | null>(null);
-const applySelectedDate = ref(new Date().toISOString());
+
+// Overwrite confirmation alert state used instead of window.confirm
+const overwriteConfirm = reactive({
+  open: false,
+  providerId: null as string | number | null,
+  providerName: '',
+  total: 0,
+  // internal resolver used to fulfill the awaiting Promise when the user acts
+  _resolve: null as null | ((val: boolean) => void),
+});
+
+/**
+ * askOverwriteConfirm: Promise-based helper that opens the overwriteConfirm ion-alert
+ * and resolves to true when the user confirms or false when cancels/dismisses.
+ * Params are optional and used to populate the alert message for better UX.
+ */
+function askOverwriteConfirm(
+  params: {
+    providerId?: string | number | null;
+    providerName?: string;
+    total?: number;
+  } = {}
+) {
+  return new Promise<boolean>(resolve => {
+    try {
+      overwriteConfirm.providerId = params.providerId ?? null;
+      overwriteConfirm.providerName = params.providerName ?? '';
+      overwriteConfirm.total = Number(params.total || 0) || 0;
+
+      // Provide a resolver that will be called by the alert button handlers
+      overwriteConfirm._resolve = (val: boolean) => {
+        try {
+          resolve(Boolean(val));
+        } catch (_e) {
+          try {
+            resolve(false);
+          } catch (__) {
+            /* noop */
+          }
+        }
+        overwriteConfirm._resolve = null;
+      };
+
+      overwriteConfirm.open = true;
+    } catch (_e) {
+      // In case of any error, resolve as false to avoid accidental overwrites
+      try {
+        resolve(false);
+      } catch (__) {
+        /* noop */
+      }
+      overwriteConfirm._resolve = null;
+      overwriteConfirm.open = false;
+    }
+  });
+}
 // Toast state used to inform the user when an action is prevented (e.g. editing a provider from a template)
 const toast = reactive({ open: false, message: '', duration: 2500 });
 // end vars
@@ -954,7 +1048,8 @@ function updateIngresoAmount(params: { value: any; index: number }) {
   ingresos[index].amount = Number(value) || 0;
 }
 
-async function removeIngreso(id: string | number) {
+async function removeIngreso(params: { id: string | number } | any) {
+  const id = params && params.id !== undefined ? params.id : params;
   const idx = ingresos.findIndex((i: any) => i.id === id);
   if (idx >= 0) {
     ingresos.splice(idx, 1);
@@ -974,7 +1069,8 @@ async function removeIngreso(id: string | number) {
   }
 }
 
-async function removeProveedor(id: string | number) {
+async function removeProveedor(params: { id?: string | number } | any) {
+  const id = params && params.id !== undefined ? params.id : params;
   const idx = proveedores.findIndex((p: any) => p.id === id);
   if (idx >= 0) {
     proveedores.splice(idx, 1);
@@ -995,8 +1091,18 @@ async function removeProveedor(id: string | number) {
 }
 
 // Show confirmation alert before actually removing a provider
-function confirmRemoveProveedor(id: string | number, name?: string) {
+function confirmRemoveProveedor(
+  params: { id?: string | number; name?: string } | any
+) {
   try {
+    // Support both: confirmRemoveProveedor(id, name) (old) and confirmRemoveProveedor({ id, name }) (new)
+    const id = params && params.id !== undefined ? params.id : params;
+    const name =
+      params && params.name !== undefined
+        ? params.name
+        : typeof params === 'object' && params && params.name
+          ? params.name
+          : '';
     deleteConfirm.providerId = id;
     deleteConfirm.providerName = name || '';
     deleteConfirm.open = true;
@@ -1592,8 +1698,18 @@ function resetToToday() {
   }
 }
 
-function changeDate(days: number) {
+function changeDate(params: { days?: number } | number) {
   try {
+    // Support both old signature changeDate(number) and new changeDate({ days })
+    let days = 0;
+    if (params == null) {
+      days = 0;
+    } else if (typeof params === 'number') {
+      days = Number(params || 0);
+    } else {
+      days = Number((params as any).days || 0);
+    }
+
     // Parse current selectedDate; fallback to now if invalid
     let current = new Date(String(selectedDate.value));
     if (isNaN(current.getTime())) current = new Date();
@@ -1832,17 +1948,56 @@ async function saveProductsModal() {
       }
     }
 
-    // Assign the computed estimate to the provider's estimated field (if providerId present)
+    // Assign the computed total (price * quantity) to the provider's efectivo field (if providerId present)
     const pid = modals.products.providerId;
     if (pid != null) {
       const prov = proveedores.find((p: any) => p.id === pid);
       if (prov) {
-        prov.estimated = Number(totalEstimate) || 0;
-        console.log(
-          'saveProductsModal: set provider estimated',
-          pid,
-          prov.estimated
-        );
+        // When either efectivo OR tarjeta is empty (0 or falsy) store directly.
+        try {
+          const currentEfectivo = Number(prov.efectivo || 0);
+          const currentTarjeta = Number(prov.tarjeta || 0);
+          // Only store directly when BOTH efectivo AND tarjeta are empty (0). Otherwise ask the user.
+          if (currentEfectivo === 0 && currentTarjeta === 0) {
+            prov.efectivo = Number(totalEstimate) || 0;
+            console.log(
+              'saveProductsModal: set provider efectivo (direct)',
+              pid,
+              prov.efectivo
+            );
+          } else {
+            // At least one field already has a value -> ask user whether to overwrite
+            let overwrite = false;
+            try {
+              // Use the ionic alert promise helper instead of window.confirm
+              overwrite = await askOverwriteConfirm({
+                providerId: pid,
+                providerName: prov.name || '',
+                total: Number(totalEstimate) || 0,
+              });
+            } catch (_e) {
+              // In non-window environments or on error, default to not overwriting
+              overwrite = false;
+            }
+            if (overwrite) {
+              prov.efectivo = Number(totalEstimate) || 0;
+              console.log(
+                'saveProductsModal: overwritten provider efectivo',
+                pid,
+                prov.efectivo
+              );
+            } else {
+              console.log(
+                'saveProductsModal: kept existing provider efectivo/tarjeta values',
+                pid,
+                { efectivo: prov.efectivo, tarjeta: prov.tarjeta }
+              );
+            }
+          }
+        } catch (_e) {
+          // Fallback: assign computed value
+          prov.efectivo = Number(totalEstimate) || 0;
+        }
       } else {
         console.warn('saveProductsModal: provider not found', pid);
       }
@@ -1898,34 +2053,69 @@ function hasFocusMethod(x: unknown): x is { focus: () => void } {
 // Notes modal: open, save and dismiss handlers
 async function openNotesModal(p: any) {
   try {
-    modals.notes.providerId = p?.id ?? null;
-    // prefer in-memory note but allow persisted note to override
-    modals.notes.content = p?.notes ?? '';
+    // Support multiple call styles:
+    // - openNotesModal(provider)
+    // - openNotesModal({ providerId })
+    // - openNotesModal(providerId)
+    // - openNotesModal({ id, notes })
+    // - openNotesModal(undefined) -> gracefully open empty modal
 
-    // Try to load persisted note for this provider+date
-    try {
-      const all = (await dixieController.listBackups()) as any[];
-      const target = (selectedDate.value || '').slice(0, 10);
-      const matches = (all || [])
-        .filter(
-          b =>
-            b &&
-            b.component === 'BudgetNotes' &&
-            b.data &&
-            b.data.selectedDate &&
-            (b.data.selectedDate as string).slice(0, 10) === target &&
-            b.data.providerId === modals.notes.providerId
-        )
-        .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-      if (matches.length) {
-        const latest = matches[0];
-        modals.notes.content =
-          latest.data && latest.data.content
-            ? String(latest.data.content)
-            : modals.notes.content;
+    let providerId: string | number | null = null;
+    let initialContent = '';
+
+    if (p == null) {
+      // nothing provided
+      providerId = null;
+    } else if (typeof p === 'object') {
+      // object could be provider, or an event wrapper, normalize
+      // try common shapes
+      providerId = p?.id ?? p?.providerId ?? null;
+      initialContent = p?.notes ?? '';
+      // if the caller passed { provider } shape
+      if (!providerId && p.provider && (p.provider.id || p.providerId)) {
+        providerId = p.provider.id ?? p.provider.providerId ?? null;
+        initialContent = p.provider.notes ?? initialContent;
       }
-    } catch (_e) {
-      /* noop */
+    } else if (typeof p === 'string' || typeof p === 'number') {
+      providerId = p as any;
+    }
+
+    // Normalize numeric string ids to numbers when possible
+    if (typeof providerId === 'string' && !isNaN(Number(providerId))) {
+      providerId = Number(providerId) as any;
+    }
+
+    modals.notes.providerId = providerId;
+
+    // prefer in-memory note but allow persisted note to override
+    modals.notes.content = initialContent || '';
+
+    // Only try to load persisted note when we have a valid provider id
+    if (modals.notes.providerId != null) {
+      try {
+        const all = (await dixieController.listBackups()) as any[];
+        const target = (selectedDate.value || '').slice(0, 10);
+        const matches = (all || [])
+          .filter(
+            b =>
+              b &&
+              b.component === 'BudgetNotes' &&
+              b.data &&
+              b.data.selectedDate &&
+              (b.data.selectedDate as string).slice(0, 10) === target &&
+              b.data.providerId === modals.notes.providerId
+          )
+          .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        if (matches.length) {
+          const latest = matches[0];
+          modals.notes.content =
+            latest.data && latest.data.content
+              ? String(latest.data.content)
+              : modals.notes.content;
+        }
+      } catch (_e) {
+        /* noop */
+      }
     }
 
     setTimeout(() => (modals.notes.open = true), 50);
@@ -2070,7 +2260,8 @@ async function applyTemplateFromModal(tmpl: any) {
   try {
     if (!tmpl) return;
     // Build payload similar to TemplatesView.confirmApply
-    const dateISO = applySelectedDate.value || selectedDate.value;
+    // Use the currently selected date from the Budget view
+    const dateISO = selectedDate.value;
 
     let providerNames: string[] = [];
 

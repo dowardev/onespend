@@ -215,7 +215,7 @@ function openSearch() {
     try {
       const el: any = supplierSearchbar.value;
       if (el && typeof el.setFocus === 'function') el.setFocus();
-      } catch (_e) {
+    } catch (_e) {
       // ignore
     }
   }, 0);
