@@ -170,9 +170,8 @@
                                       v-if="faltanteEfectivo < 0"
                                       style="color: var(--ion-color-danger)"
                                     >
-                                      ({{
-                                        formatCurrency({ v: faltanteEfectivo })
-                                      }})
+                                      ({ formatCurrency({ v: faltanteEfectivo })
+                                      })
                                     </div>
                                   </div>
                                 </ion-note>
@@ -195,9 +194,8 @@
                                       v-if="faltanteDigital < 0"
                                       style="color: var(--ion-color-danger)"
                                     >
-                                      ({{
-                                        formatCurrency({ v: faltanteDigital })
-                                      }})
+                                      ({ formatCurrency({ v: faltanteDigital })
+                                      })
                                     </div>
                                   </div>
                                 </ion-note>
@@ -267,6 +265,16 @@
                       <ion-list-header>
                         <ion-label>No asistio</ion-label>
 
+                        <!-- Add existing provider -->
+                        <ion-button
+                          @click="
+                            popovers.addExistingSupplier.event = $event;
+                            popovers.addExistingSupplier.open = true;
+                          "
+                        >
+                          <ion-icon :icon="flashOutline"></ion-icon>
+                        </ion-button>
+
                         <!-- Add provider card restored inside 'No asistio' column -->
                         <ion-button @click="addBlankProvider()">
                           <ion-icon :icon="addOutline"></ion-icon>
@@ -279,14 +287,10 @@
                         style="height: calc(100% - 73px); overflow: auto"
                       >
                         <ProviderCardComponent
-                          v-for="p in notVisitedProviders"
+                          v-for="p in enrichedNotVisited"
                           :key="p.id"
                           :provider="p"
-                          :name-input-refs="nameInputRefs"
-                          :has-products-for="hasProductsFor"
-                          :is-payment-primary="isPaymentPrimary"
-                          :value-to-consider="valueToConsider"
-                          :format-currency="formatCurrency"
+                          :has-products="p.hasProducts"
                           @visited-changed="onVisitedChanged"
                           @start-editing="startEditing"
                           @stop-editing="stopEditing"
@@ -295,6 +299,7 @@
                           @confirm-remove-proveedor="confirmRemoveProveedor"
                           @update-provider="handleUpdateProvider"
                           @register-name-input="handleRegisterNameInput"
+                          @move-provider="onMoveProvider"
                         />
                       </div>
                     </ion-list>
@@ -317,14 +322,10 @@
                         style="height: calc(100% - 73px); overflow: auto"
                       >
                         <ProviderCardComponent
-                          v-for="p in visitedProviders"
+                          v-for="p in enrichedVisited"
                           :key="p.id"
                           :provider="p"
-                          :name-input-refs="nameInputRefs"
-                          :has-products-for="hasProductsFor"
-                          :is-payment-primary="isPaymentPrimary"
-                          :value-to-consider="valueToConsider"
-                          :format-currency="formatCurrency"
+                          :has-products="p.hasProducts"
                           @visited-changed="onVisitedChanged"
                           @start-editing="startEditing"
                           @stop-editing="stopEditing"
@@ -333,6 +334,7 @@
                           @confirm-remove-proveedor="confirmRemoveProveedor"
                           @update-provider="handleUpdateProvider"
                           @register-name-input="handleRegisterNameInput"
+                          @move-provider="onMoveProvider"
                         />
                       </div>
                     </ion-list>
@@ -386,6 +388,57 @@
           <ion-item button @click="openTemplatesModal()">
             <ion-label>Aplicar template</ion-label>
           </ion-item>
+        </ion-content>
+      </ion-popover>
+
+      <!-- popove add existing supplier -->
+      <ion-popover
+        :is-open="popovers.addExistingSupplier.open"
+        :event="popovers.addExistingSupplier.event"
+        :keep-contents-mounted="true"
+        @did-dismiss="popovers.addExistingSupplier.open = false"
+      >
+        <ion-content>
+          <ion-item-divider sticky>
+            <ion-searchbar
+              v-model="addExistingSupplierQuery"
+              :debounce="300"
+              mode="ios"
+            ></ion-searchbar>
+          </ion-item-divider>
+
+          <ion-list>
+            <template v-if="filteredSuppliersEntries.length">
+              <ion-item
+                v-for="entry in filteredSuppliersEntries"
+                :key="entry.key"
+                button
+                @click="
+                  addProveedor({ name: entry.name });
+                  popovers.addExistingSupplier.open = false;
+                "
+              >
+                <ion-label>{{ entry.name }}</ion-label>
+                <ion-button
+                  slot="end"
+                  fill="clear"
+                  size="small"
+                  @click.stop="
+                    addProveedor({ name: entry.name });
+                    popovers.addExistingSupplier.open = false;
+                  "
+                >
+                  <ion-icon :icon="addOutline"></ion-icon>
+                </ion-button>
+              </ion-item>
+            </template>
+
+            <template v-else>
+              <ion-item>
+                <ion-label>No hay proveedores cargados</ion-label>
+              </ion-item>
+            </template>
+          </ion-list>
         </ion-content>
       </ion-popover>
       <!-- end popover -->
@@ -604,6 +657,7 @@ import {
   IonToolbar,
   IonAccordionGroup,
   IonToast,
+  IonSearchbar,
 } from '@ionic/vue';
 import {
   reactive,
@@ -623,6 +677,7 @@ import {
   chevronBackOutline,
   chevronForwardOutline,
   ellipsisVerticalOutline,
+  flashOutline,
 } from 'ionicons/icons';
 import { useRoute } from 'vue-router';
 import { format, parseISO } from 'date-fns';
@@ -702,6 +757,7 @@ const popovers = reactive({
   date: { open: false, event: null as unknown },
   inforSuppliers: { open: false, event: null as unknown },
   moreOptions: { open: false, event: null as unknown },
+  addExistingSupplier: { open: false, event: null as unknown },
 });
 const modals = reactive({
   products: {
@@ -736,6 +792,33 @@ const visitedList = ref<HTMLElement | null>(null);
 const suppliersProducts = reactive({} as Record<string, any[]>);
 // Map of normalized supplier name -> original supplier name (from suppliers DB)
 const suppliersNames = reactive({} as Record<string, string>);
+const addExistingSupplierQuery = ref('');
+const filteredSuppliersEntries = computed(() => {
+  try {
+    const q = String(addExistingSupplierQuery.value || '')
+      .trim()
+      .toLowerCase();
+    const entries = Object.entries(suppliersNames || {}).map(([key, name]) => ({
+      key,
+      name,
+    }));
+    if (!q) return entries;
+    return entries.filter(
+      e =>
+        String(e.name || '')
+          .toLowerCase()
+          .includes(q) ||
+        String(e.key || '')
+          .toLowerCase()
+          .includes(q)
+    );
+  } catch (_e) {
+    return Object.entries(suppliersNames || {}).map(([key, name]) => ({
+      key,
+      name,
+    }));
+  }
+});
 // --- Templates modal state & handlers ---
 const templatesModalList = reactive([] as any[]);
 const showTemplatesModal = ref(false);
@@ -896,6 +979,49 @@ const totalIngresos = computed(() =>
   ingresos.reduce((s, i) => s + Number(i.amount || 0), 0)
 );
 
+// Search query used by filteredProviders (was missing causing a TS error)
+const searchQuery = ref('');
+
+// Filtered providers based on searchQuery
+const filteredProviders = computed(() => {
+  try {
+    const q = String(searchQuery.value || '')
+      .trim()
+      .toLowerCase();
+    if (!q) return proveedores;
+    return proveedores.filter((p: any) =>
+      (p.name || '').toString().toLowerCase().includes(q)
+    );
+  } catch (_e) {
+    return proveedores;
+  }
+});
+
+const filteredNotVisited = computed(() =>
+  filteredProviders.value.filter((p: any) => !p.visited)
+);
+const filteredVisited = computed(() =>
+  filteredProviders.value.filter((p: any) => !!p.visited)
+);
+
+// Enrich providers with precomputed flags/values so child components receive simple props
+const enrichedNotVisited = computed(() =>
+  filteredNotVisited.value.map((p: any) => ({
+    ...p,
+    hasProducts: hasProductsFor(p),
+    consideredValue: valueToConsider(p),
+  }))
+);
+
+const enrichedVisited = computed(() =>
+  filteredVisited.value.map((p: any) => ({
+    ...p,
+    hasProducts: hasProductsFor(p),
+    paymentIsPrimary: isPaymentPrimary(p),
+    consideredValue: valueToConsider(p),
+  }))
+);
+
 // Totales de ingresos por método de pago (efectivo / digital)
 const totalIngresosEfectivo = computed(() =>
   ingresos.reduce(
@@ -922,13 +1048,6 @@ const totalVisitedProviders = computed(() =>
 );
 
 // Computed lists split by visited flag
-const visitedProviders = computed(() =>
-  proveedores.filter((p: any) => !!p.visited)
-);
-const notVisitedProviders = computed(() =>
-  proveedores.filter((p: any) => !p.visited)
-);
-
 // Totals by payment method but only for visited providers (used in "real" accordion breakdown)
 const totalVisitedEfectivo = computed(() =>
   proveedores.reduce((s, p) => s + (p.visited ? Number(p.efectivo || 0) : 0), 0)
@@ -1222,6 +1341,27 @@ function addProveedor(
   const d = dollar ?? newProveedor.dollar;
   const nt = notes ?? newProveedor.notes;
   if (!n) return;
+
+  // Prevent adding duplicate providers: normalize and compare against existing names
+  try {
+    const normalized = normalizeName(String(n));
+    const exists = proveedores.some(
+      (p: any) => normalizeName(p.name) === normalized
+    );
+    if (exists) {
+      // Show a toast informing the user and avoid adding the duplicate
+      try {
+        toast.message = `El proveedor «${n}» ya existe`;
+        toast.open = true;
+      } catch (_e) {
+        /* noop */
+      }
+      return;
+    }
+  } catch (_e) {
+    /* noop */
+  }
+
   // create with id and mark as new for animation
   const newItem = {
     id: Date.now() + Math.random(),
@@ -1327,13 +1467,25 @@ function onVisitedChanged(params: any) {
       (event.detail?.checked ?? event.detail?.value ?? event.target?.checked)
     );
 
-    if (provider) {
-      provider.visited = checked;
-      console.log('onVisitedChanged', {
-        id: provider?.id,
-        name: provider?.name,
-        visited: provider?.visited,
-      });
+    if (provider && provider.id != null) {
+      // IMPORTANT: Find the original provider in the reactive array by id.
+      // The enriched computed properties create copies, so updating the copy
+      // won't trigger reactivity. We must update the original object.
+      const originalProvider = proveedores.find(
+        (p: any) => p.id === provider.id
+      );
+      if (originalProvider) {
+        originalProvider.visited = checked;
+        console.log('onVisitedChanged', {
+          id: originalProvider.id,
+          name: originalProvider.name,
+          visited: originalProvider.visited,
+        });
+      } else {
+        console.warn('onVisitedChanged: provider not found in proveedores', {
+          id: provider.id,
+        });
+      }
     }
 
     // ensure Vue processes reactive updates (no-op nextTick but useful when debugging)
@@ -1437,6 +1589,34 @@ function handleRegisterNameInput(payload: { id: string | number; el: any }) {
 
 // Add empty provider card
 function addBlankProvider() {
+  // Prevent creating another blank provider if one already exists
+  try {
+    const existingBlank = proveedores.find(
+      (p: any) => (p.name ?? '').toString().trim() === ''
+    );
+    if (existingBlank) {
+      try {
+        toast.message = 'El nombre del proveedor no puede estar vacío';
+        toast.open = true;
+        nextTick(() => {
+          const el = nameInputRefs[existingBlank.id];
+          try {
+            if (hasSetFocus(el)) el.setFocus();
+            else if (has$elSetFocus(el)) el.$el.setFocus();
+            else if (hasFocusMethod(el)) el.focus();
+          } catch (_e) {
+            /* noop */
+          }
+        });
+      } catch (_e) {
+        /* noop */
+      }
+      return;
+    }
+  } catch (_e) {
+    /* noop */
+  }
+
   const newItem = {
     id: Date.now() + Math.random(),
     date: selectedDate.value,
@@ -1477,8 +1657,37 @@ function addBlankProvider() {
   });
   setTimeout(() => (newItem._justAdded = false), 400);
 }
+
 // Add empty provider card and mark it as visited (for the "Asistio" column)
 function addBlankProviderVisited() {
+  // Prevent creating another blank provider if one already exists
+  try {
+    const existingBlank = proveedores.find(
+      (p: any) => (p.name ?? '').toString().trim() === ''
+    );
+    if (existingBlank) {
+      try {
+        toast.message = 'El nombre del proveedor no puede estar vacío';
+        toast.open = true;
+        nextTick(() => {
+          const el = nameInputRefs[existingBlank.id];
+          try {
+            if (hasSetFocus(el)) el.setFocus();
+            else if (has$elSetFocus(el)) el.$el.setFocus();
+            else if (hasFocusMethod(el)) el.focus();
+          } catch (_e) {
+            /* noop */
+          }
+        });
+      } catch (_e) {
+        /* noop */
+      }
+      return;
+    }
+  } catch (_e) {
+    /* noop */
+  }
+
   const newItem = {
     id: Date.now() + Math.random(),
     date: selectedDate.value,
@@ -2619,6 +2828,92 @@ async function handleApplyConflictOverwrite() {
     await loadDataForDate(dateISO);
   } catch (e) {
     console.error('handleApplyConflictOverwrite error', e);
+  }
+}
+
+async function onMoveProvider(
+  params: { provider?: Provider; date?: Date | string } = {}
+) {
+  const { provider, date } = params;
+
+  if (!provider || !date) {
+    // nothing to do
+    return;
+  }
+
+  try {
+    // Normalize date to ISO string
+    let dateISO: string;
+    try {
+      const d = date instanceof Date ? date : new Date(String(date));
+      dateISO = !isNaN(d.getTime()) ? d.toISOString() : String(date);
+    } catch (_e) {
+      dateISO = String(date);
+    }
+
+    // Remove provider from the current in-memory list if present
+    try {
+      const idx = proveedores.findIndex((p: Provider) => p.id === provider.id);
+      if (idx >= 0) {
+        proveedores.splice(idx, 1);
+      }
+    } catch (_e) {
+      /* noop */
+    }
+
+    // Build a minimal backup payload for the destination date containing the moved provider
+    try {
+      const provCopy: Provider = { ...provider, date: dateISO };
+
+      const backupPayload = {
+        component: 'BudgetView',
+        data: {
+          ingresos: [],
+          proveedores: [provCopy],
+          newIngreso: { name: '', amount: 0, date: dateISO },
+          newProveedor: { name: '', estimated: 0, dollar: 0, notes: '' },
+          selectedDate: dateISO,
+          totals: {
+            totalIngresos: 0,
+            totalProviders:
+              Number(provCopy.dollar || provCopy.estimated || 0) || 0,
+            totalVisitedProviders: provCopy.visited
+              ? Number(provCopy.dollar || provCopy.estimated || 0) || 0
+              : 0,
+          },
+        },
+        createdAt: Date.now(),
+      };
+
+      // Persist the minimal backup using backupController
+      try {
+        await backupController.saveBackup({ entry: backupPayload });
+        // Inform user via toast
+        try {
+          let prettyDate = dateISO;
+          try {
+            const parsed = new Date(dateISO);
+            if (!isNaN(parsed.getTime())) {
+              prettyDate = format(parsed, "d 'de' MMMM 'de' yyyy", {
+                locale: esLocale,
+              });
+            }
+          } catch (_e) {
+            /* noop */
+          }
+          toast.message = `Proveedor «${provider.name || ''}» movido a ${prettyDate}`;
+          toast.open = true;
+        } catch (_e) {
+          /* noop */
+        }
+      } catch (saveErr) {
+        console.error('onMoveProvider: error saving backup', saveErr);
+      }
+    } catch (_e) {
+      console.error('onMoveProvider: build/persist error', _e);
+    }
+  } catch (err) {
+    console.error('onMoveProvider error:', err);
   }
 }
 
