@@ -1,5 +1,6 @@
 import { ref, computed } from 'vue';
 import suppliersController from '../controllers/suppliersController';
+
 // Use a lightweight local Supplier alias to avoid deep TypeScript instantiation
 type Supplier = any;
 
@@ -15,7 +16,7 @@ export function useSuppliers() {
       suppliers.value =
         (await suppliersController.listSuppliers()) as Supplier[];
     } catch (_e) {
-      error.value = _e as Error;
+      // noop
     } finally {
       loading.value = false;
     }

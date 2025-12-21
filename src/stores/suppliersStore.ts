@@ -17,8 +17,8 @@ export const useSuppliersStore = defineStore('suppliers', {
         for (const it of list) {
           (this.suppliers as any).push(it);
         }
-      } catch (_e) {
-        console.error('suppliersStore.loadAll error', _e);
+      } catch (e) {
+        console.error('suppliersStore.loadAll error', e);
         // Clear safely
         this.suppliers.length = 0;
       }

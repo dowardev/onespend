@@ -17,6 +17,17 @@ class SystemConfigController {
     const store = useSystemConfig();
     store.setDesignMode({ mode });
   }
+
+  getMigrationNoticeDismissed() {
+    const store = useSystemConfig();
+    return store.getMigrationNoticeDismissed();
+  }
+
+  setMigrationNoticeDismissed(params: { value: boolean }) {
+    const { value } = params;
+    const store = useSystemConfig();
+    store.setMigrationNoticeDismissed(!!value);
+  }
 }
 
 const suppliersController = new SystemConfigController();
