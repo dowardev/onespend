@@ -1,4 +1,5 @@
 import dixieController, { DixieController } from './dixie';
+import { formatLocalDate } from '@/utils/date';
 
 class BackupController {
   private dixie: DixieController;
@@ -10,7 +11,77 @@ class BackupController {
   async saveBackup(params: { entry: unknown }): Promise<IDBValidKey> {
     const { entry } = params;
     try {
-      const key = await this.dixie.addEntry({ entry });
+      // Clone the entry to avoid mutating the caller and normalize any fields
+      // that represent a calendar day to YYYY-MM-DD using formatLocalDate.
+      let normalizedEntry: any = entry;
+      try {
+        normalizedEntry = JSON.parse(JSON.stringify(entry));
+      } catch (_e) {
+        // If cloning fails (non-serializable), fall back to original entry
+        normalizedEntry = entry as any;
+      }
+
+      try {
+        // Normalize common shapes: payload.data.selectedDate, proveedores[].date, ingresos[].date, newIngreso.date
+        const data = normalizedEntry && (normalizedEntry as any).data;
+        if (data && typeof data === 'object') {
+          try {
+            if (data.selectedDate) {
+              data.selectedDate = formatLocalDate(String(data.selectedDate));
+            }
+          } catch (_e) {
+            /* noop */
+          }
+
+          try {
+            if (Array.isArray(data.proveedores)) {
+              data.proveedores = data.proveedores.map((p: any) => ({
+                ...(p || {}),
+                date:
+                  p && p.date ? formatLocalDate(String(p.date)) : p && p.date,
+              }));
+            }
+          } catch (_e) {
+            /* noop */
+          }
+
+          try {
+            if (Array.isArray(data.ingresos)) {
+              data.ingresos = data.ingresos.map((i: any) => ({
+                ...(i || {}),
+                date:
+                  i && i.date ? formatLocalDate(String(i.date)) : i && i.date,
+              }));
+            }
+          } catch (_e) {
+            /* noop */
+          }
+
+          try {
+            if (data.newIngreso && data.newIngreso.date) {
+              data.newIngreso.date = formatLocalDate(
+                String(data.newIngreso.date)
+              );
+            }
+          } catch (_e) {
+            /* noop */
+          }
+
+          try {
+            if (data.newProveedor && data.newProveedor.date) {
+              data.newProveedor.date = formatLocalDate(
+                String(data.newProveedor.date)
+              );
+            }
+          } catch (_e) {
+            /* noop */
+          }
+        }
+      } catch (_e) {
+        /* noop */
+      }
+
+      const key = await this.dixie.addEntry({ entry: normalizedEntry });
       console.log('BackupController.saveBackup: saved id=', key);
       return key;
     } catch (_e) {

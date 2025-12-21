@@ -28,8 +28,8 @@ export const useTemplatesStore = defineStore('templates', {
             suppliersSnapshot: (t as any).suppliersSnapshot || [],
           });
         }
-      } catch (_e) {
-        console.error('templatesStore.loadTemplates error', _e);
+      } catch (e) {
+        console.error('templatesStore.loadTemplates error', e);
         this.templates.splice(0, this.templates.length);
       }
     },
