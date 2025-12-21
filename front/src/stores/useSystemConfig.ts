@@ -22,10 +22,22 @@ export const useSystemConfig = defineStore('systemConfig', () => {
     return designMode.value;
   }
 
+  // Migración: preferencia para ocultar el aviso de migración
+  const migrationNoticeDismissed = ref(false);
+  function setMigrationNoticeDismissed(val: boolean) {
+    migrationNoticeDismissed.value = !!val;
+  }
+  function getMigrationNoticeDismissed() {
+    return migrationNoticeDismissed.value;
+  }
+
   return {
     designMode,
     init,
     setDesignMode,
     getDesignMode,
+    migrationNoticeDismissed,
+    setMigrationNoticeDismissed,
+    getMigrationNoticeDismissed,
   };
 });
