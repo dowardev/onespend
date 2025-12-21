@@ -403,6 +403,11 @@
             <ion-label>Aplicar template</ion-label>
           </ion-item>
 
+          <!-- Button clear day -->
+          <ion-item button :disabled="dayClosed" @click="confirmClearDay()">
+            <ion-label>Vaciar dia</ion-label>
+          </ion-item>
+
           <!-- Button finsh day -->
           <ion-item button @click="openFinishDayModal()">
             <ion-label>Finalizar dia</ion-label>
@@ -473,6 +478,24 @@
         @did-dismiss="onDeleteAlertDidDismiss"
       ></ion-alert>
       <!-- end confirmation alert -->
+
+      <!-- clear day confirmation alert -->
+      <ion-alert
+        :is-open="clearDayConfirm.open"
+        header="Vaciar día"
+        message="¿Deseas eliminar todos los proveedores e ingresos de la fecha seleccionada? Esta acción no se puede deshacer."
+        :buttons="[
+          {
+            text: 'Cancelar',
+            role: 'cancel',
+            cssClass: 'secondary',
+            handler: onClearDayDismiss,
+          },
+          { text: 'Vaciar', cssClass: 'danger', handler: performClearDay },
+        ]"
+        @did-dismiss="onClearDayDismiss"
+      ></ion-alert>
+      <!-- end clear day confirmation alert -->
 
       <!-- overwrite confirm when products modal would overwrite provider efectivo -->
       <ion-alert
@@ -1034,6 +1057,92 @@ const alerts = reactive({
   },
 });
 
+// Confirmation state for clearing the current date's data (vaciar día)
+const clearDayConfirm = reactive({
+  open: false,
+  processing: false,
+});
+
+/**
+ * Show confirmation alert for clearing the day
+ */
+function confirmClearDay() {
+  // Don't allow clearing if the day is already closed
+  if (dayClosed.value) return;
+  clearDayConfirm.open = true;
+}
+
+function onClearDayDismiss() {
+  clearDayConfirm.open = false;
+}
+
+/**
+ * Perform the clear day action: remove proveedores and ingresos for the selected date
+ */
+async function performClearDay() {
+  try {
+    if (clearDayConfirm.processing) return;
+    clearDayConfirm.processing = true;
+
+    const dateTarget = (selectedDate.value || '').slice(0, 10);
+
+    // Remove in-memory arrays
+    ingresos.splice(0, ingresos.length);
+    proveedores.splice(0, proveedores.length);
+
+    // Persist an empty BudgetView backup for the date so subsequent loads find an empty state
+    const payloadToSave = {
+      component: 'BudgetView',
+      data: {
+        ingresos: [],
+        proveedores: [],
+        newIngreso: {
+          name: '',
+          amount: 0,
+          date: formatLocalDate(selectedDate.value),
+        },
+        newProveedor: { name: '', estimated: 0, dollar: 0, notes: '' },
+        selectedDate: formatLocalDate(selectedDate.value),
+        totals: {
+          totalIngresos: 0,
+          totalProviders: 0,
+          totalVisitedProviders: 0,
+        },
+      },
+      createdAt: Date.now(),
+    };
+
+    try {
+      // Use dixieController if available, fallback to backupController
+      try {
+        await dixieController.addEntry({ entry: payloadToSave });
+      } catch (addErr) {
+        try {
+          await dixieController.putEntry({ entry: payloadToSave });
+        } catch (putErr) {
+          await backupController.saveBackup({ entry: payloadToSave });
+        }
+      }
+    } catch (persistErr) {
+      console.error('performClearDay persist error', persistErr);
+    }
+
+    // small UX feedback
+    toast.message = 'Día vaciado';
+    toast.open = true;
+
+    // reload to ensure derived state refreshed
+    await loadDataForDate(selectedDate.value);
+  } catch (err) {
+    console.error('performClearDay error:', err);
+    toast.message = 'Error al vaciar el día';
+    toast.open = true;
+  } finally {
+    clearDayConfirm.processing = false;
+    clearDayConfirm.open = false;
+  }
+}
+
 const dayClosed = ref(false);
 // end vars
 
@@ -1089,7 +1198,7 @@ watch(
 // Watch for query param used to force refresh from other views (TemplatesView pushes ?refresh=timestamp)
 watch(
   () => route.query.refresh,
-  () => {
+  async () => {
     try {
       // Prefer the date provided in the URL query (if any) and update selectedDate accordingly
       const parsedDateFromRouteISO = (function parseIsoDateFromString(
@@ -1105,6 +1214,86 @@ watch(
           return null;
         }
       })(route.query.date as string | undefined);
+
+      // If a backupId query param is provided, prefer loading that specific backup
+      try {
+        const backupId = route.query.backupId as string | undefined;
+        if (backupId) {
+          // attempt to load backup by id
+          try {
+            const idNum = isNaN(Number(backupId)) ? backupId : Number(backupId);
+            const b = await dixieController.getBackup(idNum as any);
+            if (b && b.data) {
+              // apply backup data similar to loadDataForDate
+              const d = b.data as any;
+              // set selectedDate if present
+              if (d.selectedDate)
+                selectedDate.value = String(d.selectedDate).slice(0, 10);
+
+              // Replace reactive arrays; ensure stable ids for ingresos
+              ingresos.splice(
+                0,
+                ingresos.length,
+                ...(d.ingresos || []).map((i: any) => ({
+                  id: i.id ?? Date.now() + Math.random(),
+                  paymentType: i.paymentType === 'digital' ? 'digital' : 'cash',
+                  ...i,
+                }))
+              );
+
+              const normalizedProviders = (d.proveedores || []).map(
+                (p: any) => {
+                  const key = normalizeName(p.name ?? '');
+                  return {
+                    id: p.id ?? Date.now() + Math.random(),
+                    name: p.name ?? '',
+                    date: p.date ?? selectedDate.value,
+                    estimated: Number(p.estimated || 0),
+                    dollar: Number(p.dollar || 0),
+                    _dbName: p._dbName ?? p.name ?? '',
+                    efectivo: Number(p.efectivo || 0),
+                    tarjeta: Number(p.tarjeta || 0),
+                    credito: Number(p.credito || 0),
+                    notes: p.notes || '',
+                    visited: !!p.visited,
+                    _fromTemplate: !!p._fromTemplate,
+                    _justAdded: !!p._justAdded,
+                    _supplierKey: key || undefined,
+                    _editing: false,
+                  };
+                }
+              );
+              proveedores.splice(0, proveedores.length, ...normalizedProviders);
+
+              Object.assign(
+                newIngreso,
+                d.newIngreso || {
+                  name: '',
+                  amount: 0,
+                  date: selectedDate.value,
+                }
+              );
+              Object.assign(
+                newProveedor,
+                d.newProveedor || {
+                  name: '',
+                  estimated: 0,
+                  dollar: 0,
+                  notes: '',
+                }
+              );
+
+              // done
+              return;
+            }
+          } catch (e) {
+            console.error('Failed to load backupId from query', e);
+          }
+        }
+      } catch (_e) {
+        /* ignore */
+      }
+
       if (parsedDateFromRouteISO) selectedDate.value = parsedDateFromRouteISO;
       loadDataForDate(selectedDate.value);
     } catch (_e) {
