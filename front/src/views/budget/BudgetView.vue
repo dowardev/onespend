@@ -858,9 +858,14 @@ type FocusableRef =
 import dixieController from '@/controllers/dixie';
 import { formatLocalDate } from '@/utils/date';
 import backupController from '@/controllers/backupController';
+import { mergeBackupData } from '@/controllers/migrationService';
 import suppliersController from '@/controllers/suppliersController';
 import systemController from '@/controllers/systemConfigController';
 import TemplateController from '@/controllers/TempalteController';
+import {
+  hasBackupMeaningfulContent,
+  buildAndSaveTemplateApplication,
+} from '@/controllers/templateService';
 // end controllers
 
 // components
@@ -950,6 +955,7 @@ const showTemplatesModal = ref(false);
 const showApplyConflictModal = ref(false);
 const applyConflictMessage = ref('');
 const pendingApplyPayload = ref<any | null>(null);
+const pendingApplyTemplate = ref<any | null>(null);
 
 // Overwrite confirmation alert state used instead of window.confirm
 const overwriteConfirm = reactive({
@@ -2762,13 +2768,9 @@ function onTemplatesModalDidDismiss() {
 async function applyTemplateFromModal(tmpl: any) {
   try {
     if (!tmpl) return;
-    // Build payload similar to TemplatesView.confirmApply
-    // Use the currently selected date from the Budget view
     const dateISO = formatLocalDate(selectedDate.value);
 
-    let providerNames: string[] = [];
-
-    // Try to load suppliers from suppliersController instead of relying on a local "suppliers" variable
+    // Load suppliers list to resolve ids synchronously
     let suppliersList: any[] = [];
     try {
       const res =
@@ -2776,8 +2778,7 @@ async function applyTemplateFromModal(tmpl: any) {
           ? await (suppliersController as any).listSuppliers()
           : null;
       if (Array.isArray(res)) suppliersList = res;
-    } catch (_err) {
-      // fallback: try other candidate method names
+    } catch (_e) {
       try {
         const candidates = ['list', 'listAll', 'getAll', 'getSuppliers'];
         for (const name of candidates) {
@@ -2789,221 +2790,80 @@ async function applyTemplateFromModal(tmpl: any) {
                 suppliersList = r;
                 break;
               }
-            } catch (_e) {
-              // ignore and continue
+            } catch (_ee) {
+              /* noop */
             }
           }
         }
-      } catch (_e) {
+      } catch (_ee) {
         /* noop */
       }
     }
 
-    if (
-      tmpl.suppliers &&
-      Array.isArray(tmpl.suppliers) &&
-      tmpl.suppliers.length
-    ) {
-      const resolved: string[] = [];
-      for (const id of tmpl.suppliers as IDBValidKey[]) {
-        try {
-          const found = suppliersList.find((s: any) => s && s.id === id);
-          const n = found ? found.name : undefined;
-          if (n) resolved.push(n);
-        } catch (_e) {
-          /* noop */
-        }
+    const resolveName = (id: any) => {
+      try {
+        const found = suppliersList.find((s: any) => s && s.id === id);
+        return found ? found.name : null;
+      } catch (_e) {
+        return null;
       }
-
-      // If resolution via id failed, fall back to suppliersSnapshot names if present
-      if (
-        resolved.length === 0 &&
-        Array.isArray(tmpl.suppliersSnapshot) &&
-        tmpl.suppliersSnapshot.length
-      ) {
-        for (const snap of tmpl.suppliersSnapshot) {
-          if (snap && snap.name) resolved.push(snap.name);
-        }
-      }
-
-      providerNames = resolved;
-    } else {
-      // Fallback to suppliersSnapshot or description parsing
-      if (
-        Array.isArray(tmpl.suppliersSnapshot) &&
-        tmpl.suppliersSnapshot.length
-      ) {
-        providerNames = tmpl.suppliersSnapshot
-          .map((s: any) => s.name || '')
-          .filter(Boolean);
-      } else if (tmpl.description) {
-        // simple parser
-        const prefix = 'Proveedores:';
-        const i = String(tmpl.description).indexOf(prefix);
-        if (i !== -1) {
-          const rest = String(tmpl.description)
-            .slice(i + prefix.length)
-            .trim();
-          providerNames = rest
-            .split(',')
-            .map((s: string) => s.trim())
-            .filter(Boolean);
-        }
-      }
-    }
-
-    const proveedoresPayload = (providerNames || []).map(name => ({
-      id: Date.now() + Math.random(),
-      name,
-      // store original DB name so child component can use it as placeholder
-      _dbName: name,
-      date: formatLocalDate(dateISO),
-      estimated: 0,
-      dollar: 0,
-      notes: '',
-      visited: false,
-      _fromTemplate: true,
-    }));
-
-    const payload = {
-      ingresos: [],
-      proveedores: proveedoresPayload,
-      newIngreso: { name: '', amount: 0, date: formatLocalDate(dateISO) },
-      newProveedor: { name: '', estimated: 0, dollar: 0, notes: '' },
-      selectedDate: formatLocalDate(dateISO),
-      totals: {
-        totalIngresos: 0,
-        totalProviders: proveedoresPayload.reduce(
-          (s: number, p: any) =>
-            s + (Number(p.dollar || 0) || Number(p.estimated || 0)),
-          0
-        ),
-        totalVisitedProviders: 0,
-      },
     };
 
-    const payloadToSave = {
-      component: 'BudgetView',
-      data: payload,
-      createdAt: Date.now(),
-    };
-
-    // Check existing backups for the date via backupController
-    const existing = await backupController.getLatestBackupForDate(
-      String(dateISO)
+    // Delegate to centralized helper. Ask strategy so UI can prompt conflict choices.
+    const result = await buildAndSaveTemplateApplication(
+      tmpl,
+      dateISO,
+      resolveName,
+      { conflictStrategy: 'ask' }
     );
-    if (
-      existing &&
-      existing.data &&
-      hasBackupMeaningfulContent(existing.data)
-    ) {
-      // Ask user whether to combine or overwrite. Only triggered when meaningful provider data exists.
+
+    if (result && result.conflict) {
       try {
         const parsedDate = parseLocalDate(String(dateISO));
         applyConflictMessage.value = `Ya existen proveedores guardados para ${format(parsedDate, "d 'de' MMMM 'de' yyyy", { locale: esLocale })}. ¿Deseas combinar el template con los proveedores existentes o sobrescribirlos?`;
       } catch (_e) {
         applyConflictMessage.value = `Ya existen proveedores guardados para la fecha seleccionada. ¿Deseas combinar el template con los proveedores existentes o sobrescribirlos?`;
       }
-      pendingApplyPayload.value = payloadToSave;
+      pendingApplyPayload.value = result.payloadToSave;
+      pendingApplyTemplate.value = tmpl;
       showApplyConflictModal.value = true;
       return;
     }
 
-    // No conflict: save directly
-    try {
-      const cleanPayload = JSON.parse(JSON.stringify(payloadToSave));
-      await backupController.saveBackup({ entry: cleanPayload });
-    } catch (saveErr) {
-      console.warn(
-        'applyTemplateFromModal: sanitized save failed, retrying',
-        saveErr
-      );
-      await backupController.saveBackup({ entry: payloadToSave });
-    }
+    if (result && result.success) {
+      try {
+        localStorage.setItem(STORAGE_KEY, String(dateISO));
+      } catch (_e) {
+        /* noop */
+      }
 
-    // Persist selected date so BudgetView loads it
-    try {
-      localStorage.setItem(STORAGE_KEY, String(dateISO));
-    } catch (_e) {
-      /* noop */
-    }
-
-    // Close modal and navigate/refresh
-    showTemplatesModal.value = false;
-    try {
-      // If we are on the Budget view, reload data for that date. Else, navigate.
-      if ((route.name || '') === 'Budget') {
-        selectedDate.value = dateISO;
-        await loadDataForDate(dateISO);
-      } else {
-        // navigate to Budget view (attempt)
-        // NOTE: router is not imported in this component; using history push via window.location may be used as fallback
-        try {
-          // prefer vue-router if available
+      showTemplatesModal.value = false;
+      try {
+        if ((route.name || '') === 'Budget') {
+          selectedDate.value = dateISO;
+          await loadDataForDate(dateISO);
+        } else {
           (await import('vue-router')).useRouter()?.push({
             name: 'Budget',
             query: { refresh: String(Date.now()), date: dateISO },
           });
-        } catch (_e) {
-          // fallback: set localStorage and reload so BudgetView picks it up
-          window.location.href =
-            '#/budget?refresh=' +
-            String(Date.now()) +
-            '&date=' +
-            encodeURIComponent(dateISO);
         }
+      } catch (_e) {
+        // fallback
+        window.location.href =
+          '#/budget?refresh=' +
+          String(Date.now()) +
+          '&date=' +
+          encodeURIComponent(dateISO);
       }
-    } catch (_e) {
-      /* noop */
+      pendingApplyTemplate.value = null;
+      return;
     }
+
+    // fallback
+    console.error('applyTemplateFromModal: unexpected result', result);
   } catch (e) {
     console.error('applyTemplateFromModal error', e);
-  }
-}
-
-function hasBackupMeaningfulContent(data: any): boolean {
-  try {
-    if (!data) return false;
-    // Consider backup meaningful if it has proveedores entries or positive provider totals.
-    // We intentionally ignore 'ingresos' here so that existing ingresos do not block template application.
-    if (Array.isArray(data.proveedores) && data.proveedores.length > 0) {
-      console.debug(
-        'hasBackupMeaningfulContent (BudgetView): detected proveedores > 0',
-        {
-          proveedoresLen: data.proveedores.length,
-          ingresosLen: Array.isArray(data.ingresos) ? data.ingresos.length : 0,
-          totals: data.totals,
-        }
-      );
-      return true;
-    }
-    if (data.totals) {
-      const t: any = data.totals || {};
-      if ((Number(t.totalProviders) || 0) > 0) {
-        console.debug(
-          'hasBackupMeaningfulContent (BudgetView): detected totalProviders > 0',
-          {
-            totalProviders: t.totalProviders,
-            totalIngresos: t.totalIngresos,
-            totalVisitedProviders: t.totalVisitedProviders,
-          }
-        );
-        return true;
-      }
-      if ((Number(t.totalVisitedProviders) || 0) > 0) {
-        console.debug(
-          'hasBackupMeaningfulContent (BudgetView): detected totalVisitedProviders > 0',
-          {
-            totalVisitedProviders: t.totalVisitedProviders,
-            totals: t,
-          }
-        );
-        return true;
-      }
-    }
-    return false;
-  } catch (_e) {
-    return false;
   }
 }
 
@@ -3022,104 +2882,40 @@ async function handleApplyConflictCombine() {
     if (!payloadToSave) return onApplyConflictDismiss();
 
     const dateISO = payloadToSave.data?.selectedDate;
-    const existing = await backupController.getLatestBackupForDate(
-      String(dateISO)
+    const res = await buildAndSaveTemplateApplication(
+      pendingApplyTemplate.value || null,
+      dateISO,
+      (id: any) => {
+        try {
+          const found = suppliers.find((s: any) => s && s.id === id);
+          return found ? found.name : null;
+        } catch (_e) {
+          return null;
+        }
+      },
+      {
+        conflictStrategy: 'combine',
+        prebuiltPayload: pendingApplyPayload.value,
+      }
     );
 
-    let mergedData: any = {};
-    if (existing && existing.data) {
-      const existingData: any = existing.data || {};
-      const existingIngresos = Array.isArray(existingData.ingresos)
-        ? existingData.ingresos
-        : [];
-      const existingProveedores = Array.isArray(existingData.proveedores)
-        ? existingData.proveedores
-        : [];
-
-      const newIngresos = Array.isArray(payloadToSave.data.ingresos)
-        ? payloadToSave.data.ingresos
-        : [];
-      const newProveedores = Array.isArray(payloadToSave.data.proveedores)
-        ? payloadToSave.data.proveedores
-        : [];
-
-      const mergedIngresos = existingIngresos.slice();
-      for (const ni of newIngresos) {
-        const exists = mergedIngresos.some(
-          (ei: any) =>
-            String(ei.name || '').trim() === String(ni.name || '').trim()
-        );
-        if (!exists) mergedIngresos.push(ni);
+    if (res && res.success) {
+      try {
+        localStorage.setItem(STORAGE_KEY, String(dateISO));
+      } catch (_e) {
+        /* noop */
       }
 
-      const mergedProveedores = existingProveedores.slice();
-      for (const np of newProveedores) {
-        const exists = mergedProveedores.some(
-          (ep: any) =>
-            String(ep.name || '').trim() === String(np.name || '').trim()
-        );
-        if (!exists) mergedProveedores.push(np);
-      }
+      showApplyConflictModal.value = false;
+      pendingApplyPayload.value = null;
+      showTemplatesModal.value = false;
 
-      const totalProviders = mergedProveedores.reduce(
-        (s: number, p: any) =>
-          s + (Number(p.dollar || 0) || Number(p.estimated || 0) || 0),
-        0
-      );
-
-      mergedData = Object.assign({}, existingData, {
-        ingresos: mergedIngresos,
-        proveedores: mergedProveedores,
-        totals: Object.assign({}, existingData.totals || {}, {
-          totalIngresos: (mergedIngresos || []).reduce(
-            (s: number, i: any) => s + (Number(i.amount || 0) || 0),
-            0
-          ),
-          totalProviders,
-          totalVisitedProviders: (mergedProveedores || []).reduce(
-            (s: number, p: any) =>
-              s +
-              (p.visited
-                ? Number(p.dollar || 0) || Number(p.estimated || 0) || 0
-                : 0),
-            0
-          ),
-        }),
-        selectedDate: dateISO,
-      });
-    } else {
-      mergedData = payloadToSave.data;
+      selectedDate.value = dateISO;
+      await loadDataForDate(dateISO);
+      return;
     }
 
-    const savePayload = {
-      component: 'BudgetView',
-      data: mergedData,
-      createdAt: Date.now(),
-    };
-    try {
-      const cleanSavePayload = JSON.parse(JSON.stringify(savePayload));
-      await backupController.saveBackup({ entry: cleanSavePayload });
-    } catch (saveErr) {
-      console.warn(
-        'handleApplyConflictCombine: sanitized save failed, retrying',
-        saveErr
-      );
-      await backupController.saveBackup({ entry: savePayload });
-    }
-
-    try {
-      localStorage.setItem(STORAGE_KEY, String(dateISO));
-    } catch (_e) {
-      /* noop */
-    }
-
-    showApplyConflictModal.value = false;
-    pendingApplyPayload.value = null;
-    showTemplatesModal.value = false;
-
-    // refresh Budget view
-    selectedDate.value = dateISO;
-    await loadDataForDate(dateISO);
+    console.error('handleApplyConflictCombine: unexpected result', res);
   } catch (e) {
     console.error('handleApplyConflictCombine error', e);
   }
@@ -3130,59 +2926,44 @@ async function handleApplyConflictOverwrite() {
     const payloadToSave = pendingApplyPayload.value;
     if (!payloadToSave) return onApplyConflictDismiss();
 
-    // Preserve ingresos from existing backup for the date when overwriting
     const dateISO = payloadToSave.data?.selectedDate;
-    const existing = await backupController.getLatestBackupForDate(
-      String(dateISO)
+    const res = await buildAndSaveTemplateApplication(
+      pendingApplyTemplate.value || null,
+      dateISO,
+      (id: any) => {
+        try {
+          const found = suppliers.find((s: any) => s && s.id === id);
+          return found ? found.name : null;
+        } catch (_e) {
+          return null;
+        }
+      },
+      {
+        conflictStrategy: 'overwrite',
+        prebuiltPayload: pendingApplyPayload.value,
+      }
     );
 
-    let finalData = payloadToSave.data;
-    if (existing && existing.data) {
-      const existingIngresos = Array.isArray((existing.data as any).ingresos)
-        ? (existing.data as any).ingresos
-        : [];
-      finalData = Object.assign({}, payloadToSave.data, {
-        ingresos: existingIngresos,
-      });
+    if (res && res.success) {
+      try {
+        localStorage.setItem(
+          STORAGE_KEY,
+          String(payloadToSave.data?.selectedDate)
+        );
+      } catch (_e) {
+        /* noop */
+      }
 
-      const existingTotals = (existing.data as any).totals || {};
-      finalData.totals = Object.assign({}, finalData.totals || {}, {
-        totalIngresos: Number(existingTotals.totalIngresos || 0) || 0,
-      });
+      showApplyConflictModal.value = false;
+      pendingApplyPayload.value = null;
+      showTemplatesModal.value = false;
+
+      selectedDate.value = dateISO;
+      await loadDataForDate(dateISO);
+      return;
     }
 
-    const savePayload = {
-      component: 'BudgetView',
-      data: finalData,
-      createdAt: Date.now(),
-    };
-
-    try {
-      const clean = JSON.parse(JSON.stringify(savePayload));
-      await backupController.saveBackup({ entry: clean });
-    } catch (saveErr) {
-      console.warn(
-        'handleApplyConflictOverwrite: sanitized save failed, retrying',
-        saveErr
-      );
-      await backupController.saveBackup({ entry: savePayload });
-    }
-
-    try {
-      localStorage.setItem(
-        STORAGE_KEY,
-        String(payloadToSave.data?.selectedDate)
-      );
-    } catch (_e) {
-      /* noop */
-    }
-
-    showApplyConflictModal.value = false;
-    pendingApplyPayload.value = null;
-    showTemplatesModal.value = false;
-
-    selectedDate.value = dateISO;
-    await loadDataForDate(dateISO);
+    console.error('handleApplyConflictOverwrite: unexpected result', res);
   } catch (e) {
     console.error('handleApplyConflictOverwrite error', e);
   }

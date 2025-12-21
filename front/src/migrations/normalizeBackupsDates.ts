@@ -1,86 +1,9 @@
 import dixieController from '@/controllers/dixie';
-import { formatLocalDate } from '@/utils/date';
+import { normalizeEntryData } from '@/controllers/migrationService';
 
 interface MigrationOptions {
   dryRun?: boolean;
   verbose?: boolean;
-}
-
-function normalizeDateIfNeeded(val: any): { value: any; changed: boolean } {
-  if (val == null) return { value: val, changed: false };
-  try {
-    const s = String(val);
-    const normalized = formatLocalDate(s);
-    if (s === normalized) return { value: val, changed: false };
-    return { value: normalized, changed: true };
-  } catch (e) {
-    return { value: val, changed: false };
-  }
-}
-
-function normalizeEntryData(data: any): { newData: any; changed: boolean } {
-  if (!data || typeof data !== 'object')
-    return { newData: data, changed: false };
-  let changed = false;
-  const clone = Object.assign({}, data);
-
-  if (clone.selectedDate != null) {
-    const res = normalizeDateIfNeeded(clone.selectedDate);
-    if (res.changed) {
-      clone.selectedDate = res.value;
-      changed = true;
-    }
-  }
-
-  const normArrayDates = (arr: any, key: string) => {
-    if (!Array.isArray(arr)) return;
-    for (let i = 0; i < arr.length; i++) {
-      const item = arr[i];
-      if (item && typeof item === 'object' && item[key] != null) {
-        const r = normalizeDateIfNeeded(item[key]);
-        if (r.changed) {
-          // shallow copy item
-          const newItem = Object.assign({}, item);
-          newItem[key] = r.value;
-          arr[i] = newItem;
-          changed = true;
-        }
-      }
-    }
-  };
-
-  if (Array.isArray(clone.proveedores)) {
-    // clone array shallowly
-    clone.proveedores = clone.proveedores.slice();
-    normArrayDates(clone.proveedores, 'date');
-  }
-
-  if (Array.isArray(clone.ingresos)) {
-    clone.ingresos = clone.ingresos.slice();
-    normArrayDates(clone.ingresos, 'date');
-  }
-
-  if (clone.newIngreso && typeof clone.newIngreso === 'object') {
-    const ni = Object.assign({}, clone.newIngreso);
-    const r = normalizeDateIfNeeded(ni.date);
-    if (r.changed) {
-      ni.date = r.value;
-      clone.newIngreso = ni;
-      changed = true;
-    }
-  }
-
-  if (clone.newProveedor && typeof clone.newProveedor === 'object') {
-    const np = Object.assign({}, clone.newProveedor);
-    const r = normalizeDateIfNeeded(np.date);
-    if (r.changed) {
-      np.date = r.value;
-      clone.newProveedor = np;
-      changed = true;
-    }
-  }
-
-  return { newData: clone, changed };
 }
 
 export async function migrateNormalizeBackupDates(opts: MigrationOptions = {}) {
