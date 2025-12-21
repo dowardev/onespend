@@ -1,32 +1,14 @@
 <template>
   <ion-page>
     <ion-header class="ion-no-border" mode="ios">
-      <ion-toolbar>
+      <ion-toolbar style="--background: white">
         <ion-buttons slot="start">
           <ion-menu-button :mode="designMode"></ion-menu-button>
         </ion-buttons>
 
-        <ion-title>Presupuesto</ion-title>
+        <ion-title>Presupuesto </ion-title>
 
         <ion-buttons slot="end">
-          <ion-button
-            title="Retroceder un día"
-            @click="changeDate({ days: -1 })"
-          >
-            <ion-icon :icon="chevronBackOutline"></ion-icon>
-          </ion-button>
-
-          <ion-button title="Avanzar un día" @click="changeDate(1)">
-            <ion-icon :icon="chevronForwardOutline"></ion-icon>
-          </ion-button>
-
-          <ion-button
-            title="Seleccionar fecha"
-            @click="openDatePopover({ event: $event })"
-          >
-            {{ formattedSelectedDate }}
-          </ion-button>
-
           <!-- button more options -->
           <ion-button
             @click="
@@ -40,325 +22,362 @@
       </ion-toolbar>
     </ion-header>
 
-    <ion-content>
-      <ion-card class="shadow1 main-card-content">
-        <ion-grid style="height: 100%">
-          <ion-row style="height: 100%">
-            <ion-col size="12" size-md="7" size-lg="4" style="height: 100%">
-              <ion-grid style="height: 100%">
-                <ion-row style="height: 100%">
-                  <ion-col size="12" style="max-height: 50%">
-                    <ion-list
-                      style="height: 100%; max-height: 100%"
-                      class="transparent"
-                    >
-                      <ion-list-header>
-                        <ion-label
-                          >Ingresos ({{
-                            formatCurrency({ v: totalIngresos })
-                          }})</ion-label
-                        >
+    <ion-content style="--background: white">
+      <div class="ion-padding-start ion-padding-end">
+        <ion-item lines="none" class="transparent">
+          <ion-buttons>
+            <ion-toggle :enable-on-off-labels="true">En ejecucion</ion-toggle>
+          </ion-buttons>
 
-                        <ion-button
-                          :disabled="dayClosed"
-                          @click="addIngresoField()"
-                        >
-                          <ion-icon :icon="addOutline"></ion-icon>
-                        </ion-button>
-                      </ion-list-header>
+          <ion-buttons slot="end">
+            <ion-button
+              title="Retroceder un día"
+              @click="changeDate({ days: -1 })"
+            >
+              <ion-icon :icon="chevronBackOutline"></ion-icon>
+            </ion-button>
 
-                      <div
-                        class="list-content"
-                        style="height: calc(100% - 64px); overflow: auto"
+            <ion-button
+              title="Seleccionar fecha"
+              @click="openDatePopover({ event: $event })"
+            >
+              {{ formattedSelectedDate }}
+            </ion-button>
+
+            <ion-button title="Avanzar un día" @click="changeDate(1)">
+              <ion-icon :icon="chevronForwardOutline"></ion-icon>
+            </ion-button>
+          </ion-buttons>
+        </ion-item>
+      </div>
+
+      <ion-grid style="height: 93%">
+        <ion-row style="height: 100%">
+          <ion-col size="12" size-md="7" size-lg="4" style="height: 100%">
+            <ion-grid style="height: 100%">
+              <ion-row style="height: 100%">
+                <ion-col size="12" style="max-height: 50%">
+                  <ion-list
+                    style="height: 100%; max-height: 100%"
+                    class="transparent"
+                  >
+                    <ion-list-header>
+                      <ion-label>
+                        <div>
+                          Ingresos ({{ formatCurrency({ v: totalIngresos }) }})
+                        </div>
+
+                        <p>
+                          Efectivo:
+                          {{ formatCurrency({ v: totalIngresosEfectivo }) }}
+                          Digital:
+                          {{ formatCurrency({ v: totalIngresosDigital }) }}
+                        </p>
+                      </ion-label>
+
+                      <ion-button
+                        :disabled="dayClosed"
+                        @click="addIngresoField()"
                       >
-                        <template v-if="ingresos.length > 0">
-                          <ion-item v-for="inc in ingresos" :key="inc.id">
-                            <ion-input
-                              v-model="inc.name"
-                              placeholder="Nombre"
-                            ></ion-input>
+                        <ion-icon :icon="addOutline"></ion-icon>
+                      </ion-button>
+                    </ion-list-header>
 
-                            <ion-input
-                              v-model.number="inc.amount"
-                              type="number"
-                              class="num-input"
-                            ></ion-input>
+                    <div
+                      class="list-content"
+                      style="height: calc(100% - 64px); overflow: auto"
+                    >
+                      <template v-if="ingresos.length > 0">
+                        <ion-item
+                          v-for="inc in ingresos"
+                          :key="inc.id"
+                          lines="full"
+                        >
+                          <ion-input
+                            v-model="inc.name"
+                            placeholder="Nombre"
+                          ></ion-input>
 
-                            <!-- type mony -->
-                            <ion-select
-                              v-model="inc.paymentType"
-                              aria-label="Tipo de pago"
-                              interface="popover"
+                          <ion-input
+                            v-model.number="inc.amount"
+                            type="number"
+                            class="num-input"
+                          ></ion-input>
+
+                          <!-- type mony -->
+                          <ion-select
+                            v-model="inc.paymentType"
+                            aria-label="Tipo de pago"
+                            interface="popover"
+                          >
+                            <ion-select-option value="cash"
+                              >Efectivo</ion-select-option
                             >
-                              <ion-select-option value="cash"
-                                >Efectivo</ion-select-option
-                              >
-                              <ion-select-option value="digital"
-                                >Digital</ion-select-option
-                              >
-                            </ion-select>
-
-                            <!-- button delete money -->
-                            <ion-button
-                              slot="end"
-                              fill="clear"
-                              size="small"
-                              title="Eliminar ingreso"
-                              @click="removeIngreso(inc.id)"
+                            <ion-select-option value="digital"
+                              >Digital</ion-select-option
                             >
-                              <ion-icon :icon="trashOutline"></ion-icon>
-                            </ion-button>
+                          </ion-select>
+
+                          <!-- button delete money -->
+                          <ion-button
+                            slot="end"
+                            fill="clear"
+                            size="small"
+                            title="Eliminar ingreso"
+                            color="danger"
+                            @click="removeIngreso(inc.id)"
+                          >
+                            <ion-icon :icon="trashOutline"></ion-icon>
+                          </ion-button>
+                        </ion-item>
+                      </template>
+
+                      <template v-else>
+                        <ion-item lines="none">
+                          <ion-label
+                            >Pulsa el botón «+» para agregar un nuevo
+                            ingreso</ion-label
+                          >
+                        </ion-item>
+                      </template>
+                    </div>
+                  </ion-list>
+                </ion-col>
+
+                <ion-col size="12" style="height: 52%">
+                  <ion-list class="transparent">
+                    <ion-list-header>
+                      <ion-label>Resumen</ion-label>
+                    </ion-list-header>
+
+                    <div class="list-content">
+                      <ion-accordion-group>
+                        <ion-accordion value="first">
+                          <ion-item slot="header">
+                            <ion-label>Se requiere</ion-label>
+
+                            <ion-note slot="end">
+                              <div style="display: flex">
+                                <div>
+                                  {{
+                                    formatCurrency({
+                                      v: totalEstimacionEfectivoTarjeta,
+                                    })
+                                  }}
+                                </div>
+
+                                <div
+                                  v-if="faltante < 0"
+                                  style="color: var(--ion-color-danger)"
+                                >
+                                  ({{ formatCurrency({ v: faltante }) }})
+                                </div>
+                              </div>
+                            </ion-note>
                           </ion-item>
-                        </template>
 
-                        <template v-else>
-                          <ion-item lines="none">
-                            <ion-label
-                              >Pulsa el botón «+» para agregar un nuevo
-                              ingreso</ion-label
-                            >
-                          </ion-item>
-                        </template>
-                      </div>
-                    </ion-list>
-                  </ion-col>
-
-                  <ion-col size="12" style="height: 100%">
-                    <ion-list class="transparent">
-                      <ion-list-header>
-                        <ion-label>Resumen</ion-label>
-                      </ion-list-header>
-
-                      <div class="list-content">
-                        <ion-accordion-group>
-                          <ion-accordion value="first">
-                            <ion-item slot="header">
-                              <ion-label>Se requiere</ion-label>
-
+                          <div slot="content">
+                            <!-- cash -->
+                            <ion-item>
+                              <ion-label>Efectivo:</ion-label>
                               <ion-note slot="end">
                                 <div style="display: flex">
                                   <div>
                                     {{
                                       formatCurrency({
-                                        v: totalEstimacionEfectivoTarjeta,
+                                        v: totalEstimacionEfectivo,
                                       })
                                     }}
                                   </div>
 
                                   <div
-                                    v-if="faltante < 0"
+                                    v-if="faltanteEfectivo < 0"
                                     style="color: var(--ion-color-danger)"
                                   >
-                                    ({{ formatCurrency({ v: faltante }) }})
+                                    ({{
+                                      formatCurrency({ v: faltanteEfectivo })
+                                    }})
                                   </div>
                                 </div>
                               </ion-note>
                             </ion-item>
 
-                            <div slot="content">
-                              <!-- cash -->
-                              <ion-item>
-                                <ion-label>Efectivo:</ion-label>
-                                <ion-note slot="end">
-                                  <div style="display: flex">
-                                    <div>
-                                      {{
-                                        formatCurrency({
-                                          v: totalEstimacionEfectivo,
-                                        })
-                                      }}
-                                    </div>
-
-                                    <div
-                                      v-if="faltanteEfectivo < 0"
-                                      style="color: var(--ion-color-danger)"
-                                    >
-                                      ({{
-                                        formatCurrency({ v: faltanteEfectivo })
-                                      }})
-                                    </div>
+                            <!-- card -->
+                            <ion-item>
+                              <ion-label>Digital:</ion-label>
+                              <ion-note slot="end">
+                                <div style="display: flex">
+                                  <div>
+                                    {{
+                                      formatCurrency({
+                                        v: totalEstimacionDigital,
+                                      })
+                                    }}
                                   </div>
-                                </ion-note>
-                              </ion-item>
 
-                              <!-- card -->
-                              <ion-item>
-                                <ion-label>Digital:</ion-label>
-                                <ion-note slot="end">
-                                  <div style="display: flex">
-                                    <div>
-                                      {{
-                                        formatCurrency({
-                                          v: totalEstimacionDigital,
-                                        })
-                                      }}
-                                    </div>
-
-                                    <div
-                                      v-if="faltanteDigital < 0"
-                                      style="color: var(--ion-color-danger)"
-                                    >
-                                      ({{
-                                        formatCurrency({ v: faltanteDigital })
-                                      }})
-                                    </div>
+                                  <div
+                                    v-if="faltanteDigital < 0"
+                                    style="color: var(--ion-color-danger)"
+                                  >
+                                    ({{
+                                      formatCurrency({ v: faltanteDigital })
+                                    }})
                                   </div>
-                                </ion-note>
-                              </ion-item>
-                            </div>
-                          </ion-accordion>
+                                </div>
+                              </ion-note>
+                            </ion-item>
+                          </div>
+                        </ion-accordion>
 
-                          <ion-accordion value="second">
-                            <ion-item slot="header" color="light">
-                              <ion-label> Contamos con </ion-label>
-                              <ion-note slot="end">{{
+                        <ion-accordion value="second">
+                          <ion-item slot="header" color="light">
+                            <ion-label> Contamos con </ion-label>
+                            <ion-note slot="end">{{
+                              formatCurrency({
+                                v: nonNegative(
+                                  totalIngresos - totalVisitedProviders
+                                ),
+                              })
+                            }}</ion-note>
+                          </ion-item>
+
+                          <div slot="content" class="ion-padding">
+                            <!-- cash -->
+                            <ion-item>
+                              <ion-label>Efectivo:</ion-label>
+                              <ion-label slot="end">{{
                                 formatCurrency({
                                   v: nonNegative(
-                                    totalIngresos - totalVisitedProviders
+                                    totalIngresosEfectivo - totalVisitedEfectivo
                                   ),
                                 })
-                              }}</ion-note>
+                              }}</ion-label>
                             </ion-item>
 
-                            <div slot="content" class="ion-padding">
-                              <!-- cash -->
-                              <ion-item>
-                                <ion-label>Efectivo:</ion-label>
-                                <ion-label slot="end">{{
-                                  formatCurrency({
-                                    v: nonNegative(
-                                      totalIngresosEfectivo -
-                                        totalVisitedEfectivo
-                                    ),
-                                  })
-                                }}</ion-label>
-                              </ion-item>
+                            <!-- digital -->
+                            <ion-item>
+                              <ion-label>Digital:</ion-label>
+                              <ion-label slot="end">{{
+                                formatCurrency({
+                                  v: nonNegative(
+                                    totalIngresosDigital - totalVisitedTarjeta
+                                  ),
+                                })
+                              }}</ion-label>
+                            </ion-item>
+                          </div>
+                        </ion-accordion>
+                      </ion-accordion-group>
+                    </div>
+                  </ion-list>
+                </ion-col>
+              </ion-row>
+            </ion-grid>
+          </ion-col>
 
-                              <!-- digital -->
-                              <ion-item>
-                                <ion-label>Digital:</ion-label>
-                                <ion-label slot="end">{{
-                                  formatCurrency({
-                                    v: nonNegative(
-                                      totalIngresosDigital - totalVisitedTarjeta
-                                    ),
-                                  })
-                                }}</ion-label>
-                              </ion-item>
-                            </div>
-                          </ion-accordion>
-                        </ion-accordion-group>
-                      </div>
-                    </ion-list>
-                  </ion-col>
-                </ion-row>
-              </ion-grid>
-            </ion-col>
+          <!-- Right: providers + unexpected -->
+          <ion-col size="12" size-md="7" size-lg="8" style="height: 100%">
+            <ion-grid style="height: 100%">
+              <ion-row
+                style="
+                  display: flex;
+                  justify-content: space-evenly;
+                  height: 100%;
+                "
+              >
+                <ion-col size-lg="5" style="height: 100%">
+                  <ion-list class="transparent" style="height: 100%">
+                    <ion-list-header>
+                      <ion-label>No asistio</ion-label>
 
-            <!-- Right: providers + unexpected -->
-            <ion-col size="12" size-md="7" size-lg="8" style="height: 100%">
-              <ion-grid style="height: 100%">
-                <ion-row
-                  style="
-                    display: flex;
-                    justify-content: space-evenly;
-                    height: 100%;
-                  "
-                >
-                  <ion-col size-lg="5" style="height: 100%">
-                    <ion-list class="transparent" style="height: 100%">
-                      <ion-list-header>
-                        <ion-label>No asistio</ion-label>
-
-                        <!-- Add existing provider -->
-                        <ion-button
-                          :disabled="dayClosed"
-                          @click="
-                            popovers.addExistingSupplier.event = $event;
-                            popovers.addExistingSupplier.open = true;
-                          "
-                        >
-                          <ion-icon :icon="flashOutline"></ion-icon>
-                        </ion-button>
-
-                        <!-- Add provider card restored inside 'No asistio' column -->
-                        <ion-button
-                          :disabled="dayClosed"
-                          @click="addBlankProvider()"
-                        >
-                          <ion-icon :icon="addOutline"></ion-icon>
-                        </ion-button>
-                      </ion-list-header>
-
-                      <div
-                        ref="notVisitedList"
-                        class="list-content"
-                        style="height: calc(100% - 73px); overflow: auto"
+                      <!-- Add existing provider -->
+                      <ion-button
+                        :disabled="dayClosed"
+                        @click="
+                          popovers.addExistingSupplier.event = $event;
+                          popovers.addExistingSupplier.open = true;
+                        "
                       >
-                        <ProviderCardComponent
-                          v-for="p in enrichedNotVisited"
-                          :key="p.id"
-                          :provider="p"
-                          :day-closed="dayClosed"
-                          :has-products="p.hasProducts"
-                          @visited-changed="onVisitedChanged"
-                          @start-editing="startEditing"
-                          @stop-editing="stopEditing"
-                          @open-products-popover="openProductsPopover"
-                          @open-notes-modal="openNotesModal"
-                          @confirm-remove-proveedor="confirmRemoveProveedor"
-                          @update-provider="handleUpdateProvider"
-                          @register-name-input="handleRegisterNameInput"
-                          @move-provider="onMoveProvider"
-                        />
-                      </div>
-                    </ion-list>
-                  </ion-col>
+                        <ion-icon :icon="flashOutline"></ion-icon>
+                      </ion-button>
 
-                  <ion-col size-lg="5" style="height: 100%">
-                    <ion-list class="transparent" style="height: 100%">
-                      <ion-list-header>
-                        <ion-label>Asistio</ion-label>
-
-                        <!-- Add provider card restored inside 'Asistio' column -->
-                        <ion-button
-                          :disabled="dayClosed"
-                          @click="addBlankProviderVisited()"
-                        >
-                          <ion-icon :icon="addOutline"></ion-icon>
-                        </ion-button>
-                      </ion-list-header>
-
-                      <div
-                        ref="visitedList"
-                        class="list-content"
-                        style="height: calc(100% - 73px); overflow: auto"
+                      <!-- Add provider card restored inside 'No asistio' column -->
+                      <ion-button
+                        :disabled="dayClosed"
+                        @click="addBlankProvider()"
                       >
-                        <ProviderCardComponent
-                          v-for="p in enrichedVisited"
-                          :key="p.id"
-                          :provider="p"
-                          :day-closed="dayClosed"
-                          :has-products="p.hasProducts"
-                          @visited-changed="onVisitedChanged"
-                          @start-editing="startEditing"
-                          @stop-editing="stopEditing"
-                          @open-products-popover="openProductsPopover"
-                          @open-notes-modal="openNotesModal"
-                          @confirm-remove-proveedor="confirmRemoveProveedor"
-                          @update-provider="handleUpdateProvider"
-                          @register-name-input="handleRegisterNameInput"
-                          @move-provider="onMoveProvider"
-                        />
-                      </div>
-                    </ion-list>
-                  </ion-col>
-                </ion-row>
-              </ion-grid>
-            </ion-col>
-          </ion-row>
-        </ion-grid>
-      </ion-card>
+                        <ion-icon :icon="addOutline"></ion-icon>
+                      </ion-button>
+                    </ion-list-header>
+
+                    <div
+                      ref="notVisitedList"
+                      class="list-content"
+                      style="height: calc(100% - 73px); overflow: auto"
+                    >
+                      <ProviderCardComponent
+                        v-for="p in enrichedNotVisited"
+                        :key="p.id"
+                        :provider="p"
+                        :day-closed="dayClosed"
+                        :has-products="p.hasProducts"
+                        @visited-changed="onVisitedChanged"
+                        @start-editing="startEditing"
+                        @stop-editing="stopEditing"
+                        @open-products-popover="openProductsPopover"
+                        @open-notes-modal="openNotesModal"
+                        @confirm-remove-proveedor="confirmRemoveProveedor"
+                        @update-provider="handleUpdateProvider"
+                        @register-name-input="handleRegisterNameInput"
+                        @move-provider="onMoveProvider"
+                      />
+                    </div>
+                  </ion-list>
+                </ion-col>
+
+                <ion-col size-lg="5" style="height: 100%">
+                  <ion-list class="transparent" style="height: 100%">
+                    <ion-list-header>
+                      <ion-label>Asistio</ion-label>
+
+                      <!-- Add provider card restored inside 'Asistio' column -->
+                      <ion-button
+                        :disabled="dayClosed"
+                        @click="addBlankProviderVisited()"
+                      >
+                        <ion-icon :icon="addOutline"></ion-icon>
+                      </ion-button>
+                    </ion-list-header>
+
+                    <div
+                      ref="visitedList"
+                      class="list-content"
+                      style="height: calc(100% - 73px); overflow: auto"
+                    >
+                      <ProviderCardComponent
+                        v-for="p in enrichedVisited"
+                        :key="p.id"
+                        :provider="p"
+                        :day-closed="dayClosed"
+                        :has-products="p.hasProducts"
+                        @visited-changed="onVisitedChanged"
+                        @start-editing="startEditing"
+                        @stop-editing="stopEditing"
+                        @open-products-popover="openProductsPopover"
+                        @open-notes-modal="openNotesModal"
+                        @confirm-remove-proveedor="confirmRemoveProveedor"
+                        @update-provider="handleUpdateProvider"
+                        @register-name-input="handleRegisterNameInput"
+                        @move-provider="onMoveProvider"
+                      />
+                    </div>
+                  </ion-list>
+                </ion-col>
+              </ion-row>
+            </ion-grid>
+          </ion-col>
+        </ion-row>
+      </ion-grid>
 
       <!-- popover -->
       <ion-popover
@@ -830,6 +849,7 @@ import {
   ellipsisVerticalOutline,
   flashOutline,
   warningOutline,
+  calendarOutline,
 } from 'ionicons/icons';
 import { useRoute } from 'vue-router';
 import { format } from 'date-fns';
