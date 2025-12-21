@@ -7,6 +7,7 @@
       <ion-checkbox
         slot="start"
         :checked="props.provider.visited"
+        :disabled="props.dayClosed"
         @ion-change="
           (e: IonEvent) =>
             emit('visited-changed', { provider: props.provider, event: e })
@@ -233,6 +234,7 @@ type IonEvent = {
 const props = defineProps<{
   provider: Provider;
   hasProducts?: boolean;
+  dayClosed?: boolean;
 }>();
 
 const emit = defineEmits([

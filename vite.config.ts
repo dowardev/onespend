@@ -14,6 +14,17 @@ export default defineConfig(({ command }) => ({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  build: {
+    chunkSizeWarningLimit: 1200,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Agrupa librerías pesadas en chunks separados
+          vendor: ['jspdf', 'html2canvas', 'chart.js'],
+        },
+      },
+    },
+  },
   test: {
     globals: true,
     environment: 'jsdom',

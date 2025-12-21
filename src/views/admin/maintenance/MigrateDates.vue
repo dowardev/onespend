@@ -1,0 +1,594 @@
+<template>
+  <ion-page class="migrate-dates admin-page">
+    <ion-header class="ion-no-border" mode="ios">
+      <ion-toolbar>
+        <ion-buttons>
+          <ion-button @click="$router.back()">
+            <ion-icon :icon="arrowBackOutline"> </ion-icon>
+          </ion-button>
+        </ion-buttons>
+
+        <ion-title>Migración de Fechas</ion-title>
+      </ion-toolbar>
+    </ion-header>
+
+    <ion-content class="ion-padding">
+      <p>
+        Esta herramienta normaliza las fechas en las copias de seguridad a
+        formato <code>YYYY-MM-DD</code>.
+      </p>
+
+      <div class="stepper">
+        <div
+          v-for="(s, i) in steps"
+          :key="i"
+          class="step"
+          :class="{ active: stepIndex === i, done: stepStatus[i] === 'done' }"
+        >
+          <div class="marker">{{ markerLabel(i) }}</div>
+          <div class="info">
+            <div class="title">{{ s.title }}</div>
+            <div class="desc">{{ s.desc }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <ion-button
+          fill="outline"
+          @click="prevStep"
+          :disabled="stepIndex === 0 || running"
+          >Atrás</ion-button
+        >
+
+        <ion-button
+          color="primary"
+          @click="primaryAction"
+          :disabled="
+            running ||
+            (stepIndex === 3 && !hasChanges) ||
+            (stepIndex === 2 && !hasChanges) ||
+            (stepIndex === 3 && !backupConfirmed)
+          "
+          >{{ primaryLabel }}</ion-button
+        >
+
+        <template v-if="stepIndex === 3">
+          <ion-item lines="none">
+            <ion-label
+              >Confirmo que he descargado la copia de seguridad</ion-label
+            >
+            <ion-checkbox v-model="backupConfirmed" slot="end" />
+          </ion-item>
+        </template>
+
+        <ion-button fill="clear" @click="resetAll" :disabled="running"
+          >Reiniciar</ion-button
+        >
+
+        <ion-button
+          v-if="isDev"
+          fill="clear"
+          color="tertiary"
+          @click="insertTestEntries"
+          :disabled="running"
+        >
+          Insertar datos de prueba
+        </ion-button>
+      </div>
+
+      <!-- Inline confirmation fallback if ion-alert handlers don't run -->
+      <div
+        v-if="confirmAlert.open"
+        class="inline-confirm"
+        style="
+          padding: 16px;
+          border: 1px solid #eee;
+          margin: 12px 0;
+          border-radius: 8px;
+        "
+      >
+        <p>{{ confirmAlert.message }}</p>
+        <div style="display: flex; gap: 8px; margin-top: 8px">
+          <ion-button fill="outline" @click="confirmCancel"
+            >Cancelar</ion-button
+          >
+          <ion-button
+            color="danger"
+            @click="
+              () => {
+                confirmAlert.open = false;
+                doApplyMigration();
+              }
+            "
+            >Aplicar</ion-button
+          >
+        </div>
+      </div>
+
+      <div class="status-area">
+        <div v-if="running" class="status">
+          Ejecutando... {{ progressText }}
+        </div>
+        <div v-if="error" class="error">Error: {{ error }}</div>
+
+        <div v-if="dryRunResult">
+          <h3>Resultado de la simulación</h3>
+          <p>
+            Total entradas inspeccionadas:
+            <strong>{{ dryRunResult.length }}</strong>
+          </p>
+          <p>
+            Entradas que cambiarían: <strong>{{ changedCount }}</strong>
+          </p>
+        </div>
+
+        <div v-if="applyResult">
+          <h3>Resultado de la aplicación</h3>
+          <p>
+            Entradas actualizadas: <strong>{{ applyChangedCount }}</strong>
+          </p>
+        </div>
+
+        <div v-if="sampleResults.length">
+          <h4>Ejemplos (antes → después)</h4>
+          <ul>
+            <li v-for="(r, idx) in sampleResults" :key="idx">
+              <strong>ID:</strong> <code>{{ r.id }}</code>
+              <pre>{{ previewPair(r.before, r.after) }}</pre>
+            </li>
+          </ul>
+        </div>
+      </div>
+      <ion-toast
+        :is-open="successToast.open"
+        :message="successToast.message"
+        :duration="2000"
+        @did-dismiss="onSuccessToastDidDismiss"
+      ></ion-toast>
+
+      <ion-alert
+        :is-open="confirmAlert.open"
+        header="Confirmar migración"
+        :message="confirmAlert.message"
+        :buttons="confirmButtons"
+        @did-dismiss="onAlertDidDismiss"
+      />
+    </ion-content>
+  </ion-page>
+</template>
+
+<script setup lang="ts">
+import { ref, computed, onMounted, reactive } from 'vue';
+import {
+  IonPage,
+  IonHeader,
+  IonToolbar,
+  IonTitle,
+  IonContent,
+  IonButton,
+  IonToast,
+  IonItem,
+  IonLabel,
+  IonCheckbox,
+  IonAlert,
+} from '@ionic/vue';
+import migrateNormalizeBackupDates from '@/migrations/normalizeBackupsDates';
+import { useRoute } from 'vue-router';
+import dixieController from '@/controllers/dixie';
+import { arrowBackOutline } from 'ionicons/icons';
+
+const steps = [
+  {
+    title: 'Exportar copia de seguridad',
+    desc: 'Guarda un JSON de respaldo antes de cualquier cambio.',
+  },
+  {
+    title: 'Simular migración (dry-run)',
+    desc: 'Ver qué entradas cambiarían sin modificar nada.',
+  },
+  {
+    title: 'Revisar resultados',
+    desc: 'Revisar ejemplos y confirmar que todo está correcto.',
+  },
+  {
+    title: 'Aplicar migración',
+    desc: 'Actualizar las copias de seguridad en la base de datos.',
+  },
+];
+
+const stepIndex = ref(0);
+const stepStatus = ref<string[]>(['pending', 'pending', 'pending', 'pending']);
+const running = ref(false);
+const progressText = ref('');
+const error = ref<string | null>(null);
+const dryRunResult = ref<any[] | null>(null);
+const applyResult = ref<any[] | null>(null);
+
+const changedCount = computed(() => {
+  if (!dryRunResult.value) return 0;
+  return dryRunResult.value.filter(r => r.changed).length;
+});
+const applyChangedCount = computed(() => {
+  if (!applyResult.value) return 0;
+  return applyResult.value.filter(r => r.changed).length;
+});
+const sampleResults = computed(() => {
+  if (!dryRunResult.value) return [];
+  return dryRunResult.value.filter(r => r.changed).slice(0, 10);
+});
+
+const hasChanges = computed(() => {
+  return !!(
+    dryRunResult.value && dryRunResult.value.some((r: any) => r.changed)
+  );
+});
+
+function markerLabel(i: number) {
+  if (stepStatus.value[i] === 'done') return '✓';
+  return String(i + 1);
+}
+
+function previewPair(before: any, after: any) {
+  try {
+    return JSON.stringify({ before, after }, null, 2);
+  } catch (e) {
+    return String(before) + ' -> ' + String(after);
+  }
+}
+
+async function exportBackups() {
+  try {
+    running.value = true;
+    progressText.value = 'Obteniendo copias...';
+    const all = await dixieController.listBackups();
+    const blob = new Blob([JSON.stringify(all, null, 2)], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `backups-export-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    stepStatus.value[0] = 'done';
+    stepIndex.value = 1;
+  } catch (e: any) {
+    console.error(e);
+    error.value = e && e.message ? e.message : String(e);
+  } finally {
+    running.value = false;
+    progressText.value = '';
+  }
+}
+
+async function runDryRun() {
+  try {
+    running.value = true;
+    error.value = null;
+    progressText.value = 'Simulando...';
+    const res = await migrateNormalizeBackupDates({
+      dryRun: true,
+      verbose: false,
+    });
+    dryRunResult.value = res as any[];
+    stepStatus.value[1] = 'done';
+    stepIndex.value = 2;
+  } catch (e: any) {
+    console.error(e);
+    error.value = e && e.message ? e.message : String(e);
+  } finally {
+    running.value = false;
+    progressText.value = '';
+  }
+}
+
+onMounted(() => {
+  const route = useRoute();
+  try {
+    if (route && route.query && (route.query as any).autoDryRun) {
+      // auto trigger dry run if requested via query
+      void runDryRun();
+    }
+  } catch (e) {
+    // ignore
+  }
+});
+
+const successToast = reactive({ open: false, message: '' });
+const backupConfirmed = ref(false);
+const confirmAlert = reactive({
+  open: false,
+  message:
+    '¿Seguro que quieres aplicar la migración? Asegúrate de haber exportado una copia de seguridad.',
+});
+
+// dev-only test insert button
+// Use Vite's DEV flag to show the button during development
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+const isDev = !!(import.meta as any).env?.DEV;
+
+async function insertTestEntries() {
+  try {
+    running.value = true;
+    progressText.value = 'Insertando entradas de prueba...';
+    const bulk: any[] = [];
+    for (let i = 0; i < 50; i++) {
+      if (i % 3 === 0) {
+        bulk.push({
+          meta: {},
+          data: {
+            selectedDate: `2027-04-${((i % 28) + 1).toString().padStart(2, '0')}T0${(i % 9) + 1}:00:00Z`,
+          },
+        });
+      } else if (i % 3 === 1) {
+        bulk.push({
+          meta: {},
+          data: {
+            proveedores: [
+              {
+                id: `p-man-${i}`,
+                name: `Prov man ${i}`,
+                date: `2027-05-${((i % 27) + 1).toString().padStart(2, '0')}T12:34:56+02:00`,
+              },
+            ],
+          },
+        });
+      } else {
+        bulk.push({
+          meta: {},
+          data: {
+            newIngreso: {
+              id: `new-i-man-${i}`,
+              date: `2027-06-${((i % 28) + 1).toString().padStart(2, '0')}T23:59:59Z`,
+            },
+          },
+        });
+      }
+    }
+    for (const e of bulk) {
+      await dixieController.addEntry({ entry: e });
+    }
+    successToast.message = `Insertadas ${bulk.length} entradas de prueba.`;
+    successToast.open = true;
+  } catch (e) {
+    console.error('insertTestEntries failed', e);
+    error.value = 'No se pudieron insertar entradas de prueba';
+  } finally {
+    running.value = false;
+    progressText.value = '';
+  }
+}
+
+const confirmButtons = [
+  {
+    text: 'Cancelar',
+    role: 'cancel',
+    handler: () => {
+      confirmAlert.open = false;
+    },
+  },
+  {
+    text: 'Aplicar',
+    role: 'confirm',
+    handler: async () => {
+      try {
+        if (
+          (
+            import.meta as unknown as {
+              env?: Record<string, string | undefined>;
+            }
+          ).env?.DEV
+        ) {
+          console.log('confirmButtons: Aplicar clicked');
+        }
+        confirmAlert.open = false;
+        await doApplyMigration();
+        if (
+          (
+            import.meta as unknown as {
+              env?: Record<string, string | undefined>;
+            }
+          ).env?.DEV
+        ) {
+          console.log('confirmButtons: doApplyMigration completed');
+        }
+      } catch (err) {
+        console.error('confirmButtons handler error', err);
+        error.value = (err && (err as any).message) || String(err);
+      }
+    },
+  },
+];
+
+function onConfirmAlertDidDismiss(ev: any) {
+  // kept for backwards compatibility
+  try {
+    const role = ev && ev.detail && ev.detail.role ? ev.detail.role : null;
+    if (role === 'confirm') {
+      void doApplyMigration();
+    }
+  } catch (_e) {
+    // ignore
+  } finally {
+    confirmAlert.open = false;
+  }
+}
+
+function confirmCancel() {
+  confirmAlert.open = false;
+}
+
+function onAlertDidDismiss(ev: any) {
+  try {
+    const role = ev && ev.detail && ev.detail.role ? ev.detail.role : null;
+    if (
+      (import.meta as unknown as { env?: Record<string, string | undefined> })
+        .env?.DEV
+    ) {
+      console.log('ion-alert did-dismiss, role=', role);
+    }
+    if (role === 'confirm') {
+      // If for some reason the button handler didn't run, ensure we still apply
+      if (
+        (import.meta as unknown as { env?: Record<string, string | undefined> })
+          .env?.DEV
+      ) {
+        console.log('onAlertDidDismiss: triggering doApplyMigration');
+      }
+      void doApplyMigration();
+    }
+  } catch (err) {
+    console.error('onAlertDidDismiss error', err);
+  } finally {
+    confirmAlert.open = false;
+  }
+}
+
+async function applyMigration() {
+  // open our ion-alert controlled by confirmAlert state
+  confirmAlert.open = true;
+}
+
+async function doApplyMigration() {
+  try {
+    running.value = true;
+    error.value = null;
+    progressText.value = 'Aplicando migración...';
+    const res = await migrateNormalizeBackupDates({
+      dryRun: false,
+      verbose: true,
+    });
+    applyResult.value = res as any[];
+    stepStatus.value[3] = 'done';
+    stepIndex.value = 3;
+
+    // Show success toast
+    try {
+      successToast.message = `Migración completada: ${applyChangedCount.value} entradas actualizadas.`;
+      successToast.open = true;
+    } catch (_e) {}
+  } catch (e: any) {
+    console.error(e);
+    error.value = e && e.message ? e.message : String(e);
+  } finally {
+    running.value = false;
+    progressText.value = '';
+  }
+}
+
+function prevStep() {
+  if (stepIndex.value > 0) stepIndex.value -= 1;
+}
+
+function onSuccessToastDidDismiss() {
+  try {
+    resetAll();
+  } finally {
+    successToast.open = false;
+  }
+}
+
+function resetAll() {
+  stepIndex.value = 0;
+  stepStatus.value = ['pending', 'pending', 'pending', 'pending'];
+  dryRunResult.value = null;
+  applyResult.value = null;
+  error.value = null;
+}
+
+const primaryLabel = computed(() => {
+  switch (stepIndex.value) {
+    case 0:
+      return 'Exportar copia de seguridad';
+    case 1:
+      return 'Simular migración (dry-run)';
+    case 2:
+      return 'Siguiente (Revisar)';
+    case 3:
+      return 'Aplicar migración';
+    default:
+      return 'Acción';
+  }
+});
+
+async function primaryAction() {
+  switch (stepIndex.value) {
+    case 0:
+      return exportBackups();
+    case 1:
+      return runDryRun();
+    case 2:
+      // move to apply step only if user wants to proceed and there are changes
+      if (!hasChanges.value) {
+        alert(
+          'No se encontraron cambios para aplicar. No es necesario continuar.'
+        );
+        return;
+      }
+      stepIndex.value = 3;
+      break;
+    case 3:
+      return applyMigration();
+  }
+}
+</script>
+
+<style scoped>
+.migrate-dates {
+}
+.stepper {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 16px 0;
+}
+.step {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #eaeaea;
+}
+.step.active {
+  background: rgba(0, 0, 0, 0.02);
+  border-color: var(--ion-color-primary);
+}
+.step.done {
+  background: rgba(220, 255, 220, 0.6);
+}
+.marker {
+  width: 36px;
+  height: 36px;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  background: #f0f0f0;
+}
+.info .title {
+  font-weight: 600;
+}
+.actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+}
+.status {
+  color: #006;
+  margin-top: 12px;
+}
+.error {
+  color: #a00;
+  margin-top: 12px;
+}
+pre {
+  background: #f8f8f8;
+  padding: 8px;
+  border-radius: 6px;
+  overflow: auto;
+}
+</style>
