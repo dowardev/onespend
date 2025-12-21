@@ -132,6 +132,8 @@ import {
 } from '@ionic/vue';
 import { closeOutline, checkmarkOutline } from 'ionicons/icons';
 import { defineProps, defineEmits, ref, computed } from 'vue';
+import { format } from 'date-fns';
+import { parseLocalDate } from '@/utils/date';
 
 // main
 const props = defineProps<{
@@ -150,9 +152,16 @@ const emit = defineEmits<{
 // vars
 const datePopoverOpen = ref(false);
 const datePopoverEvent = ref<Event | null>(null);
-const selectedDate = ref<string>(
-  props.applySelectedDate || new Date().toISOString()
-);
+let initialDate = new Date();
+try {
+  if (props.applySelectedDate) {
+    const parsed = parseLocalDate(String(props.applySelectedDate));
+    if (!isNaN(parsed.getTime())) initialDate = parsed;
+  }
+} catch (_e) {
+  /* noop */
+}
+const selectedDate = ref<string>(format(initialDate, 'yyyy-MM-dd'));
 // end vars
 
 // computed
@@ -160,8 +169,9 @@ const formattedApplyDate = computed(() => {
   try {
     const d = selectedDate.value;
     if (!d) return '-';
-    const dt = new Date(d);
-    return dt.toLocaleDateString();
+    const parsed = parseLocalDate(String(d));
+    if (isNaN(parsed.getTime())) return String(d);
+    return format(parsed, "d 'de' MMMM 'de' yyyy");
   } catch (_e) {
     return selectedDate.value || '-';
   }

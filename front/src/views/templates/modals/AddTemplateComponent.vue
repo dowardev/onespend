@@ -88,6 +88,7 @@
             <ion-checkbox
               slot="end"
               :checked="form.supplierIds.includes(s.id)"
+              :disabled="props.dayClosed"
             ></ion-checkbox>
           </ion-item>
         </div>
@@ -136,6 +137,7 @@ type TemplateSummary = {
 // mian
 const props = defineProps<{
   editingTmpl?: TemplateSummary | null;
+  dayClosed?: boolean;
 }>();
 const emit = defineEmits(['saved', 'close']);
 // end main
@@ -227,6 +229,9 @@ function onSearchCancel() {
 }
 
 function toggleSupplierSelection(s: any) {
+  // Prevent changes when the day is closed
+  if (props.dayClosed) return;
+
   const id = s.id as IDBValidKey;
   const idx = form.supplierIds.indexOf(id);
   if (idx === -1) form.supplierIds.push(id);

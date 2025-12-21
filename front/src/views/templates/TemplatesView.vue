@@ -196,7 +196,9 @@ import {
 } from '@ionic/vue';
 import { createOutline, addOutline, trashOutline } from 'ionicons/icons';
 import { reactive, ref, onMounted, computed, unref } from 'vue'; // Placeholder comment for further Ionic changes.
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
+import { parseLocalDate } from '@/utils/date';
+import { formatLocalDate } from '@/utils/date';
 import { es as esLocale } from 'date-fns/locale';
 import { useRouter } from 'vue-router';
 
@@ -258,7 +260,8 @@ const form = reactive({
 
 const suppliers = reactive<Supplier[]>([]);
 const showApplyModal = ref(false);
-const applySelectedDate = ref(new Date().toISOString());
+const applySelectedDate = ref(format(new Date(), 'yyyy-MM-dd'));
+
 const applyTargetTemplate = ref<TemplateSummary | null>(null);
 const isEditMode = ref(false);
 const editingTemplateId = ref<string | number | null>(null);
@@ -436,7 +439,7 @@ function applyTemplate(params: { tmpl: TemplateSummary }) {
 
   if (!tmpl) return;
   applyTargetTemplate.value = tmpl;
-  applySelectedDate.value = new Date().toISOString();
+  applySelectedDate.value = format(new Date(), 'yyyy-MM-dd');
   // ensure modal flag is set explicitly
   showApplyModal.value = true;
   console.log('showApplyModal set to true');
@@ -490,7 +493,7 @@ async function confirmApply() {
   const proveedores = (providerNames || []).map(name => ({
     id: Date.now() + Math.random(),
     name,
-    date: dateISO,
+    date: formatLocalDate(dateISO),
     estimated: 0,
     dollar: 0,
     notes: '',
@@ -500,9 +503,9 @@ async function confirmApply() {
   const payload = {
     ingresos: [],
     proveedores,
-    newIngreso: { name: '', amount: 0, date: dateISO },
+    newIngreso: { name: '', amount: 0, date: formatLocalDate(dateISO) },
     newProveedor: { name: '', estimated: 0, dollar: 0, notes: '' },
-    selectedDate: dateISO,
+    selectedDate: formatLocalDate(dateISO),
     totals: {
       totalIngresos: 0,
       totalProviders: proveedores.reduce(
@@ -530,15 +533,15 @@ async function confirmApply() {
       existing.data &&
       hasBackupMeaningfulContent(existing.data)
     ) {
-      // Ask user whether to combine or overwrite
+      // Ask user whether to combine or overwrite. Only triggered when meaningful provider data exists.
       try {
-        const parsedDate = parseISO(String(dateISO));
+        const parsedDate = parseLocalDate(String(dateISO));
         const pretty = isNaN(parsedDate.getTime())
           ? String(dateISO)
           : format(parsedDate, "d 'de' MMMM 'de' yyyy", { locale: esLocale });
-        applyConflictMessage.value = `Ya existen datos guardados para ${pretty}. ¿Deseas combinar el template con los datos existentes o sobrescribirlos?`;
+        applyConflictMessage.value = `Ya existen proveedores guardados para ${pretty}. ¿Deseas combinar el template con los proveedores existentes o sobrescribirlos?`;
       } catch (_e) {
-        applyConflictMessage.value = `Ya existen datos guardados para la fecha seleccionada. ¿Deseas combinar el template con los datos existentes o sobrescribirlos?`;
+        applyConflictMessage.value = `Ya existen proveedores guardados para la fecha seleccionada. ¿Deseas combinar el template con los proveedores existentes o sobrescribirlos?`;
       }
 
       pendingApplyPayload.value = payloadToSave;
@@ -562,7 +565,7 @@ async function confirmApply() {
 
     // persist selected date so BudgetView picks it up
     try {
-      localStorage.setItem(STORAGE_KEY, dateISO);
+      localStorage.setItem(STORAGE_KEY, formatLocalDate(dateISO));
     } catch (e) {
       /* noop */
     }
@@ -576,7 +579,7 @@ async function confirmApply() {
 
     router.push({
       name: 'Budget',
-      query: { refresh: String(Date.now()), date: dateISO },
+      query: { refresh: String(Date.now()), date: formatLocalDate(dateISO) },
     });
   } catch (e) {
     console.error('confirmApply error', e);
@@ -588,15 +591,39 @@ async function confirmApply() {
 function hasBackupMeaningfulContent(data: any): boolean {
   try {
     if (!data) return false;
-    // Consider backup meaningful if it has ingresos or proveedores entries or positive totals
-    if (Array.isArray(data.ingresos) && data.ingresos.length > 0) return true;
-    if (Array.isArray(data.proveedores) && data.proveedores.length > 0)
+    // Consider backup meaningful if it has proveedores entries or positive provider totals.
+    // We intentionally ignore 'ingresos' here so that existing ingresos do not block template application.
+    if (Array.isArray(data.proveedores) && data.proveedores.length > 0) {
+      console.debug('hasBackupMeaningfulContent: detected proveedores > 0', {
+        proveedoresLen: data.proveedores.length,
+        ingresosLen: Array.isArray(data.ingresos) ? data.ingresos.length : 0,
+        totals: data.totals,
+      });
       return true;
+    }
     if (data.totals) {
       const t: any = data.totals || {};
-      if ((Number(t.totalIngresos) || 0) > 0) return true;
-      if ((Number(t.totalProviders) || 0) > 0) return true;
-      if ((Number(t.totalVisitedProviders) || 0) > 0) return true;
+      if ((Number(t.totalProviders) || 0) > 0) {
+        console.debug(
+          'hasBackupMeaningfulContent: detected totalProviders > 0',
+          {
+            totalProviders: t.totalProviders,
+            totalIngresos: t.totalIngresos,
+            totalVisitedProviders: t.totalVisitedProviders,
+          }
+        );
+        return true;
+      }
+      if ((Number(t.totalVisitedProviders) || 0) > 0) {
+        console.debug(
+          'hasBackupMeaningfulContent: detected totalVisitedProviders > 0',
+          {
+            totalVisitedProviders: t.totalVisitedProviders,
+            totals: t,
+          }
+        );
+        return true;
+      }
     }
     return false;
   } catch (_e) {
@@ -686,7 +713,7 @@ async function handleApplyConflictCombine() {
             0
           ),
         }),
-        selectedDate: dateISO,
+        selectedDate: formatLocalDate(dateISO),
       });
     } else {
       mergedData = payloadToSave.data;
@@ -712,7 +739,7 @@ async function handleApplyConflictCombine() {
 
     // persist selected date
     try {
-      localStorage.setItem(STORAGE_KEY, String(dateISO));
+      localStorage.setItem(STORAGE_KEY, formatLocalDate(dateISO));
     } catch (_e) {
       /* noop */
     }
@@ -728,7 +755,7 @@ async function handleApplyConflictCombine() {
 
     router.push({
       name: 'Budget',
-      query: { refresh: String(Date.now()), date: String(dateISO) },
+      query: { refresh: String(Date.now()), date: formatLocalDate(dateISO) },
     });
   } catch (e) {
     console.error('handleApplyConflictCombine error', e);
@@ -745,13 +772,51 @@ async function handleApplyConflictOverwrite() {
       return;
     }
 
-    await backupController.saveBackup(payloadToSave);
+    // If there is an existing backup for the date, preserve its 'ingresos' when overwriting
+    const dateISO = payloadToSave.data?.selectedDate;
+    const existing = await backupController.getLatestBackupForDate(
+      String(dateISO)
+    );
+
+    let finalData = payloadToSave.data;
+    if (existing && existing.data) {
+      // preserve ingresos from existing
+      const existingIngresos = Array.isArray((existing.data as any).ingresos)
+        ? (existing.data as any).ingresos
+        : [];
+      finalData = Object.assign({}, payloadToSave.data, {
+        ingresos: existingIngresos,
+      });
+
+      // Recompute totals conservatively: keep totalIngresos from existing totals if present
+      const existingTotals = (existing.data as any).totals || {};
+      finalData.totals = Object.assign({}, finalData.totals || {}, {
+        totalIngresos: Number(existingTotals.totalIngresos || 0) || 0,
+      });
+    }
+
+    const savePayload = {
+      component: 'BudgetView',
+      data: finalData,
+      createdAt: Date.now(),
+    };
+
+    try {
+      const cleanSavePayload = JSON.parse(JSON.stringify(savePayload));
+      await backupController.saveBackup({ entry: cleanSavePayload });
+    } catch (saveErr) {
+      console.warn(
+        'handleApplyConflictOverwrite: sanitized save failed, retrying with original payload',
+        saveErr
+      );
+      await backupController.saveBackup({ entry: savePayload });
+    }
 
     // persist selected date so BudgetView picks it up
     try {
       localStorage.setItem(
         STORAGE_KEY,
-        String(payloadToSave.data?.selectedDate)
+        formatLocalDate(String(payloadToSave.data?.selectedDate))
       );
     } catch (_e) {
       /* noop */
@@ -770,7 +835,7 @@ async function handleApplyConflictOverwrite() {
       name: 'Budget',
       query: {
         refresh: String(Date.now()),
-        date: String(payloadToSave.data?.selectedDate),
+        date: formatLocalDate(String(payloadToSave.data?.selectedDate)),
       },
     });
   } catch (e) {

@@ -88,7 +88,7 @@ class SuppliersController {
       const mod = await import('../stores/suppliersStore');
       const store = mod.useSuppliersStore();
       await store.loadAll();
-    } catch (e) {
+    } catch (_e) {
       /* ignore */
     }
   }

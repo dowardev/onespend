@@ -32,6 +32,10 @@ ion-item.transparent,
 ion-item-divider.transparent {
   --background: transparent;
 }
+ion-item.border-rounded{
+
+  border-radius: 4px;
+}
 /* end ion-item */
 
 /* ion list */

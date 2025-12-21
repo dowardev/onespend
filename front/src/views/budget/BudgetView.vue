@@ -59,7 +59,10 @@
                           }})</ion-label
                         >
 
-                        <ion-button @click="addIngresoField()">
+                        <ion-button
+                          :disabled="dayClosed"
+                          @click="addIngresoField()"
+                        >
                           <ion-icon :icon="addOutline"></ion-icon>
                         </ion-button>
                       </ion-list-header>
@@ -109,7 +112,7 @@
                         </template>
 
                         <template v-else>
-                          <ion-item>
+                          <ion-item lines="none">
                             <ion-label
                               >Pulsa el botón «+» para agregar un nuevo
                               ingreso</ion-label
@@ -170,8 +173,9 @@
                                       v-if="faltanteEfectivo < 0"
                                       style="color: var(--ion-color-danger)"
                                     >
-                                      ({ formatCurrency({ v: faltanteEfectivo })
-                                      })
+                                      ({{
+                                        formatCurrency({ v: faltanteEfectivo })
+                                      }})
                                     </div>
                                   </div>
                                 </ion-note>
@@ -194,8 +198,9 @@
                                       v-if="faltanteDigital < 0"
                                       style="color: var(--ion-color-danger)"
                                     >
-                                      ({ formatCurrency({ v: faltanteDigital })
-                                      })
+                                      ({{
+                                        formatCurrency({ v: faltanteDigital })
+                                      }})
                                     </div>
                                   </div>
                                 </ion-note>
@@ -267,6 +272,7 @@
 
                         <!-- Add existing provider -->
                         <ion-button
+                          :disabled="dayClosed"
                           @click="
                             popovers.addExistingSupplier.event = $event;
                             popovers.addExistingSupplier.open = true;
@@ -276,7 +282,10 @@
                         </ion-button>
 
                         <!-- Add provider card restored inside 'No asistio' column -->
-                        <ion-button @click="addBlankProvider()">
+                        <ion-button
+                          :disabled="dayClosed"
+                          @click="addBlankProvider()"
+                        >
                           <ion-icon :icon="addOutline"></ion-icon>
                         </ion-button>
                       </ion-list-header>
@@ -290,6 +299,7 @@
                           v-for="p in enrichedNotVisited"
                           :key="p.id"
                           :provider="p"
+                          :day-closed="dayClosed"
                           :has-products="p.hasProducts"
                           @visited-changed="onVisitedChanged"
                           @start-editing="startEditing"
@@ -311,7 +321,10 @@
                         <ion-label>Asistio</ion-label>
 
                         <!-- Add provider card restored inside 'Asistio' column -->
-                        <ion-button @click="addBlankProviderVisited()">
+                        <ion-button
+                          :disabled="dayClosed"
+                          @click="addBlankProviderVisited()"
+                        >
                           <ion-icon :icon="addOutline"></ion-icon>
                         </ion-button>
                       </ion-list-header>
@@ -325,6 +338,7 @@
                           v-for="p in enrichedVisited"
                           :key="p.id"
                           :provider="p"
+                          :day-closed="dayClosed"
                           :has-products="p.hasProducts"
                           @visited-changed="onVisitedChanged"
                           @start-editing="startEditing"
@@ -388,6 +402,11 @@
           <ion-item button @click="openTemplatesModal()">
             <ion-label>Aplicar template</ion-label>
           </ion-item>
+
+          <!-- Button finsh day -->
+          <ion-item button @click="openFinishDayModal()">
+            <ion-label>Finalizar dia</ion-label>
+          </ion-item>
         </ion-content>
       </ion-popover>
 
@@ -441,6 +460,7 @@
           </ion-list>
         </ion-content>
       </ion-popover>
+
       <!-- end popover -->
 
       <!-- alerts -->
@@ -506,6 +526,15 @@
           },
         ]"
         @did-dismiss="onApplyConflictDismiss"
+      ></ion-alert>
+
+      <!-- alert open day -->
+      <ion-alert
+        :is-open="alerts.openDayConfirm.open"
+        header="Notificacion"
+        :message="`El dia se encuentra cerrado, desea volver abrirlo?`"
+        :buttons="alerts.openDayConfirm.buttons"
+        @did-dismiss="alerts.openDayConfirm.open = false"
       ></ion-alert>
       <!-- end alerts -->
 
@@ -611,6 +640,91 @@
           </ion-card>
         </ion-content>
       </ion-modal>
+
+      <!-- modal finish day -->
+      <ion-modal
+        :is-open="modals.finishDay.open"
+        @did-dismiss="modals.finishDay.open = false"
+      >
+        <ion-header class="ion-no-border" mode="ios">
+          <ion-toolbar>
+            <ion-buttons>
+              <ion-button
+                fill="clear"
+                size="small"
+                @click="modals.finishDay.open = false"
+              >
+                <ion-icon :icon="closeOutline"></ion-icon>
+              </ion-button>
+            </ion-buttons>
+
+            <ion-title>Finalizar dia</ion-title>
+
+            <ion-buttons slot="end">
+              <ion-button color="primary" @click="saveFinishDay()">
+                <ion-icon :icon="saveOutline"></ion-icon>
+              </ion-button>
+            </ion-buttons>
+          </ion-toolbar>
+        </ion-header>
+
+        <ion-content>
+          <ion-card class="shadow1">
+            <ion-item class="transparent" lines="none">
+              <ion-label
+                >Completa los siguientes datos requeridos para los datos
+                estadisticos</ion-label
+              >
+            </ion-item>
+
+            <ion-item class="transparent" lines="full">
+              <ion-input
+                v-model.number="modals.finishDay.totalSalesEfectivo"
+                label="Ventas efectivo"
+                label-placement="floating"
+                type="number"
+              ></ion-input>
+            </ion-item>
+
+            <ion-item class="transparent" lines="full">
+              <ion-input
+                v-model.number="modals.finishDay.totalSalesTarjeta"
+                label="Ventas tarjeta"
+                label-placement="floating"
+                type="number"
+              ></ion-input>
+            </ion-item>
+
+            <ion-item class="transparent" lines="full">
+              <ion-input
+                v-model.number="modals.finishDay.totalSalesCredito"
+                label="Ventas credito"
+                label-placement="floating"
+                type="number"
+              ></ion-input>
+            </ion-item>
+
+            <ion-item class="transparent" lines="full">
+              <ion-select
+                slot="start"
+                v-model="modals.finishDay.type"
+                label-placement="floating"
+                label="Tipo de dato"
+              >
+                <ion-select-option value="%">%</ion-select-option>
+                <ion-select-option value="$">$</ion-select-option>
+              </ion-select>
+
+              <ion-input
+                v-model.number="modals.finishDay.margin"
+                label="Margen de ventas"
+                label-placement="floating"
+                type="number"
+              ></ion-input>
+            </ion-item>
+          </ion-card>
+        </ion-content>
+      </ion-modal>
       <!-- end modal -->
 
       <!-- toasts -->
@@ -621,6 +735,20 @@
         @did-dismiss="() => (toast.open = false)"
       ></ion-toast>
       <!-- end toasts -->
+
+      <!-- floating buttons -->
+      <ion-fab
+        v-if="dayClosed"
+        slot="fixed"
+        vertical="bottom"
+        horizontal="end"
+        @click="alerts.openDayConfirm.open = true"
+      >
+        <ion-fab-button color="warning">
+          <ion-icon :icon="warningOutline"></ion-icon>
+        </ion-fab-button>
+      </ion-fab>
+      <!-- end floating buttons -->
     </ion-content>
   </ion-page>
 </template>
@@ -678,9 +806,11 @@ import {
   chevronForwardOutline,
   ellipsisVerticalOutline,
   flashOutline,
+  warningOutline,
 } from 'ionicons/icons';
 import { useRoute } from 'vue-router';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
+import { parseLocalDate } from '@/utils/date';
 import { es as esLocale } from 'date-fns/locale';
 
 // interface
@@ -726,6 +856,7 @@ type FocusableRef =
 
 // Controllers
 import dixieController from '@/controllers/dixie';
+import { formatLocalDate } from '@/utils/date';
 import backupController from '@/controllers/backupController';
 import suppliersController from '@/controllers/suppliersController';
 import systemController from '@/controllers/systemConfigController';
@@ -742,7 +873,7 @@ const ingresos = reactive([]) as Income[];
 const newIngreso = reactive({
   name: '',
   amount: 0,
-  date: new Date().toISOString(),
+  date: formatLocalDate(new Date()),
   paymentType: 'cash',
 });
 const proveedores = reactive([]) as Provider[];
@@ -751,7 +882,16 @@ const nameInputRefs = reactive(
   {} as Record<string | number, FocusableRef | null>
 );
 const STORAGE_KEY = 'budget:selectedDate';
-const selectedDate = ref(new Date().toISOString());
+// initialize a local YYYY-MM-DD date string to avoid UTC offset issues
+const _initialSelectedDate = (() => {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+})();
+
+const selectedDate = ref<string>(_initialSelectedDate);
 const route = useRoute();
 const popovers = reactive({
   date: { open: false, event: null as unknown },
@@ -773,6 +913,17 @@ const modals = reactive({
     providerId: null as string | number | null,
     content: '' as string,
   },
+  // finishDay now stores separate totals for each payment method while keeping
+  // totalSales for backward compatibility with older backups
+  finishDay: {
+    open: false,
+    totalSales: 0,
+    totalSalesEfectivo: 0,
+    totalSalesTarjeta: 0,
+    totalSalesCredito: 0,
+    type: '%',
+    margin: 0,
+  },
 });
 
 // State used to ask for confirmation before removing a provider
@@ -793,32 +944,6 @@ const suppliersProducts = reactive({} as Record<string, any[]>);
 // Map of normalized supplier name -> original supplier name (from suppliers DB)
 const suppliersNames = reactive({} as Record<string, string>);
 const addExistingSupplierQuery = ref('');
-const filteredSuppliersEntries = computed(() => {
-  try {
-    const q = String(addExistingSupplierQuery.value || '')
-      .trim()
-      .toLowerCase();
-    const entries = Object.entries(suppliersNames || {}).map(([key, name]) => ({
-      key,
-      name,
-    }));
-    if (!q) return entries;
-    return entries.filter(
-      e =>
-        String(e.name || '')
-          .toLowerCase()
-          .includes(q) ||
-        String(e.key || '')
-          .toLowerCase()
-          .includes(q)
-    );
-  } catch (_e) {
-    return Object.entries(suppliersNames || {}).map(([key, name]) => ({
-      key,
-      name,
-    }));
-  }
-});
 // --- Templates modal state & handlers ---
 const templatesModalList = reactive([] as any[]);
 const showTemplatesModal = ref(false);
@@ -836,53 +961,74 @@ const overwriteConfirm = reactive({
   _resolve: null as null | ((val: boolean) => void),
 });
 
-/**
- * askOverwriteConfirm: Promise-based helper that opens the overwriteConfirm ion-alert
- * and resolves to true when the user confirms or false when cancels/dismisses.
- * Params are optional and used to populate the alert message for better UX.
- */
-function askOverwriteConfirm(
-  params: {
-    providerId?: string | number | null;
-    providerName?: string;
-    total?: number;
-  } = {}
-) {
-  return new Promise<boolean>(resolve => {
-    try {
-      overwriteConfirm.providerId = params.providerId ?? null;
-      overwriteConfirm.providerName = params.providerName ?? '';
-      overwriteConfirm.total = Number(params.total || 0) || 0;
-
-      // Provide a resolver that will be called by the alert button handlers
-      overwriteConfirm._resolve = (val: boolean) => {
-        try {
-          resolve(Boolean(val));
-        } catch (_e) {
-          try {
-            resolve(false);
-          } catch (__) {
-            /* noop */
-          }
-        }
-        overwriteConfirm._resolve = null;
-      };
-
-      overwriteConfirm.open = true;
-    } catch (_e) {
-      // In case of any error, resolve as false to avoid accidental overwrites
-      try {
-        resolve(false);
-      } catch (__) {
-        /* noop */
-      }
-      overwriteConfirm._resolve = null;
-      overwriteConfirm.open = false;
-    }
-  });
-}
 // Toast state used to inform the user when an action is prevented (e.g. editing a provider from a template)
 const toast = reactive({ open: false, message: '', duration: 2500 });
+const alerts = reactive({
+  openDayConfirm: {
+    open: false,
+    buttons: [
+      {
+        text: 'Cancelar',
+        role: 'cancel',
+        cssClass: 'secondary',
+      },
+      {
+        text: 'Continuar',
+        cssClass: 'danger',
+        handler: async () => {
+          try {
+            // Persist closed:false for the selected date so the day is reopened
+            const payloadToSave = {
+              component: 'BudgetFinishDay',
+              data: {
+                selectedDate: formatLocalDate(selectedDate.value),
+                // Persist per-method totals when available; fallback to legacy totalSales
+                totalSalesEfectivo:
+                  Number(
+                    modals.finishDay.totalSalesEfectivo ||
+                      modals.finishDay.totalSales ||
+                      0
+                  ) || 0,
+                totalSalesTarjeta:
+                  Number(modals.finishDay.totalSalesTarjeta || 0) || 0,
+                totalSalesCredito:
+                  Number(modals.finishDay.totalSalesCredito || 0) || 0,
+                // Maintain legacy totalSales for backwards compatibility (prefer sum of per-methods)
+                totalSales:
+                  Number(modals.finishDay.totalSalesEfectivo || 0) +
+                    Number(modals.finishDay.totalSalesTarjeta || 0) +
+                    Number(modals.finishDay.totalSalesCredito || 0) ||
+                  Number(modals.finishDay.totalSales || 0) ||
+                  0,
+                type: String(modals.finishDay.type || '%'),
+                margin: Number(modals.finishDay.margin || 0) || 0,
+                closed: false,
+              },
+              createdAt: Date.now(),
+            };
+
+            try {
+              await dixieController.addEntry({ entry: payloadToSave });
+            } catch (addErr) {
+              try {
+                await dixieController.putEntry({ entry: payloadToSave });
+              } catch (putErr) {
+                await backupController.saveBackup({ entry: payloadToSave });
+              }
+            }
+          } catch (_e) {
+            /* noop */
+          }
+
+          dayClosed.value = false;
+          alerts.openDayConfirm.open = false;
+        },
+      },
+    ],
+  },
+});
+
+const dayClosed = ref(false);
 // end vars
 
 // life
@@ -944,8 +1090,14 @@ watch(
         dateString?: string
       ) {
         if (!dateString) return null;
-        const parsedDate = new Date(dateString);
-        return isNaN(parsedDate.getTime()) ? null : parsedDate.toISOString();
+        try {
+          const parsedDate = parseLocalDate(String(dateString));
+          return isNaN(parsedDate.getTime())
+            ? null
+            : formatLocalDate(parsedDate);
+        } catch (_e) {
+          return null;
+        }
       })(route.query.date as string | undefined);
       if (parsedDateFromRouteISO) selectedDate.value = parsedDateFromRouteISO;
       loadDataForDate(selectedDate.value);
@@ -1072,7 +1224,7 @@ const formattedSelectedDate = computed(() => {
     // parseISO accepts ISO strings; if parse fails, fall back to Date constructor
     let d: Date;
     try {
-      d = parseISO(String(v));
+      d = parseLocalDate(String(v));
       if (isNaN(d.getTime())) throw new Error('invalid');
     } catch (_e) {
       d = new Date(String(v));
@@ -1128,10 +1280,42 @@ const faltanteDigital = computed(() => {
     return 0;
   }
 });
+
+const filteredSuppliersEntries = computed(() => {
+  try {
+    const q = String(addExistingSupplierQuery.value || '')
+      .trim()
+      .toLowerCase();
+    const entries = Object.entries(suppliersNames || {}).map(([key, name]) => ({
+      key,
+      name,
+    }));
+    if (!q) return entries;
+    return entries.filter(
+      e =>
+        String(e.name || '')
+          .toLowerCase()
+          .includes(q) ||
+        String(e.key || '')
+          .toLowerCase()
+          .includes(q)
+    );
+  } catch (_e) {
+    return Object.entries(suppliersNames || {}).map(([key, name]) => ({
+      key,
+      name,
+    }));
+  }
+});
 // end computed
 
 // functions
 function addIngreso(params: { name?: string; amount?: number } = {}) {
+  // Prevent creation when the day is closed
+  if (dayClosed.value) {
+    return;
+  }
+
   const { name, amount } = params;
   const n = name ?? newIngreso.name;
   const a = amount ?? newIngreso.amount;
@@ -1140,7 +1324,7 @@ function addIngreso(params: { name?: string; amount?: number } = {}) {
     id: Date.now() + Math.random(),
     name: n,
     amount: Number(a) || 0,
-    date: selectedDate.value,
+    date: formatLocalDate(selectedDate.value),
     paymentType: (newIngreso.paymentType === 'digital' ? 'digital' : 'cash') as
       | 'cash'
       | 'digital',
@@ -1151,12 +1335,18 @@ function addIngreso(params: { name?: string; amount?: number } = {}) {
 }
 
 function addIngresoField() {
+  // Prevent creation when the day is closed
+  if (dayClosed.value) {
+    // silently ignore when day is closed (UI buttons are disabled in this state)
+    return;
+  }
+
   // Add empty income field
   ingresos.push({
     id: Date.now() + Math.random(),
     name: '',
     amount: 0,
-    date: selectedDate.value,
+    date: formatLocalDate(selectedDate.value),
     // default payment type for new empty field
     paymentType: 'cash',
   } as Income);
@@ -1335,6 +1525,18 @@ function addProveedor(
     notes?: string;
   } = {}
 ) {
+  // Prevent creation when the day is closed
+  if (dayClosed.value) {
+    try {
+      toast.message =
+        'El día está finalizado. Reabre el día para poder editar.';
+      toast.open = true;
+    } catch (_e) {
+      /* noop */
+    }
+    return;
+  }
+
   const { name, estimated, dollar, notes } = params;
   const n = name ?? newProveedor.name;
   const e = estimated ?? newProveedor.estimated;
@@ -1365,7 +1567,7 @@ function addProveedor(
   // create with id and mark as new for animation
   const newItem = {
     id: Date.now() + Math.random(),
-    date: selectedDate.value,
+    date: formatLocalDate(selectedDate.value),
     name: n,
     estimated: Number(e) || 0,
     dollar: Number(d) || 0,
@@ -1444,6 +1646,16 @@ function isPaymentPrimary(p: any) {
 // Normalize handler signature: accept either (provider, event) or a single { provider, event } object
 function onVisitedChanged(params: any) {
   try {
+    // Prevent toggling visited state when the day is closed
+    if (dayClosed.value && (dayClosed as any).value === true) {
+      try {
+        // Optional: suppress any UI changes by returning early. Avoid showing toasts.
+        return;
+      } catch (_e) {
+        return;
+      }
+    }
+
     // Support both call styles: positional (provider, event) and object { provider, event }
     let provider: any = null;
     let event: any = null;
@@ -1589,6 +1801,18 @@ function handleRegisterNameInput(payload: { id: string | number; el: any }) {
 
 // Add empty provider card
 function addBlankProvider() {
+  // Prevent creation when the day is closed
+  if (dayClosed.value) {
+    try {
+      toast.message =
+        'El día está finalizado. Reabre el día para poder editar.';
+      toast.open = true;
+    } catch (_e) {
+      /* noop */
+    }
+    return;
+  }
+
   // Prevent creating another blank provider if one already exists
   try {
     const existingBlank = proveedores.find(
@@ -1619,7 +1843,7 @@ function addBlankProvider() {
 
   const newItem = {
     id: Date.now() + Math.random(),
-    date: selectedDate.value,
+    date: formatLocalDate(selectedDate.value),
     name: '',
     estimated: 0,
     dollar: 0,
@@ -1690,7 +1914,7 @@ function addBlankProviderVisited() {
 
   const newItem = {
     id: Date.now() + Math.random(),
-    date: selectedDate.value,
+    date: formatLocalDate(selectedDate.value),
     name: '',
     estimated: 0,
     dollar: 0,
@@ -1864,6 +2088,33 @@ async function loadDataForDate(dateISO: string) {
         d.newProveedor || { name: '', estimated: 0, dollar: 0, notes: '' }
       );
       console.log('Datos cargados para', dateISO, b);
+
+      // Additionally, check for a BudgetFinishDay entry for this date to set dayClosed
+      try {
+        const target = (dateISO || '').slice(0, 10);
+        const finishMatches = (all || [])
+          .filter(
+            x =>
+              x &&
+              x.component === 'BudgetFinishDay' &&
+              x.data &&
+              x.data.selectedDate &&
+              (x.data.selectedDate as string).slice(0, 10) === target
+          )
+          .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        if (finishMatches.length) {
+          const latestFinish = finishMatches[0];
+          dayClosed.value = !!(
+            latestFinish &&
+            latestFinish.data &&
+            latestFinish.data.closed
+          );
+        } else {
+          dayClosed.value = false;
+        }
+      } catch (_e) {
+        dayClosed.value = false;
+      }
     } else {
       // No backup: initialize empty data for date
       ingresos.splice(0, ingresos.length);
@@ -1876,6 +2127,33 @@ async function loadDataForDate(dateISO: string) {
         notes: '',
       });
       console.log('No se encontró backup para', dateISO);
+
+      // Also check if the day is marked as finished/closed via BudgetFinishDay entries
+      try {
+        const target = (dateISO || '').slice(0, 10);
+        const finishMatches = (all || [])
+          .filter(
+            x =>
+              x &&
+              x.component === 'BudgetFinishDay' &&
+              x.data &&
+              x.data.selectedDate &&
+              (x.data.selectedDate as string).slice(0, 10) === target
+          )
+          .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        if (finishMatches.length) {
+          const latestFinish = finishMatches[0];
+          dayClosed.value = !!(
+            latestFinish &&
+            latestFinish.data &&
+            latestFinish.data.closed
+          );
+        } else {
+          dayClosed.value = false;
+        }
+      } catch (_e) {
+        dayClosed.value = false;
+      }
     }
   } catch (err) {
     console.error('Error cargando datos para fecha', dateISO, err);
@@ -1901,7 +2179,16 @@ function onPopoverDidDismiss() {
 
 function resetToToday() {
   try {
-    selectedDate.value = new Date().toISOString();
+    // set selectedDate to today in yyyy-mm-dd format using local date (avoid UTC offset)
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    selectedDate.value = `${y}-${m}-${day}`;
+
+    // close the popover and reload data for the selected date
+    popovers.date.open = false;
+    void loadDataForDate(selectedDate.value);
   } catch (_e) {
     /* noop */
   }
@@ -1919,12 +2206,19 @@ function changeDate(params: { days?: number } | number) {
       days = Number((params as any).days || 0);
     }
 
-    // Parse current selectedDate; fallback to now if invalid
-    let current = new Date(String(selectedDate.value));
-    if (isNaN(current.getTime())) current = new Date();
+    // Parse current selectedDate using parseISO; fallback to today
+    let current = new Date();
+    try {
+      const parsed = parseLocalDate(String(selectedDate.value));
+      if (!isNaN(parsed.getTime())) current = parsed;
+    } catch (_e) {
+      /* noop */
+    }
+
     // Advance or retreat by the requested number of days
     current.setDate(current.getDate() + Number(days || 0));
-    selectedDate.value = current.toISOString();
+    // store as local date string (YYYY-MM-DD)
+    selectedDate.value = formatLocalDate(current);
   } catch (_e) {
     /* noop */
   }
@@ -2385,7 +2679,7 @@ async function saveNotes() {
         addErr
       );
       try {
-        savedId = await dixieController.putEntry(payloadToSave);
+        savedId = await dixieController.putEntry({ entry: payloadToSave });
         console.log('saveNotes: putEntry succeeded as fallback', {
           savedId,
           pid: normalizedPid,
@@ -2470,7 +2764,7 @@ async function applyTemplateFromModal(tmpl: any) {
     if (!tmpl) return;
     // Build payload similar to TemplatesView.confirmApply
     // Use the currently selected date from the Budget view
-    const dateISO = selectedDate.value;
+    const dateISO = formatLocalDate(selectedDate.value);
 
     let providerNames: string[] = [];
 
@@ -2563,7 +2857,7 @@ async function applyTemplateFromModal(tmpl: any) {
       name,
       // store original DB name so child component can use it as placeholder
       _dbName: name,
-      date: dateISO,
+      date: formatLocalDate(dateISO),
       estimated: 0,
       dollar: 0,
       notes: '',
@@ -2574,9 +2868,9 @@ async function applyTemplateFromModal(tmpl: any) {
     const payload = {
       ingresos: [],
       proveedores: proveedoresPayload,
-      newIngreso: { name: '', amount: 0, date: dateISO },
+      newIngreso: { name: '', amount: 0, date: formatLocalDate(dateISO) },
       newProveedor: { name: '', estimated: 0, dollar: 0, notes: '' },
-      selectedDate: dateISO,
+      selectedDate: formatLocalDate(dateISO),
       totals: {
         totalIngresos: 0,
         totalProviders: proveedoresPayload.reduce(
@@ -2603,12 +2897,12 @@ async function applyTemplateFromModal(tmpl: any) {
       existing.data &&
       hasBackupMeaningfulContent(existing.data)
     ) {
-      // Ask user whether to combine or overwrite
+      // Ask user whether to combine or overwrite. Only triggered when meaningful provider data exists.
       try {
-        const parsedDate = parseISO(String(dateISO));
-        applyConflictMessage.value = `Ya existen datos guardados para ${format(parsedDate, "d 'de' MMMM 'de' yyyy", { locale: esLocale })}. ¿Deseas combinar el template con los datos existentes o sobrescribirlos?`;
+        const parsedDate = parseLocalDate(String(dateISO));
+        applyConflictMessage.value = `Ya existen proveedores guardados para ${format(parsedDate, "d 'de' MMMM 'de' yyyy", { locale: esLocale })}. ¿Deseas combinar el template con los proveedores existentes o sobrescribirlos?`;
       } catch (_e) {
-        applyConflictMessage.value = `Ya existen datos guardados para la fecha seleccionada. ¿Deseas combinar el template con los datos existentes o sobrescribirlos?`;
+        applyConflictMessage.value = `Ya existen proveedores guardados para la fecha seleccionada. ¿Deseas combinar el template con los proveedores existentes o sobrescribirlos?`;
       }
       pendingApplyPayload.value = payloadToSave;
       showApplyConflictModal.value = true;
@@ -2670,15 +2964,42 @@ async function applyTemplateFromModal(tmpl: any) {
 function hasBackupMeaningfulContent(data: any): boolean {
   try {
     if (!data) return false;
-    // Consider backup meaningful if it has ingresos or proveedores entries or positive totals
-    if (Array.isArray(data.ingresos) && data.ingresos.length > 0) return true;
-    if (Array.isArray(data.proveedores) && data.proveedores.length > 0)
+    // Consider backup meaningful if it has proveedores entries or positive provider totals.
+    // We intentionally ignore 'ingresos' here so that existing ingresos do not block template application.
+    if (Array.isArray(data.proveedores) && data.proveedores.length > 0) {
+      console.debug(
+        'hasBackupMeaningfulContent (BudgetView): detected proveedores > 0',
+        {
+          proveedoresLen: data.proveedores.length,
+          ingresosLen: Array.isArray(data.ingresos) ? data.ingresos.length : 0,
+          totals: data.totals,
+        }
+      );
       return true;
+    }
     if (data.totals) {
       const t: any = data.totals || {};
-      if ((Number(t.totalIngresos) || 0) > 0) return true;
-      if ((Number(t.totalProviders) || 0) > 0) return true;
-      if ((Number(t.totalVisitedProviders) || 0) > 0) return true;
+      if ((Number(t.totalProviders) || 0) > 0) {
+        console.debug(
+          'hasBackupMeaningfulContent (BudgetView): detected totalProviders > 0',
+          {
+            totalProviders: t.totalProviders,
+            totalIngresos: t.totalIngresos,
+            totalVisitedProviders: t.totalVisitedProviders,
+          }
+        );
+        return true;
+      }
+      if ((Number(t.totalVisitedProviders) || 0) > 0) {
+        console.debug(
+          'hasBackupMeaningfulContent (BudgetView): detected totalVisitedProviders > 0',
+          {
+            totalVisitedProviders: t.totalVisitedProviders,
+            totals: t,
+          }
+        );
+        return true;
+      }
     }
     return false;
   } catch (_e) {
@@ -2777,7 +3098,7 @@ async function handleApplyConflictCombine() {
     };
     try {
       const cleanSavePayload = JSON.parse(JSON.stringify(savePayload));
-      await backupController.saveBackup(cleanSavePayload);
+      await backupController.saveBackup({ entry: cleanSavePayload });
     } catch (saveErr) {
       console.warn(
         'handleApplyConflictCombine: sanitized save failed, retrying',
@@ -2809,7 +3130,44 @@ async function handleApplyConflictOverwrite() {
     const payloadToSave = pendingApplyPayload.value;
     if (!payloadToSave) return onApplyConflictDismiss();
 
-    await backupController.saveBackup(payloadToSave);
+    // Preserve ingresos from existing backup for the date when overwriting
+    const dateISO = payloadToSave.data?.selectedDate;
+    const existing = await backupController.getLatestBackupForDate(
+      String(dateISO)
+    );
+
+    let finalData = payloadToSave.data;
+    if (existing && existing.data) {
+      const existingIngresos = Array.isArray((existing.data as any).ingresos)
+        ? (existing.data as any).ingresos
+        : [];
+      finalData = Object.assign({}, payloadToSave.data, {
+        ingresos: existingIngresos,
+      });
+
+      const existingTotals = (existing.data as any).totals || {};
+      finalData.totals = Object.assign({}, finalData.totals || {}, {
+        totalIngresos: Number(existingTotals.totalIngresos || 0) || 0,
+      });
+    }
+
+    const savePayload = {
+      component: 'BudgetView',
+      data: finalData,
+      createdAt: Date.now(),
+    };
+
+    try {
+      const clean = JSON.parse(JSON.stringify(savePayload));
+      await backupController.saveBackup({ entry: clean });
+    } catch (saveErr) {
+      console.warn(
+        'handleApplyConflictOverwrite: sanitized save failed, retrying',
+        saveErr
+      );
+      await backupController.saveBackup({ entry: savePayload });
+    }
+
     try {
       localStorage.setItem(
         STORAGE_KEY,
@@ -2823,7 +3181,6 @@ async function handleApplyConflictOverwrite() {
     pendingApplyPayload.value = null;
     showTemplatesModal.value = false;
 
-    const dateISO = payloadToSave.data?.selectedDate;
     selectedDate.value = dateISO;
     await loadDataForDate(dateISO);
   } catch (e) {
@@ -2845,8 +3202,28 @@ async function onMoveProvider(
     // Normalize date to ISO string
     let dateISO: string;
     try {
-      const d = date instanceof Date ? date : new Date(String(date));
-      dateISO = !isNaN(d.getTime()) ? d.toISOString() : String(date);
+      let d: Date;
+      if (date instanceof Date) {
+        d = date;
+      } else if (typeof date === 'string') {
+        // Try to parse partial ISO-like strings safely: prefer slice to avoid timezone shifts
+        try {
+          // If it's a full date string (YYYY-MM-DD or longer), parse first 10 chars
+          const s =
+            String(date).length >= 10
+              ? String(date).slice(0, 10)
+              : String(date);
+          d = parseLocalDate(s);
+          if (isNaN(d.getTime())) throw new Error('invalid');
+        } catch (_e) {
+          // fallback to Date constructor as last resort
+          d = new Date(String(date));
+        }
+      } else {
+        // unknown type: attempt Date constructor
+        d = new Date(String(date));
+      }
+      dateISO = !isNaN(d.getTime()) ? formatLocalDate(d) : String(date);
     } catch (_e) {
       dateISO = String(date);
     }
@@ -2870,9 +3247,9 @@ async function onMoveProvider(
         data: {
           ingresos: [],
           proveedores: [provCopy],
-          newIngreso: { name: '', amount: 0, date: dateISO },
+          newIngreso: { name: '', amount: 0, date: formatLocalDate(dateISO) },
           newProveedor: { name: '', estimated: 0, dollar: 0, notes: '' },
-          selectedDate: dateISO,
+          selectedDate: formatLocalDate(dateISO),
           totals: {
             totalIngresos: 0,
             totalProviders:
@@ -2918,6 +3295,156 @@ async function onMoveProvider(
 }
 
 /**
+ * Open the "Finalizar dia" modal and preload previously saved finish-day values if present
+ */
+async function openFinishDayModal() {
+  try {
+    // Reset to defaults first
+    modals.finishDay.totalSales = Number(modals.finishDay.totalSales || 0) || 0;
+    modals.finishDay.totalSalesEfectivo =
+      Number(modals.finishDay.totalSalesEfectivo || 0) || 0;
+    modals.finishDay.totalSalesTarjeta =
+      Number(modals.finishDay.totalSalesTarjeta || 0) || 0;
+    modals.finishDay.totalSalesCredito =
+      Number(modals.finishDay.totalSalesCredito || 0) || 0;
+    modals.finishDay.type = modals.finishDay.type || '%';
+
+    try {
+      const all = (await dixieController.listBackups()) as any[];
+      const target = (selectedDate.value || '').slice(0, 10);
+      const matches = (all || [])
+        .filter(
+          b =>
+            b &&
+            b.component === 'BudgetFinishDay' &&
+            b.data &&
+            b.data.selectedDate &&
+            (b.data.selectedDate as string).slice(0, 10) === target
+        )
+        .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      if (matches.length) {
+        const latest = matches[0];
+        const d = latest.data || {};
+        // Prefer per-method totals if present; fallback to legacy totalSales
+        modals.finishDay.totalSalesEfectivo =
+          Number(d.totalSalesEfectivo ?? d.totalSales ?? 0) || 0;
+        modals.finishDay.totalSalesTarjeta =
+          Number(d.totalSalesTarjeta ?? 0) || 0;
+        modals.finishDay.totalSalesCredito =
+          Number(d.totalSalesCredito ?? 0) || 0;
+        // Keep legacy totalSales populated as sum for compatibility
+        modals.finishDay.totalSales =
+          Number(
+            d.totalSales ||
+              modals.finishDay.totalSalesEfectivo +
+                modals.finishDay.totalSalesTarjeta +
+                modals.finishDay.totalSalesCredito
+          ) || 0;
+        modals.finishDay.type = String(d.type || modals.finishDay.type || '%');
+        modals.finishDay.margin = Number(d.margin || 0) || 0;
+      }
+    } catch (_e) {
+      // ignore preload errors
+    }
+
+    setTimeout(() => (modals.finishDay.open = true), 50);
+  } catch (err) {
+    console.error('openFinishDayModal error:', err);
+  }
+}
+
+/**
+ * Persist the finish day data to the local storage (dixieController) and close the modal
+ */
+async function saveFinishDay() {
+  try {
+    const total = Number(modals.finishDay.totalSales || 0) || 0;
+    const type = String(modals.finishDay.type || '%');
+
+    // Basic validation: total must be finite
+    if (!isFinite(total)) {
+      toast.message = 'Total ventas no es válido';
+      toast.open = true;
+      return;
+    }
+
+    const payloadToSave = {
+      component: 'BudgetFinishDay',
+      data: {
+        selectedDate: formatLocalDate(selectedDate.value),
+        totalSalesEfectivo:
+          Number(
+            modals.finishDay.totalSalesEfectivo ||
+              modals.finishDay.totalSales ||
+              0
+          ) || 0,
+        totalSalesTarjeta: Number(modals.finishDay.totalSalesTarjeta || 0) || 0,
+        totalSalesCredito: Number(modals.finishDay.totalSalesCredito || 0) || 0,
+        // Keep legacy totalSales as sum of per-methods for backwards compatibility
+        totalSales:
+          Number(modals.finishDay.totalSalesEfectivo || 0) +
+            Number(modals.finishDay.totalSalesTarjeta || 0) +
+            Number(modals.finishDay.totalSalesCredito || 0) ||
+          Number(total || 0) ||
+          0,
+        type: String(modals.finishDay.type || '%'),
+        margin: Number(modals.finishDay.margin || 0) || 0,
+        closed: false,
+      },
+      createdAt: Date.now(),
+    };
+
+    try {
+      // Use dixieController.addEntry when available, fallback to putEntry
+      let savedId: any = null;
+      try {
+        savedId = await dixieController.addEntry({ entry: payloadToSave });
+      } catch (addErr) {
+        try {
+          savedId = await dixieController.putEntry({ entry: payloadToSave });
+        } catch (putErr) {
+          console.error('saveFinishDay persist error', putErr);
+        }
+      }
+
+      if (savedId == null) {
+        // best effort fallback: try backupController
+        try {
+          await backupController.saveBackup({ entry: payloadToSave });
+        } catch (backupErr) {
+          console.error(
+            'saveFinishDay: fallback backup save failed',
+            backupErr
+          );
+        }
+      }
+
+      // Success UX
+      toast.message = 'Datos guardados';
+      toast.open = true;
+
+      // Mark the day as closed in memory so the UI blocks further edits/creates
+      try {
+        dayClosed.value = true;
+      } catch (_e) {
+        /* noop */
+      }
+    } catch (e) {
+      console.error('saveFinishDay error saving', e);
+      toast.message = 'Error al guardar';
+      toast.open = true;
+      return;
+    } finally {
+      modals.finishDay.open = false;
+    }
+  } catch (err) {
+    console.error('saveFinishDay error:', err);
+    toast.message = 'Error inesperado';
+    toast.open = true;
+  }
+}
+
+/**
  * Scroll the given list ref (or element) to its end. Uses nextTick to ensure DOM updated.
  */
 function scrollListToEnd(
@@ -2946,6 +3473,52 @@ function scrollListToEnd(
   } catch (_e) {
     /* noop */
   }
+}
+
+/**
+ * askOverwriteConfirm: Promise-based helper that opens the overwriteConfirm ion-alert
+ * and resolves to true when the user confirms or false when cancels/dismisses.
+ * Params are optional and used to populate the alert message for better UX.
+ */
+function askOverwriteConfirm(
+  params: {
+    providerId?: string | number | null;
+    providerName?: string;
+    total?: number;
+  } = {}
+) {
+  return new Promise<boolean>(resolve => {
+    try {
+      overwriteConfirm.providerId = params.providerId ?? null;
+      overwriteConfirm.providerName = params.providerName ?? '';
+      overwriteConfirm.total = Number(params.total || 0) || 0;
+
+      // Provide a resolver that will be called by the alert button handlers
+      overwriteConfirm._resolve = (val: boolean) => {
+        try {
+          resolve(Boolean(val));
+        } catch (_e) {
+          try {
+            resolve(false);
+          } catch (__) {
+            /* noop */
+          }
+        }
+        overwriteConfirm._resolve = null;
+      };
+
+      overwriteConfirm.open = true;
+    } catch (_e) {
+      // In case of any error, resolve as false to avoid accidental overwrites
+      try {
+        resolve(false);
+      } catch (__) {
+        /* noop */
+      }
+      overwriteConfirm._resolve = null;
+      overwriteConfirm.open = false;
+    }
+  });
 }
 </script>
 
