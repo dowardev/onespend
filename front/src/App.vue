@@ -12,36 +12,43 @@
             <ion-title>{{ appName }}</ion-title>
           </ion-toolbar>
         </ion-header>
-        <ion-content class="ion-padding">
-          <ion-list>
-            <ion-item
-              button
-              lines="full"
-              :class="{ 'menu-active': isBudget }"
-              :aria-current="isBudget ? 'page' : undefined"
-              @click="navigate({ path: '/budget' })"
-            >
-              <ion-label>Presupuesto</ion-label>
-            </ion-item>
-            <ion-item
-              button
-              lines="full"
-              :class="{ 'menu-active': isTemplates }"
-              :aria-current="isTemplates ? 'page' : undefined"
-              @click="navigate({ path: '/templates' })"
-            >
-              <ion-label>Templates</ion-label>
-            </ion-item>
 
-            <ion-item
-              button
-              lines="full"
-              :class="{ 'menu-active': isSuppliers }"
-              :aria-current="isSuppliers ? 'page' : undefined"
-              @click="navigate({ path: '/suppliers' })"
-            >
-              <ion-label>Provedores</ion-label>
-            </ion-item>
+        <ion-content>
+          <ion-list>
+            <div class="list-content">
+              <ion-item
+                class="transparent"
+                button
+                lines="full"
+                :class="{ 'menu-active': isBudget }"
+                :aria-current="isBudget ? 'page' : undefined"
+                @click="navigate({ path: '/budget' })"
+              >
+                <ion-label>Presupuesto</ion-label>
+              </ion-item>
+
+              <ion-item
+                class="transparent"
+                button
+                lines="full"
+                :class="{ 'menu-active': isTemplates }"
+                :aria-current="isTemplates ? 'page' : undefined"
+                @click="navigate({ path: '/templates' })"
+              >
+                <ion-label>Templates</ion-label>
+              </ion-item>
+
+              <ion-item
+                class="transparent"
+                button
+                lines="full"
+                :class="{ 'menu-active': isSuppliers }"
+                :aria-current="isSuppliers ? 'page' : undefined"
+                @click="navigate({ path: '/suppliers' })"
+              >
+                <ion-label>Provedores</ion-label>
+              </ion-item>
+            </div>
           </ion-list>
 
           <ion-list>
@@ -49,25 +56,29 @@
               <ion-label>Estadisticas</ion-label>
             </ion-list-header>
 
-            <ion-item
-              button
-              lines="full"
-              :class="{ 'menu-active': isStatisticsCashFlow }"
-              :aria-current="isStatisticsCashFlow ? 'page' : undefined"
-              @click="navigate({ path: '/statistics/cash-flow' })"
-            >
-              <ion-label>Flujo de caja</ion-label>
-            </ion-item>
+            <div class="list-content">
+              <ion-item
+                class="transparent"
+                button
+                lines="full"
+                :class="{ 'menu-active': isStatisticsCashFlow }"
+                :aria-current="isStatisticsCashFlow ? 'page' : undefined"
+                @click="navigate({ path: '/statistics/cash-flow' })"
+              >
+                <ion-label>Flujo de caja</ion-label>
+              </ion-item>
 
-            <ion-item
-              button
-              lines="full"
-              :class="{ 'menu-active': isStatisticsPerformance }"
-              :aria-current="isStatisticsPerformance ? 'page' : undefined"
-              @click="navigate({ path: '/statistics/performance' })"
-            >
-              <ion-label>Rendimiento</ion-label>
-            </ion-item>
+              <ion-item
+                class="transparent"
+                button
+                lines="full"
+                :class="{ 'menu-active': isStatisticsPerformance }"
+                :aria-current="isStatisticsPerformance ? 'page' : undefined"
+                @click="navigate({ path: '/statistics/performance' })"
+              >
+                <ion-label>Rendimiento</ion-label>
+              </ion-item>
+            </div>
           </ion-list>
 
           <ion-list>
@@ -75,21 +86,24 @@
               <ion-label>Administracion</ion-label>
             </ion-list-header>
 
-            <ion-item
-              button
-              lines="full"
-              :class="{ 'menu-active': isAdmin }"
-              :aria-current="isAdmin ? 'page' : undefined"
-              @click="navigate({ name: 'MaintenancePage' })"
-            >
-              <ion-label>Mantenimiento</ion-label>
-              <ion-badge
-                v-if="needsNormalize && !migrationDismissed"
-                slot="end"
-                color="danger"
-                >!</ion-badge
+            <div class="list-content">
+              <ion-item
+                class="transparent"
+                button
+                lines="full"
+                :class="{ 'menu-active': isAdmin }"
+                :aria-current="isAdmin ? 'page' : undefined"
+                @click="navigate({ name: 'MaintenancePage' })"
               >
-            </ion-item>
+                <ion-label>Mantenimiento</ion-label>
+                <ion-badge
+                  v-if="needsNormalize && !migrationDismissed"
+                  slot="end"
+                  color="danger"
+                  >!</ion-badge
+                >
+              </ion-item>
+            </div>
           </ion-list>
         </ion-content>
       </ion-menu>
@@ -339,7 +353,7 @@ async function showMigrationToast() {
 <style>
 .menu-active {
   border-left: 4px solid var(--ion-color-primary);
-  background-color: rgba(0, 0, 0, 0.03);
+  /* background-color: rgba(0, 0, 0, 0.03); */
   --padding-start: 12px;
 }
 ion-menu .menu-active {
