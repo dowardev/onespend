@@ -1,3 +1,34 @@
+## [v0.8.0] - 2025-12-20
+
+### Added
+
+- New centralized migration helpers: `src/controllers/migrationService.ts` provides date-normalization utilities and data-merge helpers for backups.
+- New template application service: `src/controllers/templateService.ts` adds helpers to build payloads from templates and to apply/merge/overwrite template data safely.
+
+### Changed
+
+- Refactor: extract date-normalization logic from multiple places into `migrationService` and reuse it from `backupController` and migrations.
+- Improve template application flow: delegate building, conflict detection and merge/overwrite logic to `templateService` and use `backupController` for persistence.
+- UI integration: `src/views/budget/BudgetView.vue` now uses `templateService` helpers and shows a conflict modal with clearer messages and safer saving strategies.
+
+### Fixed
+
+- Avoid accidental loss of user `ingresos` when applying templates: preserve existing `ingresos` during combine/overwrite flows where appropriate.
+- Ensure backups are saved with consistent payload shape (`{ entry: ... }`) in all save paths.
+
+### Files changed (staged)
+
+- src/controllers/backupController.ts (modified)
+- src/controllers/migrationService.ts (new)
+- src/controllers/templateService.ts (new)
+- src/migrations/normalizeBackupsDates.ts (modified)
+- src/views/budget/BudgetView.vue (modified)
+- src/views/templates/TemplatesView.vue (modified)
+- src/views/templates/modals/AddTemplateComponent.vue (modified)
+- src/views/templates/modals/ApplyTemplateComponent.vue (modified)
+
+---
+
 ## [v0.7.1] - 2025-12-20
 
 ### Fixed

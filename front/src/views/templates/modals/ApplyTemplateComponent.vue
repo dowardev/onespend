@@ -134,6 +134,7 @@ import { closeOutline, checkmarkOutline } from 'ionicons/icons';
 import { defineProps, defineEmits, ref, computed } from 'vue';
 import { format } from 'date-fns';
 import { parseLocalDate } from '@/utils/date';
+import { parseProvidersFromDescription } from '@/controllers/templateService';
 
 // main
 const props = defineProps<{
@@ -222,20 +223,6 @@ function removeDeletedSupplier(params: { id: IDBValidKey }) {
   const { id } = params;
   // Emit kebab-case event so template listeners using kebab-case match.
   emit('remove-deleted-supplier', id);
-}
-
-function parseProvidersFromDescription(params: { desc?: string }): string[] {
-  const { desc } = params;
-  if (!desc) return [];
-  const prefix = 'Proveedores:';
-  const i = desc.indexOf(prefix);
-  if (i === -1) return [];
-  const rest = desc.slice(i + prefix.length).trim();
-  if (!rest) return [];
-  return rest
-    .split(',')
-    .map((s: string) => s.trim())
-    .filter((s: string) => s);
 }
 
 function confirmApply() {

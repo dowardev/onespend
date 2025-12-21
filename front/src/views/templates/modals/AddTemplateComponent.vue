@@ -122,6 +122,7 @@ import { reactive, ref, computed, watch, onMounted } from 'vue';
 // controllers
 import TemplateController from '@/controllers/TempalteController';
 import suppliersController from '@/controllers/suppliersController';
+import { parseProvidersFromDescription } from '@/controllers/templateService';
 // end controllers
 
 // intefaces
@@ -241,19 +242,6 @@ function toggleSupplierSelection(s: any) {
 function getSupplierNameById(id: IDBValidKey): string | null {
   const s = suppliers.value.find(x => x.id === id);
   return s ? s.name : null;
-}
-
-function parseProvidersFromDescription(desc?: string): string[] {
-  if (!desc) return [];
-  const prefix = 'Proveedores:';
-  const i = desc.indexOf(prefix);
-  if (i === -1) return [];
-  const rest = desc.slice(i + prefix.length).trim();
-  if (!rest) return [];
-  return rest
-    .split(',')
-    .map((s: string) => s.trim())
-    .filter((s: string) => s);
 }
 
 async function submitTemplate() {
