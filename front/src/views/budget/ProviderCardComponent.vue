@@ -1,13 +1,12 @@
 <template>
   <ion-card
-    class="ion-padding-bottom"
     :class="['shadow2', { 'provider-just-added': props.provider._justAdded }]"
   >
     <ion-item lines="none" class="transparent">
       <ion-checkbox
         slot="start"
         :checked="props.provider.visited"
-        :disabled="props.dayClosed"
+        :disabled="props.isClosed"
         @ion-change="
           (e: IonEvent) =>
             emit('visited-changed', { provider: props.provider, event: e })
@@ -234,7 +233,7 @@ type IonEvent = {
 const props = defineProps<{
   provider: Provider;
   hasProducts?: boolean;
-  dayClosed?: boolean;
+  isClosed?: boolean;
 }>();
 
 const emit = defineEmits([
