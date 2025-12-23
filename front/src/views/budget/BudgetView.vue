@@ -26,7 +26,24 @@
       <div class="ion-padding-start ion-padding-end">
         <ion-item lines="none" class="transparent">
           <ion-buttons>
-            <ion-toggle :enable-on-off-labels="true">En ejecucion</ion-toggle>
+            <ion-toggle
+              :key="toggleKey"
+              :enable-on-off-labels="true"
+              :checked="isInExecution"
+              :aria-label="`Estado del día: ${isInExecution ? 'Abierto' : 'Cerrado'}`"
+              @ion-change="onExecutionToggle"
+              >{{ isInExecution ? 'Abierto' : 'Cerrado' }}</ion-toggle
+            >
+
+            <ion-button
+              title="Info"
+              @click="
+                popovers.inforSuppliers.event = $event;
+                popovers.inforSuppliers.open = true;
+              "
+            >
+              <ion-icon :icon="informationCircleSharp"></ion-icon>
+            </ion-button>
           </ion-buttons>
 
           <ion-buttons slot="end">
@@ -51,14 +68,26 @@
         </ion-item>
       </div>
 
-      <ion-grid style="height: 93%">
+      <!-- main -->
+      <ion-grid v-if="showMainGrid" style="height: 93%">
         <ion-row style="height: 100%">
-          <ion-col size="12" size-md="7" size-lg="4" style="height: 100%">
-            <ion-grid style="height: 100%">
-              <ion-row style="height: 100%">
-                <ion-col size="12" style="max-height: 50%">
+          <ion-col
+            size="12"
+            size-md="7"
+            size-lg="4"
+            style="height: 100%; display: flex; flex-direction: column"
+          >
+            <ion-grid
+              style="height: 100%; display: flex; flex-direction: column"
+            >
+              <!-- Primer ion-row: altura adaptable con máximo 50% -->
+              <ion-row style="flex: 0 1 auto; max-height: 50%; min-height: 0">
+                <ion-col
+                  size="12"
+                  style="height: 100%; display: flex; flex-direction: column"
+                >
                   <ion-list
-                    style="height: 100%; max-height: 100%"
+                    style="height: 100%; display: flex; flex-direction: column"
                     class="transparent"
                   >
                     <ion-list-header>
@@ -76,7 +105,7 @@
                       </ion-label>
 
                       <ion-button
-                        :disabled="dayClosed"
+                        :disabled="controlsDisabled"
                         @click="addIngresoField()"
                       >
                         <ion-icon :icon="addOutline"></ion-icon>
@@ -85,7 +114,7 @@
 
                     <div
                       class="list-content"
-                      style="height: calc(100% - 64px); overflow: auto"
+                      style="flex: 1 1 auto; overflow-y: auto; min-height: 0"
                     >
                       <template v-if="ingresos.length > 0">
                         <ion-item
@@ -133,24 +162,34 @@
                       </template>
 
                       <template v-else>
-                        <ion-item lines="none">
-                          <ion-label
-                            >Pulsa el botón «+» para agregar un nuevo
-                            ingreso</ion-label
-                          >
-                        </ion-item>
+                        <div class="ion-padding">
+                          <ion-label>
+                            Pulsa el botón «+» para agregar un nuevo ingreso
+                          </ion-label>
+                        </div>
                       </template>
                     </div>
                   </ion-list>
                 </ion-col>
+              </ion-row>
 
-                <ion-col size="12" style="height: 52%">
-                  <ion-list class="transparent">
+              <ion-row style="flex: 0 1 auto; min-height: 0">
+                <ion-col
+                  size="12"
+                  style="height: 100%; display: flex; flex-direction: column"
+                >
+                  <ion-list
+                    class="transparent"
+                    style="height: 100%; display: flex; flex-direction: column"
+                  >
                     <ion-list-header>
                       <ion-label>Resumen</ion-label>
                     </ion-list-header>
 
-                    <div class="list-content">
+                    <div
+                      class="list-content"
+                      style="flex: 1 1 auto; overflow-y: auto; min-height: 0"
+                    >
                       <ion-accordion-group>
                         <ion-accordion value="first">
                           <ion-item slot="header">
@@ -230,7 +269,7 @@
                         </ion-accordion>
 
                         <ion-accordion value="second">
-                          <ion-item slot="header" color="light">
+                          <ion-item slot="header">
                             <ion-label> Contamos con </ion-label>
                             <ion-note slot="end">{{
                               formatCurrency({
@@ -292,7 +331,7 @@
 
                       <!-- Add existing provider -->
                       <ion-button
-                        :disabled="dayClosed"
+                        :disabled="controlsDisabled"
                         @click="
                           popovers.addExistingSupplier.event = $event;
                           popovers.addExistingSupplier.open = true;
@@ -303,7 +342,7 @@
 
                       <!-- Add provider card restored inside 'No asistio' column -->
                       <ion-button
-                        :disabled="dayClosed"
+                        :disabled="controlsDisabled"
                         @click="addBlankProvider()"
                       >
                         <ion-icon :icon="addOutline"></ion-icon>
@@ -319,7 +358,7 @@
                         v-for="p in enrichedNotVisited"
                         :key="p.id"
                         :provider="p"
-                        :day-closed="dayClosed"
+                        :is-closed="dayState.value === 'closed'"
                         :has-products="p.hasProducts"
                         @visited-changed="onVisitedChanged"
                         @start-editing="startEditing"
@@ -342,7 +381,7 @@
 
                       <!-- Add provider card restored inside 'Asistio' column -->
                       <ion-button
-                        :disabled="dayClosed"
+                        :disabled="controlsDisabled"
                         @click="addBlankProviderVisited()"
                       >
                         <ion-icon :icon="addOutline"></ion-icon>
@@ -358,7 +397,7 @@
                         v-for="p in enrichedVisited"
                         :key="p.id"
                         :provider="p"
-                        :day-closed="dayClosed"
+                        :is-closed="dayState.value === 'closed'"
                         :has-products="p.hasProducts"
                         @visited-changed="onVisitedChanged"
                         @start-editing="startEditing"
@@ -375,6 +414,79 @@
                 </ion-col>
               </ion-row>
             </ion-grid>
+          </ion-col>
+        </ion-row>
+      </ion-grid>
+
+      <!-- final day -->
+      <ion-grid v-if="showFinishForm">
+        <ion-row class="ion-justify-content-center">
+          <ion-col size="12" size-md="8" size-lg="6" size-xl="4">
+            <!-- final day data -->
+            <ion-list class="transparent">
+              <ion-list-header>
+                <ion-label> Datos finales </ion-label>
+
+                <ion-button @click="saveFinishDay()">
+                  <ion-icon :icon="saveOutline"></ion-icon>
+                </ion-button>
+              </ion-list-header>
+
+              <div class="list-content">
+                <ion-item class="transparent" lines="none">
+                  <ion-label
+                    >Completa los siguientes datos requeridos para los datos
+                    estadisticos</ion-label
+                  >
+                </ion-item>
+
+                <ion-item class="transparent" lines="full">
+                  <ion-input
+                    v-model.number="finishDay.totalSalesEfectivo"
+                    label="Ventas efectivo"
+                    label-placement="floating"
+                    type="number"
+                  ></ion-input>
+                </ion-item>
+
+                <ion-item class="transparent" lines="full">
+                  <ion-input
+                    v-model.number="finishDay.totalSalesTarjeta"
+                    label="Ventas tarjeta"
+                    label-placement="floating"
+                    type="number"
+                  ></ion-input>
+                </ion-item>
+
+                <ion-item class="transparent" lines="full">
+                  <ion-input
+                    v-model.number="finishDay.totalSalesCredito"
+                    label="Ventas credito"
+                    label-placement="floating"
+                    type="number"
+                  ></ion-input>
+                </ion-item>
+
+                <ion-item class="transparent" lines="full">
+                  <ion-select
+                    slot="start"
+                    v-model="finishDay.type"
+                    label-placement="floating"
+                    label="Tipo de dato"
+                  >
+                    <ion-select-option value="%">%</ion-select-option>
+                    <ion-select-option value="$">$</ion-select-option>
+                  </ion-select>
+
+                  <ion-input
+                    v-model.number="finishDay.margin"
+                    label="Margen de ventas"
+                    label-placement="floating"
+                    type="number"
+                  ></ion-input>
+                </ion-item>
+              </div>
+            </ion-list>
           </ion-col>
         </ion-row>
       </ion-grid>
@@ -418,19 +530,51 @@
       >
         <ion-content>
           <!-- Button to open Templates modal -->
-          <ion-item button @click="openTemplatesModal()">
+          <ion-item
+            button
+            :disabled="controlsDisabled"
+            @click="openTemplatesModal()"
+          >
             <ion-label>Aplicar template</ion-label>
           </ion-item>
 
           <!-- Button clear day -->
-          <ion-item button :disabled="dayClosed" @click="confirmClearDay()">
+          <ion-item
+            button
+            :disabled="controlsDisabled"
+            @click="confirmClearDay()"
+          >
             <ion-label>Vaciar dia</ion-label>
           </ion-item>
 
-          <!-- Button finsh day -->
-          <ion-item button @click="openFinishDayModal()">
-            <ion-label>Finalizar dia</ion-label>
-          </ion-item>
+          <!-- Button finsh day (removed; replaced by toggle) -->
+        </ion-content>
+      </ion-popover>
+
+      <!-- Info popover for the execution toggle -->
+      <ion-popover
+        :is-open="popovers.inforSuppliers.open"
+        :event="popovers.inforSuppliers.event"
+        :keep-contents-mounted="true"
+        @did-dismiss="() => (popovers.inforSuppliers.open = false)"
+      >
+        <ion-content class="ion-padding" style="max-width: 320px">
+          <p>Conmuta el toggle para abrir o cerrar el día.</p>
+          <p>
+            <strong>Día abierto:</strong> registra y edita ingresos y
+            proveedores.
+          </p>
+          <p>
+            <strong>Día cerrado:</strong> completa el formulario «Datos finales»
+            y pulsa <em>Guardar</em> para incluir el día en los reportes; la
+            vista quedará en solo lectura.
+          </p>
+          <ion-button
+            fill="clear"
+            slot="bottom"
+            @click="popovers.inforSuppliers.open = false"
+            >Cerrar</ion-button
+          >
         </ion-content>
       </ion-popover>
 
@@ -487,7 +631,6 @@
 
       <!-- end popover -->
 
-      <!-- alerts -->
       <!-- confirmation alert -->
       <ion-alert
         :is-open="deleteConfirm.open"
@@ -515,6 +658,22 @@
         @did-dismiss="onClearDayDismiss"
       ></ion-alert>
       <!-- end clear day confirmation alert -->
+
+      <!-- validation alert when trying to close without data -->
+      <ion-alert
+        :is-open="closeValidation.open"
+        header="No se puede cerrar el día"
+        :message="closeValidation.message"
+        :buttons="[
+          {
+            text: 'Aceptar',
+            role: 'cancel',
+            handler: acceptCloseValidation,
+          },
+        ]"
+        @did-dismiss="acceptCloseValidation"
+      ></ion-alert>
+      <!-- end close validation alert -->
 
       <!-- overwrite confirm when products modal would overwrite provider efectivo -->
       <ion-alert
@@ -569,16 +728,6 @@
         ]"
         @did-dismiss="onApplyConflictDismiss"
       ></ion-alert>
-
-      <!-- alert open day -->
-      <ion-alert
-        :is-open="alerts.openDayConfirm.open"
-        header="Notificacion"
-        :message="`El dia se encuentra cerrado, desea volver abrirlo?`"
-        :buttons="alerts.openDayConfirm.buttons"
-        @did-dismiss="alerts.openDayConfirm.open = false"
-      ></ion-alert>
-      <!-- end alerts -->
 
       <!-- modals -->
       <!-- products modal -->
@@ -683,91 +832,7 @@
         </ion-content>
       </ion-modal>
 
-      <!-- modal finish day -->
-      <ion-modal
-        :is-open="modals.finishDay.open"
-        @did-dismiss="modals.finishDay.open = false"
-      >
-        <ion-header class="ion-no-border" mode="ios">
-          <ion-toolbar>
-            <ion-buttons>
-              <ion-button
-                fill="clear"
-                size="small"
-                @click="modals.finishDay.open = false"
-              >
-                <ion-icon :icon="closeOutline"></ion-icon>
-              </ion-button>
-            </ion-buttons>
-
-            <ion-title>Finalizar dia</ion-title>
-
-            <ion-buttons slot="end">
-              <ion-button color="primary" @click="saveFinishDay()">
-                <ion-icon :icon="saveOutline"></ion-icon>
-              </ion-button>
-            </ion-buttons>
-          </ion-toolbar>
-        </ion-header>
-
-        <ion-content>
-          <ion-card class="shadow1">
-            <ion-item class="transparent" lines="none">
-              <ion-label
-                >Completa los siguientes datos requeridos para los datos
-                estadisticos</ion-label
-              >
-            </ion-item>
-
-            <ion-item class="transparent" lines="full">
-              <ion-input
-                v-model.number="modals.finishDay.totalSalesEfectivo"
-                label="Ventas efectivo"
-                label-placement="floating"
-                type="number"
-              ></ion-input>
-            </ion-item>
-
-            <ion-item class="transparent" lines="full">
-              <ion-input
-                v-model.number="modals.finishDay.totalSalesTarjeta"
-                label="Ventas tarjeta"
-                label-placement="floating"
-                type="number"
-              ></ion-input>
-            </ion-item>
-
-            <ion-item class="transparent" lines="full">
-              <ion-input
-                v-model.number="modals.finishDay.totalSalesCredito"
-                label="Ventas credito"
-                label-placement="floating"
-                type="number"
-              ></ion-input>
-            </ion-item>
-
-            <ion-item class="transparent" lines="full">
-              <ion-select
-                slot="start"
-                v-model="modals.finishDay.type"
-                label-placement="floating"
-                label="Tipo de dato"
-              >
-                <ion-select-option value="%">%</ion-select-option>
-                <ion-select-option value="$">$</ion-select-option>
-              </ion-select>
-
-              <ion-input
-                v-model.number="modals.finishDay.margin"
-                label="Margen de ventas"
-                label-placement="floating"
-                type="number"
-              ></ion-input>
-            </ion-item>
-          </ion-card>
-        </ion-content>
-      </ion-modal>
-      <!-- end modal -->
+      <!-- finish day form moved inline (shown when showFinishForm is true) -->
 
       <!-- toasts -->
       <ion-toast
@@ -778,19 +843,7 @@
       ></ion-toast>
       <!-- end toasts -->
 
-      <!-- floating buttons -->
-      <ion-fab
-        v-if="dayClosed"
-        slot="fixed"
-        vertical="bottom"
-        horizontal="end"
-        @click="alerts.openDayConfirm.open = true"
-      >
-        <ion-fab-button color="warning">
-          <ion-icon :icon="warningOutline"></ion-icon>
-        </ion-fab-button>
-      </ion-fab>
-      <!-- end floating buttons -->
+      <!-- floating buttons removed; replaced by toggle -->
     </ion-content>
   </ion-page>
 </template>
@@ -828,6 +881,7 @@ import {
   IonAccordionGroup,
   IonToast,
   IonSearchbar,
+  IonToggle,
 } from '@ionic/vue';
 import {
   reactive,
@@ -850,6 +904,8 @@ import {
   flashOutline,
   warningOutline,
   calendarOutline,
+  informationOutline,
+  informationCircleSharp,
 } from 'ionicons/icons';
 import { useRoute } from 'vue-router';
 import { format } from 'date-fns';
@@ -961,17 +1017,18 @@ const modals = reactive({
     providerId: null as string | number | null,
     content: '' as string,
   },
-  // finishDay now stores separate totals for each payment method while keeping
-  // totalSales for backward compatibility with older backups
-  finishDay: {
-    open: false,
-    totalSales: 0,
-    totalSalesEfectivo: 0,
-    totalSalesTarjeta: 0,
-    totalSalesCredito: 0,
-    type: '%',
-    margin: 0,
-  },
+  // finishDay was previously stored inside `modals`. It has been extracted
+  // to its own reactive object (finishDay) to separate UI modal state from form data.
+});
+
+// finishDay: data model for the inline finish-day form
+const finishDay = reactive({
+  totalSales: 0,
+  totalSalesEfectivo: 0,
+  totalSalesTarjeta: 0,
+  totalSalesCredito: 0,
+  type: '%',
+  margin: 0,
 });
 
 // State used to ask for confirmation before removing a provider
@@ -982,6 +1039,8 @@ const deleteConfirm = reactive({
 });
 
 const providersBodyRef = ref<HTMLElement | null>(null);
+// Key used to force remount of the toggle when we need to reset its visual state
+const toggleKey = ref(0);
 
 // Refs to the two scrollable lists so we can programmatically scroll them
 const notVisitedList = ref<HTMLElement | null>(null);
@@ -1012,70 +1071,8 @@ const overwriteConfirm = reactive({
 
 // Toast state used to inform the user when an action is prevented (e.g. editing a provider from a template)
 const toast = reactive({ open: false, message: '', duration: 2500 });
-const alerts = reactive({
-  openDayConfirm: {
-    open: false,
-    buttons: [
-      {
-        text: 'Cancelar',
-        role: 'cancel',
-        cssClass: 'secondary',
-      },
-      {
-        text: 'Continuar',
-        cssClass: 'danger',
-        handler: async () => {
-          try {
-            // Persist closed:false for the selected date so the day is reopened
-            const payloadToSave = {
-              component: 'BudgetFinishDay',
-              data: {
-                selectedDate: formatLocalDate(selectedDate.value),
-                // Persist per-method totals when available; fallback to legacy totalSales
-                totalSalesEfectivo:
-                  Number(
-                    modals.finishDay.totalSalesEfectivo ||
-                      modals.finishDay.totalSales ||
-                      0
-                  ) || 0,
-                totalSalesTarjeta:
-                  Number(modals.finishDay.totalSalesTarjeta || 0) || 0,
-                totalSalesCredito:
-                  Number(modals.finishDay.totalSalesCredito || 0) || 0,
-                // Maintain legacy totalSales for backwards compatibility (prefer sum of per-methods)
-                totalSales:
-                  Number(modals.finishDay.totalSalesEfectivo || 0) +
-                    Number(modals.finishDay.totalSalesTarjeta || 0) +
-                    Number(modals.finishDay.totalSalesCredito || 0) ||
-                  Number(modals.finishDay.totalSales || 0) ||
-                  0,
-                type: String(modals.finishDay.type || '%'),
-                margin: Number(modals.finishDay.margin || 0) || 0,
-                closed: false,
-              },
-              createdAt: Date.now(),
-            };
-
-            try {
-              await dixieController.addEntry({ entry: payloadToSave });
-            } catch (addErr) {
-              try {
-                await dixieController.putEntry({ entry: payloadToSave });
-              } catch (putErr) {
-                await backupController.saveBackup({ entry: payloadToSave });
-              }
-            }
-          } catch (_e) {
-            /* noop */
-          }
-
-          dayClosed.value = false;
-          alerts.openDayConfirm.open = false;
-        },
-      },
-    ],
-  },
-});
+// Previously used an alert to confirm reopening a closed day — removed.
+// Reopening logic is performed inline when needed.
 
 // Confirmation state for clearing the current date's data (vaciar día)
 const clearDayConfirm = reactive({
@@ -1083,87 +1080,14 @@ const clearDayConfirm = reactive({
   processing: false,
 });
 
-/**
- * Show confirmation alert for clearing the day
- */
-function confirmClearDay() {
-  // Don't allow clearing if the day is already closed
-  if (dayClosed.value) return;
-  clearDayConfirm.open = true;
-}
+const closeValidation = reactive({
+  open: false,
+  message: '',
+});
 
-function onClearDayDismiss() {
-  clearDayConfirm.open = false;
-}
+const dayState = ref<'open' | 'closing' | 'closed'>('open');
+const closingIntent = ref(false);
 
-/**
- * Perform the clear day action: remove proveedores and ingresos for the selected date
- */
-async function performClearDay() {
-  try {
-    if (clearDayConfirm.processing) return;
-    clearDayConfirm.processing = true;
-
-    const dateTarget = (selectedDate.value || '').slice(0, 10);
-
-    // Remove in-memory arrays
-    ingresos.splice(0, ingresos.length);
-    proveedores.splice(0, proveedores.length);
-
-    // Persist an empty BudgetView backup for the date so subsequent loads find an empty state
-    const payloadToSave = {
-      component: 'BudgetView',
-      data: {
-        ingresos: [],
-        proveedores: [],
-        newIngreso: {
-          name: '',
-          amount: 0,
-          date: formatLocalDate(selectedDate.value),
-        },
-        newProveedor: { name: '', estimated: 0, dollar: 0, notes: '' },
-        selectedDate: formatLocalDate(selectedDate.value),
-        totals: {
-          totalIngresos: 0,
-          totalProviders: 0,
-          totalVisitedProviders: 0,
-        },
-      },
-      createdAt: Date.now(),
-    };
-
-    try {
-      // Use dixieController if available, fallback to backupController
-      try {
-        await dixieController.addEntry({ entry: payloadToSave });
-      } catch (addErr) {
-        try {
-          await dixieController.putEntry({ entry: payloadToSave });
-        } catch (putErr) {
-          await backupController.saveBackup({ entry: payloadToSave });
-        }
-      }
-    } catch (persistErr) {
-      console.error('performClearDay persist error', persistErr);
-    }
-
-    // small UX feedback
-    toast.message = 'Día vaciado';
-    toast.open = true;
-
-    // reload to ensure derived state refreshed
-    await loadDataForDate(selectedDate.value);
-  } catch (err) {
-    console.error('performClearDay error:', err);
-    toast.message = 'Error al vaciar el día';
-    toast.open = true;
-  } finally {
-    clearDayConfirm.processing = false;
-    clearDayConfirm.open = false;
-  }
-}
-
-const dayClosed = ref(false);
 // end vars
 
 // life
@@ -1221,95 +1145,15 @@ watch(
   async () => {
     try {
       // Prefer the date provided in the URL query (if any) and update selectedDate accordingly
-      const parsedDateFromRouteISO = (function parseIsoDateFromString(
-        dateString?: string
-      ) {
-        if (!dateString) return null;
-        try {
-          const parsedDate = parseLocalDate(String(dateString));
-          return isNaN(parsedDate.getTime())
-            ? null
-            : formatLocalDate(parsedDate);
-        } catch (_e) {
-          return null;
-        }
-      })(route.query.date as string | undefined);
+      const parsedDateFromRouteISO = parseIsoDateFromString(
+        route.query.date as string | undefined
+      );
 
       // If a backupId query param is provided, prefer loading that specific backup
       try {
         const backupId = route.query.backupId as string | undefined;
-        if (backupId) {
-          // attempt to load backup by id
-          try {
-            const idNum = isNaN(Number(backupId)) ? backupId : Number(backupId);
-            const b = await dixieController.getBackup(idNum as any);
-            if (b && b.data) {
-              // apply backup data similar to loadDataForDate
-              const d = b.data as any;
-              // set selectedDate if present
-              if (d.selectedDate)
-                selectedDate.value = String(d.selectedDate).slice(0, 10);
-
-              // Replace reactive arrays; ensure stable ids for ingresos
-              ingresos.splice(
-                0,
-                ingresos.length,
-                ...(d.ingresos || []).map((i: any) => ({
-                  id: i.id ?? Date.now() + Math.random(),
-                  paymentType: i.paymentType === 'digital' ? 'digital' : 'cash',
-                  ...i,
-                }))
-              );
-
-              const normalizedProviders = (d.proveedores || []).map(
-                (p: any) => {
-                  const key = normalizeName(p.name ?? '');
-                  return {
-                    id: p.id ?? Date.now() + Math.random(),
-                    name: p.name ?? '',
-                    date: p.date ?? selectedDate.value,
-                    estimated: Number(p.estimated || 0),
-                    dollar: Number(p.dollar || 0),
-                    _dbName: p._dbName ?? p.name ?? '',
-                    efectivo: Number(p.efectivo || 0),
-                    tarjeta: Number(p.tarjeta || 0),
-                    credito: Number(p.credito || 0),
-                    notes: p.notes || '',
-                    visited: !!p.visited,
-                    _fromTemplate: !!p._fromTemplate,
-                    _justAdded: !!p._justAdded,
-                    _supplierKey: key || undefined,
-                    _editing: false,
-                  };
-                }
-              );
-              proveedores.splice(0, proveedores.length, ...normalizedProviders);
-
-              Object.assign(
-                newIngreso,
-                d.newIngreso || {
-                  name: '',
-                  amount: 0,
-                  date: selectedDate.value,
-                }
-              );
-              Object.assign(
-                newProveedor,
-                d.newProveedor || {
-                  name: '',
-                  estimated: 0,
-                  dollar: 0,
-                  notes: '',
-                }
-              );
-
-              // done
-              return;
-            }
-          } catch (e) {
-            console.error('Failed to load backupId from query', e);
-          }
-        }
+        const loaded = await tryLoadBackupByIdFromRoute(backupId);
+        if (loaded) return;
       } catch (_e) {
         /* ignore */
       }
@@ -1339,6 +1183,23 @@ watch(
   },
   { deep: true }
 );
+// end watch
+
+// Clear temporary closingIntent when the inline finish-day form is closed
+watch(
+  () => dayState.value,
+  (stateValue: 'open' | 'closing' | 'closed') => {
+    // If we've exited the closing flow and the day is not closed, clear the temporary intent
+    if (stateValue === 'open') {
+      // ensure we are back to 'open' state
+      dayState.value = 'open';
+      // clear the transient alias as well (if present)
+      if (typeof closingIntent.value !== 'undefined')
+        closingIntent.value = false;
+    }
+  }
+);
+
 // end watch
 
 // Computed
@@ -1454,6 +1315,22 @@ const formattedSelectedDate = computed(() => {
 
 const designMode = computed(() => systemController.getDesignMode());
 
+// Binding for the "En ejecucion" toggle and derived view helpers.
+// We use a single `dayState` ref (values: 'open' | 'closing' | 'closed') and
+// create explicit computed helpers for clarity and to simplify template logic.
+const isInExecution = computed(() => dayState.value === 'open');
+
+// Show the main editable grid when the day is open and the finish form is not shown
+const showMainGrid = computed(() => dayState.value === 'open');
+
+// Show the finish-day form when we're in the temporary closing flow or the day is closed
+const showFinishForm = computed(
+  () => dayState.value === 'closing' || dayState.value === 'closed'
+);
+
+// Controls (buttons/actions) should be disabled when the day is closed or in the closing flow
+const controlsDisabled = computed(() => dayState.value !== 'open');
+
 // Total estimacion considerando exclusivamente efectivo + tarjeta ingresados en proveedores
 const totalEstimacionEfectivoTarjeta = computed(() =>
   proveedores.reduce(
@@ -1525,9 +1402,273 @@ const filteredSuppliersEntries = computed(() => {
 // end computed
 
 // functions
+// Helper: parse an ISO-like date from a string and return YYYY-MM-DD or null
+function parseIsoDateFromString(dateString?: string): string | null {
+  if (!dateString) return null;
+  try {
+    const parsedDate = parseLocalDate(String(dateString));
+    return isNaN(parsedDate.getTime()) ? null : formatLocalDate(parsedDate);
+  } catch (_e) {
+    return null;
+  }
+}
+
+// Helper: try to load a specific backup by id from the route and populate component state
+async function tryLoadBackupByIdFromRoute(backupId?: string) {
+  if (!backupId) return false;
+  try {
+    const idNum = isNaN(Number(backupId)) ? backupId : Number(backupId);
+    const b = (await dixieController.getBackup(idNum as any)) as any;
+    if (b && b.data) {
+      const d = b.data as any;
+
+      ingresos.splice(
+        0,
+        ingresos.length,
+        ...(d.ingresos || []).map((i: any) => ({
+          id: i.id ?? Date.now() + Math.random(),
+          paymentType: i.paymentType === 'digital' ? 'digital' : 'cash',
+          ...i,
+        }))
+      );
+
+      const normalizedProviders = (d.proveedores || []).map((p: any) => {
+        const key = normalizeName(p.name ?? '');
+        return {
+          id: p.id ?? Date.now() + Math.random(),
+          name: p.name ?? '',
+          date: p.date ?? selectedDate.value,
+          estimated: Number(p.estimated || 0),
+          dollar: Number(p.dollar || 0),
+          _dbName: p._dbName ?? p.name ?? '',
+          efectivo: Number(p.efectivo || 0),
+          tarjeta: Number(p.tarjeta || 0),
+          credito: Number(p.credito || 0),
+          notes: p.notes || '',
+          visited: !!p.visited,
+          _fromTemplate: !!p._fromTemplate,
+          _justAdded: !!p._justAdded,
+          _supplierKey: key || undefined,
+          _editing: false,
+        };
+      });
+
+      proveedores.splice(0, proveedores.length, ...normalizedProviders);
+
+      Object.assign(
+        newIngreso,
+        d.newIngreso || {
+          name: '',
+          amount: 0,
+          date: selectedDate.value,
+        }
+      );
+      Object.assign(
+        newProveedor,
+        d.newProveedor || {
+          name: '',
+          estimated: 0,
+          dollar: 0,
+          notes: '',
+        }
+      );
+
+      return true;
+    }
+  } catch (e) {
+    console.error('Failed to load backupId from query', e);
+  }
+  return false;
+}
+
+// Small helpers extracted from the original onExecutionToggle to improve readability
+async function validateCanCloseDay(): Promise<boolean> {
+  const hasIngresos =
+    ingresos.length > 0 && ingresos.some(i => Number(i.amount || 0) > 0);
+  const hasProveedor = proveedores.length > 0;
+  if (!hasIngresos || !hasProveedor) {
+    const parts: string[] = [];
+    if (!hasIngresos) parts.push('al menos un ingreso');
+    if (!hasProveedor) parts.push('al menos un proveedor');
+    closeValidation.message = `Es necesario registrar ${parts.join(' y ')} antes de cerrar el día.`;
+    closeValidation.open = true;
+    dayState.value = 'open';
+    await nextTick();
+    return false;
+  }
+  return true;
+}
+
+async function preloadFinishDayFromBackups() {
+  try {
+    const all = (await dixieController.listBackups()) as any[];
+    const target = (selectedDate.value || '').slice(0, 10);
+    const matches = (all || [])
+      .filter(
+        b =>
+          b &&
+          b.component === 'BudgetFinishDay' &&
+          b.data &&
+          b.data.selectedDate &&
+          (b.data.selectedDate as string).slice(0, 10) === target
+      )
+      .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    if (matches.length) {
+      const latest = matches[0];
+      const d = latest.data || {};
+      finishDay.totalSalesEfectivo =
+        Number(d.totalSalesEfectivo ?? d.totalSales ?? 0) || 0;
+      finishDay.totalSalesTarjeta = Number(d.totalSalesTarjeta ?? 0) || 0;
+      finishDay.totalSalesCredito = Number(d.totalSalesCredito ?? 0) || 0;
+      finishDay.totalSales =
+        Number(
+          d.totalSales ||
+            finishDay.totalSalesEfectivo +
+              finishDay.totalSalesTarjeta +
+              finishDay.totalSalesCredito
+        ) || 0;
+      finishDay.type = String(d.type || finishDay.type || '%');
+      finishDay.margin = Number(d.margin || 0) || 0;
+    }
+  } catch (_e) {
+    /* ignore preload errors */
+  }
+}
+
+async function persistFinishDayReopenState() {
+  const payloadToSave = {
+    component: 'BudgetFinishDay',
+    data: {
+      selectedDate: formatLocalDate(selectedDate.value),
+      totalSalesEfectivo:
+        Number(finishDay.totalSalesEfectivo || finishDay.totalSales || 0) || 0,
+      totalSalesTarjeta: Number(finishDay.totalSalesTarjeta || 0) || 0,
+      totalSalesCredito: Number(finishDay.totalSalesCredito || 0) || 0,
+      totalSales:
+        Number(finishDay.totalSalesEfectivo || 0) +
+          Number(finishDay.totalSalesTarjeta || 0) +
+          Number(finishDay.totalSalesCredito || 0) ||
+        Number(finishDay.totalSales || 0) ||
+        0,
+      type: String(finishDay.type || '%'),
+      margin: Number(finishDay.margin || 0) || 0,
+      closed: false,
+    },
+    createdAt: Date.now(),
+  };
+
+  try {
+    await dixieController.addEntry({ entry: payloadToSave });
+  } catch (addErr) {
+    try {
+      await dixieController.putEntry({ entry: payloadToSave });
+    } catch (putErr) {
+      await backupController.saveBackup({ entry: payloadToSave });
+    }
+  }
+}
+
+async function persistBudgetViewBackup() {
+  try {
+    const backupPayload = {
+      component: 'BudgetView',
+      data: {
+        selectedDate: formatLocalDate(selectedDate.value),
+        ingresos: ingresos || [],
+        proveedores: proveedores || [],
+        newIngreso: newIngreso || {
+          name: '',
+          amount: 0,
+          date: formatLocalDate(selectedDate.value),
+        },
+        newProveedor: newProveedor || {
+          name: '',
+          estimated: 0,
+          dollar: 0,
+          notes: '',
+        },
+        totals: {
+          totalIngresos: Number(totalIngresos.value || 0) || 0,
+          totalProviders: Number(totalProviders.value || 0) || 0,
+          totalVisitedProviders: Number(totalVisitedProviders.value || 0) || 0,
+        },
+      },
+      createdAt: Date.now(),
+    };
+
+    try {
+      await dixieController.addEntry({ entry: backupPayload });
+    } catch (addErr) {
+      try {
+        await dixieController.putEntry({ entry: backupPayload });
+      } catch (putErr) {
+        try {
+          await backupController.saveBackup({ entry: backupPayload });
+        } catch (_e) {
+          /* noop */
+        }
+      }
+    }
+  } catch (_e) {
+    /* noop */
+  }
+}
+
+async function removeLocalClosedFlag() {
+  try {
+    const key = `budget:closed:${String(selectedDate.value || '').slice(0, 10)}`;
+    localStorage.removeItem(key);
+  } catch (_e) {
+    /* noop */
+  }
+}
+
+async function onExecutionToggle(event: any) {
+  try {
+    const checked = !!(event?.detail?.checked ?? event?.detail?.value);
+
+    // If user toggles OFF -> attempt to enter closing flow
+    if (!checked) {
+      if (!(await validateCanCloseDay())) return;
+
+      // Reset/preload defaults
+      finishDay.totalSales = Number(finishDay.totalSales || 0) || 0;
+      finishDay.totalSalesEfectivo =
+        Number(finishDay.totalSalesEfectivo || 0) || 0;
+      finishDay.totalSalesTarjeta =
+        Number(finishDay.totalSalesTarjeta || 0) || 0;
+      finishDay.totalSalesCredito =
+        Number(finishDay.totalSalesCredito || 0) || 0;
+      finishDay.type = finishDay.type || '%';
+
+      await preloadFinishDayFromBackups();
+
+      closingIntent.value = true;
+      dayState.value = 'closing';
+      return;
+    }
+
+    // If user toggles ON -> reopen the day
+    if (dayState.value === 'closing') dayState.value = 'open';
+
+    try {
+      await persistFinishDayReopenState();
+      await persistBudgetViewBackup();
+    } catch (_e) {
+      /* noop */
+    }
+
+    await removeLocalClosedFlag();
+
+    dayState.value = 'open';
+  } catch (err) {
+    console.error('onExecutionToggle error:', err);
+  }
+}
+
 function addIngreso(params: { name?: string; amount?: number } = {}) {
   // Prevent creation when the day is closed
-  if (dayClosed.value) {
+  if (dayState.value === 'closed') {
     return;
   }
 
@@ -1551,7 +1692,7 @@ function addIngreso(params: { name?: string; amount?: number } = {}) {
 
 function addIngresoField() {
   // Prevent creation when the day is closed
-  if (dayClosed.value) {
+  if (dayState.value === 'closed') {
     // silently ignore when day is closed (UI buttons are disabled in this state)
     return;
   }
@@ -1741,7 +1882,7 @@ function addProveedor(
   } = {}
 ) {
   // Prevent creation when the day is closed
-  if (dayClosed.value) {
+  if (dayState.value === 'closed') {
     try {
       toast.message =
         'El día está finalizado. Reabre el día para poder editar.';
@@ -1862,7 +2003,7 @@ function isPaymentPrimary(p: any) {
 function onVisitedChanged(params: any) {
   try {
     // Prevent toggling visited state when the day is closed
-    if (dayClosed.value && (dayClosed as any).value === true) {
+    if (dayState.value === 'closed') {
       try {
         // Optional: suppress any UI changes by returning early. Avoid showing toasts.
         return;
@@ -2017,7 +2158,7 @@ function handleRegisterNameInput(payload: { id: string | number; el: any }) {
 // Add empty provider card
 function addBlankProvider() {
   // Prevent creation when the day is closed
-  if (dayClosed.value) {
+  if (dayState.value === 'closed') {
     try {
       toast.message =
         'El día está finalizado. Reabre el día para poder editar.';
@@ -2235,39 +2376,68 @@ const autoSave = debounce(async () => {
 
 async function loadDataForDate(dateISO: string) {
   try {
-    // Load backups via dixieController
-    const all = (await dixieController.listBackups()) as any[];
-    let b: any = null;
-    if (all && all.length) {
-      const target = dateISO.slice(0, 10);
-      const matches = all
-        .filter(
-          x =>
-            x &&
-            x.component === 'BudgetView' &&
-            x.data &&
-            x.data.selectedDate &&
-            x.data.selectedDate.slice(0, 10) === target
-        )
-        .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-      if (matches.length) b = matches[0];
-    }
+    const all = ((await dixieController.listBackups()) as any[]) || [];
+    const target = String(dateISO || '').slice(0, 10);
 
-    if (b && b.data) {
-      const d = b.data;
-      // Replace reactive arrays; ensure stable ids for ingresos
+    // Normalize a date string to the local YYYY-MM-DD when possible
+    const normalizeDateString = (s: string) => {
+      try {
+        return formatLocalDate(parseLocalDate(String(s)));
+      } catch (_e) {
+        return String(s || '').slice(0, 10);
+      }
+    };
+
+    const targetNormalized = normalizeDateString(target);
+
+    console.log(
+      'loadDataForDate: target=',
+      target,
+      'normalized=',
+      targetNormalized
+    );
+
+    // Helper to pick latest entry for a component and date (using normalized selectedDate)
+    const latestFor = (componentName: string) =>
+      (all || [])
+        .filter(x => {
+          if (!x || String(x.component || '') !== componentName || !x.data)
+            return false;
+          const entryDateRaw = String((x.data as any).selectedDate || '');
+          const entryNormalized = normalizeDateString(entryDateRaw);
+          return entryNormalized === targetNormalized;
+        })
+        .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))[0] || null;
+
+    const latestBudgetView = latestFor('BudgetView');
+    const latestFinishDay = latestFor('BudgetFinishDay');
+
+    console.log(
+      'loadDataForDate: backupsCount=',
+      all.length,
+      'latestBudgetView=',
+      latestBudgetView
+        ? { id: latestBudgetView.id, createdAt: latestBudgetView.createdAt }
+        : null,
+      'latestFinishDay=',
+      latestFinishDay
+        ? { id: latestFinishDay.id, createdAt: latestFinishDay.createdAt }
+        : null
+    );
+
+    if (latestBudgetView && latestBudgetView.data) {
+      const d = latestBudgetView.data as any;
+
       ingresos.splice(
         0,
         ingresos.length,
         ...(d.ingresos || []).map((i: any) => ({
           id: i.id ?? Date.now() + Math.random(),
-          // Ensure paymentType exists for backwards compatibility — normalize to 'cash'|'digital'
           paymentType: i.paymentType === 'digital' ? 'digital' : 'cash',
           ...i,
         }))
       );
 
-      // Normalize providers loaded from backup to ensure editor state fields exist
       const normalizedProviders = (d.proveedores || []).map((p: any) => {
         const key = normalizeName(p.name ?? '');
         return {
@@ -2276,9 +2446,7 @@ async function loadDataForDate(dateISO: string) {
           date: p.date ?? dateISO,
           estimated: Number(p.estimated || 0),
           dollar: Number(p.dollar || 0),
-          // Persist original DB name to use as placeholder in the child component
           _dbName: p._dbName ?? p.name ?? '',
-          // Restore payment fields so values persist after reload
           efectivo: Number(p.efectivo || 0),
           tarjeta: Number(p.tarjeta || 0),
           credito: Number(p.credito || 0),
@@ -2286,14 +2454,13 @@ async function loadDataForDate(dateISO: string) {
           visited: !!p.visited,
           _fromTemplate: !!p._fromTemplate,
           _justAdded: !!p._justAdded,
-          // persist supplier key so product association survives name edits
           _supplierKey: key || undefined,
-          // Always clear editing state when loading from storage
           _editing: false,
         };
       });
+
       proveedores.splice(0, proveedores.length, ...normalizedProviders);
-      // Reemplazar objetos
+
       Object.assign(
         newIngreso,
         d.newIngreso || { name: '', amount: 0, date: dateISO }
@@ -2302,72 +2469,61 @@ async function loadDataForDate(dateISO: string) {
         newProveedor,
         d.newProveedor || { name: '', estimated: 0, dollar: 0, notes: '' }
       );
-      console.log('Datos cargados para', dateISO, b);
 
-      // Additionally, check for a BudgetFinishDay entry for this date to set dayClosed
-      try {
-        const target = (dateISO || '').slice(0, 10);
-        const finishMatches = (all || [])
-          .filter(
-            x =>
-              x &&
-              x.component === 'BudgetFinishDay' &&
-              x.data &&
-              x.data.selectedDate &&
-              (x.data.selectedDate as string).slice(0, 10) === target
-          )
-          .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-        if (finishMatches.length) {
-          const latestFinish = finishMatches[0];
-          dayClosed.value = !!(
-            latestFinish &&
-            latestFinish.data &&
-            latestFinish.data.closed
-          );
-        } else {
-          dayClosed.value = false;
+      console.log('Datos cargados para', dateISO, latestBudgetView);
+
+      // dayClosed preference: BudgetFinishDay (most recent) wins, then BudgetView.dayClosed
+      if (latestFinishDay && latestFinishDay.data) {
+        dayState.value = (latestFinishDay.data as any).closed
+          ? 'closed'
+          : 'open';
+      } else if (d && d.dayClosed !== undefined) {
+        dayState.value = d.dayClosed ? 'closed' : 'open';
+      } else {
+        // fallback to localStorage flag
+        try {
+          const key = `budget:closed:${targetNormalized}`;
+          const ls = localStorage.getItem(key);
+          console.log('loadDataForDate: localStorage flag', key, ls);
+          dayState.value = ls === '1' ? 'closed' : 'open';
+        } catch (_e) {
+          dayState.value = 'open';
         }
-      } catch (_e) {
-        dayClosed.value = false;
       }
-    } else {
-      // No backup: initialize empty data for date
-      ingresos.splice(0, ingresos.length);
-      proveedores.splice(0, proveedores.length);
-      Object.assign(newIngreso, { name: '', amount: 0, date: dateISO });
-      Object.assign(newProveedor, {
-        name: '',
-        estimated: 0,
-        dollar: 0,
-        notes: '',
-      });
-      console.log('No se encontró backup para', dateISO);
 
-      // Also check if the day is marked as finished/closed via BudgetFinishDay entries
+      return;
+    }
+
+    // No BudgetView found: initialize empty state and determine closed status from finish-day or localStorage
+    ingresos.splice(0, ingresos.length);
+    proveedores.splice(0, proveedores.length);
+    Object.assign(newIngreso, { name: '', amount: 0, date: dateISO });
+    Object.assign(newProveedor, {
+      name: '',
+      estimated: 0,
+      dollar: 0,
+      notes: '',
+    });
+    console.log('No se encontró backup para', dateISO);
+
+    if (latestFinishDay && latestFinishDay.data) {
+      dayState.value = (latestFinishDay.data as any).closed ? 'closed' : 'open';
+      console.log(
+        'loadDataForDate: using latestFinishDay.closed=',
+        dayState.value
+      );
+    } else {
       try {
-        const target = (dateISO || '').slice(0, 10);
-        const finishMatches = (all || [])
-          .filter(
-            x =>
-              x &&
-              x.component === 'BudgetFinishDay' &&
-              x.data &&
-              x.data.selectedDate &&
-              (x.data.selectedDate as string).slice(0, 10) === target
-          )
-          .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-        if (finishMatches.length) {
-          const latestFinish = finishMatches[0];
-          dayClosed.value = !!(
-            latestFinish &&
-            latestFinish.data &&
-            latestFinish.data.closed
-          );
-        } else {
-          dayClosed.value = false;
-        }
+        const key = `budget:closed:${targetNormalized}`;
+        const ls = localStorage.getItem(key);
+        console.log(
+          'loadDataForDate: no backups found, localStorage flag',
+          key,
+          ls
+        );
+        dayState.value = ls === '1' ? 'closed' : 'open';
       } catch (_e) {
-        dayClosed.value = false;
+        dayState.value = 'open';
       }
     }
   } catch (err) {
@@ -2648,99 +2804,119 @@ async function handleProductsModalSave(payload: {
   }
 }
 
-// Save handler for the products modal: compute total (price * quantity) and assign it to the provider's estimated value.
+// Small helpers for saveProductsModal (kept inside // functions)
+function computeTotalEstimate(
+  prods: any[],
+  quantities: Record<string | number, number>
+) {
+  let total = 0;
+  const list = prods || [];
+  const qmap = quantities || {};
+  for (let idx = 0; idx < list.length; idx++) {
+    const prod = list[idx];
+    const key = prod?.id ?? idx;
+    const q = Number(qmap[key] || 0);
+    const price = Number(prod?.price ?? prod?.amount ?? 0) || 0;
+    if (q > 0 && price > 0) total += price * q;
+  }
+  return total;
+}
+
+async function persistProductsSelection(
+  pid: string | number | null,
+  quantities: Record<string | number, number>
+) {
+  try {
+    const payloadToSave = {
+      component: 'BudgetProducts',
+      data: {
+        providerId: pid,
+        selectedDate: selectedDate.value,
+        quantities: JSON.parse(JSON.stringify(quantities || {})),
+      },
+      createdAt: Date.now(),
+    };
+    const id = await dixieController.addEntry({ entry: payloadToSave });
+    console.log('saveProductsModal: saved products selection id=', id);
+  } catch (e) {
+    console.error('saveProductsModal: error saving products selection', e);
+  }
+}
+
+async function assignEstimateToProvider(
+  pid: string | number | null,
+  totalEstimate: number
+) {
+  if (pid == null) {
+    console.warn('saveProductsModal: no providerId set');
+    return;
+  }
+  const prov = proveedores.find((p: any) => p.id === pid);
+  if (!prov) {
+    console.warn('saveProductsModal: provider not found', pid);
+    return;
+  }
+
+  try {
+    const currentEfectivo = Number(prov.efectivo || 0);
+    const currentTarjeta = Number(prov.tarjeta || 0);
+    // Only store directly when BOTH efectivo AND tarjeta are empty (0). Otherwise ask the user.
+    if (currentEfectivo === 0 && currentTarjeta === 0) {
+      prov.efectivo = Number(totalEstimate) || 0;
+      console.log(
+        'saveProductsModal: set provider efectivo (direct)',
+        pid,
+        prov.efectivo
+      );
+      return;
+    }
+
+    // At least one field already has a value -> ask user whether to overwrite
+    let overwrite = false;
+    try {
+      overwrite = await askOverwriteConfirm({
+        providerId: pid,
+        providerName: prov.name || '',
+        total: Number(totalEstimate) || 0,
+      });
+    } catch (_e) {
+      overwrite = false;
+    }
+    if (overwrite) {
+      prov.efectivo = Number(totalEstimate) || 0;
+      console.log(
+        'saveProductsModal: overwritten provider efectivo',
+        pid,
+        prov.efectivo
+      );
+    } else {
+      console.log(
+        'saveProductsModal: kept existing provider efectivo/tarjeta values',
+        pid,
+        { efectivo: prov.efectivo, tarjeta: prov.tarjeta }
+      );
+    }
+  } catch (_e) {
+    // Fallback: assign computed value
+    prov.efectivo = Number(totalEstimate) || 0;
+  }
+}
+
+// Save handler for the products modal: compute total (price * quantity) and assign it to the provider's efectivo value.
 async function saveProductsModal() {
   try {
     const quantities = modals.products.quantities || {};
     const prods = modals.products.products || [];
-    let totalEstimate = 0;
 
-    // Calculate total by iterating the displayed products and using the key used for quantities
-    for (let idx = 0; idx < prods.length; idx++) {
-      const prod = prods[idx];
-      const key = prod?.id ?? idx;
-      const q = Number(quantities[key] || 0);
-      const price = Number(prod?.price ?? prod?.amount ?? 0) || 0;
-      if (q > 0 && price > 0) {
-        totalEstimate += price * q;
-      }
-    }
+    // 1) compute total estimate
+    const totalEstimate = computeTotalEstimate(prods, quantities);
 
-    // Assign the computed total (price * quantity) to the provider's efectivo field (if providerId present)
-    const pid = modals.products.providerId;
-    if (pid != null) {
-      const prov = proveedores.find((p: any) => p.id === pid);
-      if (prov) {
-        // When either efectivo OR tarjeta is empty (0 or falsy) store directly.
-        try {
-          const currentEfectivo = Number(prov.efectivo || 0);
-          const currentTarjeta = Number(prov.tarjeta || 0);
-          // Only store directly when BOTH efectivo AND tarjeta are empty (0). Otherwise ask the user.
-          if (currentEfectivo === 0 && currentTarjeta === 0) {
-            prov.efectivo = Number(totalEstimate) || 0;
-            console.log(
-              'saveProductsModal: set provider efectivo (direct)',
-              pid,
-              prov.efectivo
-            );
-          } else {
-            // At least one field already has a value -> ask user whether to overwrite
-            let overwrite = false;
-            try {
-              // Use the ionic alert promise helper instead of window.confirm
-              overwrite = await askOverwriteConfirm({
-                providerId: pid,
-                providerName: prov.name || '',
-                total: Number(totalEstimate) || 0,
-              });
-            } catch (_e) {
-              // In non-window environments or on error, default to not overwriting
-              overwrite = false;
-            }
-            if (overwrite) {
-              prov.efectivo = Number(totalEstimate) || 0;
-              console.log(
-                'saveProductsModal: overwritten provider efectivo',
-                pid,
-                prov.efectivo
-              );
-            } else {
-              console.log(
-                'saveProductsModal: kept existing provider efectivo/tarjeta values',
-                pid,
-                { efectivo: prov.efectivo, tarjeta: prov.tarjeta }
-              );
-            }
-          }
-        } catch (_e) {
-          // Fallback: assign computed value
-          prov.efectivo = Number(totalEstimate) || 0;
-        }
-      } else {
-        console.warn('saveProductsModal: provider not found', pid);
-      }
-    } else {
-      console.warn('saveProductsModal: no providerId set');
-    }
+    // 2) assign to provider (if any) - helper handles prompts and fallbacks
+    const pid = modals.products.providerId ?? null;
+    await assignEstimateToProvider(pid, totalEstimate);
 
-    // Persist the quantities selection to the database so they can be reloaded for the same date
-    try {
-      // Build a clean payload to store: component to identify, data with providerId, selectedDate and quantities
-      const payloadToSave = {
-        component: 'BudgetProducts',
-        data: {
-          providerId: pid,
-          selectedDate: selectedDate.value,
-          quantities: JSON.parse(JSON.stringify(quantities)),
-        },
-        createdAt: Date.now(),
-      };
-      // Use dixieController with the default store (backups) to store product selections
-      const id = await dixieController.addEntry({ entry: payloadToSave });
-      console.log('saveProductsModal: saved products selection id=', id);
-    } catch (e) {
-      console.error('saveProductsModal: error saving products selection', e);
-    }
+    // 3) persist quantities selection (best-effort)
+    await persistProductsSelection(pid, quantities);
   } catch (err) {
     console.error('saveProductsModal error:', err);
   } finally {
@@ -2974,40 +3150,94 @@ function onTemplatesModalDidDismiss() {
   }
 }
 
+// Helper: attempt to load suppliers list from suppliersController (various method names)
+async function loadSuppliersListForTemplates(): Promise<any[]> {
+  try {
+    let suppliersList: any[] = [];
+    if (typeof (suppliersController as any).listSuppliers === 'function') {
+      try {
+        const res = await (suppliersController as any).listSuppliers();
+        if (Array.isArray(res)) return res;
+      } catch (_e) {
+        /* noop */
+      }
+    }
+
+    const candidates = ['list', 'listAll', 'getAll', 'getSuppliers'];
+    for (const name of candidates) {
+      const fn = (suppliersController as any)[name];
+      if (typeof fn === 'function') {
+        try {
+          const r = await fn();
+          if (Array.isArray(r)) return r;
+        } catch (_e) {
+          /* noop */
+        }
+      }
+    }
+    return suppliersList;
+  } catch (_e) {
+    return [];
+  }
+}
+
+// Helper: handle conflict result from buildAndSaveTemplateApplication
+function handleTemplateConflict(result: any, tmpl: any, dateISO: string) {
+  try {
+    try {
+      const parsedDate = parseLocalDate(String(dateISO));
+      applyConflictMessage.value = `Ya existen proveedores guardados para ${format(parsedDate, "d 'de' MMMM 'de' yyyy", { locale: esLocale })}. ¿Deseas combinar el template con los proveedores existentes o sobrescribirlos?`;
+    } catch (_e) {
+      applyConflictMessage.value = `Ya existen proveedores guardados para la fecha seleccionada. ¿Deseas combinar el template con los proveedores existentes o sobrescribirlos?`;
+    }
+    pendingApplyPayload.value = result.payloadToSave;
+    pendingApplyTemplate.value = tmpl;
+    showApplyConflictModal.value = true;
+  } catch (err) {
+    console.error('handleTemplateConflict error', err);
+  }
+}
+
+// Helper: navigate to Budget view or reload data for current route
+async function navigateToBudget(dateISO: string) {
+  try {
+    try {
+      localStorage.setItem(STORAGE_KEY, String(dateISO));
+    } catch (_e) {
+      /* noop */
+    }
+
+    showTemplatesModal.value = false;
+    try {
+      if ((route.name || '') === 'Budget') {
+        selectedDate.value = dateISO;
+        await loadDataForDate(dateISO);
+      } else {
+        (await import('vue-router')).useRouter()?.push({
+          name: 'Budget',
+          query: { refresh: String(Date.now()), date: dateISO },
+        });
+      }
+    } catch (_e) {
+      // fallback
+      window.location.href =
+        '#/budget?refresh=' +
+        String(Date.now()) +
+        '&date=' +
+        encodeURIComponent(dateISO);
+    }
+  } catch (err) {
+    console.error('navigateToBudget error', err);
+  }
+}
+
 async function applyTemplateFromModal(tmpl: any) {
   try {
     if (!tmpl) return;
     const dateISO = formatLocalDate(selectedDate.value);
 
-    // Load suppliers list to resolve ids synchronously
-    let suppliersList: any[] = [];
-    try {
-      const res =
-        typeof (suppliersController as any).listSuppliers === 'function'
-          ? await (suppliersController as any).listSuppliers()
-          : null;
-      if (Array.isArray(res)) suppliersList = res;
-    } catch (_e) {
-      try {
-        const candidates = ['list', 'listAll', 'getAll', 'getSuppliers'];
-        for (const name of candidates) {
-          const fn = (suppliersController as any)[name];
-          if (typeof fn === 'function') {
-            try {
-              const r = await fn();
-              if (Array.isArray(r)) {
-                suppliersList = r;
-                break;
-              }
-            } catch (_ee) {
-              /* noop */
-            }
-          }
-        }
-      } catch (_ee) {
-        /* noop */
-      }
-    }
+    // Load suppliers list (helper encapsulates fallbacks)
+    const suppliersList = await loadSuppliersListForTemplates();
 
     const resolveName = (id: any) => {
       try {
@@ -3027,44 +3257,12 @@ async function applyTemplateFromModal(tmpl: any) {
     );
 
     if (result && result.conflict) {
-      try {
-        const parsedDate = parseLocalDate(String(dateISO));
-        applyConflictMessage.value = `Ya existen proveedores guardados para ${format(parsedDate, "d 'de' MMMM 'de' yyyy", { locale: esLocale })}. ¿Deseas combinar el template con los proveedores existentes o sobrescribirlos?`;
-      } catch (_e) {
-        applyConflictMessage.value = `Ya existen proveedores guardados para la fecha seleccionada. ¿Deseas combinar el template con los proveedores existentes o sobrescribirlos?`;
-      }
-      pendingApplyPayload.value = result.payloadToSave;
-      pendingApplyTemplate.value = tmpl;
-      showApplyConflictModal.value = true;
+      handleTemplateConflict(result, tmpl, dateISO);
       return;
     }
 
     if (result && result.success) {
-      try {
-        localStorage.setItem(STORAGE_KEY, String(dateISO));
-      } catch (_e) {
-        /* noop */
-      }
-
-      showTemplatesModal.value = false;
-      try {
-        if ((route.name || '') === 'Budget') {
-          selectedDate.value = dateISO;
-          await loadDataForDate(dateISO);
-        } else {
-          (await import('vue-router')).useRouter()?.push({
-            name: 'Budget',
-            query: { refresh: String(Date.now()), date: dateISO },
-          });
-        }
-      } catch (_e) {
-        // fallback
-        window.location.href =
-          '#/budget?refresh=' +
-          String(Date.now()) +
-          '&date=' +
-          encodeURIComponent(dateISO);
-      }
+      await navigateToBudget(dateISO);
       pendingApplyTemplate.value = null;
       return;
     }
@@ -3091,12 +3289,42 @@ async function handleApplyConflictCombine() {
     if (!payloadToSave) return onApplyConflictDismiss();
 
     const dateISO = payloadToSave.data?.selectedDate;
+    // Load suppliers list to resolve names synchronously
+    let suppliersList: any[] = [];
+    try {
+      const resList =
+        typeof (suppliersController as any).listSuppliers === 'function'
+          ? await (suppliersController as any).listSuppliers()
+          : null;
+      if (Array.isArray(resList)) suppliersList = resList;
+    } catch (_e) {
+      try {
+        const candidates = ['list', 'listAll', 'getAll', 'getSuppliers'];
+        for (const name of candidates) {
+          const fn = (suppliersController as any)[name];
+          if (typeof fn === 'function') {
+            try {
+              const r = await fn();
+              if (Array.isArray(r)) {
+                suppliersList = r;
+                break;
+              }
+            } catch (_ee) {
+              /* noop */
+            }
+          }
+        }
+      } catch (_ee) {
+        /* noop */
+      }
+    }
+
     const res = await buildAndSaveTemplateApplication(
       pendingApplyTemplate.value || null,
       dateISO,
       (id: any) => {
         try {
-          const found = suppliers.find((s: any) => s && s.id === id);
+          const found = suppliersList.find((s: any) => s && s.id === id);
           return found ? found.name : null;
         } catch (_e) {
           return null;
@@ -3136,12 +3364,42 @@ async function handleApplyConflictOverwrite() {
     if (!payloadToSave) return onApplyConflictDismiss();
 
     const dateISO = payloadToSave.data?.selectedDate;
+    // Load suppliers list to resolve names synchronously
+    let suppliersList: any[] = [];
+    try {
+      const resList =
+        typeof (suppliersController as any).listSuppliers === 'function'
+          ? await (suppliersController as any).listSuppliers()
+          : null;
+      if (Array.isArray(resList)) suppliersList = resList;
+    } catch (_e) {
+      try {
+        const candidates = ['list', 'listAll', 'getAll', 'getSuppliers'];
+        for (const name of candidates) {
+          const fn = (suppliersController as any)[name];
+          if (typeof fn === 'function') {
+            try {
+              const r = await fn();
+              if (Array.isArray(r)) {
+                suppliersList = r;
+                break;
+              }
+            } catch (_ee) {
+              /* noop */
+            }
+          }
+        }
+      } catch (_ee) {
+        /* noop */
+      }
+    }
+
     const res = await buildAndSaveTemplateApplication(
       pendingApplyTemplate.value || null,
       dateISO,
       (id: any) => {
         try {
-          const found = suppliers.find((s: any) => s && s.id === id);
+          const found = suppliersList.find((s: any) => s && s.id === id);
           return found ? found.name : null;
         } catch (_e) {
           return null;
@@ -3178,104 +3436,106 @@ async function handleApplyConflictOverwrite() {
   }
 }
 
+// Helpers for onMoveProvider refactor
+function _normalizeToDateISO(date: Date | string): string {
+  try {
+    if (date instanceof Date) return formatLocalDate(date);
+    if (typeof date === 'string') {
+      const s =
+        String(date).length >= 10 ? String(date).slice(0, 10) : String(date);
+      const d = parseLocalDate(s);
+      if (!isNaN(d.getTime())) return formatLocalDate(d);
+      const fallback = new Date(String(date));
+      if (!isNaN(fallback.getTime())) return formatLocalDate(fallback);
+    }
+    const d2 = new Date(String(date));
+    return !isNaN(d2.getTime()) ? formatLocalDate(d2) : String(date);
+  } catch (_e) {
+    return String(date);
+  }
+}
+
+function _removeProviderFromList(providerId: string | number) {
+  try {
+    const idx = proveedores.findIndex((p: Provider) => p.id === providerId);
+    if (idx >= 0) proveedores.splice(idx, 1);
+  } catch (_e) {
+    /* noop */
+  }
+}
+
+function _buildMoveBackupPayload(provider: Provider, dateISO: string) {
+  const provCopy: Provider = { ...provider, date: dateISO };
+  return {
+    component: 'BudgetView',
+    data: {
+      ingresos: [],
+      proveedores: [provCopy],
+      newIngreso: { name: '', amount: 0, date: formatLocalDate(dateISO) },
+      newProveedor: { name: '', estimated: 0, dollar: 0, notes: '' },
+      selectedDate: formatLocalDate(dateISO),
+      totals: {
+        totalIngresos: 0,
+        totalProviders: Number(provCopy.dollar || provCopy.estimated || 0) || 0,
+        totalVisitedProviders: provCopy.visited
+          ? Number(provCopy.dollar || provCopy.estimated || 0) || 0
+          : 0,
+      },
+    },
+    createdAt: Date.now(),
+  };
+}
+
+async function _persistBackupAndNotify(
+  provider: Provider,
+  backupPayload: any,
+  dateISO: string
+) {
+  try {
+    await backupController.saveBackup({ entry: backupPayload });
+    try {
+      let prettyDate = dateISO;
+      try {
+        const parsed = new Date(dateISO);
+        if (!isNaN(parsed.getTime())) {
+          prettyDate = format(parsed, "d 'de' MMMM 'de' yyyy", {
+            locale: esLocale,
+          });
+        }
+      } catch (_e) {
+        /* noop */
+      }
+      toast.message = `Proveedor «${provider.name || ''}» movido a ${prettyDate}`;
+      toast.open = true;
+    } catch (_e) {
+      /* noop */
+    }
+  } catch (saveErr) {
+    console.error('onMoveProvider: error saving backup', saveErr);
+  }
+}
+
 async function onMoveProvider(
   params: { provider?: Provider; date?: Date | string } = {}
 ) {
   const { provider, date } = params;
 
-  if (!provider || !date) {
-    // nothing to do
-    return;
-  }
+  if (!provider || !date) return;
 
   try {
-    // Normalize date to ISO string
-    let dateISO: string;
-    try {
-      let d: Date;
-      if (date instanceof Date) {
-        d = date;
-      } else if (typeof date === 'string') {
-        // Try to parse partial ISO-like strings safely: prefer slice to avoid timezone shifts
-        try {
-          // If it's a full date string (YYYY-MM-DD or longer), parse first 10 chars
-          const s =
-            String(date).length >= 10
-              ? String(date).slice(0, 10)
-              : String(date);
-          d = parseLocalDate(s);
-          if (isNaN(d.getTime())) throw new Error('invalid');
-        } catch (_e) {
-          // fallback to Date constructor as last resort
-          d = new Date(String(date));
-        }
-      } else {
-        // unknown type: attempt Date constructor
-        d = new Date(String(date));
-      }
-      dateISO = !isNaN(d.getTime()) ? formatLocalDate(d) : String(date);
-    } catch (_e) {
-      dateISO = String(date);
-    }
+    const dateISO = _normalizeToDateISO(date as any);
 
-    // Remove provider from the current in-memory list if present
+    // Remove from current list (best-effort)
     try {
-      const idx = proveedores.findIndex((p: Provider) => p.id === provider.id);
-      if (idx >= 0) {
-        proveedores.splice(idx, 1);
-      }
+      _removeProviderFromList(provider.id as any);
     } catch (_e) {
       /* noop */
     }
 
-    // Build a minimal backup payload for the destination date containing the moved provider
+    // Build and persist a minimal backup for the destination date
     try {
-      const provCopy: Provider = { ...provider, date: dateISO };
-
-      const backupPayload = {
-        component: 'BudgetView',
-        data: {
-          ingresos: [],
-          proveedores: [provCopy],
-          newIngreso: { name: '', amount: 0, date: formatLocalDate(dateISO) },
-          newProveedor: { name: '', estimated: 0, dollar: 0, notes: '' },
-          selectedDate: formatLocalDate(dateISO),
-          totals: {
-            totalIngresos: 0,
-            totalProviders:
-              Number(provCopy.dollar || provCopy.estimated || 0) || 0,
-            totalVisitedProviders: provCopy.visited
-              ? Number(provCopy.dollar || provCopy.estimated || 0) || 0
-              : 0,
-          },
-        },
-        createdAt: Date.now(),
-      };
-
-      // Persist the minimal backup using backupController
-      try {
-        await backupController.saveBackup({ entry: backupPayload });
-        // Inform user via toast
-        try {
-          let prettyDate = dateISO;
-          try {
-            const parsed = new Date(dateISO);
-            if (!isNaN(parsed.getTime())) {
-              prettyDate = format(parsed, "d 'de' MMMM 'de' yyyy", {
-                locale: esLocale,
-              });
-            }
-          } catch (_e) {
-            /* noop */
-          }
-          toast.message = `Proveedor «${provider.name || ''}» movido a ${prettyDate}`;
-          toast.open = true;
-        } catch (_e) {
-          /* noop */
-        }
-      } catch (saveErr) {
-        console.error('onMoveProvider: error saving backup', saveErr);
-      }
+      const payload = _buildMoveBackupPayload(provider as Provider, dateISO);
+      await _persistBackupAndNotify(provider as Provider, payload, dateISO);
     } catch (_e) {
       console.error('onMoveProvider: build/persist error', _e);
     }
@@ -3288,17 +3548,16 @@ async function onMoveProvider(
  * Open the "Finalizar dia" modal and preload previously saved finish-day values if present
  */
 async function openFinishDayModal() {
+  // Kept for compatibility: open the inline finish-day form
   try {
-    // Reset to defaults first
-    modals.finishDay.totalSales = Number(modals.finishDay.totalSales || 0) || 0;
-    modals.finishDay.totalSalesEfectivo =
-      Number(modals.finishDay.totalSalesEfectivo || 0) || 0;
-    modals.finishDay.totalSalesTarjeta =
-      Number(modals.finishDay.totalSalesTarjeta || 0) || 0;
-    modals.finishDay.totalSalesCredito =
-      Number(modals.finishDay.totalSalesCredito || 0) || 0;
-    modals.finishDay.type = modals.finishDay.type || '%';
+    finishDay.totalSales = Number(finishDay.totalSales || 0) || 0;
+    finishDay.totalSalesEfectivo =
+      Number(finishDay.totalSalesEfectivo || 0) || 0;
+    finishDay.totalSalesTarjeta = Number(finishDay.totalSalesTarjeta || 0) || 0;
+    finishDay.totalSalesCredito = Number(finishDay.totalSalesCredito || 0) || 0;
+    finishDay.type = finishDay.type || '%';
 
+    // try to preload previously saved values
     try {
       const all = (await dixieController.listBackups()) as any[];
       const target = (selectedDate.value || '').slice(0, 10);
@@ -3315,29 +3574,26 @@ async function openFinishDayModal() {
       if (matches.length) {
         const latest = matches[0];
         const d = latest.data || {};
-        // Prefer per-method totals if present; fallback to legacy totalSales
-        modals.finishDay.totalSalesEfectivo =
+        finishDay.totalSalesEfectivo =
           Number(d.totalSalesEfectivo ?? d.totalSales ?? 0) || 0;
-        modals.finishDay.totalSalesTarjeta =
-          Number(d.totalSalesTarjeta ?? 0) || 0;
-        modals.finishDay.totalSalesCredito =
-          Number(d.totalSalesCredito ?? 0) || 0;
-        // Keep legacy totalSales populated as sum for compatibility
-        modals.finishDay.totalSales =
+        finishDay.totalSalesTarjeta = Number(d.totalSalesTarjeta ?? 0) || 0;
+        finishDay.totalSalesCredito = Number(d.totalSalesCredito ?? 0) || 0;
+        finishDay.totalSales =
           Number(
             d.totalSales ||
-              modals.finishDay.totalSalesEfectivo +
-                modals.finishDay.totalSalesTarjeta +
-                modals.finishDay.totalSalesCredito
+              finishDay.totalSalesEfectivo +
+                finishDay.totalSalesTarjeta +
+                finishDay.totalSalesCredito
           ) || 0;
-        modals.finishDay.type = String(d.type || modals.finishDay.type || '%');
-        modals.finishDay.margin = Number(d.margin || 0) || 0;
+        finishDay.type = String(d.type || finishDay.type || '%');
+        finishDay.margin = Number(d.margin || 0) || 0;
       }
     } catch (_e) {
-      // ignore preload errors
+      /* noop */
     }
 
-    setTimeout(() => (modals.finishDay.open = true), 50);
+    // Show the inline finish form by setting dayState to 'closing'
+    dayState.value = 'closing';
   } catch (err) {
     console.error('openFinishDayModal error:', err);
   }
@@ -3346,87 +3602,171 @@ async function openFinishDayModal() {
 /**
  * Persist the finish day data to the local storage (dixieController) and close the modal
  */
-async function saveFinishDay() {
-  try {
-    const total = Number(modals.finishDay.totalSales || 0) || 0;
-    const type = String(modals.finishDay.type || '%');
+// Helpers for saveFinishDay refactor
+function _validateFinishTotal(total: number) {
+  if (!isFinite(total)) {
+    toast.message = 'Total ventas no es válido';
+    toast.open = true;
+    return false;
+  }
+  return true;
+}
 
-    // Basic validation: total must be finite
-    if (!isFinite(total)) {
-      toast.message = 'Total ventas no es válido';
-      toast.open = true;
-      return;
+function _buildFinishDayPayload() {
+  const total = Number(finishDay.totalSales || 0) || 0;
+  const payloadToSave = {
+    component: 'BudgetFinishDay',
+    data: {
+      selectedDate: formatLocalDate(selectedDate.value),
+      totalSalesEfectivo:
+        Number(finishDay.totalSalesEfectivo || finishDay.totalSales || 0) || 0,
+      totalSalesTarjeta: Number(finishDay.totalSalesTarjeta || 0) || 0,
+      totalSalesCredito: Number(finishDay.totalSalesCredito || 0) || 0,
+      totalSales:
+        Number(finishDay.totalSalesEfectivo || 0) +
+          Number(finishDay.totalSalesTarjeta || 0) +
+          Number(finishDay.totalSalesCredito || 0) ||
+        Number(total || 0) ||
+        0,
+      type: String(finishDay.type || '%'),
+      margin: Number(finishDay.margin || 0) || 0,
+      closed: true,
+    },
+    createdAt: Date.now(),
+  };
+  return { total, payloadToSave };
+}
+
+async function _persistFinishDayPayload(payloadToSave: any) {
+  try {
+    let savedId: any = null;
+    try {
+      const all = (await dixieController.listBackups()) as any[];
+      const target = String(selectedDate.value || '').slice(0, 10);
+      const existing = (all || [])
+        .filter(
+          b =>
+            b &&
+            b.component === 'BudgetFinishDay' &&
+            b.data &&
+            (b.data as any).selectedDate &&
+            String((b.data as any).selectedDate).slice(0, 10) === target
+        )
+        .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))[0];
+
+      if (existing && existing.id != null) {
+        (payloadToSave as any).id = existing.id;
+        savedId = await dixieController.putEntry({ entry: payloadToSave });
+      } else {
+        savedId = await dixieController.addEntry({ entry: payloadToSave });
+      }
+    } catch (errPutAdd) {
+      try {
+        savedId = await dixieController.putEntry({ entry: payloadToSave });
+      } catch (_e) {
+        try {
+          savedId = await dixieController.addEntry({ entry: payloadToSave });
+        } catch (__e) {
+          console.error('saveFinishDay persist error', __e);
+        }
+      }
     }
 
-    const payloadToSave = {
-      component: 'BudgetFinishDay',
+    if (savedId == null) {
+      try {
+        await backupController.saveBackup({ entry: payloadToSave });
+      } catch (backupErr) {
+        console.error('saveFinishDay: fallback backup save failed', backupErr);
+      }
+    }
+
+    return savedId;
+  } catch (e) {
+    console.error('saveFinishDay error saving', e);
+    throw e;
+  }
+}
+
+async function _persistBudgetViewDayClosedSnapshot() {
+  try {
+    const backupPayload = {
+      component: 'BudgetView',
       data: {
         selectedDate: formatLocalDate(selectedDate.value),
-        totalSalesEfectivo:
-          Number(
-            modals.finishDay.totalSalesEfectivo ||
-              modals.finishDay.totalSales ||
-              0
-          ) || 0,
-        totalSalesTarjeta: Number(modals.finishDay.totalSalesTarjeta || 0) || 0,
-        totalSalesCredito: Number(modals.finishDay.totalSalesCredito || 0) || 0,
-        // Keep legacy totalSales as sum of per-methods for backwards compatibility
-        totalSales:
-          Number(modals.finishDay.totalSalesEfectivo || 0) +
-            Number(modals.finishDay.totalSalesTarjeta || 0) +
-            Number(modals.finishDay.totalSalesCredito || 0) ||
-          Number(total || 0) ||
-          0,
-        type: String(modals.finishDay.type || '%'),
-        margin: Number(modals.finishDay.margin || 0) || 0,
-        closed: false,
+        ingresos: ingresos || [],
+        proveedores: proveedores || [],
+        newIngreso: newIngreso || {
+          name: '',
+          amount: 0,
+          date: formatLocalDate(selectedDate.value),
+        },
+        newProveedor: newProveedor || {
+          name: '',
+          estimated: 0,
+          dollar: 0,
+          notes: '',
+        },
+        totals: {
+          totalIngresos: Number(totalIngresos.value || 0) || 0,
+          totalProviders: Number(totalProviders.value || 0) || 0,
+          totalVisitedProviders: Number(totalVisitedProviders.value || 0) || 0,
+        },
       },
       createdAt: Date.now(),
     };
 
     try {
-      // Use dixieController.addEntry when available, fallback to putEntry
-      let savedId: any = null;
+      await dixieController.addEntry({ entry: backupPayload });
+    } catch (addErr) {
       try {
-        savedId = await dixieController.addEntry({ entry: payloadToSave });
-      } catch (addErr) {
+        await dixieController.putEntry({ entry: backupPayload });
+      } catch (putErr) {
         try {
-          savedId = await dixieController.putEntry({ entry: payloadToSave });
-        } catch (putErr) {
-          console.error('saveFinishDay persist error', putErr);
+          await backupController.saveBackup({ entry: backupPayload });
+        } catch (_e) {
+          /* noop */
         }
       }
+    }
+  } catch (_e) {
+    /* noop */
+  }
+}
 
-      if (savedId == null) {
-        // best effort fallback: try backupController
-        try {
-          await backupController.saveBackup({ entry: payloadToSave });
-        } catch (backupErr) {
-          console.error(
-            'saveFinishDay: fallback backup save failed',
-            backupErr
-          );
-        }
-      }
+async function saveFinishDay() {
+  try {
+    const { total, payloadToSave } = _buildFinishDayPayload();
 
-      // Success UX
-      toast.message = 'Datos guardados';
-      toast.open = true;
+    if (!_validateFinishTotal(total)) return;
 
-      // Mark the day as closed in memory so the UI blocks further edits/creates
-      try {
-        dayClosed.value = true;
-      } catch (_e) {
-        /* noop */
-      }
+    try {
+      await _persistFinishDayPayload(payloadToSave);
     } catch (e) {
-      console.error('saveFinishDay error saving', e);
       toast.message = 'Error al guardar';
       toast.open = true;
       return;
-    } finally {
-      modals.finishDay.open = false;
     }
+
+    // Success UX
+    toast.message = 'Datos guardados';
+    toast.open = true;
+
+    try {
+      dayState.value = 'closed';
+      closingIntent.value = false;
+    } catch (_e) {
+      /* noop */
+    }
+
+    try {
+      const key = `budget:closed:${String(selectedDate.value || '').slice(0, 10)}`;
+      localStorage.setItem(key, '1');
+    } catch (_e) {
+      /* noop */
+    }
+
+    // Persist a minimal BudgetView snapshot marking dayClosed
+    await _persistBudgetViewDayClosedSnapshot();
   } catch (err) {
     console.error('saveFinishDay error:', err);
     toast.message = 'Error inesperado';
@@ -3792,5 +4132,20 @@ ion-list.main {
     border-color: var(--ion-color-primary, #3880ff);
     box-shadow: 0 6px 18px rgba(56, 128, 255, 0.06);
   }
+}
+
+/* Force empty ingreso row to match input rows height and alignment */
+.ingreso-empty {
+  min-height: 44px; /* same as ion-item default touch height */
+  display: flex;
+  align-items: center;
+  padding-left: 16px; /* match ion-item content padding */
+  padding-right: 16px;
+  box-sizing: border-box;
+}
+
+.ingreso-empty ion-label {
+  width: 100%;
+  white-space: normal;
 }
 </style>

@@ -76,9 +76,9 @@
                 <!-- Si el template solo tiene description -> mostrar parsed names -->
                 <template v-else>
                   <ion-item
-                    v-for="(name, idx) in parseProvidersFromDescription({
-                      desc: applyTargetTemplate.description,
-                    })"
+                    v-for="(name, idx) in parseProvidersFromDescription(
+                      applyTargetTemplate?.description
+                    )"
                     :key="idx"
                     lines="none"
                   >
