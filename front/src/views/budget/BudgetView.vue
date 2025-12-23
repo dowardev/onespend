@@ -419,77 +419,11 @@
       </ion-grid>
 
       <!-- final day -->
-      <ion-grid v-if="showFinishForm">
-        <ion-row class="ion-justify-content-center">
-          <ion-col size="12" size-md="8" size-lg="6" size-xl="4">
-            <!-- final day data -->
-            <ion-list class="transparent">
-              <ion-list-header>
-                <ion-label> Datos finales </ion-label>
-
-                <ion-button @click="saveFinishDay()">
-                  <ion-icon :icon="saveOutline"></ion-icon>
-                </ion-button>
-              </ion-list-header>
-
-              <div class="list-content">
-                <ion-item class="transparent" lines="none">
-                  <ion-label
-                    >Completa los siguientes datos requeridos para los datos
-                    estadisticos</ion-label
-                  >
-                </ion-item>
-
-                <ion-item class="transparent" lines="full">
-                  <ion-input
-                    v-model.number="finishDay.totalSalesEfectivo"
-                    label="Ventas efectivo"
-                    label-placement="floating"
-                    type="number"
-                  ></ion-input>
-                </ion-item>
-
-                <ion-item class="transparent" lines="full">
-                  <ion-input
-                    v-model.number="finishDay.totalSalesTarjeta"
-                    label="Ventas tarjeta"
-                    label-placement="floating"
-                    type="number"
-                  ></ion-input>
-                </ion-item>
-
-                <ion-item class="transparent" lines="full">
-                  <ion-input
-                    v-model.number="finishDay.totalSalesCredito"
-                    label="Ventas credito"
-                    label-placement="floating"
-                    type="number"
-                  ></ion-input>
-                </ion-item>
-
-                <ion-item class="transparent" lines="full">
-                  <ion-select
-                    slot="start"
-                    v-model="finishDay.type"
-                    label-placement="floating"
-                    label="Tipo de dato"
-                  >
-                    <ion-select-option value="%">%</ion-select-option>
-                    <ion-select-option value="$">$</ion-select-option>
-                  </ion-select>
-
-                  <ion-input
-                    v-model.number="finishDay.margin"
-                    label="Margen de ventas"
-                    label-placement="floating"
-                    type="number"
-                  ></ion-input>
-                </ion-item>
-              </div>
-            </ion-list>
-          </ion-col>
-        </ion-row>
-      </ion-grid>
+      <FinishDayForm
+        v-if="showFinishForm"
+        :finish-day="finishDay"
+        @save="saveFinishDay"
+      />
 
       <!-- popover -->
       <ion-popover
@@ -970,6 +904,7 @@ import {
 // components
 import ProductsModalComponent from './modals/PoductsModalComponent.vue';
 import ProviderCardComponent from './ProviderCardComponent.vue';
+import FinishDayForm from './FinishDayForm.vue';
 // end components
 
 // vars
@@ -2474,9 +2409,28 @@ async function loadDataForDate(dateISO: string) {
 
       // dayClosed preference: BudgetFinishDay (most recent) wins, then BudgetView.dayClosed
       if (latestFinishDay && latestFinishDay.data) {
-        dayState.value = (latestFinishDay.data as any).closed
-          ? 'closed'
-          : 'open';
+        const fd = (latestFinishDay.data as any) || {};
+        dayState.value = fd.closed ? 'closed' : 'open';
+
+        // Also restore finishDay fields from the latest finish-day backup so the
+        // inline form is populated on page reload when the day is closed.
+        try {
+          finishDay.totalSalesEfectivo =
+            Number(fd.totalSalesEfectivo ?? fd.totalSales ?? 0) || 0;
+          finishDay.totalSalesTarjeta = Number(fd.totalSalesTarjeta ?? 0) || 0;
+          finishDay.totalSalesCredito = Number(fd.totalSalesCredito ?? 0) || 0;
+          finishDay.totalSales =
+            Number(
+              fd.totalSales ||
+                finishDay.totalSalesEfectivo +
+                  finishDay.totalSalesTarjeta +
+                  finishDay.totalSalesCredito
+            ) || 0;
+          finishDay.type = String(fd.type || finishDay.type || '%');
+          finishDay.margin = Number(fd.margin || 0) || 0;
+        } catch (_e) {
+          /* noop */
+        }
       } else if (d && d.dayClosed !== undefined) {
         dayState.value = d.dayClosed ? 'closed' : 'open';
       } else {
@@ -2507,11 +2461,31 @@ async function loadDataForDate(dateISO: string) {
     console.log('No se encontró backup para', dateISO);
 
     if (latestFinishDay && latestFinishDay.data) {
-      dayState.value = (latestFinishDay.data as any).closed ? 'closed' : 'open';
+      const fd = (latestFinishDay.data as any) || {};
+      dayState.value = fd.closed ? 'closed' : 'open';
       console.log(
         'loadDataForDate: using latestFinishDay.closed=',
         dayState.value
       );
+
+      // restore finishDay values so the form fields show after reload
+      try {
+        finishDay.totalSalesEfectivo =
+          Number(fd.totalSalesEfectivo ?? fd.totalSales ?? 0) || 0;
+        finishDay.totalSalesTarjeta = Number(fd.totalSalesTarjeta ?? 0) || 0;
+        finishDay.totalSalesCredito = Number(fd.totalSalesCredito ?? 0) || 0;
+        finishDay.totalSales =
+          Number(
+            fd.totalSales ||
+              finishDay.totalSalesEfectivo +
+                finishDay.totalSalesTarjeta +
+                finishDay.totalSalesCredito
+          ) || 0;
+        finishDay.type = String(fd.type || finishDay.type || '%');
+        finishDay.margin = Number(fd.margin || 0) || 0;
+      } catch (_e) {
+        /* noop */
+      }
     } else {
       try {
         const key = `budget:closed:${targetNormalized}`;
