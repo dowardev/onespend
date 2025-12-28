@@ -264,8 +264,8 @@ async function loadYearData() {
           let ingresosSum = 0;
           let proveedoresSum = 0;
 
-          if (Array.isArray(d.ingresos)) {
-            ingresosSum = d.ingresos.reduce(
+          if (Array.isArray(d.ingresos || d.entries)) {
+            ingresosSum = (d.ingresos || d.entries).reduce(
               (s: number, i: any) => s + (Number(i.amount || 0) || 0),
               0
             );

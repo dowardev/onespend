@@ -733,8 +733,8 @@ async function loadWeekData(dateParam?: string | Date) {
     for (const entry of matches) {
       try {
         const d = entry.data;
-        if (Array.isArray(d.ingresos)) {
-          ingresosSum += d.ingresos.reduce(
+        if (Array.isArray(d.ingresos || d.entries)) {
+          ingresosSum += (d.ingresos || d.entries).reduce(
             (s: number, i: any) => s + (Number(i.amount || 0) || 0),
             0
           );
@@ -1018,8 +1018,8 @@ async function loadWeekData(dateParam?: string | Date) {
       for (const entry of prevMatches) {
         try {
           const d = entry.data;
-          if (Array.isArray(d.ingresos)) {
-            prevIngresosSum += d.ingresos.reduce(
+          if (Array.isArray(d.ingresos || d.entries)) {
+            prevIngresosSum += (d.ingresos || d.entries).reduce(
               (s: number, i: any) => s + (Number(i.amount || 0) || 0),
               0
             );

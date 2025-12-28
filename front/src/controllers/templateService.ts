@@ -67,6 +67,7 @@ export function buildPayloadFromTemplate(
 
   const payload = {
     ingresos: [],
+    entries: [],
     proveedores,
     newIngreso: { name: '', amount: 0, date: formatLocalDate(dateISO) },
     newProveedor: { name: '', estimated: 0, dollar: 0, notes: '' },
@@ -166,6 +167,7 @@ export async function buildAndSaveTemplateApplication(
         : [];
       let finalData: any = Object.assign({}, payloadToSave.data, {
         ingresos: existingIngresos,
+        entries: existingIngresos,
       });
       const existingTotals = (existing.data as any).totals || {};
       finalData.totals = Object.assign({}, finalData.totals || {}, {

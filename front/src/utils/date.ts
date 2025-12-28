@@ -95,3 +95,22 @@ export function parseLocalDate(d?: Date | string | null): Date {
   }
   return new Date();
 }
+
+/**
+ * normalizeName
+ * Normalize a supplier/provider name to a compact, lowercase, diacritics-free
+ * key suitable for matching and map lookups.
+ */
+export function normalizeName(name: string | undefined | null): string {
+  if (!name) return '';
+  try {
+    return String(name)
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/\p{Diacritic}/gu, '')
+      .replace(/\s+/g, ' ');
+  } catch (_e) {
+    return String(name).trim().toLowerCase();
+  }
+}

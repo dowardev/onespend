@@ -31,7 +31,7 @@ class BackupController {
       }
 
       const key = await this.dixie.addEntry({ entry: normalizedEntry });
-      console.log('BackupController.saveBackup: saved id=', key);
+      // console.log('BackupController.saveBackup: saved id=', key);
       return key;
     } catch (_e) {
       console.error('BackupController.saveBackup error', _e);

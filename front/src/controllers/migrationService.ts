@@ -85,14 +85,18 @@ export function mergeBackupData(existingData: any, newData: any) {
   // Merge ingresos and proveedores arrays, avoiding duplicates by name
   const existingIngresos = Array.isArray(existingData?.ingresos)
     ? existingData.ingresos
-    : [];
+    : Array.isArray(existingData?.entries)
+      ? existingData.entries
+      : [];
   const existingProveedores = Array.isArray(existingData?.proveedores)
     ? existingData.proveedores
     : [];
 
   const incomingIngresos = Array.isArray(newData?.ingresos)
     ? newData.ingresos
-    : [];
+    : Array.isArray(newData?.entries)
+      ? newData.entries
+      : [];
   const incomingProveedores = Array.isArray(newData?.proveedores)
     ? newData.proveedores
     : [];
@@ -119,6 +123,7 @@ export function mergeBackupData(existingData: any, newData: any) {
 
   const merged = Object.assign({}, existingData || {}, {
     ingresos: mergedIngresos,
+    entries: mergedIngresos,
     proveedores: mergedProveedores,
     totals: Object.assign({}, existingData?.totals || {}, {
       totalIngresos: (mergedIngresos || []).reduce(

@@ -124,9 +124,9 @@ class DixieController {
       }
 
       try {
-        console.log('DixieController.addEntry: adding entry (shallow):', {
-          keys: Object.keys((safeEntry as any) || {}),
-        });
+        // console.log('DixieController.addEntry: adding entry (shallow):', {
+        //   keys: Object.keys((safeEntry as any) || {}),
+        // });
       } catch (_e) {
         /* noop */
       }

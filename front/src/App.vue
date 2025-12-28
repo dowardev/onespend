@@ -97,7 +97,7 @@
               >
                 <ion-label>Mantenimiento</ion-label>
                 <ion-badge
-                  v-if="needsNormalize && !migrationDismissed"
+                  v-if="(needsNormalize || needsEntries) && !migrationDismissed"
                   slot="end"
                   color="danger"
                   >!</ion-badge
@@ -147,6 +147,7 @@ import {
   needsNormalizeCheck,
   migrateNormalizeBackupDates,
 } from '@/migrations/normalizeBackupsDates';
+import { needsEntriesKeyCheck } from '@/migrations/addEntriesKeyToBackups';
 
 const menuRef = ref();
 
@@ -169,18 +170,21 @@ const isStatisticsPerformance = computed(
 const isAdmin = computed(() => route.path.startsWith('/admin'));
 
 const needsNormalize = ref(false);
+const needsEntries = ref(false);
 const migrationDismissed = ref(false);
 const toast = reactive({ open: false, message: '', duration: 3000 });
 const migrationToast = reactive({
   open: false,
   message:
-    'Actualización disponible: Se detectaron datos que requieren normalización de fechas. Recomendamos crear una copia de seguridad y ejecutar la migración.',
+    'Actualización disponible: Se detectaron datos que requieren migración. Recomendamos crear una copia de seguridad y ejecutar la migración.',
   buttons: [
     {
       side: 'end',
       text: 'Ir a migración',
       handler: () => {
-        navigate({ name: 'MigrateDates' });
+        // If entries migration is needed prefer that page, otherwise dates migration
+        if (needsEntries.value) navigate({ name: 'MigrateEntries' });
+        else navigate({ name: 'MigrateDates' });
       },
     },
     {
@@ -201,21 +205,26 @@ onMounted(async () => {
   // Check whether the user already dismissed the migration notice
   migrationDismissed.value = !!systemController.getMigrationNoticeDismissed();
 
-  // Quick check to see if normalization is needed; open toast only if required
+  // Quick check to see if normalization or entries migration is needed; open toast only if required
   try {
-    const needed = await needsNormalizeCheck();
-    needsNormalize.value = !!needed;
+    const [normalizeNeeded, entriesNeeded] = await Promise.all([
+      needsNormalizeCheck(),
+      needsEntriesKeyCheck(),
+    ]);
+    needsNormalize.value = !!normalizeNeeded;
+    needsEntries.value = !!entriesNeeded;
     if (
       (import.meta as unknown as { env?: Record<string, string | undefined> })
         .env?.DEV
     ) {
-      console.log('App.onMounted: needsNormalizeCheck ->', needed);
+      // console.log('App.onMounted: needsNormalizeCheck ->', normalizeNeeded);
+      // console.log('App.onMounted: needsEntriesKeyCheck ->', entriesNeeded);
       try {
         const backups = await dixieController.listBackups();
-        console.log(
-          'App.onMounted: backups count ->',
-          Array.isArray(backups) ? backups.length : backups
-        );
+        // console.log(
+        //   'App.onMounted: backups count ->',
+        //   Array.isArray(backups) ? backups.length : backups
+        // );
       } catch (e) {
         console.error('App.onMounted: failed to listBackups', e);
       }
@@ -223,16 +232,23 @@ onMounted(async () => {
 
     // DEBUG: auto-insert removed. Use admin tools to add test data when needed.
   } catch (e) {
-    console.error('needsNormalizeCheck failed', e);
+    console.error('migration checks failed', e);
     needsNormalize.value = false;
+    needsEntries.value = false;
   }
 
-  if (needsNormalize.value && !migrationDismissed.value) {
+  if (
+    (needsEntries.value || needsNormalize.value) &&
+    !migrationDismissed.value
+  ) {
     if (
       (import.meta as unknown as { env?: Record<string, string | undefined> })
         .env?.DEV
     ) {
-      console.log('App.onMounted: opening migration toast');
+      console.log('App.onMounted: opening migration toast', {
+        needsNormalize: needsNormalize.value,
+        needsEntries: needsEntries.value,
+      });
     }
     migrationToast.open = true;
   } else {
@@ -240,10 +256,11 @@ onMounted(async () => {
       (import.meta as unknown as { env?: Record<string, string | undefined> })
         .env?.DEV
     ) {
-      console.log('App.onMounted: not opening toast', {
-        needsNormalize: needsNormalize.value,
-        migrationDismissed: migrationDismissed.value,
-      });
+      // console.log('App.onMounted: not opening toast', {
+      //   needsNormalize: needsNormalize.value,
+      //   needsEntries: needsEntries.value,
+      //   migrationDismissed: migrationDismissed.value,
+      // });
     }
   }
 

@@ -3,46 +3,42 @@
     :class="['shadow2', { 'provider-just-added': props.provider._justAdded }]"
   >
     <ion-item lines="none" class="transparent">
-      <ion-checkbox
-        slot="start"
-        :checked="props.provider.visited"
-        :disabled="props.isClosed"
-        @ion-change="
+      <ion-input
+        :value="props.provider.name"
+        placeholder="Nombre"
+        @ion-input="
           (e: IonEvent) =>
-            emit('visited-changed', { provider: props.provider, event: e })
+            emit('update-provider', {
+              id: props.provider.id,
+              field: 'name',
+              value: e?.detail?.value ?? e?.target?.value ?? '',
+            })
         "
-      ></ion-checkbox>
+      ></ion-input>
 
-      <div
-        style="width: 100%"
-        @click="() => emit('start-editing', { provider: props.provider })"
+      <ion-label
+        :color="
+          isPaymentPrimary({ provider: props.provider }) ? 'primary' : undefined
+        "
       >
-        <ion-label v-if="props.provider.name && !props.provider._editing">{{
-          props.provider.name
-        }}</ion-label>
+        {{ formattedValue }}
+      </ion-label>
 
-        <ion-input
-          v-show="props.provider._editing || !props.provider.name"
-          :ref="
-            el => emit('register-name-input', { id: props.provider.id, el })
-          "
-          :value="props.provider.name"
-          :placeholder="props.provider._dbName || 'Nombre proveedor'"
-          @ion-input="
-            (e: IonEvent) =>
-              emit('update-provider', {
-                id: props.provider.id,
-                field: 'name',
-                value: e?.detail?.value ?? e?.target?.value ?? '',
-              })
-          "
-          @ion-blur="() => emit('stop-editing', { provider: props.provider })"
-        ></ion-input>
-      </div>
+      <ion-button
+        slot="end"
+        fill="clear"
+        @click.stop="openOptionsPopover($event)"
+      >
+        <ion-icon :icon="ellipsisVerticalOutline"></ion-icon>
+      </ion-button>
     </ion-item>
 
     <div
-      style="display: flex; justify-content: space-between"
+      style="
+        display: flex;
+        justify-content: space-between;
+        background-color: var(--ion-background-color);
+      "
       class="ion-padding-start ion-padding-end"
     >
       <ion-input
@@ -92,70 +88,7 @@
             })
         "
       ></ion-input>
-
-      <ion-label
-        :color="
-          isPaymentPrimary({ provider: props.provider }) ? 'primary' : undefined
-        "
-      >
-        {{ formattedValue }}
-      </ion-label>
     </div>
-
-    <ion-item lines="none">
-      <ion-button slot="end" fill="clear" @click="openPopover($event)">
-        <ion-icon :icon="calendarOutline"> </ion-icon>
-      </ion-button>
-
-      <ion-button
-        v-if="props.hasProducts"
-        slot="end"
-        fill="clear"
-        size="small"
-        title="Ver productos"
-        class="icon-btn"
-        @click.stop="
-          emit('open-products-popover', {
-            provider: props.provider,
-            event: $event,
-          })
-        "
-      >
-        <ion-icon :icon="listOutline"></ion-icon>
-      </ion-button>
-
-      <ion-button
-        slot="end"
-        fill="clear"
-        @click.stop="
-          (e: IonEvent) => emit('open-notes-modal', { provider, event: e })
-        "
-      >
-        <ion-icon :icon="bookOutline"></ion-icon>
-      </ion-button>
-
-      <ion-button slot="end" fill="clear">
-        <ion-icon :icon="timeOutline"></ion-icon>
-      </ion-button>
-
-      <ion-button
-        slot="end"
-        fill="clear"
-        size="small"
-        title="Eliminar proveedor"
-        class="icon-btn"
-        @click.stop="
-          (e: IonEvent) =>
-            emit('confirm-remove-proveedor', {
-              id: provider.id,
-              name: provider.name,
-              event: e,
-            })
-        "
-      >
-        <ion-icon :icon="trashOutline"></ion-icon>
-      </ion-button>
-    </ion-item>
   </ion-card>
 
   <!-- popovers -->
@@ -182,6 +115,67 @@
     </ion-content>
   </ion-popover>
   <!-- end popovers -->
+
+  <!-- options popover (separate del calendario) -->
+  <ion-popover
+    :is-open="optionsPopover.open"
+    :event="optionsPopover.event"
+    keep-contents-mounted="true"
+    @did-dismiss="closeOptionsPopover"
+  >
+    <ion-content>
+      <ion-list>
+        <!-- move -->
+        <ion-item button lines="none" @click="onMoveFromOptions($event)">
+          <ion-icon slot="start" :icon="swapHorizontalOutline"></ion-icon>
+
+          <ion-label>Mover</ion-label>
+        </ion-item>
+
+        <!-- products -->
+        <ion-item
+          v-if="props.hasProducts"
+          button
+          lines="none"
+          @click="onProductsFromOptions($event)"
+        >
+          <ion-icon slot="start" :icon="listOutline"></ion-icon>
+
+          <ion-label>Ver productos</ion-label>
+        </ion-item>
+
+        <!-- notes -->
+        <ion-item button lines="none" @click="onNotesFromOptions($event)">
+          <ion-icon slot="start" :icon="bookOutline"></ion-icon>
+
+          <ion-label>Notas</ion-label>
+        </ion-item>
+
+        <ion-item button lines="none" @click="onDeleteFromOptions($event)">
+          <ion-icon slot="start" :icon="trashOutline" color="danger"></ion-icon>
+
+          <ion-label class="danger">Eliminar</ion-label>
+        </ion-item>
+      </ion-list>
+    </ion-content>
+  </ion-popover>
+  <!-- end options popover -->
+
+  <!-- delete confirm local to this card -->
+  <ion-alert
+    :is-open="deleteConfirm.open"
+    header="Confirmar eliminación"
+    :message="`¿Eliminar proveedor «${props.provider?.name || ''}»? Esta acción no se puede deshacer.`"
+    :buttons="[
+      {
+        text: 'Cancelar',
+        role: 'cancel',
+        handler: () => (deleteConfirm.open = false),
+      },
+      { text: 'Eliminar', cssClass: 'danger', handler: () => confirmDelete() },
+    ]"
+    @did-dismiss="() => (deleteConfirm.open = false)"
+  ></ion-alert>
 </template>
 
 <script setup lang="ts">
@@ -195,6 +189,7 @@ import {
   IonIcon,
   IonPopover,
   IonDatetime,
+  IonAlert,
 } from '@ionic/vue';
 import {
   listOutline,
@@ -202,6 +197,8 @@ import {
   timeOutline,
   trashOutline,
   calendarOutline,
+  ellipsisVerticalOutline,
+  swapHorizontalOutline,
 } from 'ionicons/icons';
 import { reactive, computed } from 'vue';
 
@@ -255,6 +252,21 @@ const popovers = reactive({
   event: null as Event | null,
   provider: null as Provider | null,
 });
+
+// options popover state
+const optionsPopover = reactive({
+  open: false,
+  event: null as Event | null,
+  provider: null as Provider | null,
+});
+
+// delete confirm state local to this component
+const deleteConfirm = reactive({
+  open: false,
+  providerId: null as string | number | null,
+  providerName: '' as string,
+  event: null as Event | null,
+});
 // end vars
 
 // computed
@@ -281,6 +293,114 @@ function openPopover(event: Event) {
   popovers.event = event;
   popovers.open = true;
   popovers.provider = props.provider;
+}
+
+function openOptionsPopover(event: Event) {
+  optionsPopover.event = event;
+  optionsPopover.open = true;
+  optionsPopover.provider = props.provider;
+}
+
+function closeOptionsPopover() {
+  optionsPopover.open = false;
+  optionsPopover.event = null;
+  optionsPopover.provider = null;
+}
+
+function onEditFromOptions(e: Event) {
+  try {
+    emit('start-editing', {
+      provider: optionsPopover.provider ?? props.provider,
+    });
+  } catch (err) {
+    console.error('onEditFromOptions error', err);
+  } finally {
+    closeOptionsPopover();
+  }
+}
+
+function onNotesFromOptions(e: Event) {
+  try {
+    emit('open-notes-modal', {
+      provider: optionsPopover.provider ?? props.provider,
+      event: e,
+    });
+  } catch (err) {
+    console.error('onNotesFromOptions error', err);
+  } finally {
+    closeOptionsPopover();
+  }
+}
+
+function onDeleteFromOptions(e: Event) {
+  try {
+    // Close options then open delete confirm passing the event
+    closeOptionsPopover();
+    openDeleteConfirm(e);
+  } catch (err) {
+    console.error('onDeleteFromOptions error', err);
+  }
+}
+
+// Open products view after closing the options popover
+function onProductsFromOptions(e: Event) {
+  try {
+    closeOptionsPopover();
+    emit('open-products-popover', {
+      provider: optionsPopover.provider ?? props.provider,
+      event: e,
+    });
+  } catch (err) {
+    console.error('onProductsFromOptions error', err);
+  }
+}
+
+// Open move (date) popover after closing the options popover
+function onMoveFromOptions(e: Event) {
+  try {
+    closeOptionsPopover();
+    // reuse the existing popover used for moving
+    openPopover(e);
+  } catch (err) {
+    console.error('onMoveFromOptions error', err);
+  }
+}
+
+function openDeleteConfirm(e: Event) {
+  try {
+    console.log('ProviderCardComponent.openDeleteConfirm', {
+      id: props.provider?.id,
+      name: props.provider?.name,
+    });
+    deleteConfirm.open = true;
+    deleteConfirm.providerId = props.provider?.id ?? null;
+    deleteConfirm.providerName = props.provider?.name || '';
+    deleteConfirm.event = e;
+  } catch (err) {
+    console.error('openDeleteConfirm error', err);
+  }
+}
+
+function confirmDelete() {
+  try {
+    console.log('ProviderCardComponent.confirmDelete', {
+      id: deleteConfirm.providerId,
+      name: deleteConfirm.providerName,
+    });
+    const payload = {
+      id: deleteConfirm.providerId,
+      name: deleteConfirm.providerName,
+      event: deleteConfirm.event,
+    };
+    emit('confirm-remove-proveedor', payload);
+  } catch (err) {
+    console.error('confirmDelete error', err);
+  } finally {
+    deleteConfirm.open = false;
+    deleteConfirm.providerId = null;
+    deleteConfirm.providerName = '';
+    deleteConfirm.event = null;
+  }
 }
 
 function onDateChange(
