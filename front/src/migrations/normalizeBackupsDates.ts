@@ -59,10 +59,10 @@ export async function migrateNormalizeBackupDates(opts: MigrationOptions = {}) {
 export async function needsNormalizeCheck() {
   const all = (await dixieController.listBackups()) as any[];
   try {
-    console.log(
-      'needsNormalizeCheck: found backups ->',
-      Array.isArray(all) ? all.length : all
-    );
+    // console.log(
+    //   'needsNormalizeCheck: found backups ->',
+    //   Array.isArray(all) ? all.length : all
+    // );
   } catch (_e) {}
   for (const entry of all) {
     try {
@@ -77,12 +77,12 @@ export async function needsNormalizeCheck() {
       const data = entry && entry.data ? entry.data : null;
       const { changed } = normalizeEntryData(data);
       try {
-        console.log(
-          'needsNormalizeCheck: entry',
-          id,
-          'would change?',
-          !!changed
-        );
+        // console.log(
+        //   'needsNormalizeCheck: entry',
+        //   id,
+        //   'would change?',
+        //   !!changed
+        // );
       } catch (_e) {}
       if (changed) return true;
     } catch (e) {

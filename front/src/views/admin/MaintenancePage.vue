@@ -19,6 +19,9 @@
         <ion-item button @click="goToMigrateDates">
           <ion-label>Migrar Fechas</ion-label>
         </ion-item>
+        <ion-item button @click="goToMigrateEntries">
+          <ion-label>Añadir `entries` a backups</ion-label>
+        </ion-item>
       </ion-list>
     </ion-content>
   </ion-page>
@@ -47,6 +50,16 @@ function goToMigrateDates() {
     console.log('MaintenancePage: navigating to migrate-dates');
   }
   router.push({ name: 'MigrateDates' });
+}
+
+function goToMigrateEntries() {
+  if (
+    (import.meta as unknown as { env?: Record<string, string | undefined> }).env
+      ?.DEV
+  ) {
+    console.log('MaintenancePage: navigating to migrate-entries');
+  }
+  router.push({ name: 'MigrateEntries' });
 }
 </script>
 

@@ -23,27 +23,16 @@
     </ion-header>
 
     <ion-content style="--background: white">
-      <div class="ion-padding-start ion-padding-end">
+      <section>
         <ion-item lines="none" class="transparent">
           <ion-buttons>
-            <ion-toggle
-              :key="toggleKey"
-              :enable-on-off-labels="true"
-              :checked="isInExecution"
-              :aria-label="`Estado del día: ${isInExecution ? 'Abierto' : 'Cerrado'}`"
-              @ion-change="onExecutionToggle"
-              >{{ isInExecution ? 'Abierto' : 'Cerrado' }}</ion-toggle
-            >
+            <ion-segment v-model="activeView" scrollable>
+              <ion-segment-button value="inicio">Inicio</ion-segment-button>
 
-            <ion-button
-              title="Info"
-              @click="
-                popovers.inforSuppliers.event = $event;
-                popovers.inforSuppliers.open = true;
-              "
-            >
-              <ion-icon :icon="informationCircleSharp"></ion-icon>
-            </ion-button>
+              <ion-segment-button value="proveedores"
+                >Proveedores</ion-segment-button
+              >
+            </ion-segment>
           </ion-buttons>
 
           <ion-buttons slot="end">
@@ -66,364 +55,55 @@
             </ion-button>
           </ion-buttons>
         </ion-item>
-      </div>
+      </section>
 
-      <!-- main -->
-      <ion-grid v-if="showMainGrid" style="height: 93%">
-        <ion-row style="height: 100%">
-          <ion-col
-            size="12"
-            size-md="7"
-            size-lg="4"
-            style="height: 100%; display: flex; flex-direction: column"
-          >
-            <ion-grid
-              style="height: 100%; display: flex; flex-direction: column"
-            >
-              <!-- Primer ion-row: altura adaptable con máximo 50% -->
-              <ion-row style="flex: 0 1 auto; max-height: 50%; min-height: 0">
-                <ion-col
-                  size="12"
-                  style="height: 100%; display: flex; flex-direction: column"
-                >
-                  <ion-list
-                    style="height: 100%; display: flex; flex-direction: column"
-                    class="transparent"
-                  >
-                    <ion-list-header>
-                      <ion-label>
-                        <div>
-                          Ingresos ({{ formatCurrency({ v: totalIngresos }) }})
-                        </div>
-
-                        <p>
-                          Efectivo:
-                          {{ formatCurrency({ v: totalIngresosEfectivo }) }}
-                          Digital:
-                          {{ formatCurrency({ v: totalIngresosDigital }) }}
-                        </p>
-                      </ion-label>
-
-                      <ion-button
-                        :disabled="controlsDisabled"
-                        @click="addIngresoField()"
-                      >
-                        <ion-icon :icon="addOutline"></ion-icon>
-                      </ion-button>
-                    </ion-list-header>
-
-                    <div
-                      class="list-content"
-                      style="flex: 1 1 auto; overflow-y: auto; min-height: 0"
-                    >
-                      <template v-if="ingresos.length > 0">
-                        <ion-item
-                          v-for="inc in ingresos"
-                          :key="inc.id"
-                          lines="full"
-                        >
-                          <ion-input
-                            v-model="inc.name"
-                            placeholder="Nombre"
-                          ></ion-input>
-
-                          <ion-input
-                            v-model.number="inc.amount"
-                            type="number"
-                            class="num-input"
-                          ></ion-input>
-
-                          <!-- type mony -->
-                          <ion-select
-                            v-model="inc.paymentType"
-                            aria-label="Tipo de pago"
-                            interface="popover"
-                          >
-                            <ion-select-option value="cash"
-                              >Efectivo</ion-select-option
-                            >
-                            <ion-select-option value="digital"
-                              >Digital</ion-select-option
-                            >
-                          </ion-select>
-
-                          <!-- button delete money -->
-                          <ion-button
-                            slot="end"
-                            fill="clear"
-                            size="small"
-                            title="Eliminar ingreso"
-                            color="danger"
-                            @click="removeIngreso(inc.id)"
-                          >
-                            <ion-icon :icon="trashOutline"></ion-icon>
-                          </ion-button>
-                        </ion-item>
-                      </template>
-
-                      <template v-else>
-                        <div class="ion-padding">
-                          <ion-label>
-                            Pulsa el botón «+» para agregar un nuevo ingreso
-                          </ion-label>
-                        </div>
-                      </template>
-                    </div>
-                  </ion-list>
-                </ion-col>
-              </ion-row>
-
-              <ion-row style="flex: 0 1 auto; min-height: 0">
-                <ion-col
-                  size="12"
-                  style="height: 100%; display: flex; flex-direction: column"
-                >
-                  <ion-list
-                    class="transparent"
-                    style="height: 100%; display: flex; flex-direction: column"
-                  >
-                    <ion-list-header>
-                      <ion-label>Resumen</ion-label>
-                    </ion-list-header>
-
-                    <div
-                      class="list-content"
-                      style="flex: 1 1 auto; overflow-y: auto; min-height: 0"
-                    >
-                      <ion-accordion-group>
-                        <ion-accordion value="first">
-                          <ion-item slot="header">
-                            <ion-label>Se requiere</ion-label>
-
-                            <ion-note slot="end">
-                              <div style="display: flex">
-                                <div>
-                                  {{
-                                    formatCurrency({
-                                      v: totalEstimacionEfectivoTarjeta,
-                                    })
-                                  }}
-                                </div>
-
-                                <div
-                                  v-if="faltante < 0"
-                                  style="color: var(--ion-color-danger)"
-                                >
-                                  ({{ formatCurrency({ v: faltante }) }})
-                                </div>
-                              </div>
-                            </ion-note>
-                          </ion-item>
-
-                          <div slot="content">
-                            <!-- cash -->
-                            <ion-item>
-                              <ion-label>Efectivo:</ion-label>
-                              <ion-note slot="end">
-                                <div style="display: flex">
-                                  <div>
-                                    {{
-                                      formatCurrency({
-                                        v: totalEstimacionEfectivo,
-                                      })
-                                    }}
-                                  </div>
-
-                                  <div
-                                    v-if="faltanteEfectivo < 0"
-                                    style="color: var(--ion-color-danger)"
-                                  >
-                                    ({{
-                                      formatCurrency({ v: faltanteEfectivo })
-                                    }})
-                                  </div>
-                                </div>
-                              </ion-note>
-                            </ion-item>
-
-                            <!-- card -->
-                            <ion-item>
-                              <ion-label>Digital:</ion-label>
-                              <ion-note slot="end">
-                                <div style="display: flex">
-                                  <div>
-                                    {{
-                                      formatCurrency({
-                                        v: totalEstimacionDigital,
-                                      })
-                                    }}
-                                  </div>
-
-                                  <div
-                                    v-if="faltanteDigital < 0"
-                                    style="color: var(--ion-color-danger)"
-                                  >
-                                    ({{
-                                      formatCurrency({ v: faltanteDigital })
-                                    }})
-                                  </div>
-                                </div>
-                              </ion-note>
-                            </ion-item>
-                          </div>
-                        </ion-accordion>
-
-                        <ion-accordion value="second">
-                          <ion-item slot="header">
-                            <ion-label> Contamos con </ion-label>
-                            <ion-note slot="end">{{
-                              formatCurrency({
-                                v: nonNegative(
-                                  totalIngresos - totalVisitedProviders
-                                ),
-                              })
-                            }}</ion-note>
-                          </ion-item>
-
-                          <div slot="content" class="ion-padding">
-                            <!-- cash -->
-                            <ion-item>
-                              <ion-label>Efectivo:</ion-label>
-                              <ion-label slot="end">{{
-                                formatCurrency({
-                                  v: nonNegative(
-                                    totalIngresosEfectivo - totalVisitedEfectivo
-                                  ),
-                                })
-                              }}</ion-label>
-                            </ion-item>
-
-                            <!-- digital -->
-                            <ion-item>
-                              <ion-label>Digital:</ion-label>
-                              <ion-label slot="end">{{
-                                formatCurrency({
-                                  v: nonNegative(
-                                    totalIngresosDigital - totalVisitedTarjeta
-                                  ),
-                                })
-                              }}</ion-label>
-                            </ion-item>
-                          </div>
-                        </ion-accordion>
-                      </ion-accordion-group>
-                    </div>
-                  </ion-list>
-                </ion-col>
-              </ion-row>
-            </ion-grid>
-          </ion-col>
-
-          <!-- Right: providers + unexpected -->
-          <ion-col size="12" size-md="7" size-lg="8" style="height: 100%">
-            <ion-grid style="height: 100%">
-              <ion-row
-                style="
-                  display: flex;
-                  justify-content: space-evenly;
-                  height: 100%;
+      <section>
+        <ion-grid v-if="activeView === 'inicio'">
+          <ion-row>
+            <ion-col size="12">
+              <InicioViewComponent
+                :entries="entries"
+                :providers="proveedores"
+                :selected-date="selectedDate"
+                :controls-disabled="controlsDisabled"
+                :total-estimacion-efectivo-tarjeta="
+                  totalEstimacionEfectivoTarjeta
                 "
-              >
-                <ion-col size-lg="5" style="height: 100%">
-                  <ion-list class="transparent" style="height: 100%">
-                    <ion-list-header>
-                      <ion-label>No asistio</ion-label>
+                :faltante="faltante"
+                @create-entry="onSelectEntryType"
+                @delete-ingreso="onDeleteIngreso"
+                @options-popover-did-dismiss="onOptionsPopoverDidDismiss"
+                @update-ingreso="handleUpdateIngreso"
+                @add-egresos="handleAddEgresosFromChild"
+                @delete-egresos-group="handleDeleteEgresosGroup"
+                @delete-egresos-by-provider="handleDeleteEgresosByProvider"
+              />
+            </ion-col>
+          </ion-row>
+        </ion-grid>
 
-                      <!-- Add existing provider -->
-                      <ion-button
-                        :disabled="controlsDisabled"
-                        @click="
-                          popovers.addExistingSupplier.event = $event;
-                          popovers.addExistingSupplier.open = true;
-                        "
-                      >
-                        <ion-icon :icon="flashOutline"></ion-icon>
-                      </ion-button>
+        <ion-grid v-if="activeView === 'proveedores'">
+          <ion-row>
+            <ion-col size="12">
+              <ProvidersToggleComponent
+                :initial-preview-payload="pendingApplyPayload"
+                :selected-date="selectedDate"
+                :providers="proveedores"
+                :ingreso-efectivo="totalIngresosEfectivo"
+                :ingreso-tarjeta="totalIngresosDigital"
+                :ingreso-credito="0"
+              />
+            </ion-col>
+          </ion-row>
+        </ion-grid>
 
-                      <!-- Add provider card restored inside 'No asistio' column -->
-                      <ion-button
-                        :disabled="controlsDisabled"
-                        @click="addBlankProvider()"
-                      >
-                        <ion-icon :icon="addOutline"></ion-icon>
-                      </ion-button>
-                    </ion-list-header>
-
-                    <div
-                      ref="notVisitedList"
-                      class="list-content"
-                      style="height: calc(100% - 73px); overflow: auto"
-                    >
-                      <ProviderCardComponent
-                        v-for="p in enrichedNotVisited"
-                        :key="p.id"
-                        :provider="p"
-                        :is-closed="dayState.value === 'closed'"
-                        :has-products="p.hasProducts"
-                        @visited-changed="onVisitedChanged"
-                        @start-editing="startEditing"
-                        @stop-editing="stopEditing"
-                        @open-products-popover="openProductsPopover"
-                        @open-notes-modal="openNotesModal"
-                        @confirm-remove-proveedor="confirmRemoveProveedor"
-                        @update-provider="handleUpdateProvider"
-                        @register-name-input="handleRegisterNameInput"
-                        @move-provider="onMoveProvider"
-                      />
-                    </div>
-                  </ion-list>
-                </ion-col>
-
-                <ion-col size-lg="5" style="height: 100%">
-                  <ion-list class="transparent" style="height: 100%">
-                    <ion-list-header>
-                      <ion-label>Asistio</ion-label>
-
-                      <!-- Add provider card restored inside 'Asistio' column -->
-                      <ion-button
-                        :disabled="controlsDisabled"
-                        @click="addBlankProviderVisited()"
-                      >
-                        <ion-icon :icon="addOutline"></ion-icon>
-                      </ion-button>
-                    </ion-list-header>
-
-                    <div
-                      ref="visitedList"
-                      class="list-content"
-                      style="height: calc(100% - 73px); overflow: auto"
-                    >
-                      <ProviderCardComponent
-                        v-for="p in enrichedVisited"
-                        :key="p.id"
-                        :provider="p"
-                        :is-closed="dayState.value === 'closed'"
-                        :has-products="p.hasProducts"
-                        @visited-changed="onVisitedChanged"
-                        @start-editing="startEditing"
-                        @stop-editing="stopEditing"
-                        @open-products-popover="openProductsPopover"
-                        @open-notes-modal="openNotesModal"
-                        @confirm-remove-proveedor="confirmRemoveProveedor"
-                        @update-provider="handleUpdateProvider"
-                        @register-name-input="handleRegisterNameInput"
-                        @move-provider="onMoveProvider"
-                      />
-                    </div>
-                  </ion-list>
-                </ion-col>
-              </ion-row>
-            </ion-grid>
-          </ion-col>
-        </ion-row>
-      </ion-grid>
-
-      <!-- final day -->
-      <FinishDayForm
-        v-if="showFinishForm"
-        :finish-day="finishDay"
-        @save="saveFinishDay"
-      />
+        <!-- final day -->
+        <FinishDayForm
+          v-if="showFinishForm"
+          :finish-day="finishDay"
+          @save="saveFinishDay"
+        />
+      </section>
 
       <!-- popover -->
       <ion-popover
@@ -432,7 +112,7 @@
         :keep-contents-mounted="true"
         @did-dismiss="onPopoverDidDismiss"
       >
-        <ion-content>
+        <ion-content class="centered-popover">
           <ion-datetime
             v-model="selectedDate"
             style="background: transparent"
@@ -448,13 +128,15 @@
               color="primary"
               size="small"
               @click="resetToToday()"
-              >Hoy</ion-button
             >
+              Hoy
+            </ion-button>
           </ion-item>
         </ion-content>
       </ion-popover>
 
       <!-- popover more options -->
+
       <ion-popover
         :is-open="popovers.moreOptions.open"
         :event="popovers.moreOptions.event"
@@ -463,13 +145,34 @@
         @did-dismiss="popovers.moreOptions.open = false"
       >
         <ion-content>
-          <!-- Button to open Templates modal -->
+          <!-- on/off day -->
           <ion-item
+            lines="none"
             button
-            :disabled="controlsDisabled"
-            @click="openTemplatesModal()"
+            @click="onExecutionToggle({ detail: { checked: !isInExecution } })"
           >
-            <ion-label>Aplicar template</ion-label>
+            <ion-toggle
+              :key="toggleKey"
+              :enable-on-off-labels="true"
+              :checked="isInExecution"
+              :aria-label="`Estado del día: ${isInExecution ? 'Abierto' : 'Cerrado'}`"
+              @ion-change="onExecutionToggle"
+              @click.stop
+            >
+              {{ isInExecution ? 'Abierto' : 'Cerrado' }}
+            </ion-toggle>
+
+            <ion-button
+              slot="start"
+              fill="clear"
+              title="Info"
+              @click.stop="
+                popovers.inforSuppliers.event = $event;
+                popovers.inforSuppliers.open = true;
+              "
+            >
+              <ion-icon :icon="informationCircleSharp"></ion-icon>
+            </ion-button>
           </ion-item>
 
           <!-- Button clear day -->
@@ -478,6 +181,11 @@
             :disabled="controlsDisabled"
             @click="confirmClearDay()"
           >
+            <ion-icon
+              slot="start"
+              :icon="trashOutline"
+              color="danger"
+            ></ion-icon>
             <ion-label>Vaciar dia</ion-label>
           </ion-item>
 
@@ -504,8 +212,8 @@
             vista quedará en solo lectura.
           </p>
           <ion-button
-            fill="clear"
             slot="bottom"
+            fill="clear"
             @click="popovers.inforSuppliers.open = false"
             >Cerrar</ion-button
           >
@@ -785,6 +493,8 @@
 <script setup lang="ts">
 // Imports
 import {
+  IonSegment,
+  IonSegmentButton,
   IonAccordion,
   IonAlert,
   IonButton,
@@ -840,6 +550,9 @@ import {
   calendarOutline,
   informationOutline,
   informationCircleSharp,
+  arrowBackOutline,
+  arrowForwardOutline,
+  informationCircleOutline,
 } from 'ionicons/icons';
 import { useRoute } from 'vue-router';
 import { format } from 'date-fns';
@@ -853,6 +566,8 @@ type Income = {
   amount: number;
   date: string;
   paymentType: 'cash' | 'digital';
+  entryType?: 'ingreso' | 'egreso';
+  createdAt?: number; // timestamp in ms when entry was created
 };
 
 // Provider type used throughout the component. Fields mirror the objects created
@@ -905,15 +620,19 @@ import {
 import ProductsModalComponent from './modals/PoductsModalComponent.vue';
 import ProviderCardComponent from './ProviderCardComponent.vue';
 import FinishDayForm from './FinishDayForm.vue';
+import ProvidersToggleComponent from './ProvidersComponent.vue';
+import SummaryCards from './components/SummaryCards.vue';
+import InicioViewComponent from './InicioViewComponent.vue';
 // end components
 
 // vars
-const ingresos = reactive([]) as Income[];
+const entries = reactive([]) as Income[];
 const newIngreso = reactive({
   name: '',
   amount: 0,
   date: formatLocalDate(new Date()),
   paymentType: 'cash',
+  entryType: 'ingreso' as 'ingreso' | 'egreso',
 });
 const proveedores = reactive([]) as Provider[];
 const newProveedor = reactive({ name: '', estimated: 0, dollar: 0, notes: '' });
@@ -931,12 +650,14 @@ const _initialSelectedDate = (() => {
 })();
 
 const selectedDate = ref<string>(_initialSelectedDate);
+const activeView = ref<'inicio' | 'proveedores'>('inicio');
 const route = useRoute();
 const popovers = reactive({
   date: { open: false, event: null as unknown },
   inforSuppliers: { open: false, event: null as unknown },
   moreOptions: { open: false, event: null as unknown },
   addExistingSupplier: { open: false, event: null as unknown },
+  addEntryType: { open: false, event: null as unknown },
 });
 const modals = reactive({
   products: {
@@ -1031,6 +752,22 @@ onMounted(async () => {
   if (saved) {
     selectedDate.value = saved;
   }
+
+  // Global debug listener for child dispatch fallback
+  try {
+    window.addEventListener('abogaz:update-provider', (e: any) => {
+      try {
+        console.log(
+          'global abogaz:update-provider',
+          e?.detail || e?.detail?.payload || e
+        );
+      } catch (_e) {
+        console.log('global abogaz:update-provider (fallback)', e);
+      }
+    });
+  } catch (_e) {
+    /* noop */
+  }
   // load suppliers/products map used to decide if a provider has products
   await loadSuppliersProducts();
   // load data for the selected date
@@ -1104,7 +841,7 @@ watch(
 
 // Deep watchers to trigger auto-save
 watch(
-  ingresos,
+  entries,
   () => {
     autoSave();
   },
@@ -1138,8 +875,30 @@ watch(
 // end watch
 
 // Computed
+const totalIngresosOnly = computed(() =>
+  entries.reduce(
+    (s, i) => s + (i.entryType === 'ingreso' ? Number(i.amount || 0) : 0),
+    0
+  )
+);
+
+const totalEgresos = computed(() =>
+  entries.reduce(
+    (s, i) => s + (i.entryType === 'egreso' ? Number(i.amount || 0) : 0),
+    0
+  )
+);
+
+// Net total: ingresos minus egresos (egresos treated as negative)
 const totalIngresos = computed(() =>
-  ingresos.reduce((s, i) => s + Number(i.amount || 0), 0)
+  entries.reduce(
+    (s, i) =>
+      s +
+      (i.entryType === 'egreso'
+        ? -Number(i.amount || 0)
+        : Number(i.amount || 0)),
+    0
+  )
 );
 
 // Search query used by filteredProviders (was missing causing a TS error)
@@ -1186,15 +945,28 @@ const enrichedVisited = computed(() =>
 );
 
 // Totales de ingresos por método de pago (efectivo / digital)
+// Treat egresos as negative so payment-method totals reflect signed availability
 const totalIngresosEfectivo = computed(() =>
-  ingresos.reduce(
-    (s, i) => s + (i.paymentType === 'cash' ? Number(i.amount || 0) : 0),
+  entries.reduce(
+    (s, i) =>
+      s +
+      (i.paymentType === 'cash'
+        ? i.entryType === 'egreso'
+          ? -Number(i.amount || 0)
+          : Number(i.amount || 0)
+        : 0),
     0
   )
 );
 const totalIngresosDigital = computed(() =>
-  ingresos.reduce(
-    (s, i) => s + (i.paymentType === 'digital' ? Number(i.amount || 0) : 0),
+  entries.reduce(
+    (s, i) =>
+      s +
+      (i.paymentType === 'digital'
+        ? i.entryType === 'egreso'
+          ? -Number(i.amount || 0)
+          : Number(i.amount || 0)
+        : 0),
     0
   )
 );
@@ -1357,12 +1129,13 @@ async function tryLoadBackupByIdFromRoute(backupId?: string) {
     if (b && b.data) {
       const d = b.data as any;
 
-      ingresos.splice(
+      entries.splice(
         0,
-        ingresos.length,
+        entries.length,
         ...(d.ingresos || []).map((i: any) => ({
           id: i.id ?? Date.now() + Math.random(),
           paymentType: i.paymentType === 'digital' ? 'digital' : 'cash',
+          createdAt: i.createdAt ?? Date.now(),
           ...i,
         }))
       );
@@ -1419,7 +1192,7 @@ async function tryLoadBackupByIdFromRoute(backupId?: string) {
 // Small helpers extracted from the original onExecutionToggle to improve readability
 async function validateCanCloseDay(): Promise<boolean> {
   const hasIngresos =
-    ingresos.length > 0 && ingresos.some(i => Number(i.amount || 0) > 0);
+    entries.length > 0 && entries.some(i => Number(i.amount || 0) > 0);
   const hasProveedor = proveedores.length > 0;
   if (!hasIngresos || !hasProveedor) {
     const parts: string[] = [];
@@ -1509,7 +1282,8 @@ async function persistBudgetViewBackup() {
       component: 'BudgetView',
       data: {
         selectedDate: formatLocalDate(selectedDate.value),
-        ingresos: ingresos || [],
+        ingresos: entries || [],
+        entries: entries || [],
         proveedores: proveedores || [],
         newIngreso: newIngreso || {
           name: '',
@@ -1601,17 +1375,25 @@ async function onExecutionToggle(event: any) {
   }
 }
 
-function addIngreso(params: { name?: string; amount?: number } = {}) {
+function addIngreso(
+  params: {
+    name?: string;
+    amount?: number;
+    entryType?: 'ingreso' | 'egreso';
+  } = {}
+) {
   // Prevent creation when the day is closed
   if (dayState.value === 'closed') {
     return;
   }
 
-  const { name, amount } = params;
+  const { name, amount, entryType } = params;
   const n = name ?? newIngreso.name;
   const a = amount ?? newIngreso.amount;
+  const et =
+    entryType ?? (newIngreso.entryType as 'ingreso' | 'egreso') ?? 'ingreso';
   if (!n) return;
-  ingresos.push({
+  entries.push({
     id: Date.now() + Math.random(),
     name: n,
     amount: Number(a) || 0,
@@ -1619,13 +1401,16 @@ function addIngreso(params: { name?: string; amount?: number } = {}) {
     paymentType: (newIngreso.paymentType === 'digital' ? 'digital' : 'cash') as
       | 'cash'
       | 'digital',
+    entryType: et,
+    createdAt: Date.now(),
   });
   newIngreso.name = '';
   newIngreso.amount = 0;
   newIngreso.paymentType = 'cash';
+  newIngreso.entryType = 'ingreso';
 }
 
-function addIngresoField() {
+function addIngresoField(entryType: 'ingreso' | 'egreso' = 'ingreso') {
   // Prevent creation when the day is closed
   if (dayState.value === 'closed') {
     // silently ignore when day is closed (UI buttons are disabled in this state)
@@ -1633,26 +1418,28 @@ function addIngresoField() {
   }
 
   // Add empty income field
-  ingresos.push({
+  entries.push({
     id: Date.now() + Math.random(),
     name: '',
     amount: 0,
     date: formatLocalDate(selectedDate.value),
     // default payment type for new empty field
     paymentType: 'cash',
+    entryType: entryType,
+    createdAt: Date.now(),
   } as Income);
 }
 
 function updateIngresoAmount(params: { value: any; index: number }) {
   const { value, index } = params;
-  ingresos[index].amount = Number(value) || 0;
+  entries[index].amount = Number(value) || 0;
 }
 
 async function removeIngreso(params: { id: string | number } | any) {
   const id = params && params.id !== undefined ? params.id : params;
-  const idx = ingresos.findIndex((i: any) => i.id === id);
+  const idx = entries.findIndex((i: any) => i.id === id);
   if (idx >= 0) {
-    ingresos.splice(idx, 1);
+    entries.splice(idx, 1);
     // wait for Vue update; watcher auto-saves
     try {
       await nextTick();
@@ -1666,6 +1453,208 @@ async function removeIngreso(params: { id: string | number } | any) {
         e
       );
     }
+  }
+}
+
+// Handler called from the options popover to delete an ingreso and close the popover
+async function onDeleteIngreso(id: string | number, ev?: any) {
+  try {
+    await removeIngreso(id);
+    console.debug('onDeleteIngreso removed id=', id);
+  } catch (e) {
+    console.error('onDeleteIngreso error:', e);
+  }
+
+  // Try to close the popover that contains the clicked button
+  try {
+    // First try using the event's closest popover (works when the event is the original click)
+    const popoverEl =
+      ev?.currentTarget?.closest && ev.currentTarget.closest('ion-popover');
+    if (popoverEl && typeof popoverEl.dismiss === 'function') {
+      popoverEl.dismiss();
+      return;
+    }
+  } catch (_e) {
+    /* noop */
+  }
+
+  // Fallback: find the popover by its trigger attribute using the known options button id
+  try {
+    const selector = `ion-popover[trigger="options-btn-${String(id)}"]`;
+    const popoverFallback = document.querySelector(selector) as any;
+    if (popoverFallback && typeof popoverFallback.dismiss === 'function') {
+      popoverFallback.dismiss();
+      return;
+    }
+
+    // As a last resort, dismiss any open ion-popover (be conservative)
+    const anyOpen = document.querySelector('ion-popover[is-open]') as any;
+    if (anyOpen && typeof anyOpen.dismiss === 'function') anyOpen.dismiss();
+  } catch (_e) {
+    /* noop */
+  }
+}
+
+function handleUpdateIngreso(payload: {
+  id: string | number;
+  changes: Record<string, any>;
+}) {
+  try {
+    const { id, changes } = payload || ({} as any);
+    if (id == null || !changes) return;
+    const ingreso = entries.find((x: any) => x.id === id);
+    if (!ingreso) return;
+    // Apply known fields safely
+    if (Object.prototype.hasOwnProperty.call(changes, 'amount')) {
+      ingreso.amount = Number(changes.amount) || 0;
+    }
+    if (Object.prototype.hasOwnProperty.call(changes, 'paymentType')) {
+      ingreso.paymentType =
+        String(changes.paymentType) === 'digital' ? 'digital' : 'cash';
+    }
+    if (Object.prototype.hasOwnProperty.call(changes, 'name')) {
+      ingreso.name = String(changes.name || '');
+    }
+    // ensure reactivity propagation
+    nextTick(() => {});
+  } catch (e) {
+    console.error('handleUpdateIngreso error', e);
+  }
+}
+
+// Handler called when child requests to add one or more egresos derived from a provider
+function handleAddEgresosFromChild(egresos: any[]) {
+  try {
+    // Prevent creation when the day is closed
+    if (dayState.value === 'closed') {
+      try {
+        toast.message =
+          'El día está finalizado. Reabre el día para poder editar.';
+        toast.open = true;
+      } catch (_e) {}
+      return;
+    }
+
+    if (!Array.isArray(egresos) || !egresos.length) return;
+
+    // If incoming egresos share a common group id, preserve it when adding
+    const incomingGroupId = egresos[0] && egresos[0]._fromProviderGroupId;
+    const incomingProviderName = egresos[0] && egresos[0]._providerName;
+
+    for (const e of egresos) {
+      // Ensure required fields and normalize
+      const item = {
+        id: e.id ?? Date.now() + Math.random(),
+        name: String(e.name || ''),
+        amount: Number(e.amount || 0) || 0,
+        date: String(e.date || selectedDate.value),
+        paymentType: e.paymentType === 'digital' ? 'digital' : 'cash',
+        entryType: 'egreso' as const,
+        createdAt: e.createdAt ?? Date.now(),
+      } as any;
+
+      // Preserve grouping metadata when present
+      if (e && e._fromProviderGroupId)
+        item._fromProviderGroupId = e._fromProviderGroupId;
+      else if (incomingGroupId) item._fromProviderGroupId = incomingGroupId;
+      if (e && e._providerName) item._providerName = e._providerName;
+      else if (incomingProviderName) item._providerName = incomingProviderName;
+
+      entries.push(item);
+    }
+    // Optionally focus or scroll - ensure Vue processes reactive updates
+    nextTick(() => {});
+  } catch (err) {
+    console.error('handleAddEgresosFromChild error', err);
+  }
+}
+
+function onOptionsPopoverDidDismiss() {
+  // reserved for future state sync if needed
+}
+
+// Handler to delete all egresos that belong to a provider group
+function handleDeleteEgresosGroup(groupId: string | number) {
+  try {
+    if (!groupId) return;
+    // remove entries that have the matching group id
+    for (let i = entries.length - 1; i >= 0; i--) {
+      const it: any = entries[i];
+      if (it && it._fromProviderGroupId === groupId) {
+        entries.splice(i, 1);
+      }
+    }
+    nextTick(() => {});
+  } catch (e) {
+    console.error('handleDeleteEgresosGroup error', e);
+  }
+}
+
+// Delete all egresos created from a provider (match by provider id encoded in groupId)
+function handleDeleteEgresosByProvider(providerId: string | number) {
+  try {
+    if (providerId == null) return;
+    const prefix = `prov-${providerId}-`;
+    for (let i = entries.length - 1; i >= 0; i--) {
+      const it: any = entries[i];
+      if (
+        it &&
+        typeof it._fromProviderGroupId === 'string' &&
+        it._fromProviderGroupId.indexOf(prefix) === 0
+      ) {
+        entries.splice(i, 1);
+      }
+    }
+    nextTick(() => {});
+  } catch (e) {
+    console.error('handleDeleteEgresosByProvider error', e);
+  }
+}
+
+// Clear day handlers (previously defined elsewhere)
+function confirmClearDay() {
+  try {
+    clearDayConfirm.open = true;
+  } catch (_e) {
+    /* noop */
+  }
+}
+
+function onClearDayDismiss() {
+  try {
+    clearDayConfirm.open = false;
+  } catch (_e) {
+    /* noop */
+  }
+}
+
+function performClearDay() {
+  try {
+    proveedores.splice(0, proveedores.length);
+    entries.splice(0, entries.length);
+    Object.assign(newIngreso, {
+      name: '',
+      amount: 0,
+      date: selectedDate.value,
+    });
+    Object.assign(newProveedor, {
+      name: '',
+      estimated: 0,
+      dollar: 0,
+      notes: '',
+    });
+    clearDayConfirm.open = false;
+  } catch (e) {
+    console.error('performClearDay error:', e);
+  }
+}
+
+function acceptCloseValidation() {
+  try {
+    closeValidation.open = false;
+    closeValidation.message = '';
+  } catch (_e) {
+    /* noop */
   }
 }
 
@@ -1770,6 +1759,44 @@ function onDeleteAlertDidDismiss() {
   }
 }
 
+// Handler for selecting the entry type from the popover (Ingreso / Egreso)
+function onSelectEntryType(type: 'ingreso' | 'egreso', ev?: any) {
+  try {
+    // Close the popover
+    popovers.addEntryType.open = false;
+
+    if (type === 'ingreso') {
+      // Add a new ingreso field and focus behavior
+      addIngresoField('ingreso');
+      // Optionally focus the last created input (best-effort)
+      nextTick(() => {
+        try {
+          // nothing specific to focus here since ingresos list items use ion-inputs
+        } catch (_e) {
+          /* noop */
+        }
+      });
+    } else if (type === 'egreso') {
+      // Create an egreso entry (same array but mark as egreso)
+      addIngresoField('egreso');
+      nextTick(() => {});
+    }
+
+    // try to dismiss the native popover element containing the clicked button
+    try {
+      const popoverEl =
+        ev?.currentTarget?.closest && ev.currentTarget.closest('ion-popover');
+      if (popoverEl && typeof popoverEl.dismiss === 'function') {
+        popoverEl.dismiss();
+      }
+    } catch (_e) {
+      /* noop */
+    }
+  } catch (err) {
+    console.error('onSelectEntryType error:', err);
+  }
+}
+
 function updateNewIngreso(params: { name?: string; amount?: number } = {}) {
   const { name, amount } = params;
   if (name !== undefined) newIngreso.name = name;
@@ -1782,6 +1809,15 @@ function formatCurrency(params: { v: number }) {
     style: 'currency',
     currency: 'MXN',
   }).format(v || 0);
+}
+
+function formatTime(ms?: number) {
+  try {
+    if (!ms) return '';
+    return format(new Date(Number(ms)), 'p', { locale: esLocale });
+  } catch (_e) {
+    return '';
+  }
 }
 
 function nonNegative(v: any) {
@@ -2039,7 +2075,14 @@ function handleUpdateProvider(payload: {
 }) {
   try {
     const { id, field, value } = payload || ({} as any);
+    // Debug logs to trace updates from ProviderCardComponent
+    console.log('handleUpdateProvider payload', { payload });
     const prov = proveedores.find((x: any) => x.id === id);
+    console.log('handleUpdateProvider found provider before update', prov, {
+      id,
+      field,
+      value,
+    });
     if (!prov) return;
     // Apply the value for known fields only to avoid accidental injection
     // Only allow specific fields to be updated; use a typed union to index Provider safely
@@ -2050,10 +2093,17 @@ function handleUpdateProvider(payload: {
       // Coerce numeric fields when appropriate
       if (f === 'efectivo' || f === 'tarjeta' || f === 'credito') {
         prov[f] = Number(value) || 0;
+        console.log(
+          'handleUpdateProvider updated numeric field',
+          f,
+          prov[f],
+          prov
+        );
       } else {
         // ensure name is a string
         const newName = String(value ?? '') as any;
         prov[f] = newName;
+        console.log('handleUpdateProvider updated name', prov[f], prov);
 
         // Preserve existing _supplierKey. If none exists, try to initialize it based on the new name
         // only when the normalized name maps to known suppliersProducts. This prevents breaking
@@ -2076,6 +2126,20 @@ function handleUpdateProvider(payload: {
     }
   } catch (e) {
     console.error('handleUpdateProvider error', e);
+  }
+}
+
+// New wrapper so template uses a named handler (avoids inline expression edge-cases)
+function onChildUpdateProvider(payload: {
+  id: string | number;
+  field: string;
+  value: any;
+}) {
+  try {
+    console.log('onChildUpdateProvider wrapper', payload);
+    handleUpdateProvider(payload);
+  } catch (e) {
+    console.error('onChildUpdateProvider error', e);
   }
 }
 
@@ -2248,7 +2312,8 @@ function addBlankProviderVisited() {
 async function onBackupClick() {
   try {
     const payload = {
-      ingresos: JSON.parse(JSON.stringify(ingresos)),
+      ingresos: JSON.parse(JSON.stringify(entries)),
+      entries: JSON.parse(JSON.stringify(entries)),
       proveedores: JSON.parse(JSON.stringify(proveedores)),
       newIngreso: { ...newIngreso },
       newProveedor: { ...newProveedor },
@@ -2260,10 +2325,10 @@ async function onBackupClick() {
       },
     };
 
-    console.log('onBackupClick: payload summary', {
-      selectedDate: payload.selectedDate,
-      ingresosCount: payload.ingresos.length,
-    });
+    // console.log('onBackupClick: payload summary', {
+    //   selectedDate: payload.selectedDate,
+    //   ingresosCount: payload.entries.length,
+    // });
 
     const payloadToSave = {
       component: 'BudgetView',
@@ -2273,7 +2338,7 @@ async function onBackupClick() {
 
     try {
       const id = await backupController.saveBackup({ entry: payloadToSave });
-      console.log('Backup guardado id=', id);
+      // console.log('Backup guardado id=', id);
     } catch (err) {
       console.error('Error al guardar backup:', err);
     }
@@ -2325,12 +2390,12 @@ async function loadDataForDate(dateISO: string) {
 
     const targetNormalized = normalizeDateString(target);
 
-    console.log(
-      'loadDataForDate: target=',
-      target,
-      'normalized=',
-      targetNormalized
-    );
+    // console.log(
+    //   'loadDataForDate: target=',
+    //   target,
+    //   'normalized=',
+    //   targetNormalized
+    // );
 
     // Helper to pick latest entry for a component and date (using normalized selectedDate)
     const latestFor = (componentName: string) =>
@@ -2347,28 +2412,29 @@ async function loadDataForDate(dateISO: string) {
     const latestBudgetView = latestFor('BudgetView');
     const latestFinishDay = latestFor('BudgetFinishDay');
 
-    console.log(
-      'loadDataForDate: backupsCount=',
-      all.length,
-      'latestBudgetView=',
-      latestBudgetView
-        ? { id: latestBudgetView.id, createdAt: latestBudgetView.createdAt }
-        : null,
-      'latestFinishDay=',
-      latestFinishDay
-        ? { id: latestFinishDay.id, createdAt: latestFinishDay.createdAt }
-        : null
-    );
+    // console.log(
+    //   'loadDataForDate: backupsCount=',
+    //   all.length,
+    //   'latestBudgetView=',
+    //   latestBudgetView
+    //     ? { id: latestBudgetView.id, createdAt: latestBudgetView.createdAt }
+    //     : null,
+    //   'latestFinishDay=',
+    //   latestFinishDay
+    //     ? { id: latestFinishDay.id, createdAt: latestFinishDay.createdAt }
+    //     : null
+    // );
 
     if (latestBudgetView && latestBudgetView.data) {
       const d = latestBudgetView.data as any;
 
-      ingresos.splice(
+      entries.splice(
         0,
-        ingresos.length,
+        entries.length,
         ...(d.ingresos || []).map((i: any) => ({
           id: i.id ?? Date.now() + Math.random(),
           paymentType: i.paymentType === 'digital' ? 'digital' : 'cash',
+          createdAt: i.createdAt ?? Date.now(),
           ...i,
         }))
       );
@@ -2405,7 +2471,7 @@ async function loadDataForDate(dateISO: string) {
         d.newProveedor || { name: '', estimated: 0, dollar: 0, notes: '' }
       );
 
-      console.log('Datos cargados para', dateISO, latestBudgetView);
+      // console.log('Datos cargados para', dateISO, latestBudgetView);
 
       // dayClosed preference: BudgetFinishDay (most recent) wins, then BudgetView.dayClosed
       if (latestFinishDay && latestFinishDay.data) {
@@ -2438,7 +2504,7 @@ async function loadDataForDate(dateISO: string) {
         try {
           const key = `budget:closed:${targetNormalized}`;
           const ls = localStorage.getItem(key);
-          console.log('loadDataForDate: localStorage flag', key, ls);
+          // console.log('loadDataForDate: localStorage flag', key, ls);
           dayState.value = ls === '1' ? 'closed' : 'open';
         } catch (_e) {
           dayState.value = 'open';
@@ -2449,7 +2515,7 @@ async function loadDataForDate(dateISO: string) {
     }
 
     // No BudgetView found: initialize empty state and determine closed status from finish-day or localStorage
-    ingresos.splice(0, ingresos.length);
+    entries.splice(0, entries.length);
     proveedores.splice(0, proveedores.length);
     Object.assign(newIngreso, { name: '', amount: 0, date: dateISO });
     Object.assign(newProveedor, {
@@ -2666,6 +2732,21 @@ async function loadSuppliersProducts() {
       // keep original raw name so the UI can show the DB supplier name as placeholder
       suppliersNames[key] = rawName;
     }
+
+    // Debug: log loaded suppliersProducts summary to help diagnose mismatches
+    try {
+      // console.log(
+      //   'loadSuppliersProducts: suppliersList.length=',
+      //   suppliersList.length
+      // );
+      // console.log(
+      //   'loadSuppliersProducts: loadedKeys=',
+      //   Object.keys(suppliersProducts).length,
+      //   Object.keys(suppliersProducts).slice(0, 10)
+      // );
+    } catch (_e) {
+      /* noop */
+    }
   } catch (err) {
     console.error('loadSuppliersProducts error:', err);
   }
@@ -2676,14 +2757,78 @@ function hasProductsFor(params: { provider?: any } | any) {
     // Support both named param: { provider } and positional: provider
     const p =
       params && params.provider !== undefined ? params.provider : params;
+
     // Prefer an explicit supplier key persisted on the provider so product
     // association survives name edits. Fall back to normalizing the provider
     // name only when no explicit key is available.
-    const key =
-      p && p._supplierKey
-        ? String(p._supplierKey)
-        : normalizeName(p?.name || '');
-    return !!(key && suppliersProducts[key] && suppliersProducts[key].length);
+    const rawKey = p && p._supplierKey ? String(p._supplierKey) : p?.name || '';
+
+    // Build a set of candidate lookup keys (original, normalized, and normalized _supplierKey)
+    const candidates: string[] = [];
+    if (p && p._supplierKey) candidates.push(String(p._supplierKey));
+    try {
+      const normKey = normalizeName(String(rawKey || ''));
+      if (normKey) candidates.push(normKey);
+    } catch (_e) {
+      // ignore normalize failures
+    }
+
+    // Debug: log lookup candidates and whether suppliersProducts has any
+    try {
+      console.log('hasProductsFor: provider=', {
+        id: p?.id,
+        name: p?.name,
+        _supplierKey: p?._supplierKey,
+      });
+      // console.log('hasProductsFor: lookupCandidates=', candidates);
+    } catch (_e) {
+      /* noop */
+    }
+
+    // Direct lookup using candidates
+    for (const c of candidates) {
+      if (!c) continue;
+      if (Array.isArray(suppliersProducts[c]) && suppliersProducts[c].length) {
+        console.log('hasProductsFor: matched candidate=', c);
+        return true;
+      }
+    }
+
+    // Last resort: fuzzy match normalized provider name against known supplier keys
+    const normalizedLookup = normalizeName(String(rawKey || ''));
+    if (normalizedLookup) {
+      for (const key of Object.keys(suppliersProducts)) {
+        if (!key) continue;
+        if (
+          key.includes(normalizedLookup) ||
+          normalizedLookup.includes(key) ||
+          key.startsWith(normalizedLookup) ||
+          normalizedLookup.startsWith(key)
+        ) {
+          console.log('hasProductsFor: fuzzy matched', {
+            normalizedLookup,
+            key,
+          });
+          return !!(
+            Array.isArray(suppliersProducts[key]) &&
+            suppliersProducts[key].length
+          );
+        }
+      }
+    }
+
+    // Nothing found
+    try {
+      console.log('hasProductsFor: no products found for provider', {
+        id: p?.id,
+        name: p?.name,
+        candidates,
+      });
+    } catch (_e) {
+      /* noop */
+    }
+
+    return false;
   } catch (_e) {
     return false;
   }
@@ -3444,6 +3589,7 @@ function _buildMoveBackupPayload(provider: Provider, dateISO: string) {
     component: 'BudgetView',
     data: {
       ingresos: [],
+      entries: [],
       proveedores: [provCopy],
       newIngreso: { name: '', amount: 0, date: formatLocalDate(dateISO) },
       newProveedor: { name: '', estimated: 0, dollar: 0, notes: '' },
@@ -3667,7 +3813,8 @@ async function _persistBudgetViewDayClosedSnapshot() {
       component: 'BudgetView',
       data: {
         selectedDate: formatLocalDate(selectedDate.value),
-        ingresos: ingresos || [],
+        ingresos: entries || [],
+        entries: entries || [],
         proveedores: proveedores || [],
         newIngreso: newIngreso || {
           name: '',
@@ -3827,12 +3974,41 @@ function askOverwriteConfirm(
 </script>
 
 <style scoped>
+.centered-popover {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+}
+.centered-popover ion-datetime {
+  width: 100%;
+  max-width: 320px;
+}
 ion-card {
   margin-bottom: 16px;
   border: 1px solid transparent;
   transition:
     border-color 160ms ease,
     box-shadow 160ms ease;
+}
+
+/* Hide delete buttons for income rows by default (remove from layout) */
+.income-item .hover-only {
+  display: none;
+}
+
+/* Show on hover for pointer devices */
+@media (hover: hover) and (pointer: fine) {
+  .income-item:hover .hover-only {
+    display: inline-flex;
+  }
+}
+
+/* Also show when any child has focus (keyboard accessibility) */
+.income-item:focus-within .hover-only,
+.income-item .hover-only:focus {
+  display: inline-flex;
 }
 
 .providers-list ion-card.shadow2:active {

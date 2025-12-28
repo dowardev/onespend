@@ -252,8 +252,8 @@ async function loadMonthlyData() {
       Object.values(latestPerDay).forEach((latest: any) => {
         if (!latest || !latest.data) return;
         const d = latest.data;
-        if (Array.isArray(d.ingresos)) {
-          monthIngresos += d.ingresos.reduce(
+        if (Array.isArray(d.ingresos || d.entries)) {
+          monthIngresos += (d.ingresos || d.entries).reduce(
             (s: number, i: any) => s + (Number(i.amount || 0) || 0),
             0
           );
