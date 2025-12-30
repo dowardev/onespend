@@ -1,3 +1,23 @@
+## [v0.12.1] - 2025-12-30
+
+### Fixed
+
+- Fix typos in ProvidersSummary component (`io-label` → `ion-label`)
+- Update ProvidersComponent prop naming to follow Vue kebab-case convention
+
+### Changed
+
+- Refactor BudgetView by removing unused template modal and supplier popover functionality
+- Remove unused `initialPreviewPayload` prop from ProvidersComponent
+
+### Files changed (staged)
+
+- src/views/budget/BudgetView.vue (modified)
+- src/views/budget/ProvidersComponent.vue (modified)
+- src/views/budget/components/ProvidersSummary.vue (modified)
+
+---
+
 ## [v0.12.0] - 2025-12-28
 
 ### Added

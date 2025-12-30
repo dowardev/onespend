@@ -76,7 +76,6 @@
                 @update-ingreso="handleUpdateIngreso"
                 @add-egresos="handleAddEgresosFromChild"
                 @delete-egresos-group="handleDeleteEgresosGroup"
-                @delete-egresos-by-provider="handleDeleteEgresosByProvider"
               />
             </ion-col>
           </ion-row>
@@ -86,7 +85,6 @@
           <ion-row>
             <ion-col size="12">
               <ProvidersToggleComponent
-                :initial-preview-payload="pendingApplyPayload"
                 :selected-date="selectedDate"
                 :providers="proveedores"
                 :ingreso-efectivo="totalIngresosEfectivo"
@@ -217,57 +215,6 @@
             @click="popovers.inforSuppliers.open = false"
             >Cerrar</ion-button
           >
-        </ion-content>
-      </ion-popover>
-
-      <!-- popove add existing supplier -->
-      <ion-popover
-        :is-open="popovers.addExistingSupplier.open"
-        :event="popovers.addExistingSupplier.event"
-        :keep-contents-mounted="true"
-        @did-dismiss="popovers.addExistingSupplier.open = false"
-      >
-        <ion-content>
-          <ion-item-divider sticky>
-            <ion-searchbar
-              v-model="addExistingSupplierQuery"
-              :debounce="300"
-              mode="ios"
-            ></ion-searchbar>
-          </ion-item-divider>
-
-          <ion-list>
-            <template v-if="filteredSuppliersEntries.length">
-              <ion-item
-                v-for="entry in filteredSuppliersEntries"
-                :key="entry.key"
-                button
-                @click="
-                  addProveedor({ name: entry.name });
-                  popovers.addExistingSupplier.open = false;
-                "
-              >
-                <ion-label>{{ entry.name }}</ion-label>
-                <ion-button
-                  slot="end"
-                  fill="clear"
-                  size="small"
-                  @click.stop="
-                    addProveedor({ name: entry.name });
-                    popovers.addExistingSupplier.open = false;
-                  "
-                >
-                  <ion-icon :icon="addOutline"></ion-icon>
-                </ion-button>
-              </ion-item>
-            </template>
-
-            <template v-else>
-              <ion-item>
-                <ion-label>No hay proveedores cargados</ion-label>
-              </ion-item>
-            </template>
-          </ion-list>
         </ion-content>
       </ion-popover>
 
@@ -427,53 +374,6 @@
         </ion-content>
       </ion-modal>
 
-      <!-- templates modal -->
-      <ion-modal
-        v-model:is-open="showTemplatesModal"
-        :keep-contents-mounted="true"
-        @did-dismiss="onTemplatesModalDidDismiss"
-      >
-        <ion-header class="ion-no-border" mode="ios">
-          <ion-toolbar>
-            <ion-buttons>
-              <ion-button @click="onTemplatesModalDidDismiss()">
-                <ion-icon :icon="closeOutline"></ion-icon>
-              </ion-button>
-            </ion-buttons>
-
-            <ion-title>Aplicar template</ion-title>
-          </ion-toolbar>
-        </ion-header>
-
-        <ion-content>
-          <ion-card class="shadow1">
-            <ion-list class="transparent">
-              <div v-if="templatesModalList.length">
-                <ion-item
-                  v-for="tmpl in templatesModalList"
-                  :key="String(tmpl.id || tmpl.name)"
-                  lines="full"
-                  button
-                  class="transparent"
-                  @click.stop="applyTemplateFromModal(tmpl)"
-                >
-                  <ion-label>
-                    <h2>{{ tmpl.name }}</h2>
-                    <p>{{ tmpl.description }}</p>
-                  </ion-label>
-                </ion-item>
-              </div>
-
-              <template v-else>
-                <ion-item>
-                  <ion-label>No hay templates</ion-label>
-                </ion-item>
-              </template>
-            </ion-list>
-          </ion-card>
-        </ion-content>
-      </ion-modal>
-
       <!-- finish day form moved inline (shown when showFinishForm is true) -->
 
       <!-- toasts -->
@@ -495,7 +395,6 @@
 import {
   IonSegment,
   IonSegmentButton,
-  IonAccordion,
   IonAlert,
   IonButton,
   IonButtons,
@@ -522,9 +421,7 @@ import {
   IonTextarea,
   IonTitle,
   IonToolbar,
-  IonAccordionGroup,
   IonToast,
-  IonSearchbar,
   IonToggle,
 } from '@ionic/vue';
 import {
@@ -545,14 +442,7 @@ import {
   chevronBackOutline,
   chevronForwardOutline,
   ellipsisVerticalOutline,
-  flashOutline,
-  warningOutline,
-  calendarOutline,
-  informationOutline,
   informationCircleSharp,
-  arrowBackOutline,
-  arrowForwardOutline,
-  informationCircleOutline,
 } from 'ionicons/icons';
 import { useRoute } from 'vue-router';
 import { format } from 'date-fns';
@@ -606,14 +496,8 @@ type FocusableRef =
 import dixieController from '@/controllers/dixie';
 import { formatLocalDate } from '@/utils/date';
 import backupController from '@/controllers/backupController';
-import { mergeBackupData } from '@/controllers/migrationService';
 import suppliersController from '@/controllers/suppliersController';
 import systemController from '@/controllers/systemConfigController';
-import TemplateController from '@/controllers/TempalteController';
-import {
-  hasBackupMeaningfulContent,
-  buildAndSaveTemplateApplication,
-} from '@/controllers/templateService';
 // end controllers
 
 // components
@@ -656,7 +540,6 @@ const popovers = reactive({
   date: { open: false, event: null as unknown },
   inforSuppliers: { open: false, event: null as unknown },
   moreOptions: { open: false, event: null as unknown },
-  addExistingSupplier: { open: false, event: null as unknown },
   addEntryType: { open: false, event: null as unknown },
 });
 const modals = reactive({
@@ -706,10 +589,6 @@ const visitedList = ref<HTMLElement | null>(null);
 const suppliersProducts = reactive({} as Record<string, any[]>);
 // Map of normalized supplier name -> original supplier name (from suppliers DB)
 const suppliersNames = reactive({} as Record<string, string>);
-const addExistingSupplierQuery = ref('');
-// --- Templates modal state & handlers ---
-const templatesModalList = reactive([] as any[]);
-const showTemplatesModal = ref(false);
 const showApplyConflictModal = ref(false);
 const applyConflictMessage = ref('');
 const pendingApplyPayload = ref<any | null>(null);
@@ -1077,33 +956,6 @@ const faltanteDigital = computed(() => {
     return disponible - requerido;
   } catch (_e) {
     return 0;
-  }
-});
-
-const filteredSuppliersEntries = computed(() => {
-  try {
-    const q = String(addExistingSupplierQuery.value || '')
-      .trim()
-      .toLowerCase();
-    const entries = Object.entries(suppliersNames || {}).map(([key, name]) => ({
-      key,
-      name,
-    }));
-    if (!q) return entries;
-    return entries.filter(
-      e =>
-        String(e.name || '')
-          .toLowerCase()
-          .includes(q) ||
-        String(e.key || '')
-          .toLowerCase()
-          .includes(q)
-    );
-  } catch (_e) {
-    return Object.entries(suppliersNames || {}).map(([key, name]) => ({
-      key,
-      name,
-    }));
   }
 });
 // end computed
@@ -1587,27 +1439,6 @@ function handleDeleteEgresosGroup(groupId: string | number) {
     nextTick(() => {});
   } catch (e) {
     console.error('handleDeleteEgresosGroup error', e);
-  }
-}
-
-// Delete all egresos created from a provider (match by provider id encoded in groupId)
-function handleDeleteEgresosByProvider(providerId: string | number) {
-  try {
-    if (providerId == null) return;
-    const prefix = `prov-${providerId}-`;
-    for (let i = entries.length - 1; i >= 0; i--) {
-      const it: any = entries[i];
-      if (
-        it &&
-        typeof it._fromProviderGroupId === 'string' &&
-        it._fromProviderGroupId.indexOf(prefix) === 0
-      ) {
-        entries.splice(i, 1);
-      }
-    }
-    nextTick(() => {});
-  } catch (e) {
-    console.error('handleDeleteEgresosByProvider error', e);
   }
 }
 
@@ -3234,41 +3065,6 @@ function onNotesModalDidDismiss() {
   }
 }
 
-async function loadTemplatesForModal() {
-  try {
-    // prefer TemplateController.listTemplates if available
-    if (typeof (TemplateController as any).listTemplates === 'function') {
-      const list = await (TemplateController as any).listTemplates();
-      templatesModalList.splice(0, templatesModalList.length, ...(list || []));
-    } else if (typeof (TemplateController as any).list === 'function') {
-      const list = await (TemplateController as any).list();
-      templatesModalList.splice(0, templatesModalList.length, ...(list || []));
-    } else {
-      templatesModalList.splice(0, templatesModalList.length);
-    }
-  } catch (e) {
-    console.error('loadTemplatesForModal error', e);
-    templatesModalList.splice(0, templatesModalList.length);
-  }
-}
-
-function openTemplatesModal() {
-  try {
-    loadTemplatesForModal();
-    setTimeout(() => (showTemplatesModal.value = true), 50);
-  } catch (e) {
-    console.error('openTemplatesModal error', e);
-  }
-}
-
-function onTemplatesModalDidDismiss() {
-  try {
-    showTemplatesModal.value = false;
-  } catch (_e) {
-    /* noop */
-  }
-}
-
 // Helper: attempt to load suppliers list from suppliersController (various method names)
 async function loadSuppliersListForTemplates(): Promise<any[]> {
   try {
@@ -3326,7 +3122,6 @@ async function navigateToBudget(dateISO: string) {
       /* noop */
     }
 
-    showTemplatesModal.value = false;
     try {
       if ((route.name || '') === 'Budget') {
         selectedDate.value = dateISO;
@@ -3347,49 +3142,6 @@ async function navigateToBudget(dateISO: string) {
     }
   } catch (err) {
     console.error('navigateToBudget error', err);
-  }
-}
-
-async function applyTemplateFromModal(tmpl: any) {
-  try {
-    if (!tmpl) return;
-    const dateISO = formatLocalDate(selectedDate.value);
-
-    // Load suppliers list (helper encapsulates fallbacks)
-    const suppliersList = await loadSuppliersListForTemplates();
-
-    const resolveName = (id: any) => {
-      try {
-        const found = suppliersList.find((s: any) => s && s.id === id);
-        return found ? found.name : null;
-      } catch (_e) {
-        return null;
-      }
-    };
-
-    // Delegate to centralized helper. Ask strategy so UI can prompt conflict choices.
-    const result = await buildAndSaveTemplateApplication(
-      tmpl,
-      dateISO,
-      resolveName,
-      { conflictStrategy: 'ask' }
-    );
-
-    if (result && result.conflict) {
-      handleTemplateConflict(result, tmpl, dateISO);
-      return;
-    }
-
-    if (result && result.success) {
-      await navigateToBudget(dateISO);
-      pendingApplyTemplate.value = null;
-      return;
-    }
-
-    // fallback
-    console.error('applyTemplateFromModal: unexpected result', result);
-  } catch (e) {
-    console.error('applyTemplateFromModal error', e);
   }
 }
 
@@ -3464,7 +3216,6 @@ async function handleApplyConflictCombine() {
 
       showApplyConflictModal.value = false;
       pendingApplyPayload.value = null;
-      showTemplatesModal.value = false;
 
       selectedDate.value = dateISO;
       await loadDataForDate(dateISO);
@@ -3542,7 +3293,6 @@ async function handleApplyConflictOverwrite() {
 
       showApplyConflictModal.value = false;
       pendingApplyPayload.value = null;
-      showTemplatesModal.value = false;
 
       selectedDate.value = dateISO;
       await loadDataForDate(dateISO);

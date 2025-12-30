@@ -60,9 +60,9 @@
           :efectivo="previewEfectivo"
           :tarjeta="previewTarjeta"
           :credito="previewCredito"
-          :ingresoEfectivo="ingresoEfectivo"
-          :ingresoTarjeta="ingresoTarjeta"
-          :ingresoCredito="ingresoCredito"
+          :ingreso-efectivo="ingresoEfectivo"
+          :ingreso-tarjeta="ingresoTarjeta"
+          :ingreso-credito="ingresoCredito"
         />
       </ion-col>
     </ion-row>
@@ -184,7 +184,6 @@ const pendingApplyPayload = ref<any | null>(null);
 const pendingApplyTemplate = ref<any | null>(null);
 
 const props = defineProps<{
-  initialPreviewPayload?: any | null;
   selectedDate?: string | null;
   providers?: any[];
   // ingresos disponibles para la fecha (opcional) - se usan para comparar con lo requerido por proveedores
@@ -197,18 +196,6 @@ const props = defineProps<{
 const previewProviders = reactive<any[]>([]);
 
 const router = useRouter();
-
-// Derived totals for preview providers
-const previewTotalProviders = computed(() => {
-  try {
-    return previewProviders.reduce(
-      (s, p) => s + (Number(p.dollar || p.estimated || 0) || 0),
-      0
-    );
-  } catch (_e) {
-    return 0;
-  }
-});
 
 // Preview totals by payment method
 const previewEfectivo = computed(() => {

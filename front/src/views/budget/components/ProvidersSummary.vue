@@ -4,7 +4,7 @@
       <ion-col>
         <ion-list class="transparent">
           <ion-list-header>
-            <io-label>Resumen de gastos</io-label>
+            <ion-label>Resumen de gastos</ion-label>
           </ion-list-header>
 
           <div class="list-content">
@@ -61,7 +61,7 @@
 
           <ion-list class="transparent">
             <ion-list-header>
-              <io-label>Resultado</io-label>
+              <ion-label>Resultado</ion-label>
             </ion-list-header>
 
             <div class="list-content" style="border: none">
@@ -98,7 +98,7 @@
 
 <script setup lang="ts">
 import { IonRow, IonCol, IonCard, IonItem, IonLabel } from '@ionic/vue';
-import { informationCircleOutline, informationOutline } from 'ionicons/icons';
+import { informationCircleOutline } from 'ionicons/icons';
 import { computed } from 'vue';
 
 const props = defineProps<{
