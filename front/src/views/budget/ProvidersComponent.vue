@@ -1,28 +1,29 @@
 <template>
-  <!-- content -->
   <ion-grid>
     <ion-row class="ion-justify-content-center">
       <ion-col size="4">
-        <!-- preview of template providers -->
         <ion-list class="transparent">
           <ion-list-header>
-            <ion-label>Proveedores del template (vista previa)</ion-label>
+            <ion-label>Proveedores</ion-label>
 
-            <ion-button @click="addEmptyPreviewProvider">
+            <ion-button @click="addEmptyProvider">
               <ion-icon :icon="addOutline"></ion-icon>
+            </ion-button>
+
+            <ion-button @click="openTemplatesModal">
+              <ion-icon :icon="documentOutline"></ion-icon>
             </ion-button>
           </ion-list-header>
 
           <div class="list-content">
-            <template v-if="previewProviders && previewProviders.length">
+            <template v-if="store.providers.length">
               <ProviderCardComponent
-                v-for="p in previewProviders"
+                v-for="p in store.providers"
                 :key="p.id"
                 :provider="p"
-                :is-closed="false"
                 :has-products="false"
-                @update-provider="handlePreviewUpdateProvider"
-                @confirm-remove-proveedor="onPreviewConfirmRemove"
+                @update-provider="handleUpdateProvider"
+                @confirm-remove-proveedor="confirmRemoveProveedor"
               />
             </template>
 
@@ -30,7 +31,7 @@
               <ion-item lines="none">
                 <ion-label
                   >No hay proveedores para la fecha seleccionada. Pulsa "+" para
-                  agregar uno o selecciona un template.</ion-label
+                  agregar uno.</ion-label
                 >
               </ion-item>
             </template>
@@ -41,46 +42,31 @@
       <ion-col size="3">
         <div class="ion-padding-start ion-padding-end">
           <ion-item lines="none" class="transparent">
-            <ion-label>Template</ion-label>
-
-            <ion-button
-              slot="end"
-              color="primary"
-              :fill="hasAppliedTemplate ? 'solid' : 'clear'"
-              class="no-shadow"
-              @click="openTemplatesModal"
-              >{{
-                hasAppliedTemplate ? 'Cambiar template' : 'Aplicar template'
-              }}
-            </ion-button>
+            <ion-label>Resumen</ion-label>
           </ion-item>
         </div>
 
         <ProvidersSummary
-          :efectivo="previewEfectivo"
-          :tarjeta="previewTarjeta"
-          :credito="previewCredito"
-          :ingreso-efectivo="ingresoEfectivo"
-          :ingreso-tarjeta="ingresoTarjeta"
-          :ingreso-credito="ingresoCredito"
+          :efectivo="store.totalEfectivo"
+          :tarjeta="store.totalTarjeta"
+          :credito="store.totalCredito"
+          :ingreso-efectivo="store.ingresosEfectivo"
+          :ingreso-tarjeta="store.ingresosTarjeta"
+          :ingreso-credito="0"
         />
       </ion-col>
     </ion-row>
   </ion-grid>
 
-  <!-- end content -->
-
-  <!-- modals -->
-  <!-- templates modal -->
   <ion-modal
-    v-model:is-open="showTemplatesModal"
+    :is-open="showTemplatesModal"
     :keep-contents-mounted="true"
-    @did-dismiss="onTemplatesModalDidDismiss"
+    @did-dismiss="showTemplatesModal = false"
   >
     <ion-header class="ion-no-border" mode="ios">
       <ion-toolbar>
         <ion-buttons>
-          <ion-button @click="onTemplatesModalDidDismiss">
+          <ion-button @click="showTemplatesModal = false">
             <ion-icon :icon="closeOutline"></ion-icon>
           </ion-button>
         </ion-buttons>
@@ -91,21 +77,21 @@
     <ion-content>
       <ion-card class="shadow1">
         <ion-list class="transparent">
-          <div v-if="templatesModalList.length">
+          <template v-if="templatesList.length">
             <ion-item
-              v-for="tmpl in templatesModalList"
-              :key="String(tmpl.id || tmpl.name)"
+              v-for="tmpl in templatesList"
+              :key="tmpl.id"
               lines="full"
               button
               class="transparent"
-              @click.stop="applyTemplateFromModal(tmpl)"
+              @click.stop="checkTemplateConflict(tmpl)"
             >
               <ion-label>
                 <h2>{{ tmpl.name }}</h2>
                 <p>{{ tmpl.description }}</p>
               </ion-label>
             </ion-item>
-          </div>
+          </template>
 
           <template v-else>
             <ion-item>
@@ -116,558 +102,195 @@
       </ion-card>
     </ion-content>
   </ion-modal>
-  <!-- end modals -->
 
-  <!-- alerts -->
-  <!-- apply conflict alert -->
   <ion-alert
-    :is-open="showApplyConflictModal"
+    :is-open="showConflictModal"
     header="Conflicto de datos"
-    :message="applyConflictMessage"
+    :message="conflictMessage"
     :buttons="[
-      { text: 'Cancelar', role: 'cancel', handler: onApplyConflictDismiss },
-      { text: 'Combinar', handler: handleApplyConflictCombine },
       {
-        text: 'Sobrescribir',
+        text: 'Cancelar',
+        role: 'cancel',
+        handler: () => {
+          showConflictModal = false;
+        },
+      },
+      { text: 'Combinar', handler: handleCombine },
+      { text: 'Sobrescribir', cssClass: 'danger', handler: handleOverwrite },
+    ]"
+    @did-dismiss="showConflictModal = false"
+  ></ion-alert>
+
+  <ion-alert
+    :is-open="deleteConfirm.open"
+    header="Confirmar eliminación"
+    :message="`¿Eliminar proveedor «${deleteConfirm.providerName}»? Esta acción no se puede deshacer.`"
+    :buttons="[
+      {
+        text: 'Cancelar',
+        role: 'cancel',
+        cssClass: 'secondary',
+        handler: () => {
+          deleteConfirm.open = false;
+          deleteConfirm.providerId = null;
+          deleteConfirm.providerName = '';
+        },
+      },
+      {
+        text: 'Eliminar',
         cssClass: 'danger',
-        handler: handleApplyConflictOverwrite,
+        handler: removeProveedorConfirmed,
       },
     ]"
-    @did-dismiss="onApplyConflictDismiss"
+    @did-dismiss="
+      () => {
+        deleteConfirm.open = false;
+        deleteConfirm.providerId = null;
+        deleteConfirm.providerName = '';
+      }
+    "
   ></ion-alert>
-  <!-- end alerts -->
 </template>
 
 <script setup lang="ts">
 import {
-  IonPage,
+  IonGrid,
+  IonRow,
+  IonCol,
+  IonList,
+  IonListHeader,
+  IonLabel,
+  IonButton,
+  IonIcon,
+  IonItem,
+  IonAlert,
+  IonModal,
   IonHeader,
   IonToolbar,
   IonTitle,
-  IonContent,
-  IonButton,
-  IonModal,
-  IonList,
-  IonItem,
-  IonLabel,
   IonCard,
-  IonAlert,
-  IonButtons,
-  IonIcon,
 } from '@ionic/vue';
-import { ref, reactive, computed } from 'vue';
-import { useRouter } from 'vue-router';
-import { format } from 'date-fns';
-import { es as esLocale } from 'date-fns/locale';
+import { ref, reactive } from 'vue';
+import { addOutline, documentOutline, closeOutline } from 'ionicons/icons';
 
-import TemplateController from '@/controllers/TempalteController';
-import suppliersController from '@/controllers/suppliersController';
-import {
-  buildAndSaveTemplateApplication,
-  buildPayloadFromTemplate,
-} from '@/controllers/templateService';
-import { formatLocalDate, parseLocalDate } from '@/utils/date';
-
-import { addOutline, closeOutline } from 'ionicons/icons';
 import ProviderCardComponent from './ProviderCardComponent.vue';
 import ProvidersSummary from './components/ProvidersSummary.vue';
+import { useBudgetStore } from '@/stores/budgetStore';
+import TemplateController from '@/controllers/TempalteController';
+import { buildPayloadFromTemplate } from '@/controllers/templateService';
 
-// Local storage key used by Budget view
-const STORAGE_KEY = 'budget:selectedDate';
+const store = useBudgetStore();
 
-// Templates modal state
-const templatesModalList = reactive<any[]>([]);
 const showTemplatesModal = ref(false);
-const showApplyConflictModal = ref(false);
-const applyConflictMessage = ref('');
-const pendingApplyPayload = ref<any | null>(null);
-const pendingApplyTemplate = ref<any | null>(null);
+const showConflictModal = ref(false);
+const conflictMessage = ref('');
+const templatesList = ref<any[]>([]);
+const pendingTemplate = ref<any>(null);
+const pendingProviders = ref<any[]>([]);
 
-const props = defineProps<{
-  selectedDate?: string | null;
-  providers?: any[];
-  // ingresos disponibles para la fecha (opcional) - se usan para comparar con lo requerido por proveedores
-  ingresoEfectivo?: number | string;
-  ingresoTarjeta?: number | string;
-  ingresoCredito?: number | string;
-}>();
-
-// Preview providers extracted from the template (rendered with ProviderCardComponent)
-const previewProviders = reactive<any[]>([]);
-
-const router = useRouter();
-
-// Preview totals by payment method
-const previewEfectivo = computed(() => {
-  try {
-    return previewProviders.reduce((s, p) => s + Number(p.efectivo || 0), 0);
-  } catch (_e) {
-    return 0;
-  }
-});
-const previewTarjeta = computed(() => {
-  try {
-    return previewProviders.reduce((s, p) => s + Number(p.tarjeta || 0), 0);
-  } catch (_e) {
-    return 0;
-  }
+const deleteConfirm = reactive({
+  open: false,
+  providerId: null as string | number | null,
+  providerName: '' as string,
 });
 
-// Handler to remove a preview provider when child requests deletion
-function onPreviewConfirmRemove(payload: {
-  id?: string | number;
-  name?: string;
-}) {
-  try {
-    const id = payload && payload.id !== undefined ? payload.id : payload;
-    const idx = previewProviders.findIndex((p: any) => p.id === id);
-    if (idx >= 0) previewProviders.splice(idx, 1);
-  } catch (err) {
-    console.error('onPreviewConfirmRemove error', err);
-  }
-}
-const previewCredito = computed(() => {
-  try {
-    return previewProviders.reduce((s, p) => s + Number(p.credito || 0), 0);
-  } catch (_e) {
-    return 0;
-  }
-});
-
-// Computed: whether the currently selected date already has a template applied
-const hasAppliedTemplate = computed(() => {
-  try {
-    if (Array.isArray(props.providers) && props.providers.length) {
-      return props.providers.some((p: any) => !!p._fromTemplate);
-    }
-    return false;
-  } catch (_e) {
-    return false;
-  }
-});
-
-// If parent provides an initial payload, populate preview on mount
-try {
-  if (props.initialPreviewPayload && props.initialPreviewPayload.data) {
-    const p = props.initialPreviewPayload.data.proveedores || [];
-    previewProviders.splice(0, previewProviders.length, ...(p || []));
-  } else if (Array.isArray(props.providers) && props.providers.length) {
-    // No preview payload: populate preview with existing providers for the selected date
-    previewProviders.splice(
-      0,
-      previewProviders.length,
-      ...(props.providers || [])
-    );
-  }
-} catch (_e) {
-  /* noop */
+function addEmptyProvider() {
+  store.addProvider({ name: '', estimated: 0, dollar: 0, allowEmpty: true });
 }
 
-function selectedDateFallback() {
-  try {
-    return formatLocalDate();
-  } catch (_e) {
-    return formatLocalDate();
-  }
-}
-
-// react to selectedDate prop changes to refresh preview if needed
-import { watch } from 'vue';
-watch(
-  () => props.selectedDate,
-  newVal => {
-    // If an initial payload exists and it references selectedDate, keep it; otherwise, no-op
-    // For now we just leave preview as-is. Could rebuild preview using tmpl when needed.
-  }
-);
-
-async function loadTemplatesForModal() {
-  try {
-    if (typeof (TemplateController as any).listTemplates === 'function') {
-      const list = await (TemplateController as any).listTemplates();
-      templatesModalList.splice(0, templatesModalList.length, ...(list || []));
-    } else if (typeof (TemplateController as any).list === 'function') {
-      const list = await (TemplateController as any).list();
-      templatesModalList.splice(0, templatesModalList.length, ...(list || []));
-    } else {
-      templatesModalList.splice(0, templatesModalList.length);
-    }
-  } catch (e) {
-    console.error('loadTemplatesForModal error', e);
-    templatesModalList.splice(0, templatesModalList.length);
-  }
-}
-
-function openTemplatesModal() {
-  try {
-    loadTemplatesForModal();
-    setTimeout(() => (showTemplatesModal.value = true), 50);
-  } catch (e) {
-    console.error('openTemplatesModal error', e);
-  }
-}
-
-function onTemplatesModalDidDismiss() {
-  try {
-    showTemplatesModal.value = false;
-  } catch (_e) {
-    /* noop */
-  }
-}
-
-function handlePreviewUpdateProvider(payload: {
+function handleUpdateProvider(payload: {
   id: string | number;
   field: string;
   value: any;
 }) {
+  const { id, field, value } = payload;
+  store.updateProvider(id, { [field]: value });
+}
+
+function confirmRemoveProveedor(
+  payload: { id?: string | number; name?: string } | any
+) {
+  const id =
+    payload && (payload as any).id !== undefined
+      ? (payload as any).id
+      : (payload as any);
+  const name =
+    payload && (payload as any).name !== undefined
+      ? (payload as any).name
+      : (payload as any)?.name || '';
+  deleteConfirm.providerId = id;
+  deleteConfirm.providerName = name || '';
+  deleteConfirm.open = true;
+}
+
+function removeProveedorConfirmed() {
+  const pid = deleteConfirm.providerId;
+  deleteConfirm.open = false;
+  if (pid != null) store.removeProvider(pid);
+  deleteConfirm.providerId = null;
+  deleteConfirm.providerName = '';
+}
+
+async function openTemplatesModal() {
   try {
-    const { id, field, value } = payload || ({} as any);
-    const p = previewProviders.find((x: any) => x.id === id);
-    if (!p) return;
-    if (['efectivo', 'tarjeta', 'credito'].includes(field)) {
-      (p as any)[field] = Number(value) || 0;
-    } else if (field === 'name') {
-      p.name = String(value || '');
-    }
-    console.log('handlePreviewUpdateProvider updated', { id, field, value, p });
+    const list = await TemplateController.listTemplates();
+    templatesList.value = list || [];
   } catch (e) {
-    console.error('handlePreviewUpdateProvider error', e);
+    templatesList.value = [];
   }
+  showTemplatesModal.value = true;
 }
 
-// Add an empty provider to the preview list
-function addEmptyPreviewProvider() {
+async function checkTemplateConflict(tmpl: any) {
   try {
-    const newItem = {
-      id: Date.now() + Math.random(),
-      name: '',
-      efectivo: 0,
-      tarjeta: 0,
-      credito: 0,
-      dollar: 0,
-      estimated: 0,
-      notes: '',
-      visited: false,
-      _justAdded: true,
-    } as any;
-    previewProviders.push(newItem);
-    // remove new-mark after a short delay (for animation if applicable)
-    setTimeout(() => {
-      try {
-        newItem._justAdded = false;
-      } catch (_e) {
-        /* noop */
-      }
-    }, 400);
-  } catch (err) {
-    console.error('addEmptyPreviewProvider error', err);
-  }
-}
+    const dateISO = store.selectedDate;
+    const payload = buildPayloadFromTemplate(tmpl, dateISO, () => null);
 
-// Helper: attempt to load suppliers list from suppliersController (various method names)
-async function loadSuppliersListForTemplates(): Promise<any[]> {
-  try {
-    let suppliersList: any[] = [];
-    if (typeof (suppliersController as any).listSuppliers === 'function') {
-      try {
-        const res = await (suppliersController as any).listSuppliers();
-        if (Array.isArray(res)) return res;
-      } catch (_e) {
-        /* noop */
-      }
+    const templateProviders = payload.proveedores || [];
+
+    if (store.providers.length > 0 && templateProviders.length > 0) {
+      conflictMessage.value = `Ya hay ${store.providers.length} proveedor(es) registrado(s) para esta fecha. El template tiene ${templateProviders.length} proveedor(es). ¿Deseas combinar o sobrescribir?`;
+      pendingTemplate.value = tmpl;
+      pendingProviders.value = templateProviders;
+      showConflictModal.value = true;
+    } else {
+      applyProviders(templateProviders);
+      showTemplatesModal.value = false;
     }
-
-    const candidates = ['list', 'listAll', 'getAll', 'getSuppliers'];
-    for (const name of candidates) {
-      const fn = (suppliersController as any)[name];
-      if (typeof fn === 'function') {
-        try {
-          const r = await fn();
-          if (Array.isArray(r)) return r;
-        } catch (_e) {
-          /* noop */
-        }
-      }
-    }
-    return suppliersList;
-  } catch (_e) {
-    return [];
-  }
-}
-
-function handleTemplateConflict(result: any, tmpl: any, dateISO: string) {
-  try {
-    try {
-      const parsedDate = parseLocalDate(String(dateISO));
-      applyConflictMessage.value = `Ya existen proveedores guardados para ${format(parsedDate, "d 'de' MMMM 'de' yyyy", { locale: esLocale })}. ¿Deseas combinar el template con los proveedores existentes o sobrescribirlos?`;
-    } catch (_e) {
-      applyConflictMessage.value = `Ya existen proveedores guardados para la fecha seleccionada. ¿Deseas combinar el template con los proveedores existentes o sobrescribirlos?`;
-    }
-    pendingApplyPayload.value = result.payloadToSave;
-    pendingApplyTemplate.value = tmpl;
-    showApplyConflictModal.value = true;
-  } catch (err) {
-    console.error('handleTemplateConflict error', err);
-  }
-}
-
-async function navigateToBudget(dateISO: string) {
-  try {
-    try {
-      localStorage.setItem(STORAGE_KEY, String(dateISO));
-    } catch (_e) {
-      /* noop */
-    }
-
+  } catch (e) {
+    console.error('checkTemplateConflict error', e);
     showTemplatesModal.value = false;
-    try {
-      if ((router.currentRoute.value.name || '') === 'Budget') {
-        // if already in budget route, push a refresh query
-        await router.push({
-          name: 'Budget',
-          query: { refresh: String(Date.now()), date: dateISO },
-        });
-      } else {
-        await router.push({
-          name: 'Budget',
-          query: { refresh: String(Date.now()), date: dateISO },
-        });
-      }
-    } catch (_e) {
-      // fallback
-      window.location.href =
-        '#/budget?refresh=' +
-        String(Date.now()) +
-        '&date=' +
-        encodeURIComponent(dateISO);
-    }
-  } catch (err) {
-    console.error('navigateToBudget error', err);
   }
 }
 
-async function applyTemplateFromModal(tmpl: any) {
-  try {
-    if (!tmpl) return;
-    // Use today's date as default target date for templates in providers view
-    const dateISO = formatLocalDate(
-      props.selectedDate ?? selectedDateFallback()
-    );
-
-    // Load suppliers list (helper encapsulates fallbacks)
-    const suppliersList = await loadSuppliersListForTemplates();
-
-    const resolveName = (id: any) => {
-      try {
-        const found = suppliersList.find((s: any) => s && s.id === id);
-        return found ? found.name : null;
-      } catch (_e) {
-        return null;
-      }
-    };
-
-    // Build a preview payload from template so we can show providers before saving
-    try {
-      const payload = buildPayloadFromTemplate(tmpl, dateISO, resolveName);
-      if (payload && Array.isArray(payload.proveedores)) {
-        previewProviders.splice(
-          0,
-          previewProviders.length,
-          ...payload.proveedores
-        );
-      } else {
-        previewProviders.splice(0, previewProviders.length);
-      }
-    } catch (_e) {
-      previewProviders.splice(0, previewProviders.length);
-    }
-
-    // Actually attempt to save/apply template (this will prompt conflict if needed)
-    const result = await buildAndSaveTemplateApplication(
-      tmpl,
-      dateISO,
-      resolveName,
-      { conflictStrategy: 'ask' }
-    );
-
-    if (result && result.conflict) {
-      handleTemplateConflict(result, tmpl, dateISO);
-      return;
-    }
-
-    if (result && result.success) {
-      await navigateToBudget(dateISO);
-      pendingApplyTemplate.value = null;
-      return;
-    }
-
-    console.error('applyTemplateFromModal: unexpected result', result);
-  } catch (e) {
-    console.error('applyTemplateFromModal error', e);
-  }
+function applyProviders(providers: any[]) {
+  providers.forEach((p: any) => {
+    store.addProvider({
+      name: p.name,
+      estimated: p.estimated,
+      dollar: p.dollar,
+    });
+  });
 }
 
-function onApplyConflictDismiss() {
-  try {
-    showApplyConflictModal.value = false;
-    pendingApplyPayload.value = null;
-  } catch (_e) {
-    /* noop */
+function handleCombine() {
+  if (pendingProviders.value.length > 0) {
+    applyProviders(pendingProviders.value);
   }
+  showConflictModal.value = false;
+  pendingTemplate.value = null;
+  pendingProviders.value = [];
+  showTemplatesModal.value = false;
 }
 
-async function handleApplyConflictCombine() {
-  try {
-    const payloadToSave = pendingApplyPayload.value;
-    if (!payloadToSave) return onApplyConflictDismiss();
-
-    const dateISO = payloadToSave.data?.selectedDate;
-    let suppliersList: any[] = [];
-    try {
-      const resList =
-        typeof (suppliersController as any).listSuppliers === 'function'
-          ? await (suppliersController as any).listSuppliers()
-          : null;
-      if (Array.isArray(resList)) suppliersList = resList;
-    } catch (_e) {
-      try {
-        const candidates = ['list', 'listAll', 'getAll', 'getSuppliers'];
-        for (const name of candidates) {
-          const fn = (suppliersController as any)[name];
-          if (typeof fn === 'function') {
-            try {
-              const r = await fn();
-              if (Array.isArray(r)) {
-                suppliersList = r;
-                break;
-              }
-            } catch (_ee) {
-              /* noop */
-            }
-          }
-        }
-      } catch (_ee) {
-        /* noop */
-      }
-    }
-
-    const res = await buildAndSaveTemplateApplication(
-      pendingApplyTemplate.value || null,
-      dateISO,
-      (id: any) => {
-        try {
-          const found = suppliersList.find((s: any) => s && s.id === id);
-          return found ? found.name : null;
-        } catch (_e) {
-          return null;
-        }
-      },
-      {
-        conflictStrategy: 'combine',
-        prebuiltPayload: pendingApplyPayload.value,
-      }
-    );
-
-    if (res && res.success) {
-      try {
-        localStorage.setItem(STORAGE_KEY, String(dateISO));
-      } catch (_e) {
-        /* noop */
-      }
-
-      showApplyConflictModal.value = false;
-      pendingApplyPayload.value = null;
-      showTemplatesModal.value = false;
-
-      await navigateToBudget(dateISO);
-      return;
-    }
-
-    console.error('handleApplyConflictCombine: unexpected result', res);
-  } catch (e) {
-    console.error('handleApplyConflictCombine error', e);
+function handleOverwrite() {
+  store.providers.splice(0, store.providers.length);
+  if (pendingProviders.value.length > 0) {
+    applyProviders(pendingProviders.value);
   }
-}
-
-async function handleApplyConflictOverwrite() {
-  try {
-    const payloadToSave = pendingApplyPayload.value;
-    if (!payloadToSave) return onApplyConflictDismiss();
-
-    const dateISO = payloadToSave.data?.selectedDate;
-    let suppliersList: any[] = [];
-    try {
-      const resList =
-        typeof (suppliersController as any).listSuppliers === 'function'
-          ? await (suppliersController as any).listSuppliers()
-          : null;
-      if (Array.isArray(resList)) suppliersList = resList;
-    } catch (_e) {
-      try {
-        const candidates = ['list', 'listAll', 'getAll', 'getSuppliers'];
-        for (const name of candidates) {
-          const fn = (suppliersController as any)[name];
-          if (typeof fn === 'function') {
-            try {
-              const r = await fn();
-              if (Array.isArray(r)) {
-                suppliersList = r;
-                break;
-              }
-            } catch (_ee) {
-              /* noop */
-            }
-          }
-        }
-      } catch (_ee) {
-        /* noop */
-      }
-    }
-
-    const res = await buildAndSaveTemplateApplication(
-      pendingApplyTemplate.value || null,
-      dateISO,
-      (id: any) => {
-        try {
-          const found = suppliersList.find((s: any) => s && s.id === id);
-          return found ? found.name : null;
-        } catch (_e) {
-          return null;
-        }
-      },
-      {
-        conflictStrategy: 'overwrite',
-        prebuiltPayload: pendingApplyPayload.value,
-      }
-    );
-
-    if (res && res.success) {
-      try {
-        localStorage.setItem(
-          STORAGE_KEY,
-          String(payloadToSave.data?.selectedDate)
-        );
-      } catch (_e) {
-        /* noop */
-      }
-
-      showApplyConflictModal.value = false;
-      pendingApplyPayload.value = null;
-      showTemplatesModal.value = false;
-
-      await navigateToBudget(dateISO);
-      return;
-    }
-
-    console.error('handleApplyConflictOverwrite: unexpected result', res);
-  } catch (e) {
-    console.error('handleApplyConflictOverwrite error', e);
-  }
+  showConflictModal.value = false;
+  pendingTemplate.value = null;
+  pendingProviders.value = [];
+  showTemplatesModal.value = false;
 }
 </script>
-
-<style scoped>
-ion-card {
-  margin-top: 8px;
-}
-</style>

@@ -1,3 +1,29 @@
+## [v0.13.0] - 2026-01-01
+
+### Added
+
+- Add new Pinia store for budget state management (`src/stores/budgetStore.ts`) with centralized handling of entries, providers, day state, computed totals, and auto-save functionality
+- Add debounced auto-save with watchers for entries, providers, and day closed state
+- Add comprehensive computed properties for financial calculations: totalIngresos, totalEgresos, netTotal, totalEfectivo, totalTarjeta, totalCredito, totalEstimacion, faltante, ingresosEfectivo, ingresosTarjeta
+- Add provider group operations with tracking via `_fromProviderGroupId` and `_providerName`
+
+### Changed
+
+- Refactor BudgetView to use centralized budgetStore instead of local reactive state
+- Simplify BudgetView by removing complex popover and modal handling logic
+- Update InicioViewComponent to integrate with budgetStore for entries and providers data
+- Update ProvidersComponent to use budgetStore for provider management operations
+- Remove inline type definitions from BudgetView, leveraging store types instead
+
+### Files changed (staged)
+
+- src/stores/budgetStore.ts (added)
+- src/views/budget/BudgetView.vue (modified)
+- src/views/budget/InicioViewComponent.vue (modified)
+- src/views/budget/ProvidersComponent.vue (modified)
+
+---
+
 ## [v0.12.1] - 2025-12-30
 
 ### Fixed
