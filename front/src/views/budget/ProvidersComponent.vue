@@ -25,6 +25,7 @@
                 :is-disabled="store.providerIdsWithEntries.has(p.id)"
                 @update-provider="handleUpdateProvider"
                 @confirm-remove-proveedor="confirmRemoveProveedor"
+                @open-notes-modal="handleOpenNotesModal"
               />
             </template>
 
@@ -53,6 +54,7 @@
     </ion-row>
   </ion-grid>
 
+  <!-- modals -->
   <ion-modal
     :is-open="showTemplatesModal"
     :keep-contents-mounted="true"
@@ -98,6 +100,41 @@
     </ion-content>
   </ion-modal>
 
+  <ion-modal
+    :is-open="showNotesModal"
+    :keep-contents-mounted="true"
+    @did-dismiss="showNotesModal = false"
+  >
+    <ion-header class="ion-no-border" mode="ios">
+      <ion-toolbar>
+        <ion-buttons>
+          <ion-button @click="showNotesModal = false">
+            <ion-icon :icon="closeOutline"></ion-icon>
+          </ion-button>
+        </ion-buttons>
+        <ion-title>Notas - {{ notesProvider?.name }}</ion-title>
+        <ion-buttons slot="end">
+          <ion-button @click="saveNotes">Guardar</ion-button>
+        </ion-buttons>
+      </ion-toolbar>
+    </ion-header>
+
+    <ion-content>
+      <ion-card class="shadow1">
+        <ion-item lines="none">
+          <ion-textarea
+            v-model="notesContent"
+            placeholder="Escribe las notas aquí..."
+            auto-grow
+            :rows="10"
+          ></ion-textarea>
+        </ion-item>
+      </ion-card>
+    </ion-content>
+  </ion-modal>
+  <!-- end modals -->
+
+  <!-- alerts -->
   <ion-alert
     :is-open="showConflictModal"
     header="Conflicto de datos"
@@ -145,6 +182,7 @@
       }
     "
   ></ion-alert>
+  <!-- end alerts -->
 </template>
 
 <script setup lang="ts">
@@ -164,6 +202,7 @@ import {
   IonToolbar,
   IonTitle,
   IonCard,
+  IonTextarea,
 } from '@ionic/vue';
 import { ref, reactive } from 'vue';
 import { addOutline, documentOutline, closeOutline } from 'ionicons/icons';
@@ -178,6 +217,9 @@ const store = useBudgetStore();
 
 const showTemplatesModal = ref(false);
 const showConflictModal = ref(false);
+const showNotesModal = ref(false);
+const notesProvider = ref<any>(null);
+const notesContent = ref('');
 const conflictMessage = ref('');
 const templatesList = ref<any[]>([]);
 const pendingTemplate = ref<any>(null);
@@ -224,6 +266,21 @@ function removeProveedorConfirmed() {
   if (pid != null) store.removeProvider(pid);
   deleteConfirm.providerId = null;
   deleteConfirm.providerName = '';
+}
+
+function handleOpenNotesModal(payload: { provider: any }) {
+  const { provider } = payload;
+  notesProvider.value = provider;
+  notesContent.value = provider?.notes || '';
+  showNotesModal.value = true;
+}
+
+function saveNotes() {
+  if (notesProvider.value) {
+    store.updateProvider(notesProvider.value.id, { notes: notesContent.value });
+  }
+  showNotesModal.value = false;
+  notesProvider.value = null;
 }
 
 async function openTemplatesModal() {

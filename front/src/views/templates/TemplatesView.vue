@@ -94,7 +94,6 @@
         />
       </ion-modal>
 
-      <!-- modal aplicar template -->
       <ion-modal
         v-model:is-open="showApplyModal"
         :keep-contents-mounted="true"
@@ -110,6 +109,13 @@
         />
       </ion-modal>
 
+      <ion-modal :keep-contents-mounted="true">
+        <ion-datetime
+          id="datetime"
+          v-model="applySelectedDate"
+          presentation="date"
+        ></ion-datetime>
+      </ion-modal>
       <!-- end modals -->
 
       <!-- alerts -->
@@ -131,7 +137,6 @@
         @did-dismiss="onConfirmDismiss"
       ></ion-alert>
 
-      <!-- Alert para conflicto al aplicar template: Combinar/Sobrescribir -->
       <ion-alert
         v-model:is-open="showApplyConflict"
         header="Conflicto de datos"
@@ -149,23 +154,13 @@
       ></ion-alert>
       <!-- end alerts -->
 
-      <!-- toast -->
+      <!-- toasts -->
       <ion-toast
         v-model:is-open="toast.open"
         :message="toast.message"
         duration="2000"
       ></ion-toast>
-      <!-- end toast-->
-
-      <!-- modal -->
-      <ion-modal :keep-contents-mounted="true">
-        <ion-datetime
-          id="datetime"
-          v-model="applySelectedDate"
-          presentation="date"
-        ></ion-datetime>
-      </ion-modal>
-      <!-- end modal -->
+      <!-- end toasts -->
     </ion-content>
   </ion-page>
 </template>

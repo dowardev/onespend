@@ -27,12 +27,8 @@
               >
                 <ion-accordion-group v-if="block.type === 'group'">
                   <ion-accordion>
-                    <ion-item
-                      slot="header"
-                      lines="none"
-                      class="provider-accordion-header"
-                    >
-                      <ion-icon :icon="personOutline" slot="start"></ion-icon>
+                    <ion-item slot="header" lines="none">
+                      <ion-icon slot="start" :icon="personOutline"></ion-icon>
 
                       <ion-label>
                         <div class="provider-header">
@@ -129,24 +125,22 @@
 
                             <ion-popover
                               :trigger="`options-btn-${inc.id}`"
-                              :keep-contents-mounted="true"
+                              :dismiss-on-select="true"
                             >
-                              <ion-content class="ion-padding">
-                                <ion-button
-                                  fill="clear"
-                                  color="danger"
-                                  style="
-                                    width: 100%;
-                                    justify-content: flex-start;
-                                  "
+                              <ion-content>
+                                <ion-item
+                                  lines="none"
+                                  button
                                   @click="store.removeIngreso(inc.id)"
                                 >
                                   <ion-icon
                                     slot="start"
+                                    color="danger"
                                     :icon="trashOutline"
                                   ></ion-icon>
-                                  Eliminar
-                                </ion-button>
+
+                                  <ion-label> Eliminar </ion-label>
+                                </ion-item>
                               </ion-content>
                             </ion-popover>
                           </ion-item>
@@ -243,18 +237,22 @@
 
                   <ion-popover
                     :trigger="`options-btn-${block.item.id}`"
-                    :keep-contents-mounted="true"
+                    :dismiss-on-select="true"
                   >
-                    <ion-content class="ion-padding">
-                      <ion-button
-                        fill="clear"
-                        color="danger"
-                        style="width: 100%; justify-content: flex-start"
+                    <ion-content>
+                      <ion-item
+                        lines="none"
+                        button
                         @click="store.removeIngreso(block.item.id)"
                       >
-                        <ion-icon slot="start" :icon="trashOutline"></ion-icon>
-                        Eliminar
-                      </ion-button>
+                        <ion-icon
+                          slot="start"
+                          color="danger"
+                          :icon="trashOutline"
+                        ></ion-icon>
+
+                        <ion-label> Eliminar </ion-label>
+                      </ion-item>
                     </ion-content>
                   </ion-popover>
                 </ion-item>
@@ -294,6 +292,7 @@
     </ion-row>
   </ion-grid>
 
+  <!-- popovers -->
   <ion-popover
     :is-open="localPopovers.addEntryType.open"
     :event="localPopovers.addEntryType.event"
@@ -336,11 +335,11 @@
             <ion-label>Proveedores</ion-label>
           </ion-item>
 
-          <div slot="content" class="ion-padding">
+          <div slot="content">
             <ion-list>
-              <template v-if="providersToday.length">
+              <template v-if="providersTodayWithData.length">
                 <ion-item
-                  v-for="p in providersToday"
+                  v-for="p in providersTodayWithData"
                   :key="p.id"
                   lines="none"
                   class="transparent"
@@ -353,7 +352,9 @@
 
               <template v-else>
                 <ion-item>
-                  <ion-label>No hay proveedores para este día</ion-label>
+                  <ion-label
+                    >No hay proveedores con datos para este día</ion-label
+                  >
                 </ion-item>
               </template>
             </ion-list>
@@ -362,7 +363,9 @@
       </ion-accordion-group>
     </ion-content>
   </ion-popover>
+  <!-- end popovers -->
 
+  <!-- alerts -->
   <ion-alert
     :is-open="deleteGroupConfirm.open"
     header="Eliminar gastos"
@@ -387,6 +390,7 @@
       }
     "
   ></ion-alert>
+  <!-- end alerts -->
 </template>
 
 <script setup lang="ts">
@@ -443,6 +447,18 @@ const providersToday = computed(() => {
   return store.providers.filter(
     (p: any) => String(p.date || '').slice(0, 10) === sel && !addedIds.has(p.id)
   );
+});
+
+const providersTodayWithData = computed(() => {
+  return providersToday.value.filter((p: any) => {
+    return (
+      Number(p?.efectivo) > 0 ||
+      Number(p?.tarjeta) > 0 ||
+      Number(p?.credito) > 0 ||
+      Number(p?.dollar) > 0 ||
+      Number(p?.estimated) > 0
+    );
+  });
 });
 
 const renderedEntries = computed(() => {

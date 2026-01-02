@@ -48,7 +48,6 @@
   <slot name="analysis" />
 
   <!-- modals -->
-  <!-- modal more details -->
   <ion-modal :is-open="localModal" @did-dismiss="onModalDismiss">
     <ion-header class="ion-no-border" mode="ios">
       <ion-toolbar>
