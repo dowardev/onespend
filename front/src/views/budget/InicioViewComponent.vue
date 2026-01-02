@@ -439,8 +439,9 @@ const deleteGroupConfirm = reactive({
 const providersToday = computed(() => {
   const sel = String(store.selectedDate || '').slice(0, 10);
   if (!sel) return [];
+  const addedIds = store.providerIdsWithEntries;
   return store.providers.filter(
-    (p: any) => String(p.date || '').slice(0, 10) === sel
+    (p: any) => String(p.date || '').slice(0, 10) === sel && !addedIds.has(p.id)
   );
 });
 
