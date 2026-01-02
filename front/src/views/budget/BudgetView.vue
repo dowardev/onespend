@@ -1,7 +1,7 @@
 <template>
   <ion-page>
     <ion-header class="ion-no-border" mode="ios">
-      <ion-toolbar style="--background: white">
+      <ion-toolbar>
         <ion-buttons slot="start">
           <ion-menu-button :mode="designMode"></ion-menu-button>
         </ion-buttons>
@@ -16,11 +16,15 @@
       </ion-toolbar>
     </ion-header>
 
-    <ion-content style="--background: white">
+    <ion-content>
       <section>
         <ion-item lines="none" class="transparent">
           <ion-buttons>
-            <ion-segment v-model="activeView" scrollable>
+            <ion-segment
+              v-model="activeView"
+              scrollable
+              :disabled="store.isDayClosed"
+            >
               <ion-segment-button value="inicio">Inicio</ion-segment-button>
               <ion-segment-button value="proveedores"
                 >Proveedores</ion-segment-button
@@ -29,18 +33,27 @@
           </ion-buttons>
 
           <ion-buttons slot="end">
-            <ion-button title="Retroceder" @click="goBack">
+            <ion-button
+              title="Retroceder"
+              :disabled="store.isDayClosed"
+              @click="goBack"
+            >
               <ion-icon :icon="chevronBackOutline"></ion-icon>
             </ion-button>
 
             <ion-button
               title="Seleccionar fecha"
+              :disabled="store.isDayClosed"
               @click="openDatePicker($event)"
             >
               {{ formattedSelectedDate }}
             </ion-button>
 
-            <ion-button title="Avanzar" @click="goForward">
+            <ion-button
+              title="Avanzar"
+              :disabled="store.isDayClosed"
+              @click="goForward"
+            >
               <ion-icon :icon="chevronForwardOutline"></ion-icon>
             </ion-button>
           </ion-buttons>
@@ -118,8 +131,8 @@
           </ion-item>
           <ion-item
             button
+            :disabled="store.isDayClosed"
             @click="confirmClearDay"
-            :disabled="!store.isDayClosed"
           >
             <ion-icon
               slot="start"

@@ -40,12 +40,6 @@
       </ion-col>
 
       <ion-col size="3">
-        <div class="ion-padding-start ion-padding-end">
-          <ion-item lines="none" class="transparent">
-            <ion-label>Resumen</ion-label>
-          </ion-item>
-        </div>
-
         <ProvidersSummary
           :efectivo="store.totalEfectivo"
           :tarjeta="store.totalTarjeta"

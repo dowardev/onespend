@@ -1,5 +1,6 @@
 /* theme */
 @import url('./files/light.css');
+@import url('./files/dark.css');
 
 .main-card-content {
   height: calc(100dvh - 80px);
@@ -32,8 +33,7 @@ ion-item.transparent,
 ion-item-divider.transparent {
   --background: transparent;
 }
-ion-item.border-rounded{
-
+ion-item.border-rounded {
   border-radius: 4px;
 }
 /* end ion-item */

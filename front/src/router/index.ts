@@ -9,6 +9,7 @@ import StatisticsConfigPage from '@/views/statistics/config/StatisticsConfigPage
 import MaintenancePage from '@/views/admin/MaintenancePage.vue';
 import MigrateDates from '@/views/admin/maintenance/MigrateDates.vue';
 import MigrateEntries from '@/views/admin/maintenance/MigrateEntries.vue';
+import PersonalizationPage from '@/views/admin/PersonalizationPage.vue';
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -50,7 +51,11 @@ const routes: Array<RouteRecordRaw> = [
     name: 'MigrateEntries',
     component: MigrateEntries,
   },
-  // compatibility redirect from old path to new maintenance route
+  {
+    path: '/admin/personalization',
+    name: 'PersonalizationPage',
+    component: PersonalizationPage,
+  },
   {
     path: '/admin/migrate-dates',
     redirect: '/admin/maintenance/migrate-dates',
