@@ -68,24 +68,54 @@
 
     <!-- required -->
     <ion-col size="12">
-      <ion-item class="transparent">
-        <ion-label>
-          Se requiere
-          <p>Efectivo: {{ formatCurrency(totalEstimacionEfectivo) }}</p>
+      <ion-card class="shadow1">
+        <div
+          class="ion-padding-start ion-padding-top"
+          style="display: flex; justify-content: space-between; height: 100%"
+        >
+          <div style="display: flex; align-items: center">
+            <ion-card-title :color="differenceColor">{{
+              differenceLabel
+            }}</ion-card-title>
+          </div>
 
-          <p>
-            Tarjeta:
-            {{ formatCurrency(totalEstimacionDigital) }}
-          </p>
+          <ion-button slot="end" fill="clear">
+            <ion-icon :icon="informationCircleOutline"></ion-icon>
+          </ion-button>
+        </div>
 
-          <p>
-            Total estimado:
-            {{ formatCurrency(derivedTotalEstimacionEfectivoTarjeta) }}
-            Disponible:
-            {{ formatCurrency(faltante) }}
-          </p>
-        </ion-label>
-      </ion-item>
+        <ion-list class="transparent">
+          <ion-list-header>
+            <ion-label>Resultado</ion-label>
+          </ion-list-header>
+
+          <div class="list-content" style="border: none">
+            <!-- cash -->
+            <ion-item lines="full">
+              <ion-label>Efectivo</ion-label>
+              <ion-label slot="end" :color="colorEfectivo">{{
+                labelEfectivo
+              }}</ion-label>
+            </ion-item>
+
+            <!-- card -->
+            <ion-item lines="full">
+              <ion-label>Tarjeta</ion-label>
+              <ion-label slot="end" :color="colorTarjeta">{{
+                labelTarjeta
+              }}</ion-label>
+            </ion-item>
+
+            <!-- credit -->
+            <ion-item lines="full">
+              <ion-label>Credito</ion-label>
+              <ion-label slot="end" :color="colorCredito">{{
+                labelCredito
+              }}</ion-label>
+            </ion-item>
+          </div>
+        </ion-list>
+      </ion-card>
     </ion-col>
   </ion-row>
 </template>
@@ -178,6 +208,33 @@ const derivedTotalEstimacionEfectivoTarjeta = computed(() => {
     return 0;
   }
 });
+
+const differenceColor = computed(() => {
+  const diff = Number(faltante.value || 0);
+  if (diff > 0) return 'success';
+  if (diff < 0) return 'danger';
+  return 'medium';
+});
+
+const differenceLabel = computed(() => {
+  const diff = Number(faltante.value || 0);
+  if (diff > 0) return 'Sobrante';
+  if (diff < 0) return 'Faltante';
+  return 'Cuadrado';
+});
+
+const labelEfectivo = computed(() =>
+  formatCurrency(totalEstimacionEfectivo.value)
+);
+const colorEfectivo = computed(() => 'primary');
+
+const labelTarjeta = computed(() =>
+  formatCurrency(totalEstimacionDigital.value)
+);
+const colorTarjeta = computed(() => 'primary');
+
+const labelCredito = computed(() => formatCurrency(creditoValue.value));
+const colorCredito = computed(() => 'primary');
 
 function formatCurrency(v: number | string) {
   try {

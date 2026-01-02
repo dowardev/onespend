@@ -108,4 +108,8 @@ body.dark {
   --ion-background-color-step-850: #707070;
   --ion-background-color-step-900: #757575;
   --ion-background-color-step-950: #7a7a7a;
+
+  --card-shadow-light: rgba(255, 255, 255, 0.03);
+  --card-shadow-heavy: rgba(255, 255, 255, 0.1);
+  --card-shadow-subtle: rgba(255, 255, 255, 0.08);
 }
