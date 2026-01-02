@@ -22,6 +22,7 @@
                 :key="p.id"
                 :provider="p"
                 :has-products="false"
+                :is-disabled="store.providerIdsWithEntries.has(p.id)"
                 @update-provider="handleUpdateProvider"
                 @confirm-remove-proveedor="confirmRemoveProveedor"
               />

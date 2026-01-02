@@ -1,11 +1,18 @@
 <template>
   <ion-card
-    :class="['shadow2', { 'provider-just-added': props.provider._justAdded }]"
+    :class="[
+      'shadow2',
+      {
+        'provider-just-added': props.provider._justAdded,
+        'provider-disabled': props.isDisabled,
+      },
+    ]"
   >
     <ion-item lines="none" class="transparent">
       <ion-input
         :value="props.provider.name"
         placeholder="Nombre"
+        :disabled="props.isDisabled"
         @ion-input="
           (e: IonEvent) =>
             emit('update-provider', {
@@ -47,6 +54,7 @@
         label-placement="floating"
         type="number"
         class="num-input small"
+        :disabled="props.isDisabled"
         @ion-input="
           e =>
             emit('update-provider', {
@@ -63,6 +71,7 @@
         label-placement="floating"
         type="number"
         class="num-input small"
+        :disabled="props.isDisabled"
         @ion-input="
           e =>
             emit('update-provider', {
@@ -79,6 +88,7 @@
         label-placement="floating"
         type="number"
         class="num-input small"
+        :disabled="props.isDisabled"
         @ion-input="
           e =>
             emit('update-provider', {
@@ -231,6 +241,7 @@ const props = defineProps<{
   provider: Provider;
   hasProducts?: boolean;
   isClosed?: boolean;
+  isDisabled?: boolean;
 }>();
 
 const emit = defineEmits([
@@ -455,5 +466,10 @@ function formatCurrency(params: { v: number }) {
 <style scoped>
 .icon-btn {
   color: var(--ion-color-danger, #d9534f);
+}
+
+.provider-disabled {
+  opacity: 0.6;
+  pointer-events: none;
 }
 </style>

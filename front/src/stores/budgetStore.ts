@@ -111,6 +111,22 @@ export const useBudgetStore = defineStore('budget', () => {
     )
   );
 
+  const providerIdsWithEntries = computed(() => {
+    const ids = new Set<string | number>();
+    for (const entry of entries) {
+      if (entry._fromProviderGroupId) {
+        const match = String(entry._fromProviderGroupId).match(
+          /^prov-([^ -]+)/
+        );
+        if (match) {
+          const pid = match[1];
+          ids.add(isNaN(Number(pid)) ? pid : Number(pid));
+        }
+      }
+    }
+    return ids;
+  });
+
   async function loadDataForDate(date: string) {
     if (isLoading.value) return;
     isLoading.value = true;
@@ -384,6 +400,7 @@ export const useBudgetStore = defineStore('budget', () => {
     faltante,
     ingresosEfectivo,
     ingresosTarjeta,
+    providerIdsWithEntries,
     loadDataForDate,
     setDate,
     changeDate,
