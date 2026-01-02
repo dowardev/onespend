@@ -40,6 +40,13 @@ export const useBudgetStore = defineStore('budget', () => {
   const entries = reactive<Income[]>([]);
   const providers = reactive<Provider[]>([]);
   const isDayClosed = ref(false);
+  const finishDayData = reactive({
+    totalSalesEfectivo: 0,
+    totalSalesTarjeta: 0,
+    totalSalesCredito: 0,
+    type: '%',
+    margin: 0,
+  });
 
   const isLoading = ref(false);
 
@@ -149,6 +156,16 @@ export const useBudgetStore = defineStore('budget', () => {
           providers.splice(0, providers.length);
         }
 
+        if (d.finishDayData) {
+          Object.assign(finishDayData, d.finishDayData);
+        } else {
+          finishDayData.totalSalesEfectivo = 0;
+          finishDayData.totalSalesTarjeta = 0;
+          finishDayData.totalSalesCredito = 0;
+          finishDayData.type = '%';
+          finishDayData.margin = 0;
+        }
+
         isDayClosed.value = !!d.isDayClosed;
       } else {
         entries.splice(0, entries.length);
@@ -181,6 +198,7 @@ export const useBudgetStore = defineStore('budget', () => {
       try {
         const entriesData = toPlainObject([...entries]);
         const providersData = toPlainObject([...providers]);
+        const finishDayDataPlain = toPlainObject({ ...finishDayData });
 
         const dateKey = `budget:${selectedDate.value}`;
         await dixieController.putEntry({
@@ -190,6 +208,7 @@ export const useBudgetStore = defineStore('budget', () => {
               entries: entriesData,
               proveedores: providersData,
               isDayClosed: isDayClosed.value,
+              finishDayData: finishDayDataPlain,
             },
           },
         });
@@ -371,7 +390,7 @@ export const useBudgetStore = defineStore('budget', () => {
   }
 
   watch(
-    [entries, providers, isDayClosed],
+    [entries, providers, isDayClosed, finishDayData],
     () => {
       if (!isLoading.value) {
         saveData();
@@ -387,6 +406,7 @@ export const useBudgetStore = defineStore('budget', () => {
     entries,
     providers,
     isDayClosed,
+    finishDayData,
     isLoading,
     ingresos,
     egresos,

@@ -6,23 +6,25 @@
       </ion-toolbar>
     </ion-header>
 
-    <ion-content class="ion-padding">
-      <ion-breadcrumbs>
-        <ion-breadcrumb href="#/admin/maintenance"
-          >Mantenimiento</ion-breadcrumb
-        >
-      </ion-breadcrumbs>
+    <ion-content>
+      <ion-grid>
+        <ion-row class="ion-justify-content-center">
+          <ion-col size="6">
+            <ion-list>
+              <ion-list-header>
+                <ion-label>Herramientas de mantenimiento del sistema</ion-label>
+              </ion-list-header>
 
-      <p>Herramientas de mantenimiento del sistema.</p>
-
-      <ion-list>
-        <ion-item button @click="goToMigrateDates">
-          <ion-label>Migrar Fechas</ion-label>
-        </ion-item>
-        <ion-item button @click="goToMigrateEntries">
-          <ion-label>Añadir `entries` a backups</ion-label>
-        </ion-item>
-      </ion-list>
+              <ion-item button @click="goToMigrateDates">
+                <ion-label>Migrar Fechas</ion-label>
+              </ion-item>
+              <ion-item button @click="goToMigrateEntries">
+                <ion-label>Añadir `entries` a backups</ion-label>
+              </ion-item>
+            </ion-list>
+          </ion-col>
+        </ion-row>
+      </ion-grid>
     </ion-content>
   </ion-page>
 </template>

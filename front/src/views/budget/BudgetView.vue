@@ -189,7 +189,7 @@ import {
   IonToggle,
   IonAlert,
 } from '@ionic/vue';
-import { computed, ref, reactive } from 'vue';
+import { computed, ref } from 'vue';
 import {
   chevronBackOutline,
   chevronForwardOutline,
@@ -216,16 +216,10 @@ const datePickerEvent = ref<Event | null>(null);
 const moreOptionsEvent = ref<Event | null>(null);
 const designMode = computed(() => systemController.getDesignMode());
 
-const finishDay = reactive({
-  totalSalesEfectivo: 0,
-  totalSalesTarjeta: 0,
-  totalSalesCredito: 0,
-  type: '%',
-  margin: 0,
-});
+const finishDay = computed(() => store.finishDayData);
 
 function saveFinishDay() {
-  console.log('Finish day saved:', finishDay);
+  store.saveData();
   showMoreOptions.value = false;
 }
 

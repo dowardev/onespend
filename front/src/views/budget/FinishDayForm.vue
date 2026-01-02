@@ -55,11 +55,21 @@
           ></ion-input>
         </ion-item>
 
-        <ion-button class="no-shadow" expand="block" @click="$emit('save')"
+        <ion-button class="no-shadow" expand="block" @click="handleSave"
           >Guardar</ion-button
         >
       </ion-col>
     </ion-row>
+
+    <!-- toasts  -->
+    <ion-toast
+      :is-open="showToast"
+      message="Datos actualizados"
+      duration="2000"
+      color="dark"
+      @did-dismiss="showToast = false"
+    ></ion-toast>
+    <!-- end toasts  -->
   </ion-grid>
 </template>
 
@@ -74,11 +84,18 @@ import {
   IonInput,
   IonSelect,
   IonSelectOption,
+  IonToast,
 } from '@ionic/vue';
+import { ref } from 'vue';
 
 const props = defineProps<{ finishDay: any }>();
 const emit = defineEmits(['save']);
 
-// expose finishDay to the template
 const finishDay = props.finishDay;
+const showToast = ref(false);
+
+function handleSave() {
+  emit('save');
+  showToast.value = true;
+}
 </script>

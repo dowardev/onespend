@@ -13,134 +13,145 @@
     </ion-header>
 
     <ion-content class="ion-padding">
-      <p>
-        Esta herramienta añade la clave <code>entries</code> a las copias de
-        seguridad antiguas que sólo contienen <code>ingresos</code> para
-        mantener compatibilidad.
-      </p>
+      <ion-grid>
+        <ion-row class="ion-justify-content-center">
+          <ion-col size="6">
+            <p>
+              Esta herramienta añade la clave <code>entries</code> a las copias
+              de seguridad antiguas que sólo contienen
+              <code>ingresos</code> para mantener compatibilidad.
+            </p>
 
-      <div class="stepper">
-        <div
-          v-for="(s, i) in steps"
-          :key="i"
-          class="step"
-          :class="{ active: stepIndex === i, done: stepStatus[i] === 'done' }"
-        >
-          <div class="marker">{{ markerLabel(i) }}</div>
-          <div class="info">
-            <div class="title">{{ s.title }}</div>
-            <div class="desc">{{ s.desc }}</div>
-          </div>
-        </div>
-      </div>
+            <div class="stepper">
+              <div
+                v-for="(s, i) in steps"
+                :key="i"
+                class="step"
+                :class="{
+                  active: stepIndex === i,
+                  done: stepStatus[i] === 'done',
+                }"
+              >
+                <div class="marker">{{ markerLabel(i) }}</div>
+                <div class="info">
+                  <div class="title">{{ s.title }}</div>
+                  <div class="desc">{{ s.desc }}</div>
+                </div>
+              </div>
+            </div>
 
-      <div class="actions">
-        <ion-button
-          fill="outline"
-          @click="prevStep"
-          :disabled="stepIndex === 0 || running"
-          >Atrás</ion-button
-        >
+            <div class="actions">
+              <ion-button
+                fill="outline"
+                :disabled="stepIndex === 0 || running"
+                @click="prevStep"
+                >Atrás</ion-button
+              >
 
-        <ion-button
-          color="primary"
-          @click="primaryAction"
-          :disabled="
-            running ||
-            (stepIndex === 3 && !hasChanges) ||
-            (stepIndex === 2 && !hasChanges) ||
-            (stepIndex === 3 && !backupConfirmed)
-          "
-          >{{ primaryLabel }}</ion-button
-        >
+              <ion-button
+                color="primary"
+                :disabled="
+                  running ||
+                  (stepIndex === 3 && !hasChanges) ||
+                  (stepIndex === 2 && !hasChanges) ||
+                  (stepIndex === 3 && !backupConfirmed)
+                "
+                @click="primaryAction"
+                >{{ primaryLabel }}</ion-button
+              >
 
-        <template v-if="stepIndex === 3">
-          <ion-item lines="none">
-            <ion-label
-              >Confirmo que he descargado la copia de seguridad</ion-label
+              <template v-if="stepIndex === 3">
+                <ion-item lines="none">
+                  <ion-label
+                    >Confirmo que he descargado la copia de seguridad</ion-label
+                  >
+                  <ion-checkbox slot="end" v-model="backupConfirmed" />
+                </ion-item>
+              </template>
+
+              <ion-button fill="clear" :disabled="running" @click="resetAll"
+                >Reiniciar</ion-button
+              >
+
+              <ion-button
+                v-if="isDev"
+                fill="clear"
+                color="tertiary"
+                :disabled="running"
+                @click="insertTestEntries"
+              >
+                Insertar datos de prueba
+              </ion-button>
+            </div>
+
+            <!-- Inline confirmation fallback if ion-alert handlers don't run -->
+            <div
+              v-if="confirmAlert.open"
+              class="inline-confirm"
+              style="
+                padding: 16px;
+                border: 1px solid #eee;
+                margin: 12px 0;
+                border-radius: 8px;
+              "
             >
-            <ion-checkbox v-model="backupConfirmed" slot="end" />
-          </ion-item>
-        </template>
+              <p>{{ confirmAlert.message }}</p>
+              <div style="display: flex; gap: 8px; margin-top: 8px">
+                <ion-button fill="outline" @click="confirmCancel"
+                  >Cancelar</ion-button
+                >
+                <ion-button
+                  color="danger"
+                  @click="
+                    () => {
+                      confirmAlert.open = false;
+                      doApplyMigration();
+                    }
+                  "
+                  >Aplicar</ion-button
+                >
+              </div>
+            </div>
 
-        <ion-button fill="clear" @click="resetAll" :disabled="running"
-          >Reiniciar</ion-button
-        >
+            <div class="status-area">
+              <div v-if="running" class="status">
+                Ejecutando... {{ progressText }}
+              </div>
+              <div v-if="error" class="error">Error: {{ error }}</div>
 
-        <ion-button
-          v-if="isDev"
-          fill="clear"
-          color="tertiary"
-          @click="insertTestEntries"
-          :disabled="running"
-        >
-          Insertar datos de prueba
-        </ion-button>
-      </div>
+              <div v-if="dryRunResult">
+                <h3>Resultado de la simulación</h3>
+                <p>
+                  Total entradas inspeccionadas:
+                  <strong>{{ dryRunResult.length }}</strong>
+                </p>
+                <p>
+                  Entradas que cambiarían: <strong>{{ changedCount }}</strong>
+                </p>
+              </div>
 
-      <!-- Inline confirmation fallback if ion-alert handlers don't run -->
-      <div
-        v-if="confirmAlert.open"
-        class="inline-confirm"
-        style="
-          padding: 16px;
-          border: 1px solid #eee;
-          margin: 12px 0;
-          border-radius: 8px;
-        "
-      >
-        <p>{{ confirmAlert.message }}</p>
-        <div style="display: flex; gap: 8px; margin-top: 8px">
-          <ion-button fill="outline" @click="confirmCancel"
-            >Cancelar</ion-button
-          >
-          <ion-button
-            color="danger"
-            @click="
-              () => {
-                confirmAlert.open = false;
-                doApplyMigration();
-              }
-            "
-            >Aplicar</ion-button
-          >
-        </div>
-      </div>
+              <div v-if="applyResult">
+                <h3>Resultado de la aplicación</h3>
+                <p>
+                  Entradas actualizadas:
+                  <strong>{{ applyChangedCount }}</strong>
+                </p>
+              </div>
 
-      <div class="status-area">
-        <div v-if="running" class="status">
-          Ejecutando... {{ progressText }}
-        </div>
-        <div v-if="error" class="error">Error: {{ error }}</div>
+              <div v-if="sampleResults.length">
+                <h4>Ejemplos (antes → después)</h4>
+                <ul>
+                  <li v-for="(r, idx) in sampleResults" :key="idx">
+                    <strong>ID:</strong> <code>{{ r.id }}</code>
+                    <pre>{{ previewPair(r.before, r.after) }}</pre>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </ion-col>
+        </ion-row>
+      </ion-grid>
 
-        <div v-if="dryRunResult">
-          <h3>Resultado de la simulación</h3>
-          <p>
-            Total entradas inspeccionadas:
-            <strong>{{ dryRunResult.length }}</strong>
-          </p>
-          <p>
-            Entradas que cambiarían: <strong>{{ changedCount }}</strong>
-          </p>
-        </div>
-
-        <div v-if="applyResult">
-          <h3>Resultado de la aplicación</h3>
-          <p>
-            Entradas actualizadas: <strong>{{ applyChangedCount }}</strong>
-          </p>
-        </div>
-
-        <div v-if="sampleResults.length">
-          <h4>Ejemplos (antes → después)</h4>
-          <ul>
-            <li v-for="(r, idx) in sampleResults" :key="idx">
-              <strong>ID:</strong> <code>{{ r.id }}</code>
-              <pre>{{ previewPair(r.before, r.after) }}</pre>
-            </li>
-          </ul>
-        </div>
-      </div>
       <ion-toast
         :is-open="successToast.open"
         :message="successToast.message"
