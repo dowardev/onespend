@@ -278,7 +278,7 @@
         </ion-list>
       </ion-col>
 
-      <ion-col size="2">
+      <ion-col size="3">
         <ion-grid>
           <SummaryCards
             :total-ingresos-only="store.totalIngresos"

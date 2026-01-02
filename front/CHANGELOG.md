@@ -1,3 +1,30 @@
+## [v0.15.0] - 2026-01-01
+
+### Added
+
+- Extract main menu into reusable `MainMenu.vue` component with proper emits for navigation and migration dismissal
+- Redesign `SummaryCards.vue` "required" section with card-based design showing Sobrante/Faltante/Cuadrado status with color-coded results for efectivo, tarjeta, and credito
+
+### Changed
+
+- Refactor `App.vue` to use `MainMenu` component instead of inline menu template
+- Add card shadow CSS variables (`--card-shadow-light`, `--card-shadow-heavy`, `--card-shadow-subtle`) for theme consistency in both light and dark modes
+- Add `.ion-padding-top` class to `BudgetView.vue` section for better spacing
+- Adjust `InicioViewComponent` column size from 2 to 3 for improved layout
+
+### Files changed (staged)
+
+- src/App.vue (modified)
+- src/components/MainMenu.vue (added)
+- src/theme/files/dark.css (modified)
+- src/theme/files/light.css (modified)
+- src/theme/variables.css (modified)
+- src/views/budget/BudgetView.vue (modified)
+- src/views/budget/InicioViewComponent.vue (modified)
+- src/views/budget/components/SummaryCards.vue (modified)
+
+---
+
 ## [v0.14.0] - 2026-01-01
 
 ### Added

@@ -17,7 +17,7 @@
     </ion-header>
 
     <ion-content>
-      <section>
+      <section class="ion-padding-top">
         <ion-item lines="none" class="transparent">
           <ion-buttons>
             <ion-segment

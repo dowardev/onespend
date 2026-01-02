@@ -1,123 +1,14 @@
 <template>
   <ion-app>
     <ion-split-pane when="(min-width: 992px)" content-id="main-content">
-      <ion-menu
+      <MainMenu
         ref="menuRef"
-        content-id="main-content"
-        type="overlay"
-        menu-id="main-menu"
-      >
-        <ion-header mode="ios" class="ion-no-border">
-          <ion-toolbar>
-            <ion-title>{{ appName }}</ion-title>
-          </ion-toolbar>
-        </ion-header>
-
-        <ion-content>
-          <ion-list>
-            <div class="list-content">
-              <ion-item
-                class="transparent"
-                button
-                lines="full"
-                :class="{ 'menu-active': isBudget }"
-                :aria-current="isBudget ? 'page' : undefined"
-                @click="navigate({ path: '/budget' })"
-              >
-                <ion-label>Presupuesto</ion-label>
-              </ion-item>
-
-              <ion-item
-                class="transparent"
-                button
-                lines="full"
-                :class="{ 'menu-active': isTemplates }"
-                :aria-current="isTemplates ? 'page' : undefined"
-                @click="navigate({ path: '/templates' })"
-              >
-                <ion-label>Templates</ion-label>
-              </ion-item>
-
-              <ion-item
-                class="transparent"
-                button
-                lines="full"
-                :class="{ 'menu-active': isSuppliers }"
-                :aria-current="isSuppliers ? 'page' : undefined"
-                @click="navigate({ path: '/suppliers' })"
-              >
-                <ion-label>Provedores</ion-label>
-              </ion-item>
-            </div>
-          </ion-list>
-
-          <ion-list>
-            <ion-list-header>
-              <ion-label>Estadisticas</ion-label>
-            </ion-list-header>
-
-            <div class="list-content">
-              <ion-item
-                class="transparent"
-                button
-                lines="full"
-                :class="{ 'menu-active': isStatisticsCashFlow }"
-                :aria-current="isStatisticsCashFlow ? 'page' : undefined"
-                @click="navigate({ path: '/statistics/cash-flow' })"
-              >
-                <ion-label>Flujo de caja</ion-label>
-              </ion-item>
-
-              <ion-item
-                class="transparent"
-                button
-                lines="full"
-                :class="{ 'menu-active': isStatisticsPerformance }"
-                :aria-current="isStatisticsPerformance ? 'page' : undefined"
-                @click="navigate({ path: '/statistics/performance' })"
-              >
-                <ion-label>Rendimiento</ion-label>
-              </ion-item>
-            </div>
-          </ion-list>
-
-          <ion-list>
-            <ion-list-header>
-              <ion-label>Administracion</ion-label>
-            </ion-list-header>
-
-            <div class="list-content">
-              <ion-item
-                class="transparent"
-                button
-                lines="full"
-                :class="{ 'menu-active': isAdmin }"
-                :aria-current="isAdmin ? 'page' : undefined"
-                @click="navigate({ name: 'MaintenancePage' })"
-              >
-                <ion-label>Mantenimiento</ion-label>
-                <ion-badge
-                  v-if="(needsNormalize || needsEntries) && !migrationDismissed"
-                  slot="end"
-                  color="danger"
-                  >!</ion-badge
-                >
-              </ion-item>
-
-              <ion-item
-                class="transparent"
-                button
-                lines="full"
-                :class="{ 'menu-active': isPersonalization }"
-                :aria-current="isPersonalization ? 'page' : undefined"
-                @click="navigate({ name: 'PersonalizationPage' })"
-              >
-                <ion-label>Personalización</ion-label>
-              </ion-item>
-            </div>
-          </ion-list>
-        </ion-content>
-      </ion-menu>
+        :needs-normalize="needsNormalize"
+        :needs-entries="needsEntries"
+        :migration-dismissed="migrationDismissed"
+        @navigate="handleNavigate"
+        @dismiss-migration="dismissMigrationNotice"
+      />
       <ion-router-outlet id="main-content" />
 
       <!-- toasts -->
@@ -137,21 +28,13 @@ import {
   IonApp,
   IonSplitPane,
   IonRouterOutlet,
-  IonMenu,
-  IonHeader,
-  IonToolbar,
-  IonTitle,
-  IonContent,
-  IonList,
-  IonItem,
-  IonLabel,
-  IonBadge,
   IonToast,
   menuController,
   isPlatform,
 } from '@ionic/vue';
-import { computed, onMounted, ref, reactive } from 'vue';
-import { useRouter, useRoute } from 'vue-router';
+import { onMounted, ref, reactive } from 'vue';
+import { useRouter } from 'vue-router';
+import MainMenu from '@/components/MainMenu.vue';
 import systemController from '@/controllers/systemConfigController';
 import dixieController from '@/controllers/dixie';
 import {
@@ -166,22 +49,6 @@ const appName =
   (import.meta as unknown as { env?: Record<string, string | undefined> }).env
     ?.VITE_APP_NAME || 'Menú';
 const router = useRouter();
-const route = useRoute();
-const isBudget = computed(() => route.path === '/budget');
-const isTemplates = computed(() => route.path === '/templates');
-const isSuppliers = computed(() => route.path === '/suppliers');
-const isStatisticsCashFlow = computed(
-  () => route.path === '/statistics/cash-flow'
-);
-const isStatisticsPerformance = computed(
-  () => route.path === '/statistics/performance'
-);
-
-// mark admin routes as active when the current path is under /admin
-const isAdmin = computed(() => route.path.startsWith('/admin/maintenance'));
-const isPersonalization = computed(
-  () => route.path === '/admin/personalization'
-);
 
 const needsNormalize = ref(false);
 const needsEntries = ref(false);
@@ -196,9 +63,8 @@ const migrationToast = reactive({
       side: 'end',
       text: 'Ir a migración',
       handler: () => {
-        // If entries migration is needed prefer that page, otherwise dates migration
-        if (needsEntries.value) navigate({ name: 'MigrateEntries' });
-        else navigate({ name: 'MigrateDates' });
+        if (needsEntries.value) handleNavigate({ name: 'MigrateEntries' });
+        else handleNavigate({ name: 'MigrateDates' });
       },
     },
     {
@@ -325,25 +191,7 @@ function setupThemeListener() {
 }
 
 // CAMBIO: Usar ref directa del menú
-async function navigate(params: { path?: string; name?: string }) {
-  try {
-    // try menuController API first (preferred)
-    try {
-      await menuController.close('main-menu');
-    } catch (_e) {
-      // fallback to direct ref if menuController fails
-      try {
-        if (menuRef.value && menuRef.value.$el && menuRef.value.$el.close) {
-          // @ts-ignore
-          await menuRef.value.$el.close();
-        }
-      } catch (__e) {
-        console.warn('menuRef close fallback failed:', __e);
-      }
-    }
-  } catch (_e) {
-    console.warn('menuController.close() overall failed:', _e);
-  }
+async function handleNavigate(params: { path?: string; name?: string }) {
   try {
     if (params.name) {
       // prefer named route but fallback if it's not registered
@@ -387,8 +235,7 @@ async function showMigrationToast() {
     toast.message =
       'Simulación iniciada: revisa la pantalla de migración para ver los detalles.';
     toast.open = true;
-    // also navigate to migration screen and trigger autoDryRun via query
-    navigate({ name: 'MigrateDates', path: undefined });
+    handleNavigate({ name: 'MigrateDates' });
     // pass query via direct router push to preserve ?autoDryRun behavior
     try {
       await router.push({ name: 'MigrateDates', query: { autoDryRun: '1' } });
@@ -402,14 +249,6 @@ async function showMigrationToast() {
 </script>
 
 <style>
-.menu-active {
-  border-left: 4px solid var(--ion-color-primary);
-  /* background-color: rgba(0, 0, 0, 0.03); */
-  --padding-start: 12px;
-}
-ion-menu .menu-active {
-  border-left-width: 4px;
-}
 @media (min-width: 992px) {
   ion-split-pane {
     --side-width: 300px;
