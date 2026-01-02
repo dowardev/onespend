@@ -1,3 +1,27 @@
+## [v0.15.2] - 2026-01-02
+
+### Added
+
+- Add centralized `finishDayData` state in budgetStore with sales totals (efectivo, tarjeta, credito), margin type, and margin value
+
+### Changed
+
+- Refactor `finishDay` in BudgetView to use centralized store state instead of local reactive object
+- Simplify `saveFinishDay` function to leverage store auto-save mechanism
+- Add toast notification feedback in FinishDayForm when saving finish day data
+- Restructure maintenance pages (MigrateDates, MigrateEntries, MaintenancePage) with ion-grid layout for better centering and organization
+
+### Files changed (staged)
+
+- src/stores/budgetStore.ts (modified)
+- src/views/budget/BudgetView.vue (modified)
+- src/views/budget/FinishDayForm.vue (modified)
+- src/views/admin/MaintenancePage.vue (modified)
+- src/views/admin/maintenance/MigrateDates.vue (modified)
+- src/views/admin/maintenance/MigrateEntries.vue (modified)
+
+---
+
 ## [v0.15.1] - 2026-01-02
 
 ### Added
