@@ -86,6 +86,7 @@
         </ion-row>
       </section>
 
+      <!-- popovers -->
       <ion-popover
         :is-open="showDatePicker"
         :event="datePickerEvent"
@@ -143,7 +144,9 @@
           </ion-item>
         </ion-content>
       </ion-popover>
+      <!-- end popovers -->
 
+      <!-- alerts -->
       <ion-alert
         :is-open="showClearConfirm"
         header="Vaciar día"
@@ -158,6 +161,7 @@
         ]"
         @did-dismiss="showClearConfirm = false"
       ></ion-alert>
+      <!-- end alerts -->
     </ion-content>
   </ion-page>
 </template>

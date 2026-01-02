@@ -82,13 +82,14 @@
       </ion-modal>
       <!-- end modals -->
 
-      <!-- Alert para confirmar eliminación -->
+      <!-- alerts -->
       <ion-alert
         :is-open="deleteConfirmSupplier.open"
         :message="`¿Eliminar proveedor ${deleteConfirmSupplier.supplierName}?`"
         :buttons="getAlertButtonsSupplier()"
         @did-dismiss="onDeleteAlertDidDismissSupplier"
       ></ion-alert>
+      <!-- end alerts -->
     </ion-content>
   </ion-page>
 </template>

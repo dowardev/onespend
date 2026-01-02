@@ -124,9 +124,7 @@
       </ion-datetime>
     </ion-content>
   </ion-popover>
-  <!-- end popovers -->
 
-  <!-- options popover (separate del calendario) -->
   <ion-popover
     :is-open="optionsPopover.open"
     :event="optionsPopover.event"
@@ -135,14 +133,12 @@
   >
     <ion-content>
       <ion-list>
-        <!-- move -->
         <ion-item button lines="none" @click="onMoveFromOptions($event)">
           <ion-icon slot="start" :icon="swapHorizontalOutline"></ion-icon>
 
           <ion-label>Mover</ion-label>
         </ion-item>
 
-        <!-- products -->
         <ion-item
           v-if="props.hasProducts"
           button
@@ -154,7 +150,6 @@
           <ion-label>Ver productos</ion-label>
         </ion-item>
 
-        <!-- notes -->
         <ion-item button lines="none" @click="onNotesFromOptions($event)">
           <ion-icon slot="start" :icon="bookOutline"></ion-icon>
 
@@ -169,9 +164,9 @@
       </ion-list>
     </ion-content>
   </ion-popover>
-  <!-- end options popover -->
+  <!-- end popovers -->
 
-  <!-- delete confirm local to this card -->
+  <!-- alerts -->
   <ion-alert
     :is-open="deleteConfirm.open"
     header="Confirmar eliminación"
@@ -186,6 +181,7 @@
     ]"
     @did-dismiss="() => (deleteConfirm.open = false)"
   ></ion-alert>
+  <!-- end alerts -->
 </template>
 
 <script setup lang="ts">

@@ -46,7 +46,7 @@
     </div>
   </ion-list>
 
-  <!-- popover -->
+  <!-- popovers -->
   <ion-popover
     :is-open="popovers.mainDate.open"
     :event="popovers.mainDate.event"
@@ -75,7 +75,7 @@
       </ion-item>
     </ion-content>
   </ion-popover>
-  <!-- end popover -->
+  <!-- end popovers -->
 </template>
 
 <script setup lang="ts">

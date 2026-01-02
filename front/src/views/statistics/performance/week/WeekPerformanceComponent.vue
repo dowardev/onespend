@@ -327,7 +327,6 @@
   </PeriodLayout>
 
   <!-- popovers -->
-  <!-- popover selector date -->
   <ion-popover
     :is-open="popovers.mainDate.open"
     :event="popovers.mainDate.event"
@@ -366,7 +365,7 @@
       popovers.itemMessageHeleper.message
     }}</ion-content>
   </ion-popover>
-  <!-- end popover -->
+  <!-- end popovers -->
 
   <!-- loadings -->
   <ion-loading :is-open="isGeneratingPdf" message="Generando PDF..." />

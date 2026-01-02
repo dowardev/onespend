@@ -1,3 +1,39 @@
+## [v0.15.1] - 2026-01-02
+
+### Added
+
+- Add provider notes modal with save functionality in ProvidersComponent
+
+### Fixed
+
+- Filter providers to show only those with actual financial data (efectivo, tarjeta, credito, dollar, estimated) in InicioViewComponent
+
+### Changed
+
+- Standardize comments across budget and statistics views (popovers, alerts, modals sections)
+- Refactor popover content styling to use ion-item with ion-label instead of ion-button for better UX
+- Update popover dismiss behavior from keep-contents-mounted to dismiss-on-select
+
+### Files changed (staged)
+
+- src/components/statistics/PeriodLayout.vue (modified)
+- src/views/budget/BudgetView.vue (modified)
+- src/views/budget/InicioViewComponent.vue (modified)
+- src/views/budget/ProviderCardComponent.vue (modified)
+- src/views/budget/ProvidersComponent.vue (modified)
+- src/views/statistics/cashFlow/day/DayComponent.vue (modified)
+- src/views/statistics/cashFlow/month/MonthComponent.vue (modified)
+- src/views/statistics/cashFlow/week/WeekComponent.vue (modified)
+- src/views/statistics/cashFlow/year/YearComponent.vue (modified)
+- src/views/statistics/performance/day/DayPerformanceComponent.vue (modified)
+- src/views/statistics/performance/month/MonthPerformanceComponent.vue (modified)
+- src/views/statistics/performance/week/WeekPerformanceComponent.vue (modified)
+- src/views/statistics/performance/year/YearPerformanceComponent.vue (modified)
+- src/views/suppliers/SuppliersPage.vue (modified)
+- src/views/templates/TemplatesView.vue (modified)
+
+---
+
 ## [v0.15.0] - 2026-01-01
 
 ### Added
