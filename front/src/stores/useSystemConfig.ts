@@ -1,15 +1,16 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { isPlatform } from '@ionic/vue';
+import { configController } from '@/controllers/dixie';
 
 export type SystemMode = 'ios' | 'md';
+export type ThemeMode = 'light' | 'dark' | 'auto';
 
 export const useSystemConfig = defineStore('systemConfig', () => {
-  // storea el modo de diseño actual: 'ios' o 'md'
   const designMode = ref<SystemMode>(isPlatform('ios') ? 'ios' : 'md');
+  const theme = ref<ThemeMode>('auto');
 
   function init() {
-    // inicializa/actualiza el modo según la plataforma
     designMode.value = isPlatform('ios') ? 'ios' : 'md';
   }
 
@@ -22,7 +23,6 @@ export const useSystemConfig = defineStore('systemConfig', () => {
     return designMode.value;
   }
 
-  // Migración: preferencia para ocultar el aviso de migración
   const migrationNoticeDismissed = ref(false);
   function setMigrationNoticeDismissed(val: boolean) {
     migrationNoticeDismissed.value = !!val;
@@ -31,13 +31,30 @@ export const useSystemConfig = defineStore('systemConfig', () => {
     return migrationNoticeDismissed.value;
   }
 
+  async function getTheme(): Promise<ThemeMode> {
+    if (theme.value !== 'auto') return theme.value;
+    const saved = await configController.getConfig('theme');
+    if (saved === 'light' || saved === 'dark' || saved === 'auto') {
+      return saved;
+    }
+    return 'auto';
+  }
+
+  async function setTheme(val: ThemeMode) {
+    theme.value = val;
+    await configController.setConfig({ key: 'theme', value: val });
+  }
+
   return {
     designMode,
+    theme,
     init,
     setDesignMode,
     getDesignMode,
     migrationNoticeDismissed,
     setMigrationNoticeDismissed,
     getMigrationNoticeDismissed,
+    getTheme,
+    setTheme,
   };
 });

@@ -1,3 +1,34 @@
+## [v0.14.0] - 2026-01-01
+
+### Added
+
+- Add dark mode theme system with complete dark color scheme variables (`src/theme/files/dark.css`)
+- Add personalization page (`src/views/admin/PersonalizationPage.vue`) with theme selection (light/dark/auto)
+- Add theme persistence using new config storage methods (`getConfig`, `setConfig`) in dixie.ts
+- Add ThemeMode type and theme management in useSystemConfig store
+- Add system theme listener to auto-apply theme changes when system preference changes
+
+### Changed
+
+- BudgetView now respects day closed state by disabling navigation and date controls
+- ProvidersComponent UI cleanup by removing redundant summary section
+- App.vue theme initialization now applies saved theme preference on mount
+
+### Files changed (staged)
+
+- src/App.vue (modified)
+- src/controllers/dixie.ts (modified)
+- src/controllers/systemConfigController.ts (modified)
+- src/router/index.ts (modified)
+- src/stores/useSystemConfig.ts (modified)
+- src/theme/files/dark.css (added)
+- src/theme/variables.css (modified)
+- src/views/admin/PersonalizationPage.vue (added)
+- src/views/budget/BudgetView.vue (modified)
+- src/views/budget/ProvidersComponent.vue (modified)
+
+---
+
 ## [v0.13.0] - 2026-01-01
 
 ### Added

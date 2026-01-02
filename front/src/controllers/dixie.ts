@@ -399,8 +399,41 @@ class DixieController {
       tx.oncomplete = () => db.close();
     });
   }
+
+  async getConfig(key: string): Promise<unknown> {
+    const db = await this.openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(this.storeName, 'readonly');
+      const store = tx.objectStore(this.storeName);
+      const req = store.get(key);
+      req.onsuccess = () => {
+        const result = req.result as { id: string; value: unknown } | undefined;
+        resolve(result?.value);
+      };
+      req.onerror = () => reject(req.error);
+      tx.oncomplete = () => db.close();
+    });
+  }
+
+  async setConfig(params: { key: string; value: unknown }): Promise<void> {
+    const { key, value } = params;
+    const db = await this.openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(this.storeName, 'readwrite');
+      const store = tx.objectStore(this.storeName);
+      const entry = { id: key, value };
+      const req = store.put(entry);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+      tx.oncomplete = () => db.close();
+    });
+  }
 }
 
 const dixieController = new DixieController();
+const configController = new DixieController({
+  name: 'ABOgazDB',
+  storeName: 'config',
+});
 export default dixieController;
-export { DixieController };
+export { DixieController, configController };

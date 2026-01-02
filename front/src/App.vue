@@ -103,6 +103,17 @@
                   >!</ion-badge
                 >
               </ion-item>
+
+              <ion-item
+                class="transparent"
+                button
+                lines="full"
+                :class="{ 'menu-active': isPersonalization }"
+                :aria-current="isPersonalization ? 'page' : undefined"
+                @click="navigate({ name: 'PersonalizationPage' })"
+              >
+                <ion-label>Personalización</ion-label>
+              </ion-item>
             </div>
           </ion-list>
         </ion-content>
@@ -167,7 +178,10 @@ const isStatisticsPerformance = computed(
 );
 
 // mark admin routes as active when the current path is under /admin
-const isAdmin = computed(() => route.path.startsWith('/admin'));
+const isAdmin = computed(() => route.path.startsWith('/admin/maintenance'));
+const isPersonalization = computed(
+  () => route.path === '/admin/personalization'
+);
 
 const needsNormalize = ref(false);
 const needsEntries = ref(false);
@@ -201,6 +215,8 @@ const migrationToast = reactive({
 
 onMounted(async () => {
   setDesignMode();
+  setupThemeListener();
+  await applyTheme();
 
   // Check whether the user already dismissed the migration notice
   migrationDismissed.value = !!systemController.getMigrationNoticeDismissed();
@@ -288,6 +304,24 @@ onMounted(async () => {
 function setDesignMode() {
   const platform = isPlatform('ios') ? 'ios' : 'md';
   systemController.setDesignMode({ mode: platform });
+}
+
+async function applyTheme() {
+  const theme = await systemController.getTheme();
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const isDark = theme === 'dark' || (theme === 'auto' && prefersDark);
+  document.body.classList.toggle('dark', isDark);
+}
+
+function setupThemeListener() {
+  window
+    .matchMedia('(prefers-color-scheme: dark)')
+    .addEventListener('change', async e => {
+      const theme = await systemController.getTheme();
+      if (theme === 'auto') {
+        document.body.classList.toggle('dark', e.matches);
+      }
+    });
 }
 
 // CAMBIO: Usar ref directa del menú

@@ -1,4 +1,5 @@
 import { useSystemConfig } from '../stores/useSystemConfig';
+import type { ThemeMode } from '../stores/useSystemConfig';
 
 class SystemConfigController {
   init(_params: Record<string, unknown> = {}) {
@@ -27,6 +28,17 @@ class SystemConfigController {
     const { value } = params;
     const store = useSystemConfig();
     store.setMigrationNoticeDismissed(!!value);
+  }
+
+  async getTheme(): Promise<ThemeMode> {
+    const store = useSystemConfig();
+    return store.getTheme();
+  }
+
+  async setTheme(params: { value: ThemeMode }) {
+    const { value } = params;
+    const store = useSystemConfig();
+    await store.setTheme(value);
   }
 }
 
