@@ -118,6 +118,28 @@ export const useBudgetStore = defineStore('budget', () => {
     )
   );
 
+  const egresosEfectivo = computed(() =>
+    entries.reduce(
+      (s, i) =>
+        s +
+        (i.paymentType === 'cash' && i.entryType === 'egreso'
+          ? Number(i.amount || 0)
+          : 0),
+      0
+    )
+  );
+
+  const egresosTarjeta = computed(() =>
+    entries.reduce(
+      (s, i) =>
+        s +
+        (i.paymentType === 'digital' && i.entryType === 'egreso'
+          ? Number(i.amount || 0)
+          : 0),
+      0
+    )
+  );
+
   const providerIdsWithEntries = computed(() => {
     const ids = new Set<string | number>();
     for (const entry of entries) {
@@ -420,6 +442,8 @@ export const useBudgetStore = defineStore('budget', () => {
     faltante,
     ingresosEfectivo,
     ingresosTarjeta,
+    egresosEfectivo,
+    egresosTarjeta,
     providerIdsWithEntries,
     loadDataForDate,
     setDate,
