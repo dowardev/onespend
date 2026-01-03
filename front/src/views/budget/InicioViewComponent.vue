@@ -25,132 +25,11 @@
                 v-for="(block, bIdx) in renderedEntries"
                 :key="blockKey(block, bIdx)"
               >
-                <ion-accordion-group v-if="block.type === 'group'">
-                  <ion-accordion>
-                    <ion-item slot="header" lines="none">
-                      <ion-icon slot="start" :icon="personOutline"></ion-icon>
-
-                      <ion-label>
-                        <div class="provider-header">
-                          <span class="provider-name-text">{{
-                            block.providerName || 'Proveedor'
-                          }}</span>
-                          -
-                          <span class="provider-total">{{
-                            formatCurrencyLocal({ v: block.total || 0 })
-                          }}</span>
-                        </div>
-                      </ion-label>
-
-                      <ion-button
-                        fill="clear"
-                        size="small"
-                        title="Eliminar gastos del proveedor"
-                        color="danger"
-                        @click.prevent.stop="
-                          confirmDeleteGroup(block.groupId, block.providerName)
-                        "
-                      >
-                        <ion-icon :icon="trashOutline"></ion-icon>
-                      </ion-button>
-                    </ion-item>
-
-                    <div slot="content">
-                      <ion-list class="provider-group transparent">
-                        <template v-for="inc in block.items" :key="inc.id">
-                          <ion-item lines="full" class="income-item">
-                            <ion-icon
-                              slot="start"
-                              :icon="
-                                inc.entryType === 'egreso'
-                                  ? arrowBackOutline
-                                  : arrowForwardOutline
-                              "
-                              :color="
-                                inc.entryType === 'egreso'
-                                  ? 'danger'
-                                  : 'success'
-                              "
-                            ></ion-icon>
-
-                            <ion-select
-                              slot="start"
-                              :value="inc.paymentType"
-                              aria-label="Tipo de pago"
-                              interface="popover"
-                              @ion-change="
-                                e =>
-                                  store.updateIngreso(inc.id, {
-                                    paymentType: e?.detail?.value,
-                                  })
-                              "
-                            >
-                              <ion-select-option value="cash"
-                                >Efectivo</ion-select-option
-                              >
-                              <ion-select-option value="digital"
-                                >Digital</ion-select-option
-                              >
-                            </ion-select>
-
-                            <ion-input
-                              :value="inc.amount"
-                              placeholder="Cantidad"
-                              type="number"
-                              class="num-input"
-                              @ion-input="
-                                e =>
-                                  store.updateIngreso(inc.id, {
-                                    amount: Number(e?.detail?.value) || 0,
-                                  })
-                              "
-                            ></ion-input>
-
-                            <ion-note slot="end">{{
-                              formatTimeLocal(inc.createdAt)
-                            }}</ion-note>
-
-                            <ion-button
-                              :id="`options-btn-${inc.id}`"
-                              slot="end"
-                              class="hover-only"
-                              fill="clear"
-                              size="small"
-                              title="Opciones"
-                            >
-                              <ion-icon
-                                :icon="ellipsisVerticalOutline"
-                              ></ion-icon>
-                            </ion-button>
-
-                            <ion-popover
-                              :trigger="`options-btn-${inc.id}`"
-                              :dismiss-on-select="true"
-                            >
-                              <ion-content>
-                                <ion-item
-                                  lines="none"
-                                  button
-                                  @click="store.removeIngreso(inc.id)"
-                                >
-                                  <ion-icon
-                                    slot="start"
-                                    color="danger"
-                                    :icon="trashOutline"
-                                  ></ion-icon>
-
-                                  <ion-label> Eliminar </ion-label>
-                                </ion-item>
-                              </ion-content>
-                            </ion-popover>
-                          </ion-item>
-                        </template>
-                      </ion-list>
-                    </div>
-                  </ion-accordion>
-                </ion-accordion-group>
-
-                <ion-item v-else lines="full" class="income-item">
+                <ion-item
+                  v-if="block.type === 'item'"
+                  lines="full"
+                  class="income-item"
+                >
                   <ion-icon
                     slot="start"
                     :icon="
@@ -281,11 +160,11 @@
           <SummaryCards
             :total-ingresos-only="store.totalIngresos"
             :total-egresos="store.totalEgresos"
-            :total-estimacion-efectivo-tarjeta="store.totalEstimacion"
-            :providers="store.providers"
-            :selected-date="store.selectedDate"
             :faltante="store.faltante"
-            :credito-value="store.totalEgresos"
+            :total-ingresos-efectivo="store.ingresosEfectivo"
+            :total-ingresos-tarjeta="store.ingresosTarjeta"
+            :total-egresos-efectivo="store.egresosEfectivo"
+            :total-egresos-tarjeta="store.egresosTarjeta"
           />
         </ion-grid>
       </ion-col>
@@ -364,33 +243,6 @@
     </ion-content>
   </ion-popover>
   <!-- end popovers -->
-
-  <!-- alerts -->
-  <ion-alert
-    :is-open="deleteGroupConfirm.open"
-    header="Eliminar gastos"
-    :message="`¿Eliminar todos los gastos del proveedor «${deleteGroupConfirm.providerName}»? Esta acción no se puede deshacer.`"
-    :buttons="[
-      {
-        text: 'Cancelar',
-        role: 'cancel',
-        handler: () => {
-          deleteGroupConfirm.open = false;
-          deleteGroupConfirm.groupId = null;
-          deleteGroupConfirm.providerName = '';
-        },
-      },
-      { text: 'Eliminar', cssClass: 'danger', handler: doDeleteGroup },
-    ]"
-    @did-dismiss="
-      () => {
-        deleteGroupConfirm.open = false;
-        deleteGroupConfirm.groupId = null;
-        deleteGroupConfirm.providerName = '';
-      }
-    "
-  ></ion-alert>
-  <!-- end alerts -->
 </template>
 
 <script setup lang="ts">
@@ -409,10 +261,7 @@ import {
   IonNote,
   IonItem,
   IonPopover,
-  IonAlert,
   IonContent,
-  IonAccordion,
-  IonAccordionGroup,
 } from '@ionic/vue';
 import {
   addOutline,
@@ -420,7 +269,6 @@ import {
   ellipsisVerticalOutline,
   arrowBackOutline,
   arrowForwardOutline,
-  personOutline,
 } from 'ionicons/icons';
 import SummaryCards from './components/SummaryCards.vue';
 import { computed, reactive, watch } from 'vue';
@@ -432,12 +280,6 @@ const store = useBudgetStore();
 
 const localPopovers = reactive({
   addEntryType: { open: false, event: null as any },
-});
-
-const deleteGroupConfirm = reactive({
-  open: false,
-  groupId: null as string | number | null,
-  providerName: '' as string,
 });
 
 const providersToday = computed(() => {
@@ -454,7 +296,6 @@ const providersTodayWithData = computed(() => {
     return (
       Number(p?.efectivo) > 0 ||
       Number(p?.tarjeta) > 0 ||
-      Number(p?.credito) > 0 ||
       Number(p?.dollar) > 0 ||
       Number(p?.estimated) > 0
     );
@@ -463,34 +304,7 @@ const providersTodayWithData = computed(() => {
 
 const renderedEntries = computed(() => {
   const list = store.entries;
-  const out: any[] = [];
-  let i = 0;
-  while (i < list.length) {
-    const cur = list[i];
-    if (cur && cur._fromProviderGroupId) {
-      const gid = cur._fromProviderGroupId;
-      let j = i + 1;
-      while (j < list.length && list[j] && list[j]._fromProviderGroupId === gid)
-        j++;
-      const itemsSlice = list.slice(i, j);
-      const total = itemsSlice.reduce(
-        (s: number, it: any) => s + (Number(it?.amount) || 0),
-        0
-      );
-      out.push({
-        type: 'group',
-        groupId: gid,
-        providerName: cur._providerName || cur.name || 'Proveedor',
-        items: itemsSlice,
-        total,
-      });
-      i = j;
-    } else {
-      out.push({ type: 'item', item: cur });
-      i++;
-    }
-  }
-  return out;
+  return list.map(item => ({ type: 'item', item }));
 });
 
 function formatCurrencyLocal(params: { v: number }) {
@@ -509,20 +323,6 @@ function formatTimeLocal(ms?: number) {
   });
 }
 
-function confirmDeleteGroup(groupId: string | number, providerName?: string) {
-  deleteGroupConfirm.groupId = groupId;
-  deleteGroupConfirm.providerName = String(providerName || '');
-  deleteGroupConfirm.open = true;
-}
-
-function doDeleteGroup() {
-  const gid = deleteGroupConfirm.groupId;
-  deleteGroupConfirm.open = false;
-  if (gid) store.removeEgresosGroup(gid);
-  deleteGroupConfirm.groupId = null;
-  deleteGroupConfirm.providerName = '';
-}
-
 function onSelectEntryType(type: 'ingreso' | 'egreso', ev?: any) {
   localPopovers.addEntryType.open = false;
   if (type === 'ingreso') {
@@ -534,7 +334,6 @@ function onSelectEntryType(type: 'ingreso' | 'egreso', ev?: any) {
 
 function blockKey(block: any, idx: number) {
   if (!block) return `b-${idx}`;
-  if (block.type === 'group') return `g-${String(block.groupId || idx)}`;
   return `i-${String((block.item && block.item.id) || idx)}`;
 }
 </script>

@@ -44,28 +44,6 @@
       </ion-card>
     </ion-col>
 
-    <!-- credit -->
-    <ion-col size="12">
-      <ion-card
-        :style="`border: 1px solid var(--ion-color-primary)`"
-        class="no-shadow"
-      >
-        <ion-item lines="none" class="transparent">
-          <ion-label>Credito</ion-label>
-
-          <ion-button fill="clear"
-            ><ion-icon :icon="informationCircleOutline"
-          /></ion-button>
-        </ion-item>
-
-        <div class="ion-padding-start ion-padding-bottom">
-          <ion-label color="primary">
-            <h1>{{ formatCurrency(creditoValue) }}</h1>
-          </ion-label>
-        </div>
-      </ion-card>
-    </ion-col>
-
     <!-- required -->
     <ion-col size="12">
       <ion-card class="shadow1">
@@ -93,24 +71,16 @@
             <!-- cash -->
             <ion-item lines="full">
               <ion-label>Efectivo</ion-label>
-              <ion-label slot="end" :color="colorEfectivo">{{
-                labelEfectivo
+              <ion-label slot="end" :color="colorDifferenceEfectivo">{{
+                labelDifferenceEfectivo
               }}</ion-label>
             </ion-item>
 
             <!-- card -->
             <ion-item lines="full">
               <ion-label>Tarjeta</ion-label>
-              <ion-label slot="end" :color="colorTarjeta">{{
-                labelTarjeta
-              }}</ion-label>
-            </ion-item>
-
-            <!-- credit -->
-            <ion-item lines="full">
-              <ion-label>Credito</ion-label>
-              <ion-label slot="end" :color="colorCredito">{{
-                labelCredito
+              <ion-label slot="end" :color="colorDifferenceTarjeta">{{
+                labelDifferenceTarjeta
               }}</ion-label>
             </ion-item>
           </div>
@@ -136,78 +106,57 @@ import { computed } from 'vue';
 const props = defineProps<{
   totalIngresosOnly: number | string;
   totalEgresos: number | string;
-  totalEstimacionEfectivoTarjeta: number | string;
-  totalEstimacionEfectivo?: number | string;
-  totalEstimacionDigital?: number | string;
-  providers?: any[];
-  selectedDate?: string;
+  totalIngresosEfectivo?: number | string;
+  totalIngresosTarjeta?: number | string;
+  totalEgresosEfectivo?: number | string;
+  totalEgresosTarjeta?: number | string;
   faltante: number | string;
-  creditoValue?: number | string | null;
 }>();
 
 const totalIngresosOnly = computed(
   () => Number(props.totalIngresosOnly || 0) || 0
 );
 const totalEgresos = computed(() => Number(props.totalEgresos || 0) || 0);
-const totalEstimacionEfectivoTarjeta = computed(
-  () => Number(props.totalEstimacionEfectivoTarjeta || 0) || 0
-);
 const faltante = computed(() => Number(props.faltante || 0) || 0);
-const creditoValue = computed(() =>
-  props.creditoValue != null ? Number(props.creditoValue) : totalEgresos.value
+
+const totalIngresosEfectivo = computed(() =>
+  props.totalIngresosEfectivo != null ? Number(props.totalIngresosEfectivo) : 0
+);
+const totalIngresosTarjeta = computed(() =>
+  props.totalIngresosTarjeta != null ? Number(props.totalIngresosTarjeta) : 0
+);
+const totalEgresosEfectivo = computed(() =>
+  props.totalEgresosEfectivo != null ? Number(props.totalEgresosEfectivo) : 0
+);
+const totalEgresosTarjeta = computed(() =>
+  props.totalEgresosTarjeta != null ? Number(props.totalEgresosTarjeta) : 0
 );
 
-// If providers + selectedDate are provided, compute per-method totals locally
-const providersToday = computed(() => {
-  try {
-    const list = Array.isArray(props.providers) ? props.providers : [];
-    const sel = String(props.selectedDate || '').slice(0, 10);
-    if (!sel) return [];
-    return list.filter((p: any) => String(p.date || '').slice(0, 10) === sel);
-  } catch (_e) {
-    return [];
-  }
+const differenceEfectivo = computed(
+  () => totalIngresosEfectivo.value - totalEgresosEfectivo.value
+);
+const colorDifferenceEfectivo = computed(() => {
+  const diff = differenceEfectivo.value;
+  if (diff > 0) return 'success';
+  if (diff < 0) return 'danger';
+  return 'medium';
 });
+const labelDifferenceEfectivo = computed(() =>
+  formatCurrency(Math.abs(differenceEfectivo.value))
+);
 
-const totalEstimacionEfectivo = computed(() => {
-  try {
-    if (props.totalEstimacionEfectivo != null)
-      return Number(props.totalEstimacionEfectivo) || 0;
-    return (providersToday.value || []).reduce(
-      (s: number, p: any) => s + Number(p.efectivo || 0),
-      0
-    );
-  } catch (_e) {
-    return 0;
-  }
+const differenceTarjeta = computed(
+  () => totalIngresosTarjeta.value - totalEgresosTarjeta.value
+);
+const colorDifferenceTarjeta = computed(() => {
+  const diff = differenceTarjeta.value;
+  if (diff > 0) return 'success';
+  if (diff < 0) return 'danger';
+  return 'medium';
 });
-
-const totalEstimacionDigital = computed(() => {
-  try {
-    if (props.totalEstimacionDigital != null)
-      return Number(props.totalEstimacionDigital) || 0;
-    return (providersToday.value || []).reduce(
-      (s: number, p: any) => s + Number(p.tarjeta || 0),
-      0
-    );
-  } catch (_e) {
-    return 0;
-  }
-});
-
-// If explicit totalEstimacionEfectivoTarjeta not provided, derive from per-method totals
-const derivedTotalEstimacionEfectivoTarjeta = computed(() => {
-  try {
-    if (Number(props.totalEstimacionEfectivoTarjeta || 0) > 0)
-      return Number(props.totalEstimacionEfectivoTarjeta || 0) || 0;
-    return (
-      Number(totalEstimacionEfectivo.value || 0) +
-      Number(totalEstimacionDigital.value || 0)
-    );
-  } catch (_e) {
-    return 0;
-  }
-});
+const labelDifferenceTarjeta = computed(() =>
+  formatCurrency(Math.abs(differenceTarjeta.value))
+);
 
 const differenceColor = computed(() => {
   const diff = Number(faltante.value || 0);
@@ -222,19 +171,6 @@ const differenceLabel = computed(() => {
   if (diff < 0) return 'Faltante';
   return 'Cuadrado';
 });
-
-const labelEfectivo = computed(() =>
-  formatCurrency(totalEstimacionEfectivo.value)
-);
-const colorEfectivo = computed(() => 'primary');
-
-const labelTarjeta = computed(() =>
-  formatCurrency(totalEstimacionDigital.value)
-);
-const colorTarjeta = computed(() => 'primary');
-
-const labelCredito = computed(() => formatCurrency(creditoValue.value));
-const colorCredito = computed(() => 'primary');
 
 function formatCurrency(v: number | string) {
   try {

@@ -1,3 +1,28 @@
+## [v0.16.0] - 2026-01-03
+
+### Added
+
+- Add `egresosEfectivo` and `egresosTarjeta` computed properties in budgetStore for tracking expenses by payment method
+
+### Changed
+
+- Refactor InicioViewComponent to display entries as flat list instead of grouped by provider, removing accordion-based UI and group delete functionality
+- Refactor SummaryCards to show income vs expense differences per payment method (efectivo, tarjeta) instead of separate estimate values
+- Simplify SummaryCards props by replacing `totalEstimacion*` and `providers`/`selectedDate` with direct `totalIngresosEfectivo`, `totalIngresosTarjeta`, `totalEgresosEfectivo`, `totalEgresosTarjeta` props
+
+### Removed
+
+- Remove credit card display section from SummaryCards component
+- Remove provider group delete confirmation alert from InicioViewComponent
+
+### Files changed (staged)
+
+- src/stores/budgetStore.ts (modified)
+- src/views/budget/InicioViewComponent.vue (modified)
+- src/views/budget/components/SummaryCards.vue (modified)
+
+---
+
 ## [v0.15.2] - 2026-01-02
 
 ### Added
