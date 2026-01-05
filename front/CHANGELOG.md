@@ -1,3 +1,29 @@
+## [v0.18.0] - 2026-01-04
+
+### Added
+
+- Add accounts management system with new controller (`accountsController.ts`) and Pinia store (`accountsStore.ts`) for CRUD operations
+- Add `accountId` field to `addIngreso` and `addEgreso` functions in budgetStore for linking entries to accounts
+- Add migration from suppliers to accounts for seamless data continuity
+- Add "Sin cuenta" (No account) category in account cards for entries without account assignment
+- Add cascade delete handling in AccountCards to clear account references when deleting accounts
+
+### Changed
+
+- Refactor InicioViewComponent to replace `useSuppliersStore` with `useAccountsStore`
+- Update AccountCards.vue to use accounts store instead of suppliers store
+- Fix account ID comparison to use string conversion for consistent matching
+
+### Files changed (staged)
+
+- src/controllers/accountsController.ts (added)
+- src/stores/accountsStore.ts (added)
+- src/stores/budgetStore.ts (modified)
+- src/views/budget/InicioViewComponent.vue (modified)
+- src/views/budget/components/AccountCards.vue (modified)
+
+---
+
 ## [v0.17.0] - 2026-01-04
 
 ### Added

@@ -361,12 +361,12 @@ import {
 } from '@ionic/vue';
 import { addOutline, closeOutline } from 'ionicons/icons';
 import AccountCards from './components/AccountCards.vue';
-import { useSuppliersStore } from '@/stores/suppliersStore';
+import { useAccountsStore } from '@/stores/accountsStore';
 import { computed, ref, onMounted } from 'vue';
 import { useBudgetStore } from '@/stores/budgetStore';
 
 const store = useBudgetStore();
-const suppliersStore = useSuppliersStore();
+const accountsStore = useAccountsStore();
 
 const addEntrySegment = ref('entry');
 const showDeleteAlert = ref(false);
@@ -391,18 +391,18 @@ const editEntryModalData = ref({
 });
 
 const accountsList = computed(() => {
-  const list = suppliersStore.suppliers;
+  const list = accountsStore.accounts;
   if (!list || !Array.isArray(list)) return [];
   return list.filter((acc: any) => acc != null && acc.id != null);
 });
 
 const accountsWithBalance = computed(() => {
-  return accountsList.value.map((acc: any) => {
+  const result = accountsList.value.map((acc: any) => {
     const accountId = acc.id;
     const initialBalance = Number(acc.initialBalance) || 0;
 
     const entriesForAccount = store.entries.filter(
-      (e: any) => e.accountId === accountId
+      (e: any) => String(e.accountId) === String(accountId)
     );
 
     const ingresos = entriesForAccount
@@ -423,6 +423,29 @@ const accountsWithBalance = computed(() => {
       balance,
     };
   });
+
+  const entriesWithoutAccount = store.entries.filter(
+    (e: any) => e.accountId == null || e.accountId === ''
+  );
+
+  const noAccountIngresos = entriesWithoutAccount
+    .filter((e: any) => e.entryType === 'ingreso')
+    .reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
+
+  const noAccountEgresos = entriesWithoutAccount
+    .filter((e: any) => e.entryType === 'egreso')
+    .reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
+
+  result.push({
+    id: null,
+    name: 'Sin cuenta',
+    initialBalance: 0,
+    ingresos: noAccountIngresos,
+    egresos: noAccountEgresos,
+    balance: noAccountIngresos - noAccountEgresos,
+  });
+
+  return result;
 });
 
 const providersToday = computed(() => {
@@ -499,11 +522,11 @@ function blockKey(block: any, idx: number) {
 }
 
 function getAccountName(accountId: string | number | null | undefined) {
-  if (!accountId) return '-';
+  if (!accountId) return 'Sin cuenta';
   const account = accountsList.value.find(
     (a: any) => String(a.id) === String(accountId)
   );
-  return account?.name || '-';
+  return account?.name || 'Sin cuenta';
 }
 
 function getAccountRemaining(
@@ -623,14 +646,12 @@ function saveEntryChanges() {
   } else {
     if (editEntryModalData.value.entryType === 'ingreso') {
       store.addIngreso({
-        entryType: editEntryModalData.value.entryType,
         name: editEntryModalData.value.name,
         amount: Number(editEntryModalData.value.amount) || 0,
         accountId: editEntryModalData.value.accountId,
       });
     } else {
       store.addEgreso({
-        entryType: editEntryModalData.value.entryType,
         name: editEntryModalData.value.name,
         amount: Number(editEntryModalData.value.amount) || 0,
         accountId: editEntryModalData.value.accountId,
@@ -669,7 +690,7 @@ function confirmDelete() {
 }
 
 onMounted(() => {
-  suppliersStore.loadAll();
+  accountsStore.loadAll();
 });
 </script>
 
