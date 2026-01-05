@@ -1,7 +1,7 @@
 [Desktop Entry]
-Name=AbOgaz
-Exec=/opt/AbOgaz/abogaz
-TryExec=/opt/AbOgaz/abogaz
+Name=OneSpend
+Exec=/opt/OneSpend/onespend
+TryExec=/opt/OneSpend/onespend
 Terminal=false
 StartupNotify=false
 Type=Application

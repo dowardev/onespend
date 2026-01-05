@@ -1,3 +1,41 @@
+## [v0.20.0] - 2026-01-05
+
+### Changed
+
+- Rebrand project from "AbOgaz" to "OneSpend" across all configurations
+- Update app name in environment variables, desktop entry, and Ionic configuration
+- Update version from 0.18.0 to 0.20.0
+
+### Added
+
+- Add Electron desktop support with electron-builder for cross-platform builds
+- Add chart.js and vue-chartjs for data visualization capabilities
+- Add PDF generation support with html2canvas and jspdf
+- Add comprehensive development tools (prettier, eslint, typescript-eslint)
+
+### Removed
+
+- Remove duplicate CHANGELOG from frontend directory
+
+### Files Changed
+
+- front/.env (app name updated)
+- front/ionic.config.json (name updated to OneSpend)
+- front/build/abogaz.desktop (desktop entry renamed to OneSpend)
+- front/package.json (version updated to 0.20.0, name changed to OneSpend)
+- front/CHANGELOG.md (removed, consolidated to project root)
+- README.md (updated)
+
+---
+
+## [v0.19.0] - 2026-01-05
+
+### Changed
+
+- Update version to 0.19.0 after Laravel backend implementation
+
+---
+
 ## [v0.18.0] - 2026-01-05
 
 ### Added

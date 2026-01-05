@@ -1,7 +1,7 @@
 {
-  "name": "AbOgaz",
+  "name": "OneSpend",
   "private": true,
-  "version": "0.18.0",
+  "version": "0.20.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -73,7 +73,7 @@
   "main": "electron/main.mjs",
   "build": {
     "appId": "com.dowardev.abogaz",
-    "productName": "AbOgaz",
+    "productName": "OneSpend",
     "executableName": "abogaz",
     "artifactName": "${name}-${version}-${arch}.${ext}",
     "directories": {
