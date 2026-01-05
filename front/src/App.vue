@@ -175,17 +175,25 @@ function setDesignMode() {
 async function applyTheme() {
   const theme = await systemController.getTheme();
   const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  const isDark = theme === 'dark' || (theme === 'auto' && prefersDark);
-  document.body.classList.toggle('dark', isDark);
+  
+  document.body.classList.remove('dark', 'catppuccin-latte-maroon', 'catppuccin-macchiato-maroon');
+  
+  if (theme === 'catppuccin-latte-maroon' || theme === 'catppuccin-macchiato-maroon') {
+    document.body.classList.add(theme);
+  } else {
+    const isDark = theme === 'dark' || (theme === 'auto' && prefersDark);
+    document.body.classList.toggle('dark', isDark);
+  }
 }
 
 function setupThemeListener() {
   window
     .matchMedia('(prefers-color-scheme: dark)')
-    .addEventListener('change', async e => {
+    .addEventListener('change', async () => {
       const theme = await systemController.getTheme();
       if (theme === 'auto') {
-        document.body.classList.toggle('dark', e.matches);
+        const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        document.body.classList.toggle('dark', isDark);
       }
     });
 }

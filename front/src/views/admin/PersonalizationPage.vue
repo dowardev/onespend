@@ -31,6 +31,36 @@
                   <ion-select-option value="light">Claro</ion-select-option>
                   <ion-select-option value="dark">Oscuro</ion-select-option>
                   <ion-select-option value="auto">Automático</ion-select-option>
+                  <ion-select-option value="catppuccin-latte-maroon">Catppuccin Latte Maroon</ion-select-option>
+                  <ion-select-option value="catppuccin-macchiato-maroon">Catppuccin Macchiato Maroon</ion-select-option>
+                </ion-select>
+              </ion-item>
+
+              <ion-item v-if="theme === 'auto'" lines="full">
+                <ion-icon slot="start" :icon="sunnyOutline"></ion-icon>
+                <ion-label>Modo claro</ion-label>
+                <ion-select
+                  slot="end"
+                  :value="autoLightTheme"
+                  interface="popover"
+                  @ion-change="onAutoLightThemeChange"
+                >
+                  <ion-select-option value="light">Claro</ion-select-option>
+                  <ion-select-option value="catppuccin-latte-maroon">Catppuccin Latte Maroon</ion-select-option>
+                </ion-select>
+              </ion-item>
+
+              <ion-item v-if="theme === 'auto'" lines="full">
+                <ion-icon slot="start" :icon="moonOutline"></ion-icon>
+                <ion-label>Modo oscuro</ion-label>
+                <ion-select
+                  slot="end"
+                  :value="autoDarkTheme"
+                  interface="popover"
+                  @ion-change="onAutoDarkThemeChange"
+                >
+                  <ion-select-option value="dark">Oscuro</ion-select-option>
+                  <ion-select-option value="catppuccin-macchiato-maroon">Catppuccin Macchiato Maroon</ion-select-option>
                 </ion-select>
               </ion-item>
             </ion-list>
@@ -60,13 +90,17 @@ import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import systemController from '@/controllers/systemConfigController';
 import type { ThemeMode } from '@/stores/useSystemConfig';
-import { colorPaletteOutline } from 'ionicons/icons';
+import { colorPaletteOutline, sunnyOutline, moonOutline } from 'ionicons/icons';
 
 const router = useRouter();
 const theme = ref<ThemeMode>('auto');
+const autoLightTheme = ref<ThemeMode>('light');
+const autoDarkTheme = ref<ThemeMode>('dark');
 
 async function loadTheme() {
   theme.value = await systemController.getTheme();
+  autoLightTheme.value = await systemController.getAutoLightTheme();
+  autoDarkTheme.value = await systemController.getAutoDarkTheme();
   applyTheme(theme.value);
 }
 
@@ -77,14 +111,48 @@ async function onThemeChange(e: CustomEvent) {
   await systemController.setTheme({ value });
 }
 
-function applyTheme(t: ThemeMode) {
+async function onAutoLightThemeChange(e: CustomEvent) {
+  const value = e.detail.value as ThemeMode;
+  autoLightTheme.value = value;
+  await systemController.setAutoLightTheme({ value });
+  if (theme.value === 'auto') {
+    applyTheme('auto');
+  }
+}
+
+async function onAutoDarkThemeChange(e: CustomEvent) {
+  const value = e.detail.value as ThemeMode;
+  autoDarkTheme.value = value;
+  await systemController.setAutoDarkTheme({ value });
+  if (theme.value === 'auto') {
+    applyTheme('auto');
+  }
+}
+
+function applyTheme(t: ThemeMode | string) {
   console.log('applyTheme called with:', t);
   const body = document.body;
-  const isDark =
-    t === 'dark' ||
-    (t === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-  console.log('Adding dark class:', isDark);
-  body.classList.toggle('dark', isDark);
+  
+  body.classList.remove('dark', 'catppuccin-latte-maroon', 'catppuccin-macchiato-maroon');
+  
+  let themeToApply = t;
+  
+  if (t === 'auto') {
+    const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    console.log('System prefers dark:', isDark);
+    console.log('autoLightTheme:', autoLightTheme.value);
+    console.log('autoDarkTheme:', autoDarkTheme.value);
+    themeToApply = isDark ? autoDarkTheme.value : autoLightTheme.value;
+  }
+  
+  console.log('Applying theme:', themeToApply);
+  
+  if (themeToApply === 'catppuccin-latte-maroon' || themeToApply === 'catppuccin-macchiato-maroon') {
+    body.classList.add(themeToApply);
+  } else if (themeToApply === 'dark') {
+    body.classList.add('dark');
+  }
+  
   console.log('Body classList:', body.className);
 }
 
@@ -94,6 +162,13 @@ function goBack() {
 
 onMounted(() => {
   loadTheme();
+  
+  const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+  mediaQuery.addEventListener('change', () => {
+    if (theme.value === 'auto') {
+      applyTheme('auto');
+    }
+  });
 });
 </script>
 

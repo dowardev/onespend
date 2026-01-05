@@ -1,3 +1,34 @@
+## [v0.21.0] - 2026-01-05
+
+### Added
+
+- Add Catppuccin Latte Maroon theme with complete color scheme for light mode
+- Add Catppuccin Macchiato Maroon theme with complete color scheme for dark mode
+- Add auto light theme selection in PersonalizationPage for customizable automatic light theme
+- Add auto dark theme selection in PersonalizationPage for customizable automatic dark theme
+
+### Changed
+
+- Extend ThemeMode type to include catppuccin-latte-maroon and catppuccin-macchiato-maroon
+- Refactor theme application logic in App.vue to support new Catppuccin themes
+- Refactor setupThemeListener in App.vue to use cleaner approach for theme switching
+- Update systemConfigController to expose auto light/dark theme getters and setters
+- Update useSystemConfig store with autoLightTheme and autoDarkTheme state management
+- Update PersonalizationPage UI with new theme selectors for auto mode customization
+
+### Files Changed
+
+- front/src/theme/files/catppuccin-latte-maroon.css (added)
+- front/src/theme/files/catppuccin-macchiato-maroon.css (added)
+- front/src/theme/variables.css (modified)
+- front/src/controllers/systemConfigController.ts (modified)
+- front/src/stores/useSystemConfig.ts (modified)
+- front/src/App.vue (modified)
+- front/src/views/admin/PersonalizationPage.vue (modified)
+- front/package.json (version updated to 0.21.0)
+
+---
+
 ## [v0.20.0] - 2026-01-05
 
 ### Changed
