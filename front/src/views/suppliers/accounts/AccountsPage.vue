@@ -1,0 +1,306 @@
+<template>
+  <ion-page>
+    <ion-header class="ion-no-border" mode="ios">
+      <ion-toolbar>
+        <ion-buttons slot="start">
+          <ion-menu-button :mode="designMode" />
+        </ion-buttons>
+
+        <ion-title>Cuentas</ion-title>
+
+        <ion-buttons slot="end">
+          <ion-button @click="openModal()">
+            <ion-icon :icon="addOutline"></ion-icon>
+          </ion-button>
+        </ion-buttons>
+      </ion-toolbar>
+    </ion-header>
+
+    <ion-content>
+      <ion-card class="shadow1 main-card-content">
+        <ion-list style="height: 100%" class="ion-margin-top transparent">
+          <ion-list-header>
+            <ion-label>Lista de cuentas</ion-label>
+          </ion-list-header>
+
+          <ion-searchbar
+            v-model="searchTerm"
+            mode="ios"
+            placeholder="Buscar cuentas"
+            show-clear-button="focus"
+          ></ion-searchbar>
+
+          <div class="list-content accounts__content">
+            <template v-for="group in groupedAccounts" :key="group.letter">
+              <ion-item-group>
+                <ion-item-divider sticky>
+                  <ion-label>{{ group.letter }}</ion-label>
+                </ion-item-divider>
+
+                <ion-item
+                  v-for="c in group.items"
+                  :key="c.id"
+                  button
+                  class="transparent"
+                  @click="edit({ c })"
+                >
+                  <ion-label>
+                    <h3>{{ c.name }}</h3>
+                    <p>Balance inicial: {{ c.initialBalance ?? 0 }}</p>
+                  </ion-label>
+
+                  <ion-buttons slot="end" class="account-actions">
+                    <ion-button
+                      color="danger"
+                      fill="clear"
+                      @click.stop="
+                        confirmRemoveAccount({ id: c.id, name: c.name })
+                      "
+                    >
+                      <ion-icon :icon="trashOutline" color="danger"></ion-icon>
+                    </ion-button>
+                  </ion-buttons>
+                </ion-item>
+              </ion-item-group>
+            </template>
+          </div>
+        </ion-list>
+      </ion-card>
+
+      <ion-modal
+        class="accounts__modal"
+        :is-open="showModal"
+        :backdrop-dismiss="false"
+        @did-dismiss="cancelModal"
+      >
+        <AddAccountComponent
+          :account="modalAccount"
+          @dismiss="cancelModal"
+          @saved="onModalSaved"
+        />
+      </ion-modal>
+
+      <ion-alert
+        :is-open="deleteConfirmAccount.open"
+        :message="`¿Eliminar cuenta ${deleteConfirmAccount.accountName}?`"
+        :buttons="getAlertButtonsAccount()"
+        @did-dismiss="onDeleteAlertDidDismissAccount"
+      ></ion-alert>
+    </ion-content>
+  </ion-page>
+</template>
+
+<script setup lang="ts">
+import { onMounted, ref, computed, unref, reactive } from 'vue';
+import {
+  IonContent,
+  IonHeader,
+  IonPage,
+  IonTitle,
+  IonToolbar,
+  IonItem,
+  IonLabel,
+  IonButton,
+  IonList,
+  IonListHeader,
+  IonItemGroup,
+  IonItemDivider,
+  IonModal,
+  IonAlert,
+  IonButtons,
+  IonIcon,
+  IonCard,
+  IonMenuButton,
+  IonSearchbar,
+} from '@ionic/vue';
+import { useSuppliers } from '@/stores/useSuppliers';
+import { addOutline, trashOutline } from 'ionicons/icons';
+
+import systemController from '@/controllers/systemConfigController';
+
+import AddAccountComponent from './modals/AddAccountComponent.vue';
+
+const supplierStore = useSuppliers();
+const accounts = supplierStore.suppliers;
+const loadAll = supplierStore.loadAll;
+const createSupplier = supplierStore.createSupplier;
+const updateSupplier = supplierStore.updateSupplier;
+const deleteSupplier = supplierStore.deleteSupplier;
+
+const showModal = ref(false);
+const modalAccount = ref<any | null>(null);
+
+const searchTerm = ref('');
+
+const deleteConfirmAccount = reactive({
+  open: false,
+  accountId: null as string | number | null,
+  accountName: '' as string,
+});
+
+const designMode = computed(() => systemController.getDesignMode());
+
+const filteredAccounts = computed(() => {
+  const term = (searchTerm.value || '').toString().toLowerCase().trim();
+  const list = unref(accounts) || [];
+  if (!term) return list;
+  return list.filter((a: any) => {
+    const name = (a.name || '').toString().toLowerCase();
+    return name.includes(term);
+  });
+});
+
+const groupedAccounts = computed(() => {
+  const list = (unref(filteredAccounts) || []).slice();
+  list.sort((a: any, b: any) => {
+    const na = (a.name || '').toString().toLowerCase();
+    const nb = (b.name || '').toString().toLowerCase();
+    return na.localeCompare(nb);
+  });
+
+  const map = new Map<string, any[]>();
+  list.forEach((a: any) => {
+    const name = (a.name || '').toString().trim();
+    const letter = name ? name[0].toUpperCase() : '#';
+    if (!map.has(letter)) map.set(letter, []);
+    map.get(letter)!.push(a);
+  });
+
+  return Array.from(map.keys())
+    .sort()
+    .map(letter => ({ letter, items: map.get(letter) || [] }));
+});
+
+function openModal() {
+  modalAccount.value = null;
+  showModal.value = true;
+}
+
+function edit(params: { c: any }) {
+  const { c } = params;
+  modalAccount.value = c;
+  showModal.value = true;
+}
+
+function cancelModal() {
+  showModal.value = false;
+  modalAccount.value = null;
+}
+
+function confirmRemoveAccount(params: {
+  id: string | number | null | undefined;
+  name?: string;
+}) {
+  const { id, name } = params;
+  deleteConfirmAccount.open = true;
+  deleteConfirmAccount.accountId = id ?? null;
+  deleteConfirmAccount.accountName = name ?? '';
+}
+
+function getAlertButtonsAccount() {
+  return [
+    {
+      text: 'Cancelar',
+      role: 'cancel',
+      handler: () => {},
+    },
+    {
+      text: 'Eliminar',
+      role: 'destructive',
+      handler: () => {
+        void removeAccountConfirmed();
+      },
+    },
+  ];
+}
+
+async function removeAccountConfirmed() {
+  const id = deleteConfirmAccount.accountId;
+  deleteConfirmAccount.open = false;
+  deleteConfirmAccount.accountId = null;
+  deleteConfirmAccount.accountName = '';
+
+  if (id == null) return;
+  await remove(id as any);
+}
+
+function onDeleteAlertDidDismissAccount() {
+  deleteConfirmAccount.open = false;
+  deleteConfirmAccount.accountId = null;
+  deleteConfirmAccount.accountName = '';
+}
+
+onMounted(() => {
+  loadAll();
+});
+
+async function onModalSaved(payload: any) {
+  if (!payload) return;
+  if (payload.id != null) {
+    await updateSupplier(payload as any);
+  } else {
+    await createSupplier(payload as any);
+  }
+
+  cancelModal();
+  await loadAll();
+}
+
+async function remove(id: IDBValidKey | undefined) {
+  if (id == null) return;
+  await deleteSupplier(id);
+  await loadAll();
+}
+</script>
+
+<style scoped>
+.accounts__content {
+  height: calc(100% - 117px);
+  overflow-y: auto;
+}
+
+.account-actions {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms ease;
+}
+
+ion-item:hover .account-actions,
+ion-item:focus-within .account-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+@media (pointer: fine) {
+  ion-item:hover .account-actions,
+  ion-item:focus-within .account-actions {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+@media (pointer: coarse) {
+  .account-actions {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+@media (min-width: 426px) and (max-width: 768px) {
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+}
+
+@media (min-width: 1025px) and (max-width: 1440px) {
+  .accounts__modal {
+    --height: 80dvh;
+  }
+}
+
+@media (min-width: 1441px) {
+  .accounts__modal {
+    --height: 80dvh;
+  }
+}
+</style>

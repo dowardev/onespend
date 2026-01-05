@@ -1,3 +1,34 @@
+## [v0.17.0] - 2026-01-04
+
+### Added
+
+- Add "Cuentas" menu item in MainMenu for suppliers accounts navigation
+- Add new route `/suppliers/accounts` for AccountsPage component
+- Add `accountId` optional field to Income interface in budgetStore for linking entries to accounts
+- Add AccountBarChart.vue component for visualizing account balances
+- Add AccountCards.vue component for displaying accounts with their balances, ingresos, and egresos
+- Add AccountsPage.vue as main page for supplier accounts management
+- Add AddAccountComponent.vue modal for creating new supplier accounts
+
+### Changed
+
+- Refactor InicioViewComponent to use modals instead of popovers for adding/editing entries and providers
+- Replace SummaryCards component with AccountCards to show account balances instead of payment method summaries
+- Add `isSuppliersAccounts` computed property in MainMenu for active menu state
+
+### Files changed (staged)
+
+- src/components/MainMenu.vue (modified)
+- src/router/index.ts (modified)
+- src/stores/budgetStore.ts (modified)
+- src/views/budget/InicioViewComponent.vue (modified)
+- src/views/budget/components/AccountBarChart.vue (added)
+- src/views/budget/components/AccountCards.vue (added)
+- src/views/suppliers/accounts/AccountsPage.vue (added)
+- src/views/suppliers/accounts/modals/AddAccountComponent.vue (added)
+
+---
+
 ## [v0.16.0] - 2026-01-03
 
 ### Added

@@ -13,6 +13,7 @@ export interface Income {
   date: string;
   paymentType: PaymentType;
   entryType: EntryType;
+  accountId?: string | number | null;
   createdAt: number;
   _fromProviderGroupId?: string;
   _providerName?: string;
@@ -328,6 +329,8 @@ export const useBudgetStore = defineStore('budget', () => {
     if (changes.paymentType !== undefined)
       ingreso.paymentType = changes.paymentType;
     if (changes.name !== undefined) ingreso.name = String(changes.name || '');
+    if (changes.entryType !== undefined) ingreso.entryType = changes.entryType;
+    if (changes.accountId !== undefined) ingreso.accountId = changes.accountId;
   }
 
   function removeIngreso(id: string | number) {
