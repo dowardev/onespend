@@ -14,8 +14,9 @@
           v-for="acc in accounts"
           :key="acc.id"
           lines="full"
-          button
-          @click="edit(acc)"
+          :button="acc.id != null"
+          :class="{ 'no-account-item': acc.id == null }"
+          @click="acc.id != null && edit(acc)"
         >
           <ion-label>
             <h2>{{ acc.name }}</h2>
@@ -80,7 +81,8 @@ import {
 } from '@ionic/vue';
 import AccountBarChart from './AccountBarChart.vue';
 import { addOutline } from 'ionicons/icons';
-import { useSuppliers } from '@/stores/useSuppliers';
+import { useAccountsStore } from '@/stores/accountsStore';
+import { useBudgetStore } from '@/stores/budgetStore';
 import AddAccountComponent from '@/views/suppliers/accounts/modals/AddAccountComponent.vue';
 
 interface AccountWithBalance {
@@ -96,11 +98,13 @@ defineProps<{
   accounts: AccountWithBalance[];
 }>();
 
-const supplierStore = useSuppliers();
-const createSupplier = supplierStore.createSupplier;
-const updateSupplier = supplierStore.updateSupplier;
-const deleteSupplier = supplierStore.deleteSupplier;
-const loadAll = supplierStore.loadAll;
+const accountsStore = useAccountsStore();
+const createAccount = accountsStore.createAccount;
+const updateAccount = accountsStore.updateAccount;
+const deleteAccount = accountsStore.deleteAccount;
+const loadAll = accountsStore.loadAll;
+
+const budgetStore = useBudgetStore();
 
 const showModal = ref(false);
 const modalAccount = ref<any | null>(null);
@@ -130,16 +134,21 @@ function cancelModal() {
 async function onModalSaved(payload: any) {
   if (!payload) return;
   if (payload.id != null) {
-    await updateSupplier(payload as any);
+    await updateAccount(payload as any);
   } else {
-    await createSupplier(payload as any);
+    await createAccount(payload as any);
   }
   cancelModal();
   await loadAll();
 }
 
 async function onDeleteAccount(id: string | number) {
-  await deleteSupplier(id);
+  for (const entry of budgetStore.entries) {
+    if (String(entry.accountId) === String(id)) {
+      budgetStore.updateIngreso(entry.id, { accountId: null });
+    }
+  }
+  await deleteAccount(id);
   cancelModal();
   await loadAll();
 }
@@ -158,5 +167,10 @@ async function onDeleteAccount(id: string | number) {
 
 .accounts__modal {
   --height: 80dvh;
+}
+
+.no-account-item {
+  --background: var(--ion-color-light);
+  opacity: 0.8;
 }
 </style>

@@ -254,9 +254,19 @@ export const useBudgetStore = defineStore('budget', () => {
   }
 
   function addIngreso(
-    params: { name?: string; amount?: number; paymentType?: PaymentType } = {}
+    params: {
+      name?: string;
+      amount?: number;
+      paymentType?: PaymentType;
+      accountId?: string | number | null;
+    } = {}
   ) {
-    const { name = '', amount = 0, paymentType = 'cash' } = params;
+    const {
+      name = '',
+      amount = 0,
+      paymentType = 'cash',
+      accountId = null,
+    } = params;
     entries.push({
       id: Date.now() + Math.random(),
       name,
@@ -264,14 +274,25 @@ export const useBudgetStore = defineStore('budget', () => {
       date: selectedDate.value,
       paymentType,
       entryType: 'ingreso',
+      accountId,
       createdAt: Date.now(),
     });
   }
 
   function addEgreso(
-    params: { name?: string; amount?: number; paymentType?: PaymentType } = {}
+    params: {
+      name?: string;
+      amount?: number;
+      paymentType?: PaymentType;
+      accountId?: string | number | null;
+    } = {}
   ) {
-    const { name = '', amount = 0, paymentType = 'cash' } = params;
+    const {
+      name = '',
+      amount = 0,
+      paymentType = 'cash',
+      accountId = null,
+    } = params;
     entries.push({
       id: Date.now() + Math.random(),
       name,
@@ -279,6 +300,7 @@ export const useBudgetStore = defineStore('budget', () => {
       date: selectedDate.value,
       paymentType,
       entryType: 'egreso',
+      accountId,
       createdAt: Date.now(),
     });
   }
