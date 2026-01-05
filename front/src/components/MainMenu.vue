@@ -46,6 +46,17 @@
           >
             <ion-label>Provedores</ion-label>
           </ion-item>
+
+          <ion-item
+            class="transparent"
+            button
+            lines="full"
+            :class="{ 'menu-active': isSuppliersAccounts }"
+            :aria-current="isSuppliersAccounts ? 'page' : undefined"
+            @click="navigate({ path: '/suppliers/accounts' })"
+          >
+            <ion-label>Cuentas</ion-label>
+          </ion-item>
         </div>
       </ion-list>
 
@@ -150,6 +161,9 @@ const appName =
 const isBudget = computed(() => route.path === '/budget');
 const isTemplates = computed(() => route.path === '/templates');
 const isSuppliers = computed(() => route.path === '/suppliers');
+const isSuppliersAccounts = computed(
+  () => route.path === '/suppliers/accounts'
+);
 const isStatisticsCashFlow = computed(
   () => route.path === '/statistics/cash-flow'
 );

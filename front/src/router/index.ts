@@ -4,6 +4,7 @@ import HomePage from '../views/HomePage.vue';
 import BudgetView from '../views/budget/BudgetView.vue';
 import TemplatesView from '../views/templates/TemplatesView.vue';
 import SuppliersPage from '../views/suppliers/SuppliersPage.vue';
+import AccountsPage from '../views/suppliers/accounts/AccountsPage.vue';
 import StatisticsPage from '@/views/statistics/StatisticsPage.vue';
 import StatisticsConfigPage from '@/views/statistics/config/StatisticsConfigPage.vue';
 import MaintenancePage from '@/views/admin/MaintenancePage.vue';
@@ -35,6 +36,11 @@ const routes: Array<RouteRecordRaw> = [
     path: '/suppliers',
     name: 'SuppliersPage',
     component: SuppliersPage,
+  },
+  {
+    path: '/suppliers/accounts',
+    name: 'SuppliersAccounts',
+    component: AccountsPage,
   },
   {
     path: '/admin/maintenance',
