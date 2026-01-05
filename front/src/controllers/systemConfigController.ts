@@ -40,6 +40,28 @@ class SystemConfigController {
     const store = useSystemConfig();
     await store.setTheme(value);
   }
+
+  async getAutoLightTheme(): Promise<ThemeMode> {
+    const store = useSystemConfig();
+    return store.getAutoLightTheme();
+  }
+
+  async setAutoLightTheme(params: { value: ThemeMode }) {
+    const { value } = params;
+    const store = useSystemConfig();
+    await store.setAutoLightTheme(value);
+  }
+
+  async getAutoDarkTheme(): Promise<ThemeMode> {
+    const store = useSystemConfig();
+    return store.getAutoDarkTheme();
+  }
+
+  async setAutoDarkTheme(params: { value: ThemeMode }) {
+    const { value } = params;
+    const store = useSystemConfig();
+    await store.setAutoDarkTheme(value);
+  }
 }
 
 const suppliersController = new SystemConfigController();

@@ -4,11 +4,13 @@ import { isPlatform } from '@ionic/vue';
 import { configController } from '@/controllers/dixie';
 
 export type SystemMode = 'ios' | 'md';
-export type ThemeMode = 'light' | 'dark' | 'auto';
+export type ThemeMode = 'light' | 'dark' | 'auto' | 'catppuccin-latte-maroon' | 'catppuccin-macchiato-maroon';
 
 export const useSystemConfig = defineStore('systemConfig', () => {
   const designMode = ref<SystemMode>(isPlatform('ios') ? 'ios' : 'md');
   const theme = ref<ThemeMode>('auto');
+  const autoLightTheme = ref<ThemeMode>('light');
+  const autoDarkTheme = ref<ThemeMode>('dark');
 
   function init() {
     designMode.value = isPlatform('ios') ? 'ios' : 'md';
@@ -34,8 +36,8 @@ export const useSystemConfig = defineStore('systemConfig', () => {
   async function getTheme(): Promise<ThemeMode> {
     if (theme.value !== 'auto') return theme.value;
     const saved = await configController.getConfig('theme');
-    if (saved === 'light' || saved === 'dark' || saved === 'auto') {
-      return saved;
+    if (['light', 'dark', 'auto', 'catppuccin-latte-maroon', 'catppuccin-macchiato-maroon'].includes(saved as ThemeMode)) {
+      return saved as ThemeMode;
     }
     return 'auto';
   }
@@ -45,9 +47,37 @@ export const useSystemConfig = defineStore('systemConfig', () => {
     await configController.setConfig({ key: 'theme', value: val });
   }
 
+  async function getAutoLightTheme(): Promise<ThemeMode> {
+    const saved = await configController.getConfig('autoLightTheme');
+    if (['light', 'dark', 'catppuccin-latte-maroon', 'catppuccin-macchiato-maroon'].includes(saved as ThemeMode)) {
+      return saved as ThemeMode;
+    }
+    return 'light';
+  }
+
+  async function setAutoLightTheme(val: ThemeMode) {
+    autoLightTheme.value = val;
+    await configController.setConfig({ key: 'autoLightTheme', value: val });
+  }
+
+  async function getAutoDarkTheme(): Promise<ThemeMode> {
+    const saved = await configController.getConfig('autoDarkTheme');
+    if (['light', 'dark', 'catppuccin-latte-maroon', 'catppuccin-macchiato-maroon'].includes(saved as ThemeMode)) {
+      return saved as ThemeMode;
+    }
+    return 'dark';
+  }
+
+  async function setAutoDarkTheme(val: ThemeMode) {
+    autoDarkTheme.value = val;
+    await configController.setConfig({ key: 'autoDarkTheme', value: val });
+  }
+
   return {
     designMode,
     theme,
+    autoLightTheme,
+    autoDarkTheme,
     init,
     setDesignMode,
     getDesignMode,
@@ -56,5 +86,9 @@ export const useSystemConfig = defineStore('systemConfig', () => {
     getMigrationNoticeDismissed,
     getTheme,
     setTheme,
+    getAutoLightTheme,
+    setAutoLightTheme,
+    getAutoDarkTheme,
+    setAutoDarkTheme,
   };
 });
