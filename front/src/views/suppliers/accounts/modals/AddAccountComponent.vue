@@ -16,7 +16,7 @@
           <ion-button v-if="selectedId" color="danger" @click="confirmRemove">
             <ion-icon :icon="trashOutline"></ion-icon>
           </ion-button>
-          <ion-button @click="onSubmit">
+          <ion-button @click="onSubmit" :disabled="!isFormValid">
             <ion-icon :icon="saveOutline"></ion-icon>
           </ion-button>
         </ion-buttons>
@@ -71,6 +71,8 @@ import {
 } from '@ionic/vue';
 import { reactive, computed, watch, ref } from 'vue';
 import { closeOutline, saveOutline, trashOutline } from 'ionicons/icons';
+import { required, minValue, helpers } from '@vuelidate/validators';
+import useVuelidate from '@vuelidate/core';
 
 const props = defineProps<{ account: any | null }>();
 const emit = defineEmits<{
@@ -88,6 +90,17 @@ function confirmRemove() {
 const form = reactive({ name: '', initialBalance: 0 });
 const selectedId = computed(() => props.account?.id ?? null);
 const showDeleteAlert = ref(false);
+
+const formRules = computed(() => ({
+  name: { required: helpers.withMessage('El nombre es obligatorio', required) },
+  initialBalance: { minValue: minValue(0) },
+}));
+
+const v$ = useVuelidate(formRules, form);
+
+const isFormValid = computed(() => {
+  return !v$.value.$invalid;
+});
 const alertButtons = [
   { text: 'Cancelar', role: 'cancel' },
   {
@@ -117,8 +130,10 @@ function cancelModal() {
   emit('dismiss');
 }
 
-function onSubmit() {
-  if (!form.name) return;
+async function onSubmit() {
+  const isValid = await v$.value.$validate();
+  if (!isValid) return;
+
   const payload: any = {
     name: form.name,
     initialBalance: form.initialBalance,

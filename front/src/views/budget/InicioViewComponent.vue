@@ -178,7 +178,7 @@
             <ion-icon :icon="trashOutline"></ion-icon>
           </ion-button>
 
-          <ion-button @click="saveEntryChanges">
+          <ion-button @click="saveEntryChanges" :disabled="!isFormValid">
             <ion-icon :icon="saveOutline"></ion-icon>
           </ion-button>
         </ion-buttons>
@@ -252,24 +252,23 @@
                 ></ion-input>
               </ion-item>
 
-              <ion-item class="transparent">
-                <ion-select
-                  v-model="item.accountId"
-                  label="Cuenta"
-                  label-placement="stacked"
-                >
-                  <ion-select-option :value="null"
-                    >Sin cuenta</ion-select-option
+                <ion-item class="transparent">
+                  <ion-select
+                    v-model="item.accountId"
+                    label="Cuenta"
+                    label-placement="stacked"
+                    :validate="true"
+                    error-text="Selecciona una cuenta"
                   >
-                  <ion-select-option
-                    v-for="acc in availableAccountsForItem(index)"
-                    :key="acc.id"
-                    :value="acc.id"
-                  >
-                    {{ acc.name }}
-                  </ion-select-option>
-                </ion-select>
-              </ion-item>
+                    <ion-select-option
+                      v-for="acc in availableAccountsForItem(index)"
+                      :key="acc.id"
+                      :value="acc.id"
+                    >
+                      {{ acc.name }}
+                    </ion-select-option>
+                  </ion-select>
+                </ion-item>
             </div>
           </div>
         </ion-list>
@@ -354,11 +353,9 @@
                   v-model="item.accountId"
                   label="Cuenta"
                   label-placement="stacked"
+                  :validate="true"
+                  error-text="Selecciona una cuenta"
                 >
-                  <ion-select-option :value="null"
-                    >Sin cuenta</ion-select-option
-                  >
-
                   <ion-select-option
                     v-for="acc in availableAccountsForItem(index)"
                     :key="acc.id"
@@ -434,7 +431,7 @@ import {
 } from 'ionicons/icons';
 import AccountCards from './components/AccountCards.vue';
 import { useAccountsStore } from '@/stores/accountsStore';
-import { computed, ref, onMounted } from 'vue';
+import { computed, ref, onMounted, reactive, watch } from 'vue';
 import { useBudgetStore } from '@/stores/budgetStore';
 
 const store = useBudgetStore();
@@ -460,7 +457,64 @@ const editEntryModalData = ref({
   name: '',
 });
 
+const accountsList = computed(() => {
+  const list = accountsStore.accounts;
+  if (!list || !Array.isArray(list)) return [] as any[];
+  return list.filter((acc: any) => acc != null && acc.id != null) as any[];
+});
+
+const getDefaultAccountId = () => {
+  const accounts = accountsList.value;
+  return accounts.length > 0 ? accounts[0].id : null;
+};
+
 const entryItems = ref([{ amount: 0, accountId: null }]);
+
+const entryFormState = reactive({
+  name: '',
+  entryType: 'ingreso',
+  items: [{ amount: 0, accountId: null }],
+});
+
+const isItemsValid = computed(() => {
+  return entryFormState.items.every(
+    (item) => Number(item.amount) > 0 && item.accountId != null
+  );
+});
+
+const isFormValid = computed(() => {
+  return (
+    entryFormState.name.trim().length > 0 &&
+    entryFormState.entryType &&
+    entryFormState.items.length > 0 &&
+    isItemsValid.value
+  );
+});
+
+watch(
+  () => entryItems.value,
+  (newItems) => {
+    entryFormState.items = newItems.map((item) => ({
+      amount: Number(item.amount) || 0,
+      accountId: item.accountId,
+    }));
+  },
+  { deep: true }
+);
+
+watch(
+  () => editEntryModalData.value.name,
+  (newName) => {
+    entryFormState.name = newName;
+  }
+);
+
+watch(
+  () => editEntryModalData.value.entryType,
+  (newType) => {
+    entryFormState.entryType = newType;
+  }
+);
 
 const availableAccountsForItem = (currentIndex: number) => {
   const usedAccountIds = entryItems.value
@@ -477,47 +531,38 @@ const canAddMoreItems = computed(() => {
   return entryItems.value.length < availableAccounts + 2;
 });
 
-const accountsList = computed(() => {
-  const list = accountsStore.accounts;
-  if (!list || !Array.isArray(list)) return [];
-  return list.filter((acc: any) => acc != null && acc.id != null);
-});
+function calculateAccountBalance(acc: any, accountId: string | number) {
+  const initialBalance = Number(acc.initialBalance) || 0;
 
-const accountsWithBalance = computed(() => {
-  const result = accountsList.value.map((acc: any) => {
-    const accountId = acc.id;
-    const initialBalance = Number(acc.initialBalance) || 0;
-
-    const entriesForAccount = store.entries.filter((e: any) => {
-      if (String(e.accountId) === String(accountId)) return true;
-      if (e.groups && Array.isArray(e.groups)) {
-        return e.groups.some(
-          (g: any) => String(g.accountId) === String(accountId)
-        );
-      }
-      return false;
-    });
-
-    const ingresos = entriesForAccount
-      .filter((e: any) => e.entryType === 'ingreso')
-      .reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
-
-    const egresos = entriesForAccount
-      .filter((e: any) => e.entryType === 'egreso')
-      .reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
-
-    const balance = initialBalance + ingresos - egresos;
-
-    return {
-      ...acc,
-      initialBalance,
-      ingresos,
-      egresos,
-      balance,
-      hasTransactions: ingresos > 0 || egresos > 0,
-    };
+  const entriesForAccount = store.entries.filter((e: any) => {
+    if (String(e.accountId) === String(accountId)) return true;
+    if (e.groups && Array.isArray(e.groups)) {
+      return e.groups.some(
+        (g: any) => String(g.accountId) === String(accountId)
+      );
+    }
+    return false;
   });
 
+  const ingresos = entriesForAccount
+    .filter((e: any) => e.entryType === 'ingreso')
+    .reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
+
+  const egresos = entriesForAccount
+    .filter((e: any) => e.entryType === 'egreso')
+    .reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
+
+  return {
+    ...acc,
+    initialBalance,
+    ingresos,
+    egresos,
+    balance: initialBalance + ingresos - egresos,
+    hasTransactions: ingresos > 0 || egresos > 0,
+  };
+}
+
+function calculateNoAccountStats() {
   const entriesWithoutAccount = store.entries.filter(
     (e: any) => e.accountId == null || e.accountId === ''
   );
@@ -530,7 +575,7 @@ const accountsWithBalance = computed(() => {
     .filter((e: any) => e.entryType === 'egreso')
     .reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
 
-  const noAccount = {
+  return {
     id: null,
     name: 'Sin cuenta',
     initialBalance: 0,
@@ -539,14 +584,22 @@ const accountsWithBalance = computed(() => {
     balance: noAccountIngresos - noAccountEgresos,
     hasTransactions: noAccountIngresos > 0 || noAccountEgresos > 0,
   };
+}
+
+const accountsWithBalance = computed(() => {
+  const result = accountsList.value.map((acc: any) =>
+    calculateAccountBalance(acc, acc.id)
+  );
+
+  const noAccount = calculateNoAccountStats();
 
   const withTransactions = result
-    .filter(acc => acc.hasTransactions)
-    .sort((a, b) => b.balance - a.balance);
+    .filter((acc: any) => acc.hasTransactions)
+    .sort((a: any, b: any) => b.balance - a.balance);
 
   const withoutTransactions = result
-    .filter(acc => !acc.hasTransactions)
-    .sort((a, b) => a.name.localeCompare(b.name));
+    .filter((acc: any) => !acc.hasTransactions)
+    .sort((a: any, b: any) => a.name.localeCompare(b.name));
 
   return [noAccount, ...withTransactions, ...withoutTransactions];
 });
@@ -573,7 +626,7 @@ const providersTodayWithData = computed(() => {
 
 const renderedEntries = computed(() => {
   const list = store.entries;
-  return list.map(item => ({ type: 'item', item }));
+  return list.map((item: any) => ({ type: 'item', item }));
 });
 
 function formatCurrencyLocal(params: { v: number }) {
@@ -600,7 +653,10 @@ function openAddEntryModal() {
     entryType: 'ingreso',
     name: '',
   };
-  entryItems.value = [{ amount: 0, accountId: null }];
+  entryFormState.name = '';
+  entryFormState.entryType = 'ingreso';
+  entryFormState.items = [{ amount: 0, accountId: getDefaultAccountId() }];
+  entryItems.value = [...entryFormState.items];
   editEntryModalOpen.value = true;
   console.log('editEntryModalData.id after set:', editEntryModalData.value.id);
 }
@@ -643,7 +699,7 @@ function getEntryAccountInfo(item: any) {
     if (uniqueAccountIds.length > 1) {
       return { name: 'Varios', accountId: null };
     }
-    const accountId = uniqueAccountIds[0] ?? null;
+    const accountId = (uniqueAccountIds[0] as string | number | undefined) ?? null;
     return { name: getAccountName(accountId), accountId };
   }
   return {
@@ -762,27 +818,32 @@ function openEditEntryModal(item: any) {
     if (item.groups && Array.isArray(item.groups) && item.groups.length > 0) {
       entryItems.value = item.groups.map((g: any) => ({
         amount: Number(g.amount) || 0,
-        accountId: g.accountId ?? null,
+        accountId: g.accountId ?? getDefaultAccountId(),
       }));
     } else {
       entryItems.value = [
         {
           amount: Number(item.amount) || 0,
-          accountId: item.accountId || null,
+          accountId: item.accountId || getDefaultAccountId(),
         },
       ];
     }
+    entryFormState.items = [...entryItems.value];
+    entryFormState.name = item.name || '';
+    entryFormState.entryType = item.entryType || 'ingreso';
     editEntryModalOpen.value = true;
   }
 }
 
 function addEntryItem() {
   if (canAddMoreItems.value) {
-    entryItems.value.push({ amount: 0, accountId: null });
+    entryItems.value.push({ amount: 0, accountId: getDefaultAccountId() });
   }
 }
 
-function saveEntryChanges() {
+async function saveEntryChanges() {
+  if (!isFormValid.value) return;
+
   const totalAmount = entryItems.value.reduce(
     (sum, item) => sum + (Number(item.amount) || 0),
     0
@@ -843,7 +904,10 @@ function confirmDelete() {
     entryType: 'ingreso',
     name: '',
   };
-  entryItems.value = [{ amount: 0, accountId: null }];
+  entryItems.value = [{ amount: 0, accountId: getDefaultAccountId() }];
+  entryFormState.items = [...entryItems.value];
+  entryFormState.name = '';
+  entryFormState.entryType = 'ingreso';
 }
 
 onMounted(() => {

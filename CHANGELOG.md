@@ -1,3 +1,18 @@
+## [v0.23.0] - 2026-01-07
+
+### Changed
+
+- Refactor InicioViewComponent to use accounts store instead of suppliers store
+- Rename AddProveedorComponent to AddAccountComponent for consistency with accounts terminology
+- Update all component props, emits, and references from "proveedor" to "account"
+
+### Files Changed
+
+- front/src/views/budget/InicioViewComponent.vue (modified)
+- front/src/views/suppliers/accounts/modals/AddAccountComponent.vue (modified)
+
+---
+
 ## [v0.22.0] - 2026-01-06
 
 ### Added
