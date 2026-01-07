@@ -14,6 +14,7 @@ export interface Income {
   paymentType: PaymentType;
   entryType: EntryType;
   accountId?: string | number | null;
+  groups?: Array<{ amount: number; accountId: string | number | null }>;
   createdAt: number;
   _fromProviderGroupId?: string;
   _providerName?: string;
@@ -259,6 +260,7 @@ export const useBudgetStore = defineStore('budget', () => {
       amount?: number;
       paymentType?: PaymentType;
       accountId?: string | number | null;
+      groups?: Array<{ amount: number; accountId: string | number | null }>;
     } = {}
   ) {
     const {
@@ -266,6 +268,7 @@ export const useBudgetStore = defineStore('budget', () => {
       amount = 0,
       paymentType = 'cash',
       accountId = null,
+      groups = [],
     } = params;
     entries.push({
       id: Date.now() + Math.random(),
@@ -275,6 +278,7 @@ export const useBudgetStore = defineStore('budget', () => {
       paymentType,
       entryType: 'ingreso',
       accountId,
+      groups,
       createdAt: Date.now(),
     });
   }
@@ -285,6 +289,7 @@ export const useBudgetStore = defineStore('budget', () => {
       amount?: number;
       paymentType?: PaymentType;
       accountId?: string | number | null;
+      groups?: Array<{ amount: number; accountId: string | number | null }>;
     } = {}
   ) {
     const {
@@ -292,6 +297,7 @@ export const useBudgetStore = defineStore('budget', () => {
       amount = 0,
       paymentType = 'cash',
       accountId = null,
+      groups = [],
     } = params;
     entries.push({
       id: Date.now() + Math.random(),
@@ -301,6 +307,7 @@ export const useBudgetStore = defineStore('budget', () => {
       paymentType,
       entryType: 'egreso',
       accountId,
+      groups,
       createdAt: Date.now(),
     });
   }
@@ -343,16 +350,11 @@ export const useBudgetStore = defineStore('budget', () => {
   }
 
   function updateIngreso(id: string | number, changes: Partial<Income>) {
-    const ingreso = entries.find(e => e.id === id);
-    if (!ingreso) return;
+    const idx = entries.findIndex(e => e.id === id);
+    if (idx === -1) return;
 
-    if (changes.amount !== undefined)
-      ingreso.amount = Number(changes.amount) || 0;
-    if (changes.paymentType !== undefined)
-      ingreso.paymentType = changes.paymentType;
-    if (changes.name !== undefined) ingreso.name = String(changes.name || '');
-    if (changes.entryType !== undefined) ingreso.entryType = changes.entryType;
-    if (changes.accountId !== undefined) ingreso.accountId = changes.accountId;
+    const updated = { ...entries[idx], ...changes };
+    entries.splice(idx, 1, updated);
   }
 
   function removeIngreso(id: string | number) {

@@ -30,6 +30,7 @@ ion-card.no-shadow {
 ion-item.transparent,
 ion-item-divider.transparent {
   --background: transparent;
+  border-bottom: 1px solid var(--ion-background-color-step-200) !important;
 }
 ion-item.border-rounded {
   border-radius: 4px;
@@ -54,3 +55,9 @@ ion-button.no-shadow {
   --box-shadow: none !important;
 }
 /* end ion button */
+
+/* hr */
+hr {
+  border-top: 1px solid var(--ion-background-color-step-200);
+}
+/* end hr */

@@ -1,3 +1,30 @@
+## [v0.22.0] - 2026-01-06
+
+### Added
+
+- Add support for multiple items per entry with groups array in Income interface
+- Add entry items management UI with add/remove functionality for splitting amounts across accounts
+- Add `getEntryAccountInfo` helper function to handle single and grouped account entries
+- Add `availableAccountsForItem` computed property to prevent duplicate account selection within same entry
+- Add hr separators and transparent item styling for improved visual hierarchy
+
+### Changed
+
+- Refactor InicioViewComponent entry modal to use item groups instead of single amount/account
+- Refactor budgetStore `addIngreso` and `addEgreso` to accept optional groups parameter
+- Refactor `updateIngreso` to use object spread for merging changes instead of individual property updates
+- Improve account balance calculation to include entries with groups
+- Improve account remaining calculation to track group-based account usage
+- Update AccountCards to show accounts with transactions first, sorted by balance
+
+### Files Changed
+
+- front/src/stores/budgetStore.ts (modified)
+- front/src/views/budget/InicioViewComponent.vue (modified)
+- front/src/theme/variables.css (modified)
+
+---
+
 ## [v0.21.0] - 2026-01-05
 
 ### Added

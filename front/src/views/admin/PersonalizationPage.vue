@@ -31,8 +31,12 @@
                   <ion-select-option value="light">Claro</ion-select-option>
                   <ion-select-option value="dark">Oscuro</ion-select-option>
                   <ion-select-option value="auto">Automático</ion-select-option>
-                  <ion-select-option value="catppuccin-latte-maroon">Catppuccin Latte Maroon</ion-select-option>
-                  <ion-select-option value="catppuccin-macchiato-maroon">Catppuccin Macchiato Maroon</ion-select-option>
+                  <ion-select-option value="catppuccin-latte-maroon"
+                    >Catppuccin Latte Maroon</ion-select-option
+                  >
+                  <ion-select-option value="catppuccin-macchiato-maroon"
+                    >Catppuccin Macchiato Maroon</ion-select-option
+                  >
                 </ion-select>
               </ion-item>
 
@@ -46,7 +50,9 @@
                   @ion-change="onAutoLightThemeChange"
                 >
                   <ion-select-option value="light">Claro</ion-select-option>
-                  <ion-select-option value="catppuccin-latte-maroon">Catppuccin Latte Maroon</ion-select-option>
+                  <ion-select-option value="catppuccin-latte-maroon"
+                    >Catppuccin Latte Maroon</ion-select-option
+                  >
                 </ion-select>
               </ion-item>
 
@@ -60,7 +66,9 @@
                   @ion-change="onAutoDarkThemeChange"
                 >
                   <ion-select-option value="dark">Oscuro</ion-select-option>
-                  <ion-select-option value="catppuccin-macchiato-maroon">Catppuccin Macchiato Maroon</ion-select-option>
+                  <ion-select-option value="catppuccin-macchiato-maroon"
+                    >Catppuccin Macchiato Maroon</ion-select-option
+                  >
                 </ion-select>
               </ion-item>
             </ion-list>
@@ -132,11 +140,15 @@ async function onAutoDarkThemeChange(e: CustomEvent) {
 function applyTheme(t: ThemeMode | string) {
   console.log('applyTheme called with:', t);
   const body = document.body;
-  
-  body.classList.remove('dark', 'catppuccin-latte-maroon', 'catppuccin-macchiato-maroon');
-  
+
+  body.classList.remove(
+    'dark',
+    'catppuccin-latte-maroon',
+    'catppuccin-macchiato-maroon'
+  );
+
   let themeToApply = t;
-  
+
   if (t === 'auto') {
     const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     console.log('System prefers dark:', isDark);
@@ -144,15 +156,18 @@ function applyTheme(t: ThemeMode | string) {
     console.log('autoDarkTheme:', autoDarkTheme.value);
     themeToApply = isDark ? autoDarkTheme.value : autoLightTheme.value;
   }
-  
+
   console.log('Applying theme:', themeToApply);
-  
-  if (themeToApply === 'catppuccin-latte-maroon' || themeToApply === 'catppuccin-macchiato-maroon') {
+
+  if (
+    themeToApply === 'catppuccin-latte-maroon' ||
+    themeToApply === 'catppuccin-macchiato-maroon'
+  ) {
     body.classList.add(themeToApply);
   } else if (themeToApply === 'dark') {
     body.classList.add('dark');
   }
-  
+
   console.log('Body classList:', body.className);
 }
 
@@ -162,7 +177,7 @@ function goBack() {
 
 onMounted(() => {
   loadTheme();
-  
+
   const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
   mediaQuery.addEventListener('change', () => {
     if (theme.value === 'auto') {
