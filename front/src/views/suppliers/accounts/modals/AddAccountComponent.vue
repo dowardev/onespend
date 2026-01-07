@@ -25,21 +25,23 @@
 
     <ion-content class="ion-padding-top ion-padding-bottom">
       <ion-card class="shadow1">
-        <ion-card-content>
+        <ion-item class="transparent" lines="none">
           <ion-input
             v-model="form.name"
             label="Nombre"
             label-placement="floating"
             required
           ></ion-input>
+        </ion-item>
 
+        <ion-item class="transparent" lines="none">
           <ion-input
             v-model.number="form.initialBalance"
             label="Balance inicial"
             label-placement="floating"
             type="number"
           ></ion-input>
-        </ion-card-content>
+        </ion-item>
       </ion-card>
     </ion-content>
 

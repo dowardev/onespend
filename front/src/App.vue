@@ -175,10 +175,17 @@ function setDesignMode() {
 async function applyTheme() {
   const theme = await systemController.getTheme();
   const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  
-  document.body.classList.remove('dark', 'catppuccin-latte-maroon', 'catppuccin-macchiato-maroon');
-  
-  if (theme === 'catppuccin-latte-maroon' || theme === 'catppuccin-macchiato-maroon') {
+
+  document.body.classList.remove(
+    'dark',
+    'catppuccin-latte-maroon',
+    'catppuccin-macchiato-maroon'
+  );
+
+  if (
+    theme === 'catppuccin-latte-maroon' ||
+    theme === 'catppuccin-macchiato-maroon'
+  ) {
     document.body.classList.add(theme);
   } else {
     const isDark = theme === 'dark' || (theme === 'auto' && prefersDark);
@@ -192,7 +199,9 @@ function setupThemeListener() {
     .addEventListener('change', async () => {
       const theme = await systemController.getTheme();
       if (theme === 'auto') {
-        const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const isDark = window.matchMedia(
+          '(prefers-color-scheme: dark)'
+        ).matches;
         document.body.classList.toggle('dark', isDark);
       }
     });

@@ -13,9 +13,9 @@
         <ion-item
           v-for="acc in accounts"
           :key="acc.id"
+          class="transparent"
           lines="full"
           :button="acc.id != null"
-          :class="{ 'no-account-item': acc.id == null }"
           @click="acc.id != null && edit(acc)"
         >
           <ion-label>
@@ -159,6 +159,11 @@ async function onDeleteAccount(id: string | number) {
   margin-bottom: 8px;
 }
 
+.list-content {
+  max-height: calc(100dvh - 210px);
+  overflow-y: auto;
+}
+
 .chart-wrapper {
   width: 80px;
   height: 40px;
@@ -169,8 +174,4 @@ async function onDeleteAccount(id: string | number) {
   --height: 80dvh;
 }
 
-.no-account-item {
-  --background: var(--ion-color-light);
-  opacity: 0.8;
-}
 </style>

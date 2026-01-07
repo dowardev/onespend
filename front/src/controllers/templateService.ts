@@ -165,7 +165,7 @@ export async function buildAndSaveTemplateApplication(
       const existingIngresos = Array.isArray((existing.data as any).ingresos)
         ? (existing.data as any).ingresos
         : [];
-      let finalData: any = Object.assign({}, payloadToSave.data, {
+      const finalData: any = Object.assign({}, payloadToSave.data, {
         ingresos: existingIngresos,
         entries: existingIngresos,
       });
