@@ -1,15 +1,15 @@
-## [v0.25.2] - 2026-01-08
+## [v0.25.3] - 2026-01-08
 
 ### Fix
 
-- Fix Pinia initialization error in suppliersController
-- Convert module-level store initialization to lazy initialization pattern
-- Add getStore() method that calls useSuppliersStore() only when needed
-- This prevents "getActivePinia()" error when controllers are loaded before app.mount()
+- Fix 'this is undefined' error in accountsController
+- AccountsPage.vue now uses accountsController methods directly instead of extracting them
+- Extract methods without binding causes 'this' to be undefined when called
+- Changed from `const loadAll = accountsController.loadAll` to `accountsController.loadAll()`
 
 ---
 
-## [v0.25.1] - 2026-01-08
+## [v0.25.2] - 2026-01-08
 
 ### Refactor
 
