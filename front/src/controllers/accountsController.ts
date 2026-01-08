@@ -1,32 +1,26 @@
 import { DixieController } from './dixie';
 import { ref, computed, toRefs } from 'vue';
-
-export type Account = {
-  id?: IDBValidKey;
-  name: string;
-  initialBalance: number;
-  createdAt?: number;
-  updatedAt?: number;
-};
+import { useAccountsStore } from '@/stores/accountsStore';
+import type { Account } from '@/stores/accountsStore';
 
 class AccountsController {
-  private accountsState = ref<Account[]>([]);
   private isLoading = ref(false);
 
   private getController(): DixieController {
     return new DixieController({ name: 'ABOgazDB', storeName: 'accounts' });
   }
 
-  get accounts() {
-    return this.accountsState.value;
+  getAccountsStore() {
+    return useAccountsStore();
   }
 
   getAccounts() {
-    return this.accountsState.value;
+    return this.getAccountsStore().accounts;
   }
 
   getAccountsList() {
-    return computed(() => [...this.accountsState.value]);
+    const store = this.getAccountsStore();
+    return computed(() => [...store.accounts]);
   }
 
   getIsLoading() {
@@ -40,16 +34,18 @@ class AccountsController {
         storeName: 'suppliers',
       });
       const suppliers = (await suppliersCtrl.listBackups()) as any[];
+      const store = this.getAccountsStore();
 
       if (suppliers && suppliers.length > 0) {
-        if (this.accountsState.value.length === 0) {
+        if (store.accounts.length === 0) {
           const newAccounts: Account[] = suppliers.map((s) => ({
+            id: s.id || undefined,
             name: s.name,
             initialBalance: s.initialBalance ?? 0,
             createdAt: s.createdAt || Date.now(),
             updatedAt: s.updatedAt || Date.now(),
           }));
-          this.accountsState.value = newAccounts;
+          store.accounts.splice(0, store.accounts.length, ...newAccounts);
           console.log(`Migrated ${suppliers.length} suppliers to accounts`);
         }
       }
@@ -69,11 +65,13 @@ class AccountsController {
 
       await this.migrateFromSuppliers();
 
-      this.accountsState.value = sorted;
+      const store = this.getAccountsStore();
+      store.accounts.splice(0, store.accounts.length, ...sorted);
       return [...sorted];
     } catch (e) {
       console.error('accountsController.loadAll error', e);
-      this.accountsState.value = [];
+      const store = this.getAccountsStore();
+      store.accounts.splice(0, store.accounts.length);
       return [];
     } finally {
       this.isLoading.value = false;
@@ -93,7 +91,9 @@ class AccountsController {
 
     const id = await ctrl.addEntry({ entry });
     const newAccount: Account = { ...entry, id };
-    this.accountsState.value.push(newAccount);
+
+    const store = this.getAccountsStore();
+    store.accounts.push(newAccount);
 
     return newAccount;
   }
@@ -112,11 +112,10 @@ class AccountsController {
 
     await ctrl.putEntry({ entry });
 
-    const idx = this.accountsState.value.findIndex(acc => acc.id === a.id);
+    const store = this.getAccountsStore();
+    const idx = store.accounts.findIndex(acc => acc.id === a.id);
     if (idx >= 0) {
-      const newAccounts = [...this.accountsState.value];
-      newAccounts[idx] = entry;
-      this.accountsState.value = newAccounts;
+      store.accounts[idx] = entry;
     }
 
     return entry;
@@ -126,7 +125,11 @@ class AccountsController {
     const ctrl = this.getController();
     await ctrl.deleteBackup(id);
 
-    this.accountsState.value = this.accountsState.value.filter(acc => acc.id !== id);
+    const store = this.getAccountsStore();
+    const idx = store.accounts.findIndex(acc => acc.id === id);
+    if (idx >= 0) {
+      store.accounts.splice(idx, 1);
+    }
   }
 }
 

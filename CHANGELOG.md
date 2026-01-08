@@ -1,3 +1,33 @@
+## [v0.25.1] - 2026-01-08
+
+### Refactor
+
+- Refactor accountsController to manage store state directly instead of local state
+- Simplify accountsStore to pure reactive state container without business logic
+- Convert accountsStore to setup store syntax with only accounts array export
+- Remove Account type definition from controller, move to store
+
+### Architecture
+
+- Implement View → Controller → Store pattern for accounts feature
+- Controller now directly updates store state after IndexedDB operations
+- Store becomes passive reactive state container managed by controller
+- Consistent pattern with suppliers, budget, and templates refactoring
+
+### Changed
+
+- accountsController imports useAccountsStore and calls store methods for state updates
+- getAccounts() returns store.accounts directly instead of local ref
+- All CRUD operations (loadAll, addAccount, updateAccount, deleteAccount) update store immediately
+- accountsController provides getAccountsStore() getter for store access
+
+### Files Changed
+
+- front/src/controllers/accountsController.ts (modified)
+- front/src/stores/accountsStore.ts (modified)
+
+---
+
 ## [v0.25.0] - 2026-01-08
 
 ### Refactor
