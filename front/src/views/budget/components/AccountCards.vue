@@ -82,7 +82,7 @@ import {
 import AccountBarChart from './AccountBarChart.vue';
 import { addOutline } from 'ionicons/icons';
 import { useAccountsStore } from '@/stores/accountsStore';
-import { useBudgetStore } from '@/stores/budgetStore';
+import budgetController from '@/controllers/budgetController';
 import AddAccountComponent from '@/views/suppliers/accounts/modals/AddAccountComponent.vue';
 
 interface AccountWithBalance {
@@ -103,8 +103,6 @@ const createAccount = accountsStore.createAccount;
 const updateAccount = accountsStore.updateAccount;
 const deleteAccount = accountsStore.deleteAccount;
 const loadAll = accountsStore.loadAll;
-
-const budgetStore = useBudgetStore();
 
 const showModal = ref(false);
 const modalAccount = ref<any | null>(null);
@@ -143,9 +141,9 @@ async function onModalSaved(payload: any) {
 }
 
 async function onDeleteAccount(id: string | number) {
-  for (const entry of budgetStore.entries) {
+  for (const entry of budgetController.getEntries()) {
     if (String(entry.accountId) === String(id)) {
-      budgetStore.updateIngreso(entry.id, { accountId: null });
+      budgetController.updateIngreso(entry.id, { accountId: null });
     }
   }
   await deleteAccount(id);

@@ -1,3 +1,30 @@
+## [v0.23.1] - 2026-01-08
+
+### Changed
+
+- Refactor budget views to use controller pattern for data access
+- Create budgetController.ts as intermediary between views and budgetStore
+- Update BudgetView to access data through budgetController instead of direct store access
+- Update InicioViewComponent to use budgetController for entries and providers data
+- Update ProvidersComponent to use budgetController for provider management
+- Update AccountCards to use budgetController for entry operations
+
+### Refactor
+
+- Implement View → Controller → Store data flow pattern
+- Views no longer have direct access to budgetStore, only through controller exports
+- All data mutations go through controller functions that update the store
+
+### Files Changed
+
+- front/src/controllers/budgetController.ts (added)
+- front/src/views/budget/BudgetView.vue (modified)
+- front/src/views/budget/InicioViewComponent.vue (modified)
+- front/src/views/budget/ProvidersComponent.vue (modified)
+- front/src/views/budget/components/AccountCards.vue (modified)
+
+---
+
 ## [v0.23.0] - 2026-01-07
 
 ### Changed

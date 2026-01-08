@@ -27,7 +27,7 @@
             </div>
             <hr />
 
-            <template v-if="store.entries.length > 0">
+            <template v-if="budgetController.getEntries().length > 0">
               <template
                 v-for="(block, bIdx) in renderedEntries"
                 :key="blockKey(block, bIdx)"
@@ -432,9 +432,8 @@ import {
 import AccountCards from './components/AccountCards.vue';
 import { useAccountsStore } from '@/stores/accountsStore';
 import { computed, ref, onMounted, reactive, watch } from 'vue';
-import { useBudgetStore } from '@/stores/budgetStore';
+import budgetController from '@/controllers/budgetController';
 
-const store = useBudgetStore();
 const accountsStore = useAccountsStore();
 
 const addEntrySegment = ref('entry');
@@ -534,7 +533,7 @@ const canAddMoreItems = computed(() => {
 function calculateAccountBalance(acc: any, accountId: string | number) {
   const initialBalance = Number(acc.initialBalance) || 0;
 
-  const entriesForAccount = store.entries.filter((e: any) => {
+  const entriesForAccount = budgetController.getEntries().filter((e: any) => {
     if (String(e.accountId) === String(accountId)) return true;
     if (e.groups && Array.isArray(e.groups)) {
       return e.groups.some(
@@ -563,7 +562,7 @@ function calculateAccountBalance(acc: any, accountId: string | number) {
 }
 
 function calculateNoAccountStats() {
-  const entriesWithoutAccount = store.entries.filter(
+  const entriesWithoutAccount = budgetController.getEntries().filter(
     (e: any) => e.accountId == null || e.accountId === ''
   );
 
@@ -605,10 +604,10 @@ const accountsWithBalance = computed(() => {
 });
 
 const providersToday = computed(() => {
-  const sel = String(store.selectedDate || '').slice(0, 10);
+  const sel = String(budgetController.getSelectedDate() || '').slice(0, 10);
   if (!sel) return [];
-  const addedIds = store.providerIdsWithEntries;
-  return store.providers.filter(
+  const addedIds = budgetController.getProviderIdsWithEntries();
+  return budgetController.getProviders().filter(
     (p: any) => String(p.date || '').slice(0, 10) === sel && !addedIds.has(p.id)
   );
 });
@@ -625,7 +624,7 @@ const providersTodayWithData = computed(() => {
 });
 
 const renderedEntries = computed(() => {
-  const list = store.entries;
+  const list = budgetController.getEntries();
   return list.map((item: any) => ({ type: 'item', item }));
 });
 
@@ -672,7 +671,7 @@ function formatProviderAmount(provider: any) {
 }
 
 function selectProvider(provider: any) {
-  store.addProviderEgresos(provider);
+  budgetController.addProviderEgresos(provider);
   editEntryModalOpen.value = false;
 }
 
@@ -720,7 +719,7 @@ function getAccountRemaining(
 
   const initialBalance = Number(account.initialBalance) || 0;
 
-  const entriesForAccount = store.entries.filter((e: any) => {
+  const entriesForAccount = budgetController.getEntries().filter((e: any) => {
     if (String(e.accountId) === String(accountId)) return true;
     if (e.groups && Array.isArray(e.groups)) {
       return e.groups.some(
@@ -771,11 +770,11 @@ function openEditProviderModal(item: any) {
   }
 
   let provider = providerId
-    ? store.providers.find((p: any) => String(p.id) === String(providerId))
+    ? budgetController.getProviders().find((p: any) => String(p.id) === String(providerId))
     : null;
 
   if (!provider && item._providerName) {
-    provider = store.providers.find((p: any) => p.name === item._providerName);
+    provider = budgetController.getProviders().find((p: any) => p.name === item._providerName);
   }
 
   if (provider) {
@@ -793,7 +792,7 @@ function openEditProviderModal(item: any) {
 
 function saveProviderChanges() {
   if (editProviderModalProviderId) {
-    store.updateProvider(editProviderModalProviderId, {
+    budgetController.updateProvider(editProviderModalProviderId, {
       name: editProviderModalData.value.name,
       efectivo: Number(editProviderModalData.value.efectivo) || 0,
       tarjeta: Number(editProviderModalData.value.tarjeta) || 0,
@@ -852,7 +851,7 @@ async function saveEntryChanges() {
   const accountIdToSave = entryItems.value[0]?.accountId ?? null;
 
   if (editEntryModalData.value.id) {
-    store.updateIngreso(editEntryModalData.value.id, {
+    budgetController.updateIngreso(editEntryModalData.value.id, {
       entryType: editEntryModalData.value.entryType,
       name: editEntryModalData.value.name,
       amount: totalAmount,
@@ -862,14 +861,14 @@ async function saveEntryChanges() {
   } else {
     if (totalAmount > 0) {
       if (editEntryModalData.value.entryType === 'ingreso') {
-        store.addIngreso({
+        budgetController.addIngreso({
           name: editEntryModalData.value.name,
           amount: totalAmount,
           accountId: accountIdToSave,
           groups: entryItems.value,
         });
       } else {
-        store.addEgreso({
+        budgetController.addEgreso({
           name: editEntryModalData.value.name,
           amount: totalAmount,
           accountId: accountIdToSave,
@@ -895,7 +894,7 @@ function deleteEntry() {
 
 function confirmDelete() {
   if (editEntryModalData.value.id) {
-    store.removeIngreso(editEntryModalData.value.id);
+    budgetController.removeIngreso(editEntryModalData.value.id);
   }
   showDeleteAlert.value = false;
   editEntryModalOpen.value = false;
