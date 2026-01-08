@@ -23,7 +23,7 @@
             <ion-segment
               v-model="activeView"
               scrollable
-              :disabled="store.isDayClosed"
+              :disabled="budgetController.getIsDayClosed()"
             >
               <ion-segment-button value="inicio">Inicio</ion-segment-button>
               <ion-segment-button value="proveedores"
@@ -35,7 +35,7 @@
           <ion-buttons slot="end">
             <ion-button
               title="Retroceder"
-              :disabled="store.isDayClosed"
+              :disabled="budgetController.getIsDayClosed()"
               @click="goBack"
             >
               <ion-icon :icon="chevronBackOutline"></ion-icon>
@@ -43,7 +43,7 @@
 
             <ion-button
               title="Seleccionar fecha"
-              :disabled="store.isDayClosed"
+              :disabled="budgetController.getIsDayClosed()"
               @click="openDatePicker($event)"
             >
               {{ formattedSelectedDate }}
@@ -51,7 +51,7 @@
 
             <ion-button
               title="Avanzar"
-              :disabled="store.isDayClosed"
+              :disabled="budgetController.getIsDayClosed()"
               @click="goForward"
             >
               <ion-icon :icon="chevronForwardOutline"></ion-icon>
@@ -60,7 +60,7 @@
         </ion-item>
       </section>
 
-      <section v-if="!store.isDayClosed">
+      <section v-if="!budgetController.getIsDayClosed()">
         <ion-grid v-if="activeView === 'inicio'">
           <ion-row>
             <ion-col size="12">
@@ -95,7 +95,7 @@
       >
         <ion-content class="centered-popover">
           <ion-datetime
-            :value="store.selectedDate"
+            :value="budgetController.getSelectedDate()"
             presentation="date"
             @ion-change="onDateSelected"
           ></ion-datetime>
@@ -123,16 +123,16 @@
         <ion-content>
           <ion-item lines="none" button>
             <ion-toggle
-              :checked="!store.isDayClosed"
+              :checked="!budgetController.getIsDayClosed()"
               enable-on-off-labels
-              @ion-change="store.toggleDayClosed(!$event.detail.checked)"
+              @ion-change="budgetController.toggleDayClosed(!$event.detail.checked)"
             >
-              {{ store.isDayClosed ? 'Día cerrado' : 'Día abierto' }}
+              {{ budgetController.getIsDayClosed() ? 'Día cerrado' : 'Día abierto' }}
             </ion-toggle>
           </ion-item>
           <ion-item
             button
-            :disabled="store.isDayClosed"
+            :disabled="budgetController.getIsDayClosed()"
             @click="confirmClearDay"
           >
             <ion-icon
@@ -201,12 +201,10 @@ import { parseLocalDate, formatLocalDate } from '@/utils/date';
 import { es as esLocale } from 'date-fns/locale';
 
 import systemController from '@/controllers/systemConfigController';
-import { useBudgetStore } from '@/stores/budgetStore';
+import budgetController from '@/controllers/budgetController';
 import InicioViewComponent from './InicioViewComponent.vue';
 import ProvidersComponent from './ProvidersComponent.vue';
 import FinishDayForm from './FinishDayForm.vue';
-
-const store = useBudgetStore();
 
 const activeView = ref<'inicio' | 'proveedores'>('inicio');
 const showDatePicker = ref(false);
@@ -216,20 +214,20 @@ const datePickerEvent = ref<Event | null>(null);
 const moreOptionsEvent = ref<Event | null>(null);
 const designMode = computed(() => systemController.getDesignMode());
 
-const finishDay = computed(() => store.finishDayData);
+const finishDay = computed(() => budgetController.getFinishDayData());
 
 function saveFinishDay() {
-  store.saveData();
+  budgetController.saveData();
   showMoreOptions.value = false;
 }
 
 const formattedSelectedDate = computed(() => {
   try {
-    const d = parseLocalDate(store.selectedDate);
-    if (isNaN(d.getTime())) return store.selectedDate;
+    const d = parseLocalDate(budgetController.getSelectedDate());
+    if (isNaN(d.getTime())) return budgetController.getSelectedDate();
     return format(d, "d 'de' MMMM 'de' yyyy", { locale: esLocale });
   } catch {
-    return store.selectedDate;
+    return budgetController.getSelectedDate();
   }
 });
 
@@ -250,7 +248,7 @@ function onDateSelected(e: any) {
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
-    store.setDate(`${y}-${m}-${day}`);
+    budgetController.setDate(`${y}-${m}-${day}`);
   }
   showDatePicker.value = false;
 }
@@ -260,22 +258,22 @@ function goToToday() {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
-  store.setDate(`${y}-${m}-${day}`);
+  budgetController.setDate(`${y}-${m}-${day}`);
   showDatePicker.value = false;
 }
 
 function goBack() {
-  const current = store.selectedDate;
+  const current = budgetController.getSelectedDate();
   const d = parseLocalDate(current);
   d.setDate(d.getDate() - 1);
-  store.setDate(formatLocalDate(d));
+  budgetController.setDate(formatLocalDate(d));
 }
 
 function goForward() {
-  const current = store.selectedDate;
+  const current = budgetController.getSelectedDate();
   const d = parseLocalDate(current);
   d.setDate(d.getDate() + 1);
-  store.setDate(formatLocalDate(d));
+  budgetController.setDate(formatLocalDate(d));
 }
 
 function confirmClearDay() {
@@ -284,7 +282,7 @@ function confirmClearDay() {
 }
 
 function performClearDay() {
-  store.clearDay();
+  budgetController.clearDay();
   showClearConfirm.value = false;
 }
 </script>

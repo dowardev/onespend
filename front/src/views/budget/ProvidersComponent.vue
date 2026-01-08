@@ -16,13 +16,13 @@
           </ion-list-header>
 
           <div class="list-content">
-            <template v-if="store.providers.length">
+            <template v-if="budgetController.getProviders().length">
               <ProviderCardComponent
-                v-for="p in store.providers"
+                v-for="p in budgetController.getProviders()"
                 :key="p.id"
                 :provider="p"
                 :has-products="false"
-                :is-disabled="store.providerIdsWithEntries.has(p.id)"
+                :is-disabled="budgetController.getProviderIdsWithEntries().has(p.id)"
                 @update-provider="handleUpdateProvider"
                 @confirm-remove-proveedor="confirmRemoveProveedor"
                 @open-notes-modal="handleOpenNotesModal"
@@ -43,11 +43,11 @@
 
       <ion-col size="3">
         <ProvidersSummary
-          :efectivo="store.totalEfectivo"
-          :tarjeta="store.totalTarjeta"
-          :credito="store.totalCredito"
-          :ingreso-efectivo="store.ingresosEfectivo"
-          :ingreso-tarjeta="store.ingresosTarjeta"
+          :efectivo="budgetController.getTotalEfectivo()"
+          :tarjeta="budgetController.getTotalTarjeta()"
+          :credito="budgetController.getTotalCredito()"
+          :ingreso-efectivo="budgetController.getIngresosEfectivo()"
+          :ingreso-tarjeta="budgetController.getIngresosTarjeta()"
           :ingreso-credito="0"
         />
       </ion-col>
@@ -209,11 +209,9 @@ import { addOutline, documentOutline, closeOutline } from 'ionicons/icons';
 
 import ProviderCardComponent from './ProviderCardComponent.vue';
 import ProvidersSummary from './components/ProvidersSummary.vue';
-import { useBudgetStore } from '@/stores/budgetStore';
+import budgetController from '@/controllers/budgetController';
 import TemplateController from '@/controllers/TempalteController';
 import { buildPayloadFromTemplate } from '@/controllers/templateService';
-
-const store = useBudgetStore();
 
 const showTemplatesModal = ref(false);
 const showConflictModal = ref(false);
@@ -232,7 +230,7 @@ const deleteConfirm = reactive({
 });
 
 function addEmptyProvider() {
-  store.addProvider({ name: '', estimated: 0, dollar: 0, allowEmpty: true });
+  budgetController.addProvider({ name: '', estimated: 0, dollar: 0, allowEmpty: true });
 }
 
 function handleUpdateProvider(payload: {
@@ -241,7 +239,7 @@ function handleUpdateProvider(payload: {
   value: any;
 }) {
   const { id, field, value } = payload;
-  store.updateProvider(id, { [field]: value });
+  budgetController.updateProvider(id, { [field]: value });
 }
 
 function confirmRemoveProveedor(
@@ -263,7 +261,7 @@ function confirmRemoveProveedor(
 function removeProveedorConfirmed() {
   const pid = deleteConfirm.providerId;
   deleteConfirm.open = false;
-  if (pid != null) store.removeProvider(pid);
+  if (pid != null) budgetController.removeProvider(pid);
   deleteConfirm.providerId = null;
   deleteConfirm.providerName = '';
 }
@@ -277,7 +275,7 @@ function handleOpenNotesModal(payload: { provider: any }) {
 
 function saveNotes() {
   if (notesProvider.value) {
-    store.updateProvider(notesProvider.value.id, { notes: notesContent.value });
+    budgetController.updateProvider(notesProvider.value.id, { notes: notesContent.value });
   }
   showNotesModal.value = false;
   notesProvider.value = null;
@@ -295,13 +293,13 @@ async function openTemplatesModal() {
 
 async function checkTemplateConflict(tmpl: any) {
   try {
-    const dateISO = store.selectedDate;
+    const dateISO = budgetController.getSelectedDate();
     const payload = buildPayloadFromTemplate(tmpl, dateISO, () => null);
 
     const templateProviders = payload.proveedores || [];
 
-    if (store.providers.length > 0 && templateProviders.length > 0) {
-      conflictMessage.value = `Ya hay ${store.providers.length} proveedor(es) registrado(s) para esta fecha. El template tiene ${templateProviders.length} proveedor(es). ¿Deseas combinar o sobrescribir?`;
+    if (budgetController.getProviders().length > 0 && templateProviders.length > 0) {
+      conflictMessage.value = `Ya hay ${budgetController.getProviders().length} proveedor(es) registrado(s) para esta fecha. El template tiene ${templateProviders.length} proveedor(es). ¿Deseas combinar o sobrescribir?`;
       pendingTemplate.value = tmpl;
       pendingProviders.value = templateProviders;
       showConflictModal.value = true;
@@ -317,7 +315,7 @@ async function checkTemplateConflict(tmpl: any) {
 
 function applyProviders(providers: any[]) {
   providers.forEach((p: any) => {
-    store.addProvider({
+    budgetController.addProvider({
       name: p.name,
       estimated: p.estimated,
       dollar: p.dollar,
@@ -336,7 +334,7 @@ function handleCombine() {
 }
 
 function handleOverwrite() {
-  store.providers.splice(0, store.providers.length);
+  budgetController.getProviders().splice(0, budgetController.getProviders().length);
   if (pendingProviders.value.length > 0) {
     applyProviders(pendingProviders.value);
   }
