@@ -1,3 +1,14 @@
+## [v0.25.4] - 2026-01-08
+
+### Fix
+
+- Fix 'this is undefined' error in SuppliersPage.vue
+- Apply same fix as AccountsPage.vue - use controller methods directly
+- Extract methods without binding causes 'this' to be undefined when called
+- Changed from `const loadAll = suppliersController.listSuppliers` to `suppliersController.listSuppliers()`
+
+---
+
 ## [v0.25.3] - 2026-01-08
 
 ### Fix
