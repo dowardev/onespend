@@ -1,3 +1,14 @@
+## [v0.25.2] - 2026-01-08
+
+### Fix
+
+- Fix Pinia initialization error in suppliersController
+- Convert module-level store initialization to lazy initialization pattern
+- Add getStore() method that calls useSuppliersStore() only when needed
+- This prevents "getActivePinia()" error when controllers are loaded before app.mount()
+
+---
+
 ## [v0.25.1] - 2026-01-08
 
 ### Refactor
