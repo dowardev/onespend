@@ -120,12 +120,6 @@ import accountsController from '@/controllers/accountsController';
 
 import AddAccountComponent from './modals/AddAccountComponent.vue';
 
-const accounts = accountsController.getAccounts();
-const loadAll = accountsController.loadAll;
-const createAccount = accountsController.addAccount;
-const updateAccount = accountsController.updateAccount;
-const deleteAccount = accountsController.deleteAccount;
-
 const showModal = ref(false);
 const modalAccount = ref<any | null>(null);
 
@@ -139,9 +133,11 @@ const deleteConfirmAccount = reactive({
 
 const designMode = computed(() => systemController.getDesignMode());
 
+const accounts = computed(() => accountsController.getAccounts());
+
 const filteredAccounts = computed(() => {
   const term = (searchTerm.value || '').toString().toLowerCase().trim();
-  const list = unref(accounts) || [];
+  const list = accounts.value || [];
   if (!term) return list;
   return list.filter((a: any) => {
     const name = (a.name || '').toString().toLowerCase();
@@ -150,7 +146,7 @@ const filteredAccounts = computed(() => {
 });
 
 const groupedAccounts = computed(() => {
-  const list = (unref(filteredAccounts) || []).slice();
+  const list = (filteredAccounts.value || []).slice();
   list.sort((a: any, b: any) => {
     const na = (a.name || '').toString().toLowerCase();
     const nb = (b.name || '').toString().toLowerCase();
@@ -230,25 +226,25 @@ function onDeleteAlertDidDismissAccount() {
 }
 
 onMounted(() => {
-  loadAll();
+  accountsController.loadAll();
 });
 
 async function onModalSaved(payload: any) {
   if (!payload) return;
   if (payload.id != null) {
-    await updateAccount(payload as any);
+    await accountsController.updateAccount(payload as any);
   } else {
-    await createAccount(payload as any);
+    await accountsController.addAccount(payload as any);
   }
 
   cancelModal();
-  await loadAll();
+  await accountsController.loadAll();
 }
 
 async function remove(id: IDBValidKey | undefined) {
   if (id == null) return;
-  await deleteAccount(id);
-  await loadAll();
+  await accountsController.deleteAccount(id);
+  await accountsController.loadAll();
 }
 </script>
 
