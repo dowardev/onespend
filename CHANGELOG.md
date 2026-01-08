@@ -1,3 +1,27 @@
+## [v0.24.0] - 2026-01-08
+
+### Refactor
+
+- Refactor templates store to use Pinia setup store syntax
+- Refactor templates controller to act as intermediary between views and store
+- Update TemplatesView to access data through controller instead of local state
+- Implement View → Controller → Store data flow pattern for templates feature
+
+### Changed
+
+- `templatesStore.ts` converted to setup store syntax with `ref` and returning functions
+- `TempalteController.ts` now exposes `templates` getter and manages store updates
+- `TemplatesView.vue` removed local `templates` ref, using `TemplateController.templates` instead
+- Controller now directly updates store state after DB operations
+
+### Files Changed
+
+- front/src/stores/templatesStore.ts (modified)
+- front/src/controllers/TempalteController.ts (modified)
+- front/src/views/templates/TemplatesView.vue (modified)
+
+---
+
 ## [v0.23.1] - 2026-01-08
 
 ### Changed
