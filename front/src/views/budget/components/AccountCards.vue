@@ -81,7 +81,7 @@ import {
 } from '@ionic/vue';
 import AccountBarChart from './AccountBarChart.vue';
 import { addOutline } from 'ionicons/icons';
-import { useAccountsStore } from '@/stores/accountsStore';
+import accountsController from '@/controllers/accountsController';
 import budgetController from '@/controllers/budgetController';
 import AddAccountComponent from '@/views/suppliers/accounts/modals/AddAccountComponent.vue';
 
@@ -98,11 +98,10 @@ defineProps<{
   accounts: AccountWithBalance[];
 }>();
 
-const accountsStore = useAccountsStore();
-const createAccount = accountsStore.createAccount;
-const updateAccount = accountsStore.updateAccount;
-const deleteAccount = accountsStore.deleteAccount;
-const loadAll = accountsStore.loadAll;
+const createAccount = accountsController.addAccount.bind(accountsController);
+const updateAccount = accountsController.updateAccount.bind(accountsController);
+const deleteAccount = accountsController.deleteAccount.bind(accountsController);
+const loadAll = accountsController.loadAll.bind(accountsController);
 
 const showModal = ref(false);
 const modalAccount = ref<any | null>(null);

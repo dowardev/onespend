@@ -1,3 +1,41 @@
+## [v0.24.1] - 2026-01-08
+
+### Refactor
+
+- Refactor budgetController to handle data persistence directly instead of delegating to store
+- Simplify budgetStore to be only reactive state without persistence logic
+- Convert budgetStore to use setup store syntax with setter functions only
+- Refactor accountsController to provide reactive state for accounts data
+- Convert accountsStore to use setup store syntax for consistency
+- Remove direct store imports from Vue components, routing through controllers instead
+
+### Architecture
+
+- Implement strict View → Controller → Store data flow pattern
+- Controller acts as single source of truth for data operations
+- Store becomes pure reactive state container without business logic
+- Components access data exclusively through controller exports
+
+### Changed
+
+- budgetController now manages dixieController persistence calls
+- budgetStore provides setState functions for controller to update state
+- accountsController manages reactive accountsState with ref
+- Components (InicioViewComponent, ProvidersComponent, AccountCards) use controller exports only
+- Removed watch-based auto-save, controller explicitly calls saveData()
+
+### Files Changed
+
+- front/src/controllers/budgetController.ts (modified)
+- front/src/controllers/accountsController.ts (modified)
+- front/src/stores/budgetStore.ts (modified)
+- front/src/stores/accountsStore.ts (modified)
+- front/src/views/budget/InicioViewComponent.vue (modified)
+- front/src/views/budget/ProvidersComponent.vue (modified)
+- front/src/views/budget/components/AccountCards.vue (modified)
+
+---
+
 ## [v0.24.0] - 2026-01-08
 
 ### Refactor

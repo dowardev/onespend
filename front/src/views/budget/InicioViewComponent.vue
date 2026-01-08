@@ -430,11 +430,9 @@ import {
   trashOutline,
 } from 'ionicons/icons';
 import AccountCards from './components/AccountCards.vue';
-import { useAccountsStore } from '@/stores/accountsStore';
 import { computed, ref, onMounted, reactive, watch } from 'vue';
 import budgetController from '@/controllers/budgetController';
-
-const accountsStore = useAccountsStore();
+import accountsController from '@/controllers/accountsController';
 
 const addEntrySegment = ref('entry');
 const showDeleteAlert = ref(false);
@@ -457,7 +455,7 @@ const editEntryModalData = ref({
 });
 
 const accountsList = computed(() => {
-  const list = accountsStore.accounts;
+  const list = accountsController.getAccounts();
   if (!list || !Array.isArray(list)) return [] as any[];
   return list.filter((acc: any) => acc != null && acc.id != null) as any[];
 });
@@ -910,7 +908,7 @@ function confirmDelete() {
 }
 
 onMounted(() => {
-  accountsStore.loadAll();
+  accountsController.loadAll();
 });
 </script>
 
