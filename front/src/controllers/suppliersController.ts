@@ -1,9 +1,10 @@
 import { DixieController } from './dixie';
+import { reactive, ref } from 'vue';
+import { useSuppliersStore } from '../stores/suppliersStore';
 
 export type Product = {
   name: string;
   price: number;
-  // Optional base64-encoded image for the product (nullable)
   imageBase64?: string | null;
 };
 
@@ -18,99 +19,118 @@ export type Supplier = {
   updatedAt?: number;
 };
 
-class SuppliersController {
-  // We don't keep a long-lived dixie instance here; create per-operation controllers
+const store = useSuppliersStore();
 
+class SuppliersController {
   private getController(): DixieController {
-    // Create a new controller instance configured for suppliers object store
     return new DixieController({ name: 'ABOgazDB', storeName: 'suppliers' });
   }
 
   async addSupplier(s: Omit<Supplier, 'id' | 'createdAt' | 'updatedAt'>) {
-    const ctrl = this.getController();
-    const now = Date.now();
-
-    // Ensure we are not passing Vue reactive Proxy objects to IndexedDB (structured clone fails on Proxy)
-    // Create a deep plain clone of the incoming object
-    const clean = JSON.parse(JSON.stringify(s)) as any;
-
-    const entry: Supplier = {
-      ...clean,
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    const id = await ctrl.addEntry({ entry });
-
-    // Try to sync Pinia store lazily
+    store.loading = true;
+    store.error = null;
     try {
-      const mod = await import('../stores/suppliersStore');
-      const store = mod.useSuppliersStore();
-      await store.loadAll();
-    } catch (_e) {
-      /* ignore */
-    }
+      const ctrl = this.getController();
+      const now = Date.now();
 
-    return { ...(entry as any), id } as Supplier;
+      const clean = JSON.parse(JSON.stringify(s)) as any;
+
+      const entry: Supplier = {
+        ...clean,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      const id = await ctrl.addEntry({ entry });
+      const result = { ...(entry as any), id };
+
+      store.suppliers = [result, ...store.suppliers];
+      return result;
+    } catch (e) {
+      store.error = e as Error;
+      throw e;
+    } finally {
+      store.loading = false;
+    }
   }
 
   async updateSupplier(s: Supplier) {
     if (s.id == null) throw new Error('Supplier must have id to be updated');
-    const ctrl = this.getController();
-
-    // Ensure we don't send Vue reactive Proxy objects to IndexedDB
-    const clean = JSON.parse(JSON.stringify(s)) as Supplier;
-
-    const entry: Supplier = {
-      ...clean,
-      id: s.id,
-      updatedAt: Date.now(),
-    };
-
-    await ctrl.putEntry({ entry });
-
+    store.loading = true;
+    store.error = null;
     try {
-      const mod = await import('../stores/suppliersStore');
-      const store = mod.useSuppliersStore();
-      await store.loadAll();
-    } catch (_e) {
-      /* ignore */
-    }
+      const ctrl = this.getController();
 
-    return entry;
+      const clean = JSON.parse(JSON.stringify(s)) as Supplier;
+
+      const entry: Supplier = {
+        ...clean,
+        id: s.id,
+        updatedAt: Date.now(),
+      };
+
+      await ctrl.putEntry({ entry });
+
+      store.suppliers = store.suppliers.map(x =>
+        x.id === entry.id ? entry : x
+      );
+
+      return entry;
+    } catch (e) {
+      store.error = e as Error;
+      throw e;
+    } finally {
+      store.loading = false;
+    }
   }
 
   async deleteSupplier(id: IDBValidKey) {
-    const ctrl = this.getController();
-    await ctrl.deleteBackup(id);
-
+    store.loading = true;
+    store.error = null;
     try {
-      const mod = await import('../stores/suppliersStore');
-      const store = mod.useSuppliersStore();
-      await store.loadAll();
-    } catch (_e) {
-      /* ignore */
+      const ctrl = this.getController();
+      await ctrl.deleteBackup(id);
+
+      store.suppliers = store.suppliers.filter(s => s.id !== id);
+    } catch (e) {
+      store.error = e as Error;
+      throw e;
+    } finally {
+      store.loading = false;
     }
   }
 
   async listSuppliers() {
-    const ctrl = this.getController();
-    const all = (await ctrl.listBackups()) as Supplier[];
-    // sort by createdAt descending
-    const sorted = (all || [])
-      .slice()
-      .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-
-    // Try to sync Pinia store lazily
+    store.loading = true;
+    store.error = null;
     try {
-      const mod = await import('../stores/suppliersStore');
-      const store = mod.useSuppliersStore();
-      store.suppliers.splice(0, store.suppliers.length, ...(sorted as any));
-    } catch (e) {
-      /* ignore */
-    }
+      const ctrl = this.getController();
+      const all = (await ctrl.listBackups()) as Supplier[];
 
-    return sorted;
+      const sorted = (all || [])
+        .slice()
+        .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+      store.suppliers = sorted as any;
+      return sorted;
+    } catch (e) {
+      store.error = e as Error;
+      throw e;
+    } finally {
+      store.loading = false;
+    }
+  }
+
+  getSuppliers() {
+    return store.suppliers;
+  }
+
+  getLoading() {
+    return store.loading;
+  }
+
+  getError() {
+    return store.error;
   }
 }
 

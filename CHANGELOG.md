@@ -1,3 +1,38 @@
+## [v0.25.0] - 2026-01-08
+
+### Refactor
+
+- Convert suppliersStore from Options API to Composition API style with ref
+- Refactor suppliersController to manage store state directly with loading/error handling
+- Update budgetController to use lazy store initialization pattern
+- Remove useSuppliers composable, consolidate to controller-based data access
+
+### Changed
+
+- suppliersController now imports useSuppliersStore directly instead of lazy imports
+- suppliersController provides getSuppliers(), getLoading(), getError() getter functions
+- All CRUD operations in suppliersController update store state immediately
+- SuppliersPage.vue uses suppliersController exports instead of useSuppliers composable
+- AccountsPage.vue uses accountsController for account operations
+
+### Architecture
+
+- Implement View → Controller → Store pattern for suppliers feature
+- Store becomes pure reactive state container without business logic
+- Controller manages persistence calls and state updates
+- Consistent pattern with budget and templates refactoring
+
+### Files Changed
+
+- front/src/controllers/budgetController.ts (modified)
+- front/src/controllers/suppliersController.ts (modified)
+- front/src/stores/suppliersStore.ts (modified)
+- front/src/stores/useSuppliers.ts (deleted)
+- front/src/views/suppliers/SuppliersPage.vue (modified)
+- front/src/views/suppliers/accounts/AccountsPage.vue (modified)
+
+---
+
 ## [v0.24.1] - 2026-01-08
 
 ### Refactor

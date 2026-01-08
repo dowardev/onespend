@@ -3,7 +3,14 @@ import dixieController from '@/controllers/dixie';
 import { formatLocalDate } from '@/utils/date';
 
 class BudgetController {
-  private store = useBudgetStore();
+  private _store: ReturnType<typeof useBudgetStore> | null = null;
+
+  private get store(): ReturnType<typeof useBudgetStore> {
+    if (!this._store) {
+      this._store = useBudgetStore();
+    }
+    return this._store;
+  }
 
   getSelectedDate() {
     return this.store.selectedDate;

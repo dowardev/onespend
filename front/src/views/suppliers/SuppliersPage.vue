@@ -117,22 +117,20 @@ import {
   IonMenuButton,
   IonSearchbar,
 } from '@ionic/vue';
-import { useSuppliers } from '@/stores/useSuppliers';
 import { addOutline, trashOutline } from 'ionicons/icons';
 
 // controllers
 import systemController from '@/controllers/systemConfigController';
+import suppliersController from '@/controllers/suppliersController';
 
 // components
 import AddSupliersComponent from '../suppliers/modals/AddSupliersComponent.vue';
 
-// store
-const supplierStore = useSuppliers();
-const suppliers = supplierStore.suppliers;
-const loadAll = supplierStore.loadAll;
-const createSupplier = supplierStore.createSupplier;
-const updateSupplier = supplierStore.updateSupplier;
-const deleteSupplier = supplierStore.deleteSupplier;
+const suppliers = suppliersController.getSuppliers();
+const loadAll = suppliersController.listSuppliers;
+const createSupplier = suppliersController.addSupplier;
+const updateSupplier = suppliersController.updateSupplier;
+const deleteSupplier = suppliersController.deleteSupplier;
 
 // modal control
 const showModal = ref(false);
@@ -248,7 +246,7 @@ function onDeleteAlertDidDismissSupplier() {
 }
 
 onMounted(() => {
-  loadAll();
+  void loadAll();
 });
 
 // Handler called when modal emits 'saved' with payload
