@@ -333,14 +333,14 @@ function handleCombine() {
   showTemplatesModal.value = false;
 }
 
-function handleOverwrite() {
-  budgetController.getProviders().splice(0, budgetController.getProviders().length);
-  if (pendingProviders.value.length > 0) {
-    applyProviders(pendingProviders.value);
+  function handleOverwrite() {
+    budgetController.clearAllProviders();
+    if (pendingProviders.value.length > 0) {
+      applyProviders(pendingProviders.value);
+    }
+    showConflictModal.value = false;
+    pendingTemplate.value = null;
+    pendingProviders.value = [];
+    showTemplatesModal.value = false;
   }
-  showConflictModal.value = false;
-  pendingTemplate.value = null;
-  pendingProviders.value = [];
-  showTemplatesModal.value = false;
-}
 </script>

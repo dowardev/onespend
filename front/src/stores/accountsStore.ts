@@ -1,53 +1,55 @@
 import { defineStore } from 'pinia';
+import { ref, reactive } from 'vue';
 import accountsController, { Account } from '../controllers/accountsController';
 
-export const useAccountsStore = defineStore('accounts', {
-  state: () => ({
-    accounts: [] as Account[],
-  }),
-  actions: {
-    async loadAll() {
-      try {
-        const list =
-          (await accountsController.listAccounts()) as unknown as any[];
-        this.accounts.length = 0;
-        for (const it of list) {
-          (this.accounts as any).push(it);
-        }
-      } catch (e) {
-        console.error('accountsStore.loadAll error', e);
-        this.accounts.length = 0;
-      }
-    },
+export const useAccountsStore = defineStore('accounts', () => {
+  const accounts = reactive<Account[]>([]);
 
-    async createAccount(data: Omit<Account, 'id' | 'createdAt' | 'updatedAt'>) {
-      try {
-        await accountsController.addAccount(data);
-        await this.loadAll();
-      } catch (e) {
-        console.error('accountsStore.createAccount error', e);
-        throw e;
-      }
-    },
+  async function loadAll() {
+    try {
+      const list = await accountsController.loadAll();
+      accounts.splice(0, accounts.length, ...list);
+    } catch (e) {
+      console.error('accountsStore.loadAll error', e);
+      accounts.splice(0, accounts.length);
+    }
+  }
 
-    async updateAccount(a: Account) {
-      try {
-        await accountsController.updateAccount(a);
-        await this.loadAll();
-      } catch (e) {
-        console.error('accountsStore.updateAccount error', e);
-        throw e;
-      }
-    },
+  async function createAccount(data: Omit<Account, 'id' | 'createdAt' | 'updatedAt'>) {
+    try {
+      await accountsController.addAccount(data);
+      await loadAll();
+    } catch (e) {
+      console.error('accountsStore.createAccount error', e);
+      throw e;
+    }
+  }
 
-    async deleteAccount(id: IDBValidKey) {
-      try {
-        await accountsController.deleteAccount(id);
-        await this.loadAll();
-      } catch (e) {
-        console.error('accountsStore.deleteAccount error', e);
-        throw e;
-      }
-    },
-  },
+  async function updateAccount(a: Account) {
+    try {
+      await accountsController.updateAccount(a);
+      await loadAll();
+    } catch (e) {
+      console.error('accountsStore.updateAccount error', e);
+      throw e;
+    }
+  }
+
+  async function deleteAccount(id: IDBValidKey) {
+    try {
+      await accountsController.deleteAccount(id);
+      await loadAll();
+    } catch (e) {
+      console.error('accountsStore.deleteAccount error', e);
+      throw e;
+    }
+  }
+
+  return {
+    accounts,
+    loadAll,
+    createAccount,
+    updateAccount,
+    deleteAccount,
+  };
 });

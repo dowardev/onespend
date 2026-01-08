@@ -1,4 +1,5 @@
 import { DixieController } from './dixie';
+import { ref, computed, toRefs } from 'vue';
 
 export type Account = {
   id?: IDBValidKey;
@@ -9,8 +10,27 @@ export type Account = {
 };
 
 class AccountsController {
+  private accountsState = ref<Account[]>([]);
+  private isLoading = ref(false);
+
   private getController(): DixieController {
     return new DixieController({ name: 'ABOgazDB', storeName: 'accounts' });
+  }
+
+  get accounts() {
+    return this.accountsState.value;
+  }
+
+  getAccounts() {
+    return this.accountsState.value;
+  }
+
+  getAccountsList() {
+    return computed(() => [...this.accountsState.value]);
+  }
+
+  getIsLoading() {
+    return this.isLoading;
   }
 
   private async migrateFromSuppliers(): Promise<void> {
@@ -22,19 +42,14 @@ class AccountsController {
       const suppliers = (await suppliersCtrl.listBackups()) as any[];
 
       if (suppliers && suppliers.length > 0) {
-        const accountsCtrl = this.getController();
-        const existingAccounts = (await accountsCtrl.listBackups()) as any[];
-
-        if (existingAccounts.length === 0) {
-          for (const s of suppliers) {
-            const accountEntry = {
-              name: s.name,
-              initialBalance: s.initialBalance ?? 0,
-              createdAt: s.createdAt || Date.now(),
-              updatedAt: s.updatedAt || Date.now(),
-            };
-            await accountsCtrl.addEntry({ entry: accountEntry });
-          }
+        if (this.accountsState.value.length === 0) {
+          const newAccounts: Account[] = suppliers.map((s) => ({
+            name: s.name,
+            initialBalance: s.initialBalance ?? 0,
+            createdAt: s.createdAt || Date.now(),
+            updatedAt: s.updatedAt || Date.now(),
+          }));
+          this.accountsState.value = newAccounts;
           console.log(`Migrated ${suppliers.length} suppliers to accounts`);
         }
       }
@@ -43,51 +58,65 @@ class AccountsController {
     }
   }
 
+  async loadAll(): Promise<Account[]> {
+    this.isLoading.value = true;
+    try {
+      const ctrl = this.getController();
+      const all = (await ctrl.listBackups()) as Account[];
+      const sorted = (all || [])
+        .slice()
+        .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+      await this.migrateFromSuppliers();
+
+      this.accountsState.value = sorted;
+      return [...sorted];
+    } catch (e) {
+      console.error('accountsController.loadAll error', e);
+      this.accountsState.value = [];
+      return [];
+    } finally {
+      this.isLoading.value = false;
+    }
+  }
+
   async addAccount(a: Omit<Account, 'id' | 'createdAt' | 'updatedAt'>) {
     const ctrl = this.getController();
     const now = Date.now();
 
-    const clean = JSON.parse(JSON.stringify(a)) as any;
-
     const entry: Account = {
-      ...clean,
+      name: String(a.name),
+      initialBalance: Number(a.initialBalance) || 0,
       createdAt: now,
       updatedAt: now,
     };
 
     const id = await ctrl.addEntry({ entry });
+    const newAccount: Account = { ...entry, id };
+    this.accountsState.value.push(newAccount);
 
-    try {
-      const mod = await import('../stores/accountsStore');
-      const store = mod.useAccountsStore();
-      await store.loadAll();
-    } catch (_e) {
-      /* ignore */
-    }
-
-    return { ...(entry as any), id } as Account;
+    return newAccount;
   }
 
   async updateAccount(a: Account) {
     if (a.id == null) throw new Error('Account must have id to be updated');
     const ctrl = this.getController();
 
-    const clean = JSON.parse(JSON.stringify(a)) as Account;
-
     const entry: Account = {
-      ...clean,
+      name: String(a.name),
+      initialBalance: Number(a.initialBalance) || 0,
       id: a.id,
+      createdAt: a.createdAt,
       updatedAt: Date.now(),
     };
 
     await ctrl.putEntry({ entry });
 
-    try {
-      const mod = await import('../stores/accountsStore');
-      const store = mod.useAccountsStore();
-      await store.loadAll();
-    } catch (_e) {
-      /* ignore */
+    const idx = this.accountsState.value.findIndex(acc => acc.id === a.id);
+    if (idx >= 0) {
+      const newAccounts = [...this.accountsState.value];
+      newAccounts[idx] = entry;
+      this.accountsState.value = newAccounts;
     }
 
     return entry;
@@ -97,33 +126,7 @@ class AccountsController {
     const ctrl = this.getController();
     await ctrl.deleteBackup(id);
 
-    try {
-      const mod = await import('../stores/accountsStore');
-      const store = mod.useAccountsStore();
-      await store.loadAll();
-    } catch (_e) {
-      /* ignore */
-    }
-  }
-
-  async listAccounts() {
-    const ctrl = this.getController();
-    const all = (await ctrl.listBackups()) as Account[];
-    const sorted = (all || [])
-      .slice()
-      .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-
-    await this.migrateFromSuppliers();
-
-    try {
-      const mod = await import('../stores/accountsStore');
-      const store = mod.useAccountsStore();
-      store.accounts.splice(0, store.accounts.length, ...(sorted as any));
-    } catch (e) {
-      /* ignore */
-    }
-
-    return sorted;
+    this.accountsState.value = this.accountsState.value.filter(acc => acc.id !== id);
   }
 }
 

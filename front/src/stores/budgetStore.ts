@@ -1,6 +1,5 @@
 import { defineStore } from 'pinia';
-import { ref, computed, reactive, watch } from 'vue';
-import dixieController from '@/controllers/dixie';
+import { ref, computed, reactive } from 'vue';
 import { formatLocalDate } from '@/utils/date';
 
 export type PaymentType = 'cash' | 'digital';
@@ -36,13 +35,21 @@ export interface Provider {
   _supplierKey?: string;
 }
 
+interface FinishDayData {
+  totalSalesEfectivo: number;
+  totalSalesTarjeta: number;
+  totalSalesCredito: number;
+  type: '%' | 'fixed';
+  margin: number;
+}
+
 export const useBudgetStore = defineStore('budget', () => {
   const selectedDate = ref(formatLocalDate(new Date()));
 
   const entries = reactive<Income[]>([]);
   const providers = reactive<Provider[]>([]);
   const isDayClosed = ref(false);
-  const finishDayData = reactive({
+  const finishDayData = reactive<FinishDayData>({
     totalSalesEfectivo: 0,
     totalSalesTarjeta: 0,
     totalSalesCredito: 0,
@@ -158,206 +165,50 @@ export const useBudgetStore = defineStore('budget', () => {
     return ids;
   });
 
-  async function loadDataForDate(date: string) {
-    if (isLoading.value) return;
-    isLoading.value = true;
-
-    try {
-      const dateKey = `budget:${date}`;
-      const data = (await dixieController.getBackup(dateKey)) as any;
-
-      if (data && data.data) {
-        const d = data.data;
-        if (d.entries) {
-          entries.splice(0, entries.length, ...(d.entries || []));
-        } else {
-          entries.splice(0, entries.length);
-        }
-
-        if (d.proveedores) {
-          providers.splice(0, providers.length, ...(d.proveedores || []));
-        } else {
-          providers.splice(0, providers.length);
-        }
-
-        if (d.finishDayData) {
-          Object.assign(finishDayData, d.finishDayData);
-        } else {
-          finishDayData.totalSalesEfectivo = 0;
-          finishDayData.totalSalesTarjeta = 0;
-          finishDayData.totalSalesCredito = 0;
-          finishDayData.type = '%';
-          finishDayData.margin = 0;
-        }
-
-        isDayClosed.value = !!d.isDayClosed;
-      } else {
-        entries.splice(0, entries.length);
-        providers.splice(0, providers.length);
-        isDayClosed.value = false;
-      }
-    } catch (e) {
-      console.error('loadDataForDate error', e);
-      entries.splice(0, entries.length);
-      providers.splice(0, providers.length);
-      isDayClosed.value = false;
-    } finally {
-      isLoading.value = false;
-    }
-  }
-
-  let saveTimeout: any = null;
-
-  function toPlainObject(obj: any): any {
-    try {
-      return JSON.parse(JSON.stringify(obj));
-    } catch {
-      return {};
-    }
-  }
-
-  async function saveData() {
-    if (saveTimeout) clearTimeout(saveTimeout);
-    saveTimeout = setTimeout(async () => {
-      try {
-        const entriesData = toPlainObject([...entries]);
-        const providersData = toPlainObject([...providers]);
-        const finishDayDataPlain = toPlainObject({ ...finishDayData });
-
-        const dateKey = `budget:${selectedDate.value}`;
-        await dixieController.putEntry({
-          entry: {
-            id: dateKey,
-            data: {
-              entries: entriesData,
-              proveedores: providersData,
-              isDayClosed: isDayClosed.value,
-              finishDayData: finishDayDataPlain,
-            },
-          },
-        });
-      } catch (e) {
-        console.error('saveData error', e);
-      }
-    }, 500);
-  }
-
-  function setDate(date: string) {
-    if (date === selectedDate.value) return;
+  function setSelectedDate(date: string) {
     selectedDate.value = date;
-    loadDataForDate(date);
   }
 
-  function changeDate(days: number) {
-    const d = new Date(selectedDate.value);
-    d.setDate(d.getDate() + days);
-    setDate(formatLocalDate(d));
+  function setIsLoading(value: boolean) {
+    isLoading.value = value;
   }
 
-  function addIngreso(
-    params: {
-      name?: string;
-      amount?: number;
-      paymentType?: PaymentType;
-      accountId?: string | number | null;
-      groups?: Array<{ amount: number; accountId: string | number | null }>;
-    } = {}
-  ) {
-    const {
-      name = '',
-      amount = 0,
-      paymentType = 'cash',
-      accountId = null,
-      groups = [],
-    } = params;
-    entries.push({
-      id: Date.now() + Math.random(),
-      name,
-      amount: Number(amount) || 0,
-      date: selectedDate.value,
-      paymentType,
-      entryType: 'ingreso',
-      accountId,
-      groups,
-      createdAt: Date.now(),
-    });
+  function setIsDayClosed(value: boolean) {
+    isDayClosed.value = value;
   }
 
-  function addEgreso(
-    params: {
-      name?: string;
-      amount?: number;
-      paymentType?: PaymentType;
-      accountId?: string | number | null;
-      groups?: Array<{ amount: number; accountId: string | number | null }>;
-    } = {}
-  ) {
-    const {
-      name = '',
-      amount = 0,
-      paymentType = 'cash',
-      accountId = null,
-      groups = [],
-    } = params;
-    entries.push({
-      id: Date.now() + Math.random(),
-      name,
-      amount: Number(amount) || 0,
-      date: selectedDate.value,
-      paymentType,
-      entryType: 'egreso',
-      accountId,
-      groups,
-      createdAt: Date.now(),
-    });
+  function setEntries(data: Income[]) {
+    entries.splice(0, entries.length, ...data);
   }
 
-  function addProviderEgresos(provider: Provider) {
-    const toAdd: Income[] = [];
-    const now = Date.now();
-
-    const pushIf = (
-      amount: number,
-      label: string,
-      paymentType: PaymentType
-    ) => {
-      const v = Number(amount || 0);
-      if (v > 0) {
-        toAdd.push({
-          id: Date.now() + Math.random(),
-          name: `${provider.name}${label ? ' - ' + label : ''}`,
-          amount: v,
-          date: selectedDate.value,
-          paymentType,
-          entryType: 'egreso',
-          createdAt: now,
-        });
-      }
-    };
-
-    pushIf(provider.efectivo, 'efectivo', 'cash');
-    pushIf(provider.tarjeta, 'tarjeta', 'digital');
-    pushIf(provider.credito, 'credito', 'cash');
-
-    if (toAdd.length) {
-      const groupId = `prov-${provider.id}-${Date.now()}`;
-      toAdd.forEach(t => {
-        t._fromProviderGroupId = groupId;
-        t._providerName = provider.name;
-      });
-      entries.push(...toAdd);
-    }
+  function setProviders(data: Provider[]) {
+    providers.splice(0, providers.length, ...data);
   }
 
-  function updateIngreso(id: string | number, changes: Partial<Income>) {
+  function setFinishDayData(data: FinishDayData) {
+    finishDayData.totalSalesEfectivo = data.totalSalesEfectivo;
+    finishDayData.totalSalesTarjeta = data.totalSalesTarjeta;
+    finishDayData.totalSalesCredito = data.totalSalesCredito;
+    finishDayData.type = data.type;
+    finishDayData.margin = data.margin;
+  }
+
+  function addEntry(entry: Income) {
+    entries.push(entry);
+  }
+
+  function addProvider(provider: Provider) {
+    providers.push(provider);
+  }
+
+  function updateEntry(id: string | number, changes: Partial<Income>) {
     const idx = entries.findIndex(e => e.id === id);
     if (idx === -1) return;
-
     const updated = { ...entries[idx], ...changes };
     entries.splice(idx, 1, updated);
   }
 
-  function removeIngreso(id: string | number) {
+  function removeEntry(id: string | number) {
     const idx = entries.findIndex(e => e.id === id);
     if (idx >= 0) entries.splice(idx, 1);
   }
@@ -369,35 +220,6 @@ export const useBudgetStore = defineStore('budget', () => {
         entries.splice(i, 1);
       }
     }
-  }
-
-  function addProvider(
-    params: {
-      name?: string;
-      estimated?: number;
-      dollar?: number;
-      allowEmpty?: boolean;
-    } = {}
-  ) {
-    const { name = '', estimated = 0, dollar = 0, allowEmpty = false } = params;
-    if (!name && !allowEmpty) return;
-
-    const newProvider: Provider = {
-      id: Date.now() + Math.random(),
-      name,
-      date: selectedDate.value,
-      estimated: Number(estimated) || 0,
-      dollar: Number(dollar) || 0,
-      efectivo: 0,
-      tarjeta: 0,
-      credito: 0,
-      notes: '',
-      visited: false,
-      _justAdded: true,
-    };
-
-    providers.push(newProvider);
-    setTimeout(() => (newProvider._justAdded = false), 400);
   }
 
   function updateProvider(id: string | number, changes: Partial<Provider>) {
@@ -421,6 +243,7 @@ export const useBudgetStore = defineStore('budget', () => {
     if (changes.name !== undefined) provider.name = String(changes.name);
     if (changes.notes !== undefined) provider.notes = String(changes.notes);
     if (changes.visited !== undefined) provider.visited = !!changes.visited;
+    if (changes._justAdded !== undefined) provider._justAdded = changes._justAdded;
   }
 
   function removeProvider(id: string | number) {
@@ -434,21 +257,16 @@ export const useBudgetStore = defineStore('budget', () => {
     isDayClosed.value = false;
   }
 
-  function toggleDayClosed(value: boolean) {
-    isDayClosed.value = value;
+  function clearAll() {
+    entries.splice(0, entries.length);
+    providers.splice(0, providers.length);
+    isDayClosed.value = false;
+    finishDayData.totalSalesEfectivo = 0;
+    finishDayData.totalSalesTarjeta = 0;
+    finishDayData.totalSalesCredito = 0;
+    finishDayData.type = '%';
+    finishDayData.margin = 0;
   }
-
-  watch(
-    [entries, providers, isDayClosed, finishDayData],
-    () => {
-      if (!isLoading.value) {
-        saveData();
-      }
-    },
-    { deep: true }
-  );
-
-  loadDataForDate(selectedDate.value);
 
   return {
     selectedDate,
@@ -472,20 +290,20 @@ export const useBudgetStore = defineStore('budget', () => {
     egresosEfectivo,
     egresosTarjeta,
     providerIdsWithEntries,
-    loadDataForDate,
-    setDate,
-    changeDate,
-    addIngreso,
-    addEgreso,
-    addProviderEgresos,
-    updateIngreso,
-    removeIngreso,
-    removeEgresosGroup,
+    setSelectedDate,
+    setIsLoading,
+    setIsDayClosed,
+    setEntries,
+    setProviders,
+    setFinishDayData,
+    addEntry,
     addProvider,
+    updateEntry,
+    removeEntry,
+    removeEgresosGroup,
     updateProvider,
     removeProvider,
     clearDay,
-    toggleDayClosed,
-    saveData,
+    clearAll,
   };
 });
