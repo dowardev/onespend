@@ -19,14 +19,17 @@ export type Supplier = {
   updatedAt?: number;
 };
 
-const store = useSuppliersStore();
-
 class SuppliersController {
+  private getStore() {
+    return useSuppliersStore();
+  }
+
   private getController(): DixieController {
     return new DixieController({ name: 'ABOgazDB', storeName: 'suppliers' });
   }
 
   async addSupplier(s: Omit<Supplier, 'id' | 'createdAt' | 'updatedAt'>) {
+    const store = this.getStore();
     store.loading = true;
     store.error = null;
     try {
@@ -56,6 +59,7 @@ class SuppliersController {
 
   async updateSupplier(s: Supplier) {
     if (s.id == null) throw new Error('Supplier must have id to be updated');
+    const store = this.getStore();
     store.loading = true;
     store.error = null;
     try {
@@ -85,6 +89,7 @@ class SuppliersController {
   }
 
   async deleteSupplier(id: IDBValidKey) {
+    const store = this.getStore();
     store.loading = true;
     store.error = null;
     try {
@@ -101,6 +106,7 @@ class SuppliersController {
   }
 
   async listSuppliers() {
+    const store = this.getStore();
     store.loading = true;
     store.error = null;
     try {
@@ -122,14 +128,17 @@ class SuppliersController {
   }
 
   getSuppliers() {
+    const store = this.getStore();
     return store.suppliers;
   }
 
   getLoading() {
+    const store = this.getStore();
     return store.loading;
   }
 
   getError() {
+    const store = this.getStore();
     return store.error;
   }
 }
