@@ -113,19 +113,18 @@ import {
   IonMenuButton,
   IonSearchbar,
 } from '@ionic/vue';
-import { useSuppliers } from '@/stores/useSuppliers';
 import { addOutline, trashOutline } from 'ionicons/icons';
 
 import systemController from '@/controllers/systemConfigController';
+import accountsController from '@/controllers/accountsController';
 
 import AddAccountComponent from './modals/AddAccountComponent.vue';
 
-const supplierStore = useSuppliers();
-const accounts = supplierStore.suppliers;
-const loadAll = supplierStore.loadAll;
-const createSupplier = supplierStore.createSupplier;
-const updateSupplier = supplierStore.updateSupplier;
-const deleteSupplier = supplierStore.deleteSupplier;
+const accounts = accountsController.getAccounts();
+const loadAll = accountsController.loadAll;
+const createAccount = accountsController.addAccount;
+const updateAccount = accountsController.updateAccount;
+const deleteAccount = accountsController.deleteAccount;
 
 const showModal = ref(false);
 const modalAccount = ref<any | null>(null);
@@ -237,9 +236,9 @@ onMounted(() => {
 async function onModalSaved(payload: any) {
   if (!payload) return;
   if (payload.id != null) {
-    await updateSupplier(payload as any);
+    await updateAccount(payload as any);
   } else {
-    await createSupplier(payload as any);
+    await createAccount(payload as any);
   }
 
   cancelModal();
@@ -248,7 +247,7 @@ async function onModalSaved(payload: any) {
 
 async function remove(id: IDBValidKey | undefined) {
   if (id == null) return;
-  await deleteSupplier(id);
+  await deleteAccount(id);
   await loadAll();
 }
 </script>
