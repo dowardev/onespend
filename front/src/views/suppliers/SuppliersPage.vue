@@ -126,11 +126,7 @@ import suppliersController from '@/controllers/suppliersController';
 // components
 import AddSupliersComponent from '../suppliers/modals/AddSupliersComponent.vue';
 
-const suppliers = suppliersController.getSuppliers();
-const loadAll = suppliersController.listSuppliers;
-const createSupplier = suppliersController.addSupplier;
-const updateSupplier = suppliersController.updateSupplier;
-const deleteSupplier = suppliersController.deleteSupplier;
+const suppliers = computed(() => suppliersController.getSuppliers());
 
 // modal control
 const showModal = ref(false);
@@ -246,27 +242,27 @@ function onDeleteAlertDidDismissSupplier() {
 }
 
 onMounted(() => {
-  void loadAll();
+  suppliersController.listSuppliers();
 });
 
 // Handler called when modal emits 'saved' with payload
 async function onModalSaved(payload: any) {
   if (!payload) return;
   if (payload.id != null) {
-    await updateSupplier(payload as any);
+    await suppliersController.updateSupplier(payload as any);
   } else {
-    await createSupplier(payload as any);
+    await suppliersController.addSupplier(payload as any);
   }
 
   // close modal and refresh list
   cancelModal();
-  await loadAll();
+  await suppliersController.listSuppliers();
 }
 
 async function remove(id: IDBValidKey | undefined) {
   if (id == null) return;
-  await deleteSupplier(id);
-  await loadAll();
+  await suppliersController.deleteSupplier(id);
+  await suppliersController.listSuppliers();
 }
 </script>
 
