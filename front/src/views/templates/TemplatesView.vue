@@ -20,7 +20,7 @@
       <ion-card class="shadow1 main-card-content">
         <ion-card-content>
           <ion-list class="transparent">
-            <div v-if="templates.length" class="templates-content">
+            <div v-if="TemplateController.templates.length" class="templates-content">
               <template v-for="group in groupedTemplates" :key="group.letter">
                 <ion-item-group>
                   <ion-item-divider sticky>
@@ -81,7 +81,7 @@
         <AddTemplateComponent
           :editing-tmpl="
             editingTemplateId != null
-              ? templates.find(t => t.id === editingTemplateId)
+              ? TemplateController.templates.find(t => t.id === editingTemplateId)
               : null
           "
           @saved="onAddTemplateSaved"
@@ -190,7 +190,7 @@ import {
   IonSearchbar,
 } from '@ionic/vue';
 import { createOutline, addOutline, trashOutline } from 'ionicons/icons';
-import { reactive, ref, onMounted, computed, unref } from 'vue'; // Placeholder comment for further Ionic changes.
+import { reactive, ref, onMounted, computed, unref } from 'vue';
 import { format } from 'date-fns';
 import { parseLocalDate } from '@/utils/date';
 import { formatLocalDate } from '@/utils/date';
@@ -242,7 +242,6 @@ onMounted(() => {
 
 // vars
 const STORAGE_KEY = 'budget:selectedDate';
-const templates = ref<TemplateSummary[]>([]);
 const showModal = ref(false);
 const showAlert = ref(false);
 const alertMessage = ref('');
@@ -288,7 +287,7 @@ const designMode = computed(() => systemController.getDesignMode());
 
 // Group templates by the first letter of their name and sort groups and items alphabetically
 const groupedTemplates = computed(() => {
-  const list = (unref(templates) || []).slice();
+  const list = (unref(TemplateController.templates) || []).slice();
   // sort templates by name
   list.sort((a: any, b: any) => {
     const na = (a.name || '').toString().toLowerCase();
@@ -417,7 +416,7 @@ async function onAddTemplateSaved() {
   // After a template is saved from the modal component, refresh the list,
   // reset the form state and close the modal, then show a confirmation toast.
   try {
-    await loadTemplates();
+    // The controller has already updated the store via saveTemplate
   } catch (e) {
     console.error('onAddTemplateSaved: failed to reload templates', e);
   }
@@ -646,7 +645,6 @@ async function proceedDelete() {
     // reset target and hide confirm
     confirmTargetId.value = null;
     showConfirm.value = false;
-    await loadTemplates();
 
     // show success toast
     toast.message = 'Template eliminado';
@@ -665,17 +663,7 @@ function onConfirmDismiss() {
 
 async function loadTemplates() {
   try {
-    const list = await TemplateController.listTemplates();
-    const mapped = list.map((t: any) => ({
-      id: t.id || '',
-      name: t.name,
-      description: t.description,
-      suppliers: (t as any).suppliers || [],
-      suppliersSnapshot: (t as any).suppliersSnapshot || [],
-    }));
-
-    templates.value.length = 0;
-    for (const it of mapped) templates.value.push(it);
+    await TemplateController.listTemplates();
   } catch (e) {
     console.error('loadTemplates error', e);
   }

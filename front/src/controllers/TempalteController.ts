@@ -1,5 +1,5 @@
 import dixieController, { DixieController } from './dixie';
-// import store lazily to avoid calling useTemplatesStore before Pinia is initialized
+import { useTemplatesStore } from '../stores/templatesStore';
 
 export type TemplateRecord = {
   id?: number | string;
@@ -15,56 +15,9 @@ class TemplateController {
     this.dixie = dixie;
   }
 
-  async saveTemplate(params: {
-    template: Partial<Omit<TemplateRecord, 'createdAt'>> & { id?: IDBValidKey };
-  }) {
-    const { template } = params;
-
-    const entry: TemplateRecord = {
-      ...(template as Omit<TemplateRecord, 'createdAt'>),
-      createdAt: Date.now(),
-    };
-
-    try {
-      let key: IDBValidKey;
-      if (template && template.id) {
-        // existing template -> update
-        // keep id as numeric when possible
-        const numericId =
-          typeof template.id === 'string' && !Number.isNaN(Number(template.id))
-            ? Number(template.id)
-            : template.id;
-
-        key = await this.dixie.putEntry({
-          entry: {
-            id: numericId,
-            type: 'template',
-            payload: entry,
-          },
-        });
-      } else {
-        key = await this.dixie.addEntry({
-          entry: { type: 'template', payload: entry },
-        });
-      }
-
-      // After saving to DB, refresh the Pinia store (controller is the center)
-      try {
-        // Lazy-import the store so we don't call useTemplatesStore before Pinia is ready
-        const mod = await import('../stores/templatesStore');
-        mod.useTemplatesStore();
-        // trigger a reload from the DB to ensure store is in sync
-        await this.listTemplates();
-      } catch (_e) {
-        // If the store can't be used (e.g. before app init), ignore
-        // The DB still has the saved template.
-      }
-
-      return key;
-    } catch (e) {
-      console.error('TemplateController.saveTemplate error', e);
-      throw e;
-    }
+  get templates() {
+    const store = useTemplatesStore();
+    return store.templates;
   }
 
   async listTemplates() {
@@ -86,56 +39,81 @@ class TemplateController {
           return { ...(payload as Record<string, unknown>), id: String(x.id) };
         }) as TemplateRecord[];
 
-      // Update Pinia store if available (lazy import to avoid using Pinia before init)
-      try {
-        const mod = await import('../stores/templatesStore');
-        const store = mod.useTemplatesStore();
-        // Clear existing templates and push items individually to avoid deep type instantiation
-        store.templates.length = 0;
-        for (const t of templates) {
-          (store.templates as any).push({
-            id: t.id || '',
-            name: t.name,
-            description: t.description,
-            suppliers: (t as any).suppliers || [],
-            suppliersSnapshot: (t as any).suppliersSnapshot || [],
-          });
-        }
-      } catch (e) {
-        // ignore pinia errors (e.g. store not initialized yet)
-      }
+      const store = useTemplatesStore();
+      const mapped = templates.map(t => ({
+        id: t.id || '',
+        name: t.name,
+        description: t.description,
+        suppliers: (t as any).suppliers || [],
+        suppliersSnapshot: (t as any).suppliersSnapshot || [],
+      }));
 
-      return templates;
+      store.setTemplates(mapped);
+
+      return mapped;
     } catch (e) {
       console.error('TemplateController.listTemplates error', e);
-      return [] as TemplateRecord[];
+      return [];
+    }
+  }
+
+  async saveTemplate(params: {
+    template: Partial<Omit<TemplateRecord, 'createdAt'>> & { id?: IDBValidKey };
+  }) {
+    const { template } = params;
+
+    const entry: TemplateRecord = {
+      ...(template as Omit<TemplateRecord, 'createdAt'>),
+      createdAt: Date.now(),
+    };
+
+    try {
+      let key: IDBValidKey;
+      if (template && template.id) {
+        const numericId =
+          typeof template.id === 'string' && !Number.isNaN(Number(template.id))
+            ? Number(template.id)
+            : template.id;
+
+        key = await this.dixie.putEntry({
+          entry: {
+            id: numericId,
+            type: 'template',
+            payload: entry,
+          },
+        });
+      } else {
+        key = await this.dixie.addEntry({
+          entry: { type: 'template', payload: entry },
+        });
+      }
+
+      const store = useTemplatesStore();
+      store.addOrUpdateTemplate({
+        id: key as string | number | null,
+        name: entry.name,
+        description: entry.description,
+        suppliers: (entry as any).suppliers || [],
+        suppliersSnapshot: (entry as any).suppliersSnapshot || [],
+      });
+
+      return key;
+    } catch (e) {
+      console.error('TemplateController.saveTemplate error', e);
+      throw e;
     }
   }
 
   async deleteTemplate(params: { id: IDBValidKey }) {
     const { id } = params;
     try {
-      console.log(
-        'TemplateController.deleteTemplate: deleting id',
-        id,
-        '(type:',
-        typeof id,
-        ')'
-      );
-
-      // If the id comes as a numeric string (e.g. "123"), coerce it to a number
-      // so IndexedDB deletes the correct entry when the DB uses numeric keys.
       const numericId =
         typeof id === 'string' && !Number.isNaN(Number(id)) ? Number(id) : id;
 
       await this.dixie.deleteBackup(numericId as IDBValidKey);
 
-      // Refresh Pinia store
-      try {
-        await this.listTemplates();
-      } catch (e) {
-        /* noop */
-      }
+      const store = useTemplatesStore();
+      store.removeTemplate(id);
 
       return true;
     } catch (e) {
