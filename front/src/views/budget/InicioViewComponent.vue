@@ -230,7 +230,7 @@
 
         <ion-list class="transparent">
           <ion-list-header>
-            <ion-label>Detalles</ion-label>
+            <ion-label>etalles</ion-label>
             <ion-button :disabled="!canAddMoreItems" @click="addEntryItem">
               <ion-icon :icon="addOutline"></ion-icon>
               Agregar

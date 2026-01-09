@@ -48,6 +48,7 @@ class SuppliersController {
       const result = { ...(entry as any), id };
 
       store.suppliers = [result, ...store.suppliers];
+      store.notifyChange();
       return result;
     } catch (e) {
       store.error = e as Error;
@@ -78,6 +79,7 @@ class SuppliersController {
       store.suppliers = store.suppliers.map(x =>
         x.id === entry.id ? entry : x
       );
+      store.notifyChange();
 
       return entry;
     } catch (e) {
@@ -97,6 +99,7 @@ class SuppliersController {
       await ctrl.deleteBackup(id);
 
       store.suppliers = store.suppliers.filter(s => s.id !== id);
+      store.notifyChange();
     } catch (e) {
       store.error = e as Error;
       throw e;

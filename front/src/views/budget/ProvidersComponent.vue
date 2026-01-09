@@ -26,6 +26,7 @@
                 @update-provider="handleUpdateProvider"
                 @confirm-remove-proveedor="confirmRemoveProveedor"
                 @open-notes-modal="handleOpenNotesModal"
+                @open-edit-modal="openEditProviderModal"
               />
             </template>
 
@@ -135,6 +136,180 @@
   <!-- end modals -->
 
   <!-- alerts -->
+  <ion-modal
+    :is-open="showAddProviderModal"
+    :keep-contents-mounted="true"
+    @did-dismiss="showAddProviderModal = false"
+  >
+    <ion-header class="ion-no-border" mode="ios">
+      <ion-toolbar>
+        <ion-buttons>
+          <ion-button @click="showAddProviderModal = false">
+            <ion-icon :icon="closeOutline"></ion-icon>
+          </ion-button>
+        </ion-buttons>
+        <ion-title>{{ editingProviderId ? 'Editar Proveedor' : 'Agregar Proveedor' }}</ion-title>
+        <ion-buttons slot="end" v-if="editingProviderId">
+          <ion-button @click="deleteCurrentProvider" color="danger">
+            <ion-icon :icon="trashOutline"></ion-icon>
+          </ion-button>
+        </ion-buttons>
+      </ion-toolbar>
+    </ion-header>
+
+    <ion-content>
+      <div v-if="!selectedProvider">
+        <ion-searchbar
+          v-model="searchQuery"
+          placeholder="Buscar proveedor"
+          class="ion-no-padding"
+        ></ion-searchbar>
+        <ion-list class="transparent">
+          <ion-item
+            v-for="p in filteredProviders"
+            :key="p.id"
+            lines="full"
+            button
+            class="transparent"
+            @click="selectProvider(p)"
+          >
+            <ion-label>{{ p.name }}</ion-label>
+          </ion-item>
+        </ion-list>
+      </div>
+
+      <div v-else class="ion-padding">
+        <ion-item lines="none">
+          <ion-label>
+            <h2>Proveedor</h2>
+            <p>{{ selectedProvider.name }}</p>
+          </ion-label>
+          <ion-button @click="changeProvider" fill="outline" size="small">
+            Cambiar
+          </ion-button>
+        </ion-item>
+
+        <ion-segment v-model="selectedSegment" class="ion-margin-top">
+          <ion-segment-button value="inicio">
+            <ion-label>Inicio</ion-label>
+          </ion-segment-button>
+          <ion-segment-button value="productos">
+            <ion-label>Productos</ion-label>
+          </ion-segment-button>
+        </ion-segment>
+
+        <div v-if="selectedSegment === 'inicio'" class="ion-margin-top">
+          <ion-list class="transparent">
+            <ion-list-header>
+              <ion-label>Cantidades por Cuenta</ion-label>
+              <ion-button @click="addProviderItem" :disabled="!canAddMoreItems">
+                <ion-icon :icon="addOutline"></ion-icon>
+                Agregar
+              </ion-button>
+            </ion-list-header>
+
+            <div class="list-content">
+              <ion-card
+                v-for="(item, index) in providerItems"
+                :key="index"
+                class="shadow2"
+              >
+                <ion-item class="transparent">
+                  <ion-label position="stacked">Cantidad</ion-label>
+                  <ion-input
+                    v-model.number="item.amount"
+                    type="number"
+                    placeholder="0"
+                  ></ion-input>
+                </ion-item>
+
+                <ion-item class="transparent">
+                  <ion-select
+                    v-model="item.accountId"
+                    label="Cuenta"
+                    label-placement="stacked"
+                    interface="popover"
+                    :compare-with="compareAccounts"
+                  >
+                    <ion-select-option
+                      v-for="acc in availableAccountsForItem(index)"
+                      :key="acc.id"
+                      :value="acc"
+                    >
+                      {{ acc.name }} ({{ acc.type }})
+                    </ion-select-option>
+                  </ion-select>
+                </ion-item>
+
+                <ion-item class="transparent" lines="none" v-if="providerItems.length > 1">
+                  <ion-button
+                    slot="end"
+                    fill="clear"
+                    color="danger"
+                    @click="removeProviderItem(index)"
+                  >
+                    <ion-icon :icon="trashOutline"></ion-icon>
+                  </ion-button>
+                </ion-item>
+              </ion-card>
+            </div>
+          </ion-list>
+
+          <ion-item v-if="hasProductsWithQuantity" lines="none" class="warning-item">
+            <ion-icon :icon="warningOutline" slot="start" color="warning"></ion-icon>
+            <ion-label color="warning">
+              <h3>Productos: {{ formatPrice(productsTotal) }}</h3>
+              <p v-if="productsCoverage.falta > 0">
+                Faltante: {{ formatPrice(productsCoverage.falta) }}
+              </p>
+              <p v-else>
+                Cubierto
+              </p>
+            </ion-label>
+          </ion-item>
+        </div>
+
+        <div v-else class="ion-margin-top">
+          <template v-if="selectedProvider.products && selectedProvider.products.length">
+            <ion-item
+              v-for="product in selectedProvider.products"
+              :key="product.name"
+              lines="inset"
+            >
+              <ion-label>
+                <h3>{{ product.name }}</h3>
+                <p>{{ formatPrice(product.price) }}</p>
+              </ion-label>
+              <ion-input
+                type="number"
+                placeholder="0"
+                :value="productQuantities[product.name]"
+                @ion-input="productQuantities[product.name] = Number($event.detail.value)"
+                slot="end"
+                style="width: 80px; text-align: end;"
+              ></ion-input>
+            </ion-item>
+          </template>
+          <template v-else>
+            <ion-item lines="none">
+              <ion-label>Este proveedor no tiene productos</ion-label>
+            </ion-item>
+          </template>
+        </div>
+
+        <ion-button
+          expand="block"
+          @click="saveNewProvider"
+          class="ion-margin-top"
+          :disabled="!isFormValid || (hasProductsWithQuantity && productsCoverage.falta > 0)"
+        >
+          Guardar
+        </ion-button>
+      </div>
+    </ion-content>
+  </ion-modal>
+
+  <!-- alerts -->
   <ion-alert
     :is-open="showConflictModal"
     header="Conflicto de datos"
@@ -203,16 +378,37 @@ import {
   IonTitle,
   IonCard,
   IonTextarea,
+  IonSearchbar,
+  IonInput,
+  IonSelect,
+  IonSelectOption,
+  IonSegment,
+  IonSegmentButton,
+  IonThumbnail,
+  onIonViewWillEnter,
 } from '@ionic/vue';
-import { ref, reactive } from 'vue';
-import { addOutline, documentOutline, closeOutline } from 'ionicons/icons';
+import { ref, reactive, computed, onMounted, onUnmounted } from 'vue';
+import { addOutline, documentOutline, closeOutline, trashOutline, warningOutline } from 'ionicons/icons';
 
 import ProviderCardComponent from './ProviderCardComponent.vue';
 import ProvidersSummary from './components/ProvidersSummary.vue';
 import budgetController from '@/controllers/budgetController';
 import TemplateController from '@/controllers/TempalteController';
 import { buildPayloadFromTemplate } from '@/controllers/templateService';
+import suppliersController from '@/controllers/suppliersController';
+import accountsController from '@/controllers/accountsController';
+import { useBudgetStore } from '@/stores/budgetStore';
+import { useSuppliersStore } from '@/stores/suppliersStore';
 
+const showAddProviderModal = ref(false);
+const searchQuery = ref('');
+const allSuppliers = computed(() => suppliersController.getSuppliers());
+const allAccounts = ref<any[]>([]);
+const selectedProvider = ref<any>(null);
+const providerItems = ref<any[]>([{ amount: 0, accountId: null }]);
+const selectedSegment = ref('inicio');
+const productQuantities = ref<Record<string, number>>({});
+const editingProviderId = ref<string | number | null>(null);
 const showTemplatesModal = ref(false);
 const showConflictModal = ref(false);
 const showNotesModal = ref(false);
@@ -222,6 +418,233 @@ const conflictMessage = ref('');
 const templatesList = ref<any[]>([]);
 const pendingTemplate = ref<any>(null);
 const pendingProviders = ref<any[]>([]);
+let unsubscribeFromSuppliers: (() => void) | null = null;
+
+const filteredProviders = computed(() => {
+  if (!searchQuery.value) return allSuppliers.value;
+  return allSuppliers.value.filter((p) =>
+    p.name.toLowerCase().includes(searchQuery.value.toLowerCase())
+  );
+});
+
+const productsTotal = computed(() => {
+  if (!selectedProvider.value?.products) return 0;
+  return selectedProvider.value.products.reduce((sum: number, product: any) => {
+    const qty = productQuantities.value[product.name] || 0;
+    return sum + (qty * (product.price || 0));
+  }, 0);
+});
+
+const hasProductsWithQuantity = computed(() => {
+  if (!selectedProvider.value?.products) return false;
+  return selectedProvider.value.products.some((product: any) => {
+    return (productQuantities.value[product.name] || 0) > 0;
+  });
+});
+
+const productsCoverage = computed(() => {
+  const totalEntered = providerItems.value.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+  return {
+    falta: productsTotal.value - totalEntered,
+    total: productsTotal.value,
+    entered: totalEntered,
+  };
+});
+
+const canAddMoreItems = computed(() => {
+  return providerItems.value.length < allAccounts.value.length;
+});
+
+const getDefaultAccountId = () => {
+  const accounts = allAccounts.value;
+  return accounts.length > 0 ? accounts[0] : null;
+};
+
+const availableAccountsForItem = (currentIndex: number) => {
+  const usedAccountIds = providerItems.value
+    .filter((_: any, idx: number) => idx !== currentIndex)
+    .map((item: any) => String(item.accountId?.id ?? item.accountId))
+    .filter((id: string) => id !== 'null' && id !== 'undefined' && id !== '' && id !== 'undefined');
+  return allAccounts.value.filter(
+    (acc: any) => !usedAccountIds.includes(String(acc.id))
+  );
+};
+
+const isItemsValid = computed(() => {
+  return providerItems.value.every(
+    (item) => Number(item.amount) > 0 && item.accountId != null
+  );
+});
+
+const isFormValid = computed(() => {
+  return selectedProvider.value != null && isItemsValid.value;
+});
+
+async function loadSuppliers() {
+  const list = await suppliersController.listSuppliers();
+  allSuppliers.value = list || [];
+  const budgetStore = useBudgetStore();
+  budgetStore.syncProvidersWithSuppliers(list || []);
+}
+
+async function loadAccounts() {
+  const list = accountsController.getAccounts();
+  allAccounts.value = list || [];
+}
+
+onMounted(async () => {
+  await loadSuppliers();
+  loadAccounts();
+  await budgetController.loadDataForCurrentDate();
+  
+  const suppliersStore = useSuppliersStore();
+  unsubscribeFromSuppliers = suppliersStore.subscribeToChanges((suppliers) => {
+    console.log('[Suppliers Change] Received update, suppliers count:', suppliers.length);
+    const budgetStore = useBudgetStore();
+    budgetStore.syncProvidersWithSuppliers(suppliers);
+  });
+});
+
+onUnmounted(() => {
+  if (unsubscribeFromSuppliers) {
+    unsubscribeFromSuppliers();
+    unsubscribeFromSuppliers = null;
+  }
+});
+
+onIonViewWillEnter(async () => {
+  await loadSuppliers();
+});
+
+function openAddProviderModal() {
+  editingProviderId.value = null;
+  selectedProvider.value = null;
+  providerItems.value = [{ amount: 0, accountId: getDefaultAccountId() }];
+  selectedSegment.value = 'inicio';
+  productQuantities.value = {};
+  searchQuery.value = '';
+  void loadSuppliers();
+  showAddProviderModal.value = true;
+}
+
+async function openEditProviderModal(payload: { provider: any }) {
+  console.log('openEditProviderModal - payload:', payload);
+  const provider = payload.provider;
+  console.log('openEditProviderModal - provider:', provider);
+  editingProviderId.value = provider.id;
+  console.log('openEditProviderModal - editingProviderId:', editingProviderId.value);
+  
+  let fullSupplier: any = null;
+  const supplierId = provider._supplierId || provider._supplierKey;
+  
+  console.log('Recargando suppliers para obtener datos actualizados...');
+  await loadSuppliers();
+  
+  if (supplierId) {
+    fullSupplier = allSuppliers.value.find((s: any) => String(s.id) === String(supplierId));
+  } else {
+    console.log('No tiene _supplierId, buscando por nombre:', provider.name);
+    fullSupplier = allSuppliers.value.find((s: any) => 
+      s.name && provider.name && s.name.toLowerCase() === provider.name.toLowerCase()
+    );
+    console.log('openEditProviderModal - fullSupplier by name:', fullSupplier);
+  }
+  
+  console.log('openEditProviderModal - fullSupplier:', fullSupplier);
+  console.log('openEditProviderModal - products:', fullSupplier?.products);
+  
+  selectedProvider.value = fullSupplier || { id: supplierId, name: provider._supplierName || provider.name, products: [] };
+  console.log('openEditProviderModal - selectedProvider:', selectedProvider.value);
+  providerItems.value = [{ amount: provider.estimated || 0, accountId: provider.dollar ? { id: provider.dollar, name: provider._accountName, type: provider._accountType } : getDefaultAccountId() }];
+  console.log('openEditProviderModal - providerItems:', providerItems.value);
+  selectedSegment.value = 'inicio';
+  productQuantities.value = {};
+  searchQuery.value = '';
+  showAddProviderModal.value = true;
+}
+
+function addProviderItem() {
+  if (canAddMoreItems.value) {
+    providerItems.value.push({ amount: 0, accountId: getDefaultAccountId() });
+  }
+}
+
+function removeProviderItem(index: number) {
+  if (providerItems.value.length > 1) {
+    providerItems.value.splice(index, 1);
+  }
+}
+
+function selectProvider(provider: any) {
+  selectedProvider.value = provider;
+}
+
+function changeProvider() {
+  selectedProvider.value = null;
+  selectedSegment.value = 'inicio';
+  productQuantities.value = {};
+}
+
+function compareAccounts(o1: any, o2: any) {
+  return o1 && o2 && o1.id === o2.id;
+}
+
+function formatPrice(price: number) {
+  return new Intl.NumberFormat('es-MX', {
+    style: 'currency',
+    currency: 'MXN',
+  }).format(price || 0);
+}
+
+function saveNewProvider() {
+  console.log('saveNewProvider - editingProviderId:', editingProviderId.value);
+  console.log('saveNewProvider - providerItems:', providerItems.value);
+  
+  const totalAmount = providerItems.value.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+  const firstItem = providerItems.value[0];
+  const firstAccount = firstItem?.accountId;
+
+  const accountNames = providerItems.value
+    .filter(item => item.accountId?.name)
+    .map(item => item.accountId.name);
+  const uniqueAccountNames = [...new Set(accountNames)];
+  const accountNameDisplay = uniqueAccountNames.length > 1 ? 'Varios' : (uniqueAccountNames[0] || '');
+  const accountTypeDisplay = uniqueAccountNames.length > 1 ? '' : (firstAccount?.type || '');
+
+  if (editingProviderId.value !== null && editingProviderId.value !== undefined) {
+    console.log('saveNewProvider - updating provider:', editingProviderId.value);
+    budgetController.updateProvider(editingProviderId.value, {
+      estimated: totalAmount,
+      dollar: firstAccount ? firstAccount.id : 0,
+      _supplierId: selectedProvider.value?.id,
+      _supplierName: selectedProvider.value?.name,
+      _accountName: accountNameDisplay,
+      _accountType: accountTypeDisplay,
+    });
+  } else {
+    console.log('saveNewProvider - adding new provider');
+    budgetController.addProvider({
+      name: selectedProvider.value?.name || '',
+      estimated: totalAmount,
+      dollar: firstAccount ? firstAccount.id : 0,
+      allowEmpty: true,
+      _supplierId: selectedProvider.value?.id,
+      _supplierName: selectedProvider.value?.name,
+      _accountName: accountNameDisplay,
+      _accountType: accountTypeDisplay,
+    });
+  }
+  budgetController.saveData();
+  showAddProviderModal.value = false;
+}
+
+function deleteCurrentProvider() {
+  if (editingProviderId.value) {
+    budgetController.removeProvider(editingProviderId.value);
+    budgetController.saveData();
+    showAddProviderModal.value = false;
+  }
+}
 
 const deleteConfirm = reactive({
   open: false,
@@ -230,7 +653,7 @@ const deleteConfirm = reactive({
 });
 
 function addEmptyProvider() {
-  budgetController.addProvider({ name: '', estimated: 0, dollar: 0, allowEmpty: true });
+  openAddProviderModal();
 }
 
 function handleUpdateProvider(payload: {
@@ -261,7 +684,10 @@ function confirmRemoveProveedor(
 function removeProveedorConfirmed() {
   const pid = deleteConfirm.providerId;
   deleteConfirm.open = false;
-  if (pid != null) budgetController.removeProvider(pid);
+  if (pid != null) {
+    budgetController.removeProvider(pid);
+    budgetController.saveData();
+  }
   deleteConfirm.providerId = null;
   deleteConfirm.providerName = '';
 }
@@ -276,6 +702,7 @@ function handleOpenNotesModal(payload: { provider: any }) {
 function saveNotes() {
   if (notesProvider.value) {
     budgetController.updateProvider(notesProvider.value.id, { notes: notesContent.value });
+    budgetController.saveData();
   }
   showNotesModal.value = false;
   notesProvider.value = null;
@@ -321,6 +748,7 @@ function applyProviders(providers: any[]) {
       dollar: p.dollar,
     });
   });
+  budgetController.saveData();
 }
 
 function handleCombine() {
@@ -344,3 +772,11 @@ function handleCombine() {
     showTemplatesModal.value = false;
   }
 </script>
+
+<style scoped>
+.warning-item {
+  margin-top: 8px;
+  border: 1px solid var(--ion-color-warning);
+  border-radius: 8px;
+}
+</style>

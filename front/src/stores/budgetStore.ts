@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { ref, computed, reactive } from 'vue';
+import { ref, computed, reactive, watch } from 'vue';
 import { formatLocalDate } from '@/utils/date';
 
 export type PaymentType = 'cash' | 'digital';
@@ -33,6 +33,10 @@ export interface Provider {
   _justAdded?: boolean;
   _fromTemplate?: boolean;
   _supplierKey?: string;
+  _supplierId?: string | number;
+  _supplierName?: string;
+  _accountName?: string;
+  _accountType?: string;
 }
 
 interface FinishDayData {
@@ -268,6 +272,36 @@ export const useBudgetStore = defineStore('budget', () => {
     finishDayData.margin = 0;
   }
 
+  function syncProvidersWithSuppliers(suppliers: Array<{ id: any; name: string; products?: Array<{ name: string; price: number }> }>) {
+    for (let i = 0; i < providers.length; i++) {
+      const provider = providers[i];
+      if (provider._supplierId) {
+        const matchingSupplier = suppliers.find(
+          s => String(s.id) === String(provider._supplierId)
+        );
+
+        if (matchingSupplier) {
+          let needsUpdate = false;
+          const updates: Partial<Provider> = {};
+
+          if (provider._supplierName !== matchingSupplier.name) {
+            updates._supplierName = matchingSupplier.name;
+            needsUpdate = true;
+          }
+
+          if (matchingSupplier.products && matchingSupplier.products.length > 0) {
+            (provider as any)._supplierProducts = matchingSupplier.products;
+          }
+
+          if (needsUpdate) {
+            const updatedProvider = { ...provider, ...updates };
+            providers.splice(i, 1, updatedProvider);
+          }
+        }
+      }
+    }
+  }
+
   return {
     selectedDate,
     entries,
@@ -305,5 +339,6 @@ export const useBudgetStore = defineStore('budget', () => {
     removeProvider,
     clearDay,
     clearAll,
+    syncProvidersWithSuppliers,
   };
 });
