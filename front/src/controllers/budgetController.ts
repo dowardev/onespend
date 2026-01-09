@@ -255,8 +255,21 @@ class BudgetController {
     estimated?: number;
     dollar?: number;
     allowEmpty?: boolean;
+    _supplierId?: string | number;
+    _supplierName?: string;
+    _accountName?: string;
+    _accountType?: string;
   }) {
-    const { name = '', estimated = 0, dollar = 0, allowEmpty = false } = params;
+    const {
+      name = '',
+      estimated = 0,
+      dollar = 0,
+      allowEmpty = false,
+      _supplierId,
+      _supplierName,
+      _accountName,
+      _accountType,
+    } = params;
     if (!name && !allowEmpty) return;
 
     const newProvider: Provider = {
@@ -271,6 +284,10 @@ class BudgetController {
       notes: '',
       visited: false,
       _justAdded: true,
+      _supplierId,
+      _supplierName,
+      _accountName,
+      _accountType,
     };
 
     this.store.addProvider(newProvider);

@@ -1,104 +1,46 @@
 <template>
   <ion-card
     :class="[
+      'provider-card',
       'shadow2',
       {
         'provider-just-added': props.provider._justAdded,
         'provider-disabled': props.isDisabled,
       },
     ]"
+    button
+    @click="$emit('open-edit-modal', { provider: props.provider })"
   >
-    <ion-item lines="none" class="transparent">
-      <ion-input
-        :value="props.provider.name"
-        placeholder="Nombre"
-        :disabled="props.isDisabled"
-        @ion-input="
-          (e: IonEvent) =>
-            emit('update-provider', {
-              id: props.provider.id,
-              field: 'name',
-              value: e?.detail?.value ?? e?.target?.value ?? '',
-            })
-        "
-      ></ion-input>
+    <div class="provider-content">
+      <div class="provider-header">
+        <ion-icon :icon="businessOutline" class="provider-icon"></ion-icon>
+        <ion-label class="provider-name">{{ props.provider._supplierName || props.provider.name || 'Sin nombre' }}</ion-label>
+      </div>
 
-      <ion-label
-        :color="
-          isPaymentPrimary({ provider: props.provider }) ? 'primary' : undefined
-        "
-      >
-        {{ formattedValue }}
-      </ion-label>
+      <div class="provider-details">
+        <div class="detail-row">
+          <ion-icon :icon="walletOutline" class="detail-icon"></ion-icon>
+          <ion-label class="account-label">
+            {{ getAccountDisplay() }}
+          </ion-label>
+        </div>
 
-      <ion-button
-        slot="end"
-        fill="clear"
-        @click.stop="openOptionsPopover($event)"
-      >
-        <ion-icon :icon="ellipsisVerticalOutline"></ion-icon>
-      </ion-button>
-    </ion-item>
-
-    <div
-      style="
-        display: flex;
-        justify-content: space-between;
-        background-color: var(--ion-background-color);
-      "
-      class="ion-padding-start ion-padding-end"
-    >
-      <ion-input
-        :value="props.provider.efectivo"
-        label="Efectivo"
-        label-placement="floating"
-        type="number"
-        class="num-input small"
-        :disabled="props.isDisabled"
-        @ion-input="
-          e =>
-            emit('update-provider', {
-              id: props.provider.id,
-              field: 'efectivo',
-              value: Number(e?.detail?.value ?? e?.target?.value ?? 0),
-            })
-        "
-      ></ion-input>
-
-      <ion-input
-        :value="props.provider.tarjeta"
-        label="Tarjeta/Transferencia"
-        label-placement="floating"
-        type="number"
-        class="num-input small"
-        :disabled="props.isDisabled"
-        @ion-input="
-          e =>
-            emit('update-provider', {
-              id: props.provider.id,
-              field: 'tarjeta',
-              value: Number(e?.detail?.value ?? e?.target?.value ?? 0),
-            })
-        "
-      ></ion-input>
-
-      <ion-input
-        :value="props.provider.credito"
-        label="Credito"
-        label-placement="floating"
-        type="number"
-        class="num-input small"
-        :disabled="props.isDisabled"
-        @ion-input="
-          e =>
-            emit('update-provider', {
-              id: provider.id,
-              field: 'credito',
-              value: Number(e?.detail?.value ?? e?.target?.value ?? 0),
-            })
-        "
-      ></ion-input>
+        <div class="total-row">
+          <ion-label class="total-label">
+            {{ formatCurrency({ v: props.provider.estimated || 0 }) }}
+          </ion-label>
+        </div>
+      </div>
     </div>
+
+    <ion-button
+      slot="end"
+      fill="clear"
+      class="options-btn"
+      @click.stop="openOptionsPopover($event)"
+    >
+      <ion-icon :icon="ellipsisVerticalOutline"></ion-icon>
+    </ion-button>
   </ion-card>
 
   <!-- popovers -->
@@ -188,8 +130,6 @@
 import {
   IonCard,
   IonItem,
-  IonCheckbox,
-  IonInput,
   IonLabel,
   IonButton,
   IonIcon,
@@ -200,13 +140,13 @@ import {
 import {
   listOutline,
   bookOutline,
-  timeOutline,
   trashOutline,
-  calendarOutline,
   ellipsisVerticalOutline,
   swapHorizontalOutline,
+  walletOutline,
+  businessOutline,
 } from 'ionicons/icons';
-import { reactive, computed } from 'vue';
+import { reactive } from 'vue';
 
 // interface
 interface Provider {
@@ -222,6 +162,11 @@ interface Provider {
   // Optional fields used by parent backups: estimate/dollar fallback
   dollar?: number;
   estimated?: number;
+  // New fields from modal
+  _supplierId?: string | number;
+  _supplierName?: string;
+  _accountName?: string;
+  _accountType?: string;
 }
 
 // Generic Ion event shape used in template handlers
@@ -250,6 +195,7 @@ const emit = defineEmits([
   'open-notes-modal',
   'confirm-remove-proveedor',
   'move-provider',
+  'open-edit-modal',
 ]);
 // end main
 
@@ -275,25 +221,6 @@ const deleteConfirm = reactive({
   event: null as Event | null,
 });
 // end vars
-
-// computed
-const formattedValue = computed(() => {
-  try {
-    const p = props.provider || ({} as Provider);
-    const efectivo = Number(p.efectivo || 0);
-    const tarjeta = Number(p.tarjeta || 0);
-    const credito = Number(p.credito || 0);
-    const sumPayments = efectivo + tarjeta + credito;
-    let v = 0;
-    if (sumPayments > 0) v = sumPayments;
-    else if ((Number(p.dollar) || 0) > 0) v = Number(p.dollar || 0);
-    else v = Number(p.estimated || 0) || 0;
-    return formatCurrency({ v });
-  } catch (_e) {
-    return '';
-  }
-});
-// end computed
 
 // functions
 function openPopover(event: Event) {
@@ -443,6 +370,17 @@ function isPaymentPrimary(params: { provider?: Provider } | any) {
   }
 }
 
+function getAccountDisplay(): string {
+  const accountName = props.provider._accountName;
+  if (!accountName) return 'Sin cuenta';
+  if (accountName === 'Varias') return 'Varias';
+  const accountType = props.provider._accountType;
+  if (accountType) {
+    return `${accountName} (${accountType})`;
+  }
+  return accountName;
+}
+
 // local formatter: format numbers as MXN currency
 function formatCurrency(params: { v: number }) {
   const { v } = params;
@@ -460,12 +398,95 @@ function formatCurrency(params: { v: number }) {
 </script>
 
 <style scoped>
-.icon-btn {
-  color: var(--ion-color-danger, #d9534f);
+.provider-card {
+  margin: 8px 10px;
+  border-radius: 12px;
+  position: relative;
+  overflow: hidden;
+}
+
+.provider-card.provider-just-added {
+  animation: highlight 1s ease-out;
+}
+
+@keyframes highlight {
+  0% {
+    background-color: var(--ion-color-success-tint);
+  }
+  100% {
+    background-color: transparent;
+  }
 }
 
 .provider-disabled {
   opacity: 0.6;
   pointer-events: none;
+}
+
+.provider-content {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.provider-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.provider-icon {
+  font-size: 24px;
+  color: var(--ion-color-primary);
+}
+
+.provider-name {
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--ion-color-dark);
+}
+
+.provider-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-left: 34px;
+}
+
+.detail-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.detail-icon {
+  font-size: 16px;
+  color: var(--ion-color-medium);
+}
+
+.account-label {
+  font-size: 14px;
+  color: var(--ion-color-medium);
+}
+
+.total-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+.total-label {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.options-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  --padding-start: 8px;
+  --padding-end: 8px;
 }
 </style>

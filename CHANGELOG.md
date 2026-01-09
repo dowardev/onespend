@@ -1,4 +1,30 @@
-## [v0.25.4] - 2026-01-08
+## [v0.26.0] - 2026-01-09
+
+### Added
+
+- Add provider add/edit modal with supplier search functionality in ProvidersComponent
+- Add account selection for splitting provider amounts across multiple accounts
+- Add product quantities tracking with coverage validation and warning display
+- Add supplier change notification system with subscribe/notify pattern in suppliersStore
+- Add provider-supplier synchronization to keep provider data updated when suppliers change
+
+### Changed
+
+- Refactor ProviderCardComponent to clickable card design with cleaner supplier/account display
+- Update budgetController.addProvider to accept new supplier and account fields
+- Update suppliersController to notify subscribers after add/update/delete operations
+- Update budgetStore Provider interface with new supplier and account metadata fields
+
+### Features
+
+- New provider modal allows searching and selecting from existing suppliers
+- Multiple account support with validation preventing duplicate account selection
+- Product coverage tracking shows warning when entered amounts don't match product costs
+- Real-time sync between providers and suppliers when supplier data changes
+
+---
+
+
 
 ### Fix
 
