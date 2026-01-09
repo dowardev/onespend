@@ -60,7 +60,7 @@ export function buildPayloadFromTemplate(
     name,
     date: formatLocalDate(dateISO),
     estimated: 0,
-    dollar: 0,
+    accountId: 0,
     notes: '',
     visited: false,
   }));
@@ -70,12 +70,12 @@ export function buildPayloadFromTemplate(
     entries: [],
     proveedores,
     newIngreso: { name: '', amount: 0, date: formatLocalDate(dateISO) },
-    newProveedor: { name: '', estimated: 0, dollar: 0, notes: '' },
+    newProveedor: { name: '', estimated: 0, accountId: 0, notes: '' },
     selectedDate: formatLocalDate(dateISO),
     totals: {
       totalIngresos: 0,
       totalProviders: proveedores.reduce(
-        (s, p) => s + (Number(p.dollar || 0) || Number(p.estimated || 0)),
+        (s, p) => s + Number(p.estimated || 0),
         0
       ),
       totalVisitedProviders: 0,

@@ -253,22 +253,18 @@ class BudgetController {
   addProvider(params: {
     name?: string;
     estimated?: number;
-    dollar?: number;
+    accountId?: number;
     allowEmpty?: boolean;
     _supplierId?: string | number;
     _supplierName?: string;
-    _accountName?: string;
-    _accountType?: string;
   }) {
     const {
       name = '',
       estimated = 0,
-      dollar = 0,
+      accountId = 0,
       allowEmpty = false,
       _supplierId,
       _supplierName,
-      _accountName,
-      _accountType,
     } = params;
     if (!name && !allowEmpty) return;
 
@@ -277,7 +273,7 @@ class BudgetController {
       name,
       date: this.store.selectedDate,
       estimated: Number(estimated) || 0,
-      dollar: Number(dollar) || 0,
+      accountId: Number(accountId) || 0,
       efectivo: 0,
       tarjeta: 0,
       credito: 0,
@@ -286,8 +282,6 @@ class BudgetController {
       _justAdded: true,
       _supplierId,
       _supplierName,
-      _accountName,
-      _accountType,
     };
 
     this.store.addProvider(newProvider);

@@ -21,7 +21,7 @@
         <div class="detail-row">
           <ion-icon :icon="walletOutline" class="detail-icon"></ion-icon>
           <ion-label class="account-label">
-            {{ getAccountDisplay() }}
+            {{ accountDisplay }}
           </ion-label>
         </div>
 
@@ -146,7 +146,10 @@ import {
   walletOutline,
   businessOutline,
 } from 'ionicons/icons';
-import { reactive } from 'vue';
+import { reactive, computed } from 'vue';
+import { useAccountsStore } from '@/stores/accountsStore';
+
+const accountsStore = useAccountsStore();
 
 // interface
 interface Provider {
@@ -159,14 +162,12 @@ interface Provider {
   efectivo?: number;
   tarjeta?: number;
   credito?: number;
-  // Optional fields used by parent backups: estimate/dollar fallback
-  dollar?: number;
+  // Account ID for the provider
+  accountId?: number;
   estimated?: number;
   // New fields from modal
   _supplierId?: string | number;
   _supplierName?: string;
-  _accountName?: string;
-  _accountType?: string;
 }
 
 // Generic Ion event shape used in template handlers
@@ -370,16 +371,17 @@ function isPaymentPrimary(params: { provider?: Provider } | any) {
   }
 }
 
-function getAccountDisplay(): string {
-  const accountName = props.provider._accountName;
-  if (!accountName) return 'Sin cuenta';
-  if (accountName === 'Varias') return 'Varias';
-  const accountType = props.provider._accountType;
-  if (accountType) {
-    return `${accountName} (${accountType})`;
-  }
-  return accountName;
-}
+const accountDisplay = computed(() => {
+  const accountId = props.provider.accountId;
+  if (!accountId) return 'Sin cuenta';
+  
+  const account = accountsStore.accounts.find(
+    (a) => String(a.id) === String(accountId)
+  );
+  
+  if (!account) return 'Sin cuenta';
+  return account.name;
+});
 
 // local formatter: format numbers as MXN currency
 function formatCurrency(params: { v: number }) {
