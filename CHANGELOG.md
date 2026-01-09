@@ -1,3 +1,40 @@
+## [v0.27.0] - 2026-01-09
+
+### Breaking Changes
+
+- Replace `dollar` field with `accountId` in Provider interface across the entire codebase
+- Remove `_accountName` and `_accountType` metadata fields from Provider interface
+
+### Changed
+
+- Refactor ProvidersSummary to dynamically group totals by account using accountsStore
+- Refactor ProviderCardComponent to compute account display from accountsStore instead of provider metadata
+- Refactor ProvidersComponent to use computed properties for reactive providers list
+- Update budgetStore updateProvider to use splice for proper Vue reactivity
+- Simplify provider value calculations by removing dollar fallback logic across all cash flow components
+
+### Fixed
+
+- Fix Vue reactivity issue in budgetStore.updateProvider by replacing object in array instead of mutating
+
+### Files Changed
+
+- front/src/composables/usePerformancePeriod.ts (modified)
+- front/src/controllers/budgetController.ts (modified)
+- front/src/controllers/migrationService.ts (modified)
+- front/src/controllers/templateService.ts (modified)
+- front/src/stores/budgetStore.ts (modified)
+- front/src/views/budget/InicioViewComponent.vue (modified)
+- front/src/views/budget/ProviderCardComponent.vue (modified)
+- front/src/views/budget/ProvidersComponent.vue (modified)
+- front/src/views/budget/components/ProvidersSummary.vue (modified)
+- front/src/views/statistics/cashFlow/day/DayComponent.vue (modified)
+- front/src/views/statistics/cashFlow/month/MonthComponent.vue (modified)
+- front/src/views/statistics/cashFlow/week/WeekComponent.vue (modified)
+- front/src/views/statistics/cashFlow/year/YearComponent.vue (modified)
+
+---
+
 ## [v0.26.0] - 2026-01-09
 
 ### Added

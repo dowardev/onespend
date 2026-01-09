@@ -24,7 +24,7 @@ export interface Provider {
   name: string;
   date: string;
   estimated: number;
-  dollar: number;
+  accountId: number;
   efectivo: number;
   tarjeta: number;
   credito: number;
@@ -35,8 +35,6 @@ export interface Provider {
   _supplierKey?: string;
   _supplierId?: string | number;
   _supplierName?: string;
-  _accountName?: string;
-  _accountType?: string;
 }
 
 interface FinishDayData {
@@ -227,27 +225,35 @@ export const useBudgetStore = defineStore('budget', () => {
   }
 
   function updateProvider(id: string | number, changes: Partial<Provider>) {
-    const provider = providers.find(p => p.id === id);
-    if (!provider) return;
+    const idx = providers.findIndex(p => p.id === id);
+    if (idx === -1) return;
+
+    const provider = providers[idx];
+    const updatedProvider = { ...provider };
 
     const numericFields = [
       'estimated',
-      'dollar',
+      'accountId',
       'efectivo',
       'tarjeta',
       'credito',
     ];
     for (const field of numericFields) {
       if (changes[field as keyof Provider] !== undefined) {
-        (provider as any)[field] =
+        (updatedProvider as any)[field] =
           Number(changes[field as keyof Provider]) || 0;
       }
     }
 
-    if (changes.name !== undefined) provider.name = String(changes.name);
-    if (changes.notes !== undefined) provider.notes = String(changes.notes);
-    if (changes.visited !== undefined) provider.visited = !!changes.visited;
-    if (changes._justAdded !== undefined) provider._justAdded = changes._justAdded;
+    if (changes.name !== undefined) updatedProvider.name = String(changes.name);
+    if (changes.notes !== undefined) updatedProvider.notes = String(changes.notes);
+    if (changes.visited !== undefined) updatedProvider.visited = !!changes.visited;
+    if (changes._justAdded !== undefined) updatedProvider._justAdded = changes._justAdded;
+    if (changes._supplierId !== undefined) updatedProvider._supplierId = changes._supplierId;
+    if (changes._supplierName !== undefined) updatedProvider._supplierName = changes._supplierName;
+
+    // Replace the object in the array to trigger reactivity
+    providers.splice(idx, 1, updatedProvider);
   }
 
   function removeProvider(id: string | number) {

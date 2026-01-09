@@ -193,9 +193,8 @@ function providerValue(p: any) {
     const credito = Number(p?.credito || 0);
     const sumPayments = efectivo + tarjeta + credito;
     if (sumPayments > 0) return sumPayments;
-    const d = Number(p?.dollar || 0);
     const e = Number(p?.estimated || 0);
-    return d > 0 ? d : e;
+    return e;
   } catch (_e) {
     return 0;
   }

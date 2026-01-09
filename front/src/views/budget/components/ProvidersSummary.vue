@@ -8,30 +8,14 @@
           </ion-list-header>
 
           <div class="list-content">
-            <!-- cash -->
-            <ion-item lines="full">
-              <ion-label>Efectivo</ion-label>
-
+            <ion-item
+              v-for="account in accountsSummary"
+              :key="account.name"
+              lines="full"
+            >
+              <ion-label>{{ account.name }}</ion-label>
               <ion-label slot="end">{{
-                formatCurrency(efectivoValue)
-              }}</ion-label>
-            </ion-item>
-
-            <!-- card -->
-            <ion-item lines="full">
-              <ion-label>Tarjeta</ion-label>
-
-              <ion-label slot="end">{{
-                formatCurrency(tarjetaValue)
-              }}</ion-label>
-            </ion-item>
-
-            <!-- credit -->
-            <ion-item lines="full">
-              <ion-label>Credito</ion-label>
-
-              <ion-label slot="end">{{
-                formatCurrency(creditoValue)
+                formatCurrency(account.total)
               }}</ion-label>
             </ion-item>
           </div>
@@ -65,27 +49,14 @@
             </ion-list-header>
 
             <div class="list-content" style="border: none">
-              <!-- cash -->
-              <ion-item lines="full">
-                <ion-label>Efectivo</ion-label>
-                <ion-label slot="end" :color="colorEfectivo">{{
-                  labelEfectivo
-                }}</ion-label>
-              </ion-item>
-
-              <!-- card -->
-              <ion-item lines="full">
-                <ion-label>Tarjeta</ion-label>
-                <ion-label slot="end" :color="colorTarjeta">{{
-                  labelTarjeta
-                }}</ion-label>
-              </ion-item>
-
-              <!-- credit -->
-              <ion-item lines="full">
-                <ion-label>Credito</ion-label>
-                <ion-label slot="end" :color="colorCredito">{{
-                  labelCredito
+              <ion-item
+                v-for="account in accountsSummary"
+                :key="account.name"
+                lines="full"
+              >
+                <ion-label>{{ account.name }}</ion-label>
+                <ion-label slot="end" :color="account.diffColor">{{
+                  account.diffLabel
                 }}</ion-label>
               </ion-item>
             </div>
@@ -100,54 +71,93 @@
 import { IonRow, IonCol, IonCard, IonItem, IonLabel } from '@ionic/vue';
 import { informationCircleOutline } from 'ionicons/icons';
 import { computed } from 'vue';
+import { useBudgetStore } from '@/stores/budgetStore';
+import { useAccountsStore } from '@/stores/accountsStore';
 
-const props = defineProps<{
-  // provider-required totals
-  efectivo?: number | string;
-  tarjeta?: number | string;
-  credito?: number | string;
-  // optional income totals to compare against (if not provided, treat as 0)
-  ingresoEfectivo?: number | string;
-  ingresoTarjeta?: number | string;
-  ingresoCredito?: number | string;
-}>();
+const budgetStore = useBudgetStore();
+const accountsStore = useAccountsStore();
 
-const efectivoValue = computed(() => Number(props.efectivo || 0) || 0);
-const tarjetaValue = computed(() => Number(props.tarjeta || 0) || 0);
-const creditoValue = computed(() => Number(props.credito || 0) || 0);
+// Get account name by id from accounts store
+function getAccountNameById(accountId: string | number | null | undefined): string {
+  if (!accountId) return 'Sin cuenta';
+  const account = accountsStore.accounts.find(
+    (a) => String(a.id) === String(accountId)
+  );
+  return account?.name || 'Sin cuenta';
+}
 
-const ingresoEfectivoValue = computed(
-  () => Number(props.ingresoEfectivo || 0) || 0
-);
-const ingresoTarjetaValue = computed(
-  () => Number(props.ingresoTarjeta || 0) || 0
-);
-const ingresoCreditoValue = computed(
-  () => Number(props.ingresoCredito || 0) || 0
-);
+// Group by account and sum totals (providers + egresos) and ingresos
+const accountsSummary = computed(() => {
+  const accountMap = new Map<string, { total: number; ingreso: number }>();
+
+  // Sum providers totals by account using 'estimated' and 'accountId'
+  for (const provider of budgetStore.providers) {
+    const accountName = getAccountNameById(provider.accountId);
+    const providerTotal = Number(provider.estimated || 0);
+
+    if (!accountMap.has(accountName)) {
+      accountMap.set(accountName, { total: 0, ingreso: 0 });
+    }
+    accountMap.get(accountName)!.total += providerTotal;
+  }
+
+  // Process entries (ingresos and egresos)
+  for (const entry of budgetStore.entries) {
+    // If entry has groups, use them
+    if (entry.groups && entry.groups.length > 0) {
+      for (const group of entry.groups) {
+        const accountName = getAccountNameById(group.accountId);
+        if (!accountMap.has(accountName)) {
+          accountMap.set(accountName, { total: 0, ingreso: 0 });
+        }
+        const data = accountMap.get(accountName)!;
+        if (entry.entryType === 'ingreso') {
+          data.ingreso += Number(group.amount || 0);
+        } else if (entry.entryType === 'egreso') {
+          data.total += Number(group.amount || 0);
+        }
+      }
+    } else {
+      // Use entry.accountId directly
+      const accountName = getAccountNameById(entry.accountId);
+      if (!accountMap.has(accountName)) {
+        accountMap.set(accountName, { total: 0, ingreso: 0 });
+      }
+      const data = accountMap.get(accountName)!;
+      if (entry.entryType === 'ingreso') {
+        data.ingreso += Number(entry.amount || 0);
+      } else if (entry.entryType === 'egreso') {
+        data.total += Number(entry.amount || 0);
+      }
+    }
+  }
+
+  return Array.from(accountMap.entries()).map(([name, data]) => {
+    const diff = data.ingreso - data.total;
+    return {
+      name,
+      total: data.total,
+      ingreso: data.ingreso,
+      diff,
+      diffLabel: diff === 0 ? '0' : `${diff > 0 ? '+' : '-'}${Math.round(Math.abs(diff))}`,
+      diffColor: diff === 0 ? undefined : diff > 0 ? 'success' : 'danger',
+    };
+  });
+});
 
 // total required by providers
 const totalProvidersRequired = computed(() => {
-  return (
-    Number(efectivoValue.value || 0) +
-    Number(tarjetaValue.value || 0) +
-    Number(creditoValue.value || 0)
-  );
+  return accountsSummary.value.reduce((sum, acc) => sum + acc.total, 0);
 });
 
 // total ingresos (available)
 const totalIngresos = computed(() => {
-  return (
-    Number(ingresoEfectivoValue.value || 0) +
-    Number(ingresoTarjetaValue.value || 0) +
-    Number(ingresoCreditoValue.value || 0)
-  );
+  return accountsSummary.value.reduce((sum, acc) => sum + acc.ingreso, 0);
 });
 
 // difference: ingresos - required (positive => sobrante, negative => faltante)
 const difference = computed(
-  () =>
-    Number(totalIngresos.value || 0) - Number(totalProvidersRequired.value || 0)
+  () => Number(totalIngresos.value || 0) - Number(totalProvidersRequired.value || 0)
 );
 
 const differenceLabel = computed(() => {
@@ -160,53 +170,6 @@ const differenceLabel = computed(() => {
 
 const differenceColor = computed(() => {
   const d = Number(difference.value || 0) || 0;
-  if (d === 0) return undefined;
-  return d > 0 ? 'success' : 'danger';
-});
-
-// Per-category differences and labels/colors
-const diffEfectivo = computed(
-  () =>
-    Number(ingresoEfectivoValue.value || 0) - Number(efectivoValue.value || 0)
-);
-const diffTarjeta = computed(
-  () => Number(ingresoTarjetaValue.value || 0) - Number(tarjetaValue.value || 0)
-);
-const diffCredito = computed(
-  () => Number(ingresoCreditoValue.value || 0) - Number(creditoValue.value || 0)
-);
-
-const labelEfectivo = computed(() => {
-  const d = Number(diffEfectivo.value || 0) || 0;
-  if (d === 0) return '0';
-  const sign = d > 0 ? '+' : '-';
-  return `${sign}${Math.round(Math.abs(d))}`;
-});
-const labelTarjeta = computed(() => {
-  const d = Number(diffTarjeta.value || 0) || 0;
-  if (d === 0) return '0';
-  const sign = d > 0 ? '+' : '-';
-  return `${sign}${Math.round(Math.abs(d))}`;
-});
-const labelCredito = computed(() => {
-  const d = Number(diffCredito.value || 0) || 0;
-  if (d === 0) return '0';
-  const sign = d > 0 ? '+' : '-';
-  return `${sign}${Math.round(Math.abs(d))}`;
-});
-
-const colorEfectivo = computed(() => {
-  const d = Number(diffEfectivo.value || 0) || 0;
-  if (d === 0) return undefined;
-  return d > 0 ? 'success' : 'danger';
-});
-const colorTarjeta = computed(() => {
-  const d = Number(diffTarjeta.value || 0) || 0;
-  if (d === 0) return undefined;
-  return d > 0 ? 'success' : 'danger';
-});
-const colorCredito = computed(() => {
-  const d = Number(diffCredito.value || 0) || 0;
   if (d === 0) return undefined;
   return d > 0 ? 'success' : 'danger';
 });

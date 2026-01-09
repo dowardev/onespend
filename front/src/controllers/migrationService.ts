@@ -118,7 +118,7 @@ export function mergeBackupData(existingData: any, newData: any) {
   }
 
   const totalProviders = mergedProveedores.reduce((s: number, p: any) => {
-    return s + (Number(p.dollar || 0) || Number(p.estimated || 0) || 0);
+    return s + (Number(p.accountId || 0) || Number(p.estimated || 0) || 0);
   }, 0);
 
   const merged = Object.assign({}, existingData || {}, {
@@ -135,7 +135,7 @@ export function mergeBackupData(existingData: any, newData: any) {
         (s: number, p: any) =>
           s +
           (p.visited
-            ? Number(p.dollar || 0) || Number(p.estimated || 0) || 0
+            ? Number(p.accountId || 0) || Number(p.estimated || 0) || 0
             : 0),
         0
       ),

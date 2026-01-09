@@ -130,12 +130,19 @@
             ></ion-input>
           </ion-item>
           <ion-item>
-            <ion-label position="stacked">Dólares</ion-label>
-            <ion-input
-              v-model="editProviderModalData.dollar"
-              type="number"
-              placeholder="0"
-            ></ion-input>
+            <ion-label position="stacked">Cuenta</ion-label>
+            <ion-select
+              v-model="editProviderModalData.accountId"
+              placeholder="Seleccionar cuenta"
+            >
+              <ion-select-option
+                v-for="acc in accountsList"
+                :key="acc.id"
+                :value="acc.id"
+              >
+                {{ acc.name }}
+              </ion-select-option>
+            </ion-select>
           </ion-item>
           <ion-item>
             <ion-label position="stacked">Estimado</ion-label>
@@ -442,7 +449,7 @@ const editProviderModalData = ref({
   name: '',
   efectivo: '',
   tarjeta: '',
-  dollar: '',
+  accountId: null as number | null,
   estimated: '',
 });
 let editProviderModalProviderId: string | number | null = null;
@@ -615,7 +622,7 @@ const providersTodayWithData = computed(() => {
     return (
       Number(p?.efectivo) > 0 ||
       Number(p?.tarjeta) > 0 ||
-      Number(p?.dollar) > 0 ||
+      Number(p?.accountId) > 0 ||
       Number(p?.estimated) > 0
     );
   });
@@ -662,7 +669,6 @@ function formatProviderAmount(provider: any) {
   const amounts = [];
   if (Number(provider?.efectivo) > 0) amounts.push(`EF: $${provider.efectivo}`);
   if (Number(provider?.tarjeta) > 0) amounts.push(`TA: $${provider.tarjeta}`);
-  if (Number(provider?.dollar) > 0) amounts.push(`USD: $${provider.dollar}`);
   if (Number(provider?.estimated) > 0)
     amounts.push(`EST: $${provider.estimated}`);
   return amounts.join(' | ');
@@ -781,7 +787,7 @@ function openEditProviderModal(item: any) {
       name: provider.name || '',
       efectivo: provider.efectivo?.toString() || '',
       tarjeta: provider.tarjeta?.toString() || '',
-      dollar: provider.dollar?.toString() || '',
+      accountId: provider.accountId || null,
       estimated: provider.estimated?.toString() || '',
     };
     editProviderModalOpen.value = true;
@@ -794,7 +800,7 @@ function saveProviderChanges() {
       name: editProviderModalData.value.name,
       efectivo: Number(editProviderModalData.value.efectivo) || 0,
       tarjeta: Number(editProviderModalData.value.tarjeta) || 0,
-      dollar: Number(editProviderModalData.value.dollar) || 0,
+      accountId: editProviderModalData.value.accountId || 0,
       estimated: Number(editProviderModalData.value.estimated) || 0,
     });
   }

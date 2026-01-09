@@ -16,13 +16,13 @@
           </ion-list-header>
 
           <div class="list-content">
-            <template v-if="budgetController.getProviders().length">
+            <template v-if="providers.length">
               <ProviderCardComponent
-                v-for="p in budgetController.getProviders()"
+                v-for="p in providers"
                 :key="p.id"
                 :provider="p"
                 :has-products="false"
-                :is-disabled="budgetController.getProviderIdsWithEntries().has(p.id)"
+                :is-disabled="providerIdsWithEntries.has(p.id)"
                 @update-provider="handleUpdateProvider"
                 @confirm-remove-proveedor="confirmRemoveProveedor"
                 @open-notes-modal="handleOpenNotesModal"
@@ -43,14 +43,7 @@
       </ion-col>
 
       <ion-col size="3">
-        <ProvidersSummary
-          :efectivo="budgetController.getTotalEfectivo()"
-          :tarjeta="budgetController.getTotalTarjeta()"
-          :credito="budgetController.getTotalCredito()"
-          :ingreso-efectivo="budgetController.getIngresosEfectivo()"
-          :ingreso-tarjeta="budgetController.getIngresosTarjeta()"
-          :ingreso-credito="0"
-        />
+        <ProvidersSummary />
       </ion-col>
     </ion-row>
   </ion-grid>
@@ -400,6 +393,8 @@ import accountsController from '@/controllers/accountsController';
 import { useBudgetStore } from '@/stores/budgetStore';
 import { useSuppliersStore } from '@/stores/suppliersStore';
 
+const budgetStore = useBudgetStore();
+
 const showAddProviderModal = ref(false);
 const searchQuery = ref('');
 const allSuppliers = computed(() => suppliersController.getSuppliers());
@@ -408,6 +403,10 @@ const selectedProvider = ref<any>(null);
 const providerItems = ref<any[]>([{ amount: 0, accountId: null }]);
 const selectedSegment = ref('inicio');
 const productQuantities = ref<Record<string, number>>({});
+
+// Computed for reactive providers list
+const providers = computed(() => budgetStore.providers);
+const providerIdsWithEntries = computed(() => budgetStore.providerIdsWithEntries);
 const editingProviderId = ref<string | number | null>(null);
 const showTemplatesModal = ref(false);
 const showConflictModal = ref(false);
@@ -555,7 +554,7 @@ async function openEditProviderModal(payload: { provider: any }) {
   
   selectedProvider.value = fullSupplier || { id: supplierId, name: provider._supplierName || provider.name, products: [] };
   console.log('openEditProviderModal - selectedProvider:', selectedProvider.value);
-  providerItems.value = [{ amount: provider.estimated || 0, accountId: provider.dollar ? { id: provider.dollar, name: provider._accountName, type: provider._accountType } : getDefaultAccountId() }];
+  providerItems.value = [{ amount: provider.estimated || 0, accountId: provider.accountId ? { id: provider.accountId } : getDefaultAccountId() }];
   console.log('openEditProviderModal - providerItems:', providerItems.value);
   selectedSegment.value = 'inicio';
   productQuantities.value = {};
@@ -604,34 +603,23 @@ function saveNewProvider() {
   const firstItem = providerItems.value[0];
   const firstAccount = firstItem?.accountId;
 
-  const accountNames = providerItems.value
-    .filter(item => item.accountId?.name)
-    .map(item => item.accountId.name);
-  const uniqueAccountNames = [...new Set(accountNames)];
-  const accountNameDisplay = uniqueAccountNames.length > 1 ? 'Varios' : (uniqueAccountNames[0] || '');
-  const accountTypeDisplay = uniqueAccountNames.length > 1 ? '' : (firstAccount?.type || '');
-
   if (editingProviderId.value !== null && editingProviderId.value !== undefined) {
     console.log('saveNewProvider - updating provider:', editingProviderId.value);
     budgetController.updateProvider(editingProviderId.value, {
       estimated: totalAmount,
-      dollar: firstAccount ? firstAccount.id : 0,
+      accountId: firstAccount ? firstAccount.id : 0,
       _supplierId: selectedProvider.value?.id,
       _supplierName: selectedProvider.value?.name,
-      _accountName: accountNameDisplay,
-      _accountType: accountTypeDisplay,
     });
   } else {
     console.log('saveNewProvider - adding new provider');
     budgetController.addProvider({
       name: selectedProvider.value?.name || '',
       estimated: totalAmount,
-      dollar: firstAccount ? firstAccount.id : 0,
+      accountId: firstAccount ? firstAccount.id : 0,
       allowEmpty: true,
       _supplierId: selectedProvider.value?.id,
       _supplierName: selectedProvider.value?.name,
-      _accountName: accountNameDisplay,
-      _accountType: accountTypeDisplay,
     });
   }
   budgetController.saveData();
@@ -725,8 +713,8 @@ async function checkTemplateConflict(tmpl: any) {
 
     const templateProviders = payload.proveedores || [];
 
-    if (budgetController.getProviders().length > 0 && templateProviders.length > 0) {
-      conflictMessage.value = `Ya hay ${budgetController.getProviders().length} proveedor(es) registrado(s) para esta fecha. El template tiene ${templateProviders.length} proveedor(es). ¿Deseas combinar o sobrescribir?`;
+    if (providers.value.length > 0 && templateProviders.length > 0) {
+      conflictMessage.value = `Ya hay ${providers.value.length} proveedor(es) registrado(s) para esta fecha. El template tiene ${templateProviders.length} proveedor(es). ¿Deseas combinar o sobrescribir?`;
       pendingTemplate.value = tmpl;
       pendingProviders.value = templateProviders;
       showConflictModal.value = true;
@@ -745,7 +733,7 @@ function applyProviders(providers: any[]) {
     budgetController.addProvider({
       name: p.name,
       estimated: p.estimated,
-      dollar: p.dollar,
+      accountId: p.accountId,
     });
   });
   budgetController.saveData();
