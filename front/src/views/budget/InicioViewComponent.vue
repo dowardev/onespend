@@ -803,6 +803,7 @@ function saveProviderChanges() {
       accountId: editProviderModalData.value.accountId || 0,
       estimated: Number(editProviderModalData.value.estimated) || 0,
     });
+    budgetController.saveData();
   }
   editProviderModalOpen.value = false;
   editProviderModalProviderId = null;
@@ -881,6 +882,7 @@ async function saveEntryChanges() {
       }
     }
   }
+  budgetController.saveData();
   editEntryModalOpen.value = false;
   editEntryModalData.value = {
     id: null,
@@ -900,6 +902,7 @@ function confirmDelete() {
   if (editEntryModalData.value.id) {
     budgetController.removeIngreso(editEntryModalData.value.id);
   }
+  budgetController.saveData();
   showDeleteAlert.value = false;
   editEntryModalOpen.value = false;
   editEntryModalData.value = {
