@@ -189,7 +189,7 @@ import {
   IonToggle,
   IonAlert,
 } from '@ionic/vue';
-import { computed, ref } from 'vue';
+import { computed, ref, onMounted } from 'vue';
 import {
   chevronBackOutline,
   chevronForwardOutline,
@@ -283,6 +283,11 @@ function confirmClearDay() {
 
 function performClearDay() {
   budgetController.clearDay();
+  budgetController.saveData();
   showClearConfirm.value = false;
 }
+
+onMounted(async () => {
+  await budgetController.loadDataForCurrentDate();
+});
 </script>

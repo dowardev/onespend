@@ -100,10 +100,18 @@ class BudgetController {
     this.store.setIsLoading(true);
     try {
       const dateKey = `budget:${date}`;
+      console.log('[BudgetController.loadDataForDate] Loading data for:', dateKey);
       const data = (await dixieController.getBackup(dateKey)) as any;
+      console.log('[BudgetController.loadDataForDate] Raw data from DB:', data);
 
       if (data && data.data) {
         const d = data.data;
+        console.log('[BudgetController.loadDataForDate] Parsed data:', {
+          entriesCount: d.entries?.length || 0,
+          providersCount: d.proveedores?.length || 0,
+          entries: d.entries,
+          providers: d.proveedores,
+        });
         this.store.setEntries(d.entries || []);
         this.store.setProviders(d.proveedores || []);
         this.store.setFinishDayData(d.finishDayData || {
@@ -115,6 +123,7 @@ class BudgetController {
         });
         this.store.setIsDayClosed(!!d.isDayClosed);
       } else {
+        console.log('[BudgetController.loadDataForDate] No data found, clearing store');
         this.store.clearAll();
       }
     } catch (e) {
@@ -321,6 +330,13 @@ class BudgetController {
       const finishDayDataPlain = this.toPlainObject({ ...this.store.finishDayData });
 
       const dateKey = `budget:${this.store.selectedDate}`;
+      console.log('[BudgetController.saveData] Saving data:', {
+        dateKey,
+        entriesCount: entriesData.length,
+        providersCount: providersData.length,
+        entries: entriesData,
+        providers: providersData,
+      });
       await dixieController.putEntry({
         entry: {
           id: dateKey,
@@ -332,6 +348,7 @@ class BudgetController {
           },
         },
       });
+      console.log('[BudgetController.saveData] Data saved successfully');
     } catch (e) {
       console.error('saveData error', e);
     }

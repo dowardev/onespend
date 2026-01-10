@@ -494,7 +494,6 @@ async function loadAccounts() {
 onMounted(async () => {
   await loadSuppliers();
   loadAccounts();
-  await budgetController.loadDataForCurrentDate();
   
   const suppliersStore = useSuppliersStore();
   unsubscribeFromSuppliers = suppliersStore.subscribeToChanges((suppliers) => {
@@ -651,6 +650,7 @@ function handleUpdateProvider(payload: {
 }) {
   const { id, field, value } = payload;
   budgetController.updateProvider(id, { [field]: value });
+  budgetController.saveData();
 }
 
 function confirmRemoveProveedor(

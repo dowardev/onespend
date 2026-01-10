@@ -1,3 +1,33 @@
+## [v0.27.1] - 2026-01-10
+
+### Fixed
+
+- Fix data persistence not saving after provider and entry operations (add, update, delete)
+- Fix budget data loading by moving `loadDataForCurrentDate` to BudgetView on mount
+- Fix clear day operation to save data immediately after clearing
+
+### Changed
+
+- Redesign ProvidersSummary component with improved per-account summary layout
+- Add AccountBarChart visualization for income vs expense per account
+- Display difference with color-coded success/danger styling per account
+- Simplify layout by consolidating grid structure into single list with summary card
+- Update currency formatting to include `$` prefix in difference labels
+
+### Developer
+
+- Add debug logging to budgetController for data loading and saving operations
+
+### Files Changed
+
+- front/src/controllers/budgetController.ts (modified)
+- front/src/views/budget/BudgetView.vue (modified)
+- front/src/views/budget/InicioViewComponent.vue (modified)
+- front/src/views/budget/ProvidersComponent.vue (modified)
+- front/src/views/budget/components/ProvidersSummary.vue (modified)
+
+---
+
 ## [v0.27.0] - 2026-01-09
 
 ### Breaking Changes

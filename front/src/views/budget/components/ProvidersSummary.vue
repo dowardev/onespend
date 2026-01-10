@@ -1,78 +1,95 @@
 <template>
-  <ion-grid>
-    <ion-row>
-      <ion-col>
-        <ion-list class="transparent">
-          <ion-list-header>
-            <ion-label>Resumen de gastos</ion-label>
-          </ion-list-header>
+  <ion-list class="transparent">
+    <ion-list-header>
+      <ion-label>Resumen por cuenta</ion-label>
+    </ion-list-header>
 
-          <div class="list-content">
-            <ion-item
-              v-for="account in accountsSummary"
-              :key="account.name"
-              lines="full"
-            >
-              <ion-label>{{ account.name }}</ion-label>
-              <ion-label slot="end">{{
-                formatCurrency(account.total)
-              }}</ion-label>
-            </ion-item>
+    <div class="list-content">
+      <template v-if="accountsSummary.length > 0">
+        <ion-item
+          v-for="acc in accountsSummary"
+          :key="acc.name"
+          class="transparent"
+          lines="full"
+        >
+          <ion-label>
+            <h2>{{ acc.name }}</h2>
+            <p>Estimado: {{ formatCurrency(acc.total) }}</p>
+          </ion-label>
+
+          <ion-label slot="end" class="ion-text-end">
+            <h2 :style="{ color: acc.diff >= 0 ? 'var(--ion-color-success)' : 'var(--ion-color-danger)' }">
+              {{ acc.diffLabel }}
+            </h2>
+            <p v-if="acc.ingreso > 0 || acc.total > 0">
+              <span style="color: var(--ion-color-success)">+{{ formatCurrency(acc.ingreso) }}</span>
+              /
+              <span style="color: var(--ion-color-danger)">-{{ formatCurrency(acc.total) }}</span>
+            </p>
+          </ion-label>
+
+          <div slot="end" class="chart-wrapper">
+            <AccountBarChart
+              v-if="acc.ingreso > 0 || acc.total > 0"
+              :ingresos="acc.ingreso"
+              :egresos="acc.total"
+            />
           </div>
-        </ion-list>
-      </ion-col>
-    </ion-row>
-  </ion-grid>
+        </ion-item>
+      </template>
 
-  <ion-grid>
-    <ion-row>
-      <ion-col>
-        <ion-card class="shadow1">
-          <div
-            class="ion-padding-start ion-padding-top"
-            style="display: flex; justify-content: space-between; height: 100%"
-          >
-            <div style="display: flex; align-items: center">
-              <ion-card-title :color="differenceColor">{{
-                differenceLabel
-              }}</ion-card-title>
-            </div>
+      <template v-else>
+        <ion-item lines="none">
+          <ion-label>No hay datos de cuentas</ion-label>
+        </ion-item>
+      </template>
+    </div>
+  </ion-list>
 
-            <ion-button slot="end" fill="clear">
-              <ion-icon :icon="informationCircleOutline"></ion-icon>
-            </ion-button>
-          </div>
+  <!-- Resultado Total Card -->
+  <ion-card class="shadow1">
+    <div
+      class="ion-padding-start ion-padding-top"
+      style="display: flex; justify-content: space-between; align-items: center"
+    >
+      <div style="display: flex; align-items: center">
+        <ion-card-title :color="differenceColor">{{
+          differenceLabel
+        }}</ion-card-title>
+      </div>
 
-          <ion-list class="transparent">
-            <ion-list-header>
-              <ion-label>Resultado</ion-label>
-            </ion-list-header>
+      <ion-button fill="clear">
+        <ion-icon :icon="informationCircleOutline"></ion-icon>
+      </ion-button>
+    </div>
 
-            <div class="list-content" style="border: none">
-              <ion-item
-                v-for="account in accountsSummary"
-                :key="account.name"
-                lines="full"
-              >
-                <ion-label>{{ account.name }}</ion-label>
-                <ion-label slot="end" :color="account.diffColor">{{
-                  account.diffLabel
-                }}</ion-label>
-              </ion-item>
-            </div>
-          </ion-list>
-        </ion-card>
-      </ion-col>
-    </ion-row>
-  </ion-grid>
+    <ion-card-content>
+      <p>
+        <span style="color: var(--ion-color-success)">Ingresos: {{ formatCurrency(totalIngresos) }}</span>
+        <br />
+        <span style="color: var(--ion-color-danger)">Gastos: {{ formatCurrency(totalProvidersRequired) }}</span>
+      </p>
+    </ion-card-content>
+  </ion-card>
 </template>
 
 <script setup lang="ts">
-import { IonRow, IonCol, IonCard, IonItem, IonLabel } from '@ionic/vue';
+import {
+  IonList,
+  IonListHeader,
+  IonLabel,
+  IonItem,
+  IonCard,
+  IonCardTitle,
+  IonCardContent,
+  IonButton,
+  IonIcon,
+} from '@ionic/vue';
 import { informationCircleOutline } from 'ionicons/icons';
 import { computed } from 'vue';
 import { useBudgetStore } from '@/stores/budgetStore';
 import { useAccountsStore } from '@/stores/accountsStore';
+import AccountBarChart from './AccountBarChart.vue';
 
 const budgetStore = useBudgetStore();
 const accountsStore = useAccountsStore();
@@ -139,7 +156,7 @@ const accountsSummary = computed(() => {
       total: data.total,
       ingreso: data.ingreso,
       diff,
-      diffLabel: diff === 0 ? '0' : `${diff > 0 ? '+' : '-'}${Math.round(Math.abs(diff))}`,
+      diffLabel: diff === 0 ? '$0' : `${diff > 0 ? '+' : ''}${formatCurrency(diff)}`,
       diffColor: diff === 0 ? undefined : diff > 0 ? 'success' : 'danger',
     };
   });
@@ -162,10 +179,8 @@ const difference = computed(
 
 const differenceLabel = computed(() => {
   const d = Number(difference.value || 0) || 0;
-  if (d === 0) return '0';
-  const sign = d > 0 ? '+' : '-';
-  const abs = Math.abs(d);
-  return `${sign}${Math.round(abs)}`;
+  if (d === 0) return '$0';
+  return `${d > 0 ? '+' : ''}${formatCurrency(d)}`;
 });
 
 const differenceColor = computed(() => {
@@ -190,5 +205,16 @@ function formatCurrency(v: number | string) {
 <style scoped>
 ion-card {
   margin-bottom: 12px;
+}
+
+.list-content {
+  max-height: calc(100dvh - 210px);
+  overflow-y: auto;
+}
+
+.chart-wrapper {
+  width: 80px;
+  height: 40px;
+  margin-left: 8px;
 }
 </style>
