@@ -20,6 +20,7 @@
                 <span class="legend-color success"></span>
                 Ingreso
               </span>
+
               <span class="legend-item">
                 <span class="legend-color danger"></span>
                 Egreso
@@ -37,7 +38,7 @@
                   lines="full"
                   class="transparent"
                   button
-                  @click="openEditEntryModal(block.item)"
+                  @click="handleEntryClick(block.item)"
                 >
                   <ion-label>
                     {{ block.item._providerName || block.item.name || '-' }}
@@ -78,84 +79,53 @@
         </ion-list>
       </ion-col>
 
-      <ion-col size="12" size-md="4">
+      <ion-col size="12" size-md="3">
         <AccountCards :accounts="accountsWithBalance" />
+
+        <!-- Resultado Total Card -->
+        <ion-card class="shadow1">
+          <div
+            class="ion-padding-start ion-padding-top"
+            style="display: flex; justify-content: space-between; align-items: center"
+          >
+            <div style="display: flex; align-items: center">
+              <ion-card-title :color="totalDifferenceColor">{{
+                totalDifferenceLabel
+              }}</ion-card-title>
+            </div>
+
+            <ion-button fill="clear">
+              <ion-icon :icon="informationCircleOutline"></ion-icon>
+            </ion-button>
+          </div>
+
+          <ion-card-content>
+            <p>
+              <span style="color: var(--ion-color-success)"
+                >Ingresos: {{ formatCurrencyLocal({ v: totalIngresos }) }}</span
+              >
+              <br />
+              <span style="color: var(--ion-color-danger)"
+                >Gastos: {{ formatCurrencyLocal({ v: totalEgresos }) }}</span
+              >
+            </p>
+          </ion-card-content>
+        </ion-card>
       </ion-col>
     </ion-row>
   </ion-grid>
 
-  <ion-modal
+  <!-- Edit Provider Entry Modal -->
+  <EditProviderModal
     :is-open="editProviderModalOpen"
-    :keep-contents-mounted="true"
-    @did-dismiss="editProviderModalOpen = false"
-  >
-    <ion-header class="ion-no-border" mode="ios">
-      <ion-toolbar>
-        <ion-buttons>
-          <ion-button @click="editProviderModalOpen = false">
-            <ion-icon :icon="closeOutline"></ion-icon>
-          </ion-button>
-        </ion-buttons>
-        <ion-title>Editar Proveedor</ion-title>
-        <ion-buttons slot="end">
-          <ion-button @click="saveProviderChanges">Guardar</ion-button>
-        </ion-buttons>
-      </ion-toolbar>
-    </ion-header>
-
-    <ion-content>
-      <ion-card class="shadow1">
-        <ion-list>
-          <ion-item>
-            <ion-label position="stacked">Nombre</ion-label>
-            <ion-input
-              v-model="editProviderModalData.name"
-              placeholder="Nombre del proveedor"
-            ></ion-input>
-          </ion-item>
-          <ion-item>
-            <ion-label position="stacked">Efectivo</ion-label>
-            <ion-input
-              v-model="editProviderModalData.efectivo"
-              type="number"
-              placeholder="0"
-            ></ion-input>
-          </ion-item>
-          <ion-item>
-            <ion-label position="stacked">Tarjeta</ion-label>
-            <ion-input
-              v-model="editProviderModalData.tarjeta"
-              type="number"
-              placeholder="0"
-            ></ion-input>
-          </ion-item>
-          <ion-item>
-            <ion-label position="stacked">Cuenta</ion-label>
-            <ion-select
-              v-model="editProviderModalData.accountId"
-              placeholder="Seleccionar cuenta"
-            >
-              <ion-select-option
-                v-for="acc in accountsList"
-                :key="acc.id"
-                :value="acc.id"
-              >
-                {{ acc.name }}
-              </ion-select-option>
-            </ion-select>
-          </ion-item>
-          <ion-item>
-            <ion-label position="stacked">Estimado</ion-label>
-            <ion-input
-              v-model="editProviderModalData.estimated"
-              type="number"
-              placeholder="0"
-            ></ion-input>
-          </ion-item>
-        </ion-list>
-      </ion-card>
-    </ion-content>
-  </ion-modal>
+    :provider="editProviderData"
+    :suppliers="allSuppliers"
+    :accounts="accountsList"
+    mode="provider"
+    @dismiss="editProviderModalOpen = false"
+    @saved="handleProviderEntrySaved"
+    @deleted="handleProviderEntryDeleted"
+  />
 
   <ion-modal
     :is-open="editEntryModalOpen"
@@ -185,7 +155,7 @@
             <ion-icon :icon="trashOutline"></ion-icon>
           </ion-button>
 
-          <ion-button @click="saveEntryChanges" :disabled="!isFormValid">
+          <ion-button :disabled="!isFormValid" @click="saveEntryChanges">
             <ion-icon :icon="saveOutline"></ion-icon>
           </ion-button>
         </ion-buttons>
@@ -238,6 +208,7 @@
         <ion-list class="transparent">
           <ion-list-header>
             <ion-label>etalles</ion-label>
+
             <ion-button :disabled="!canAddMoreItems" @click="addEntryItem">
               <ion-icon :icon="addOutline"></ion-icon>
               Agregar
@@ -252,6 +223,7 @@
             >
               <ion-item class="transparent">
                 <ion-label position="stacked">Cantidad</ion-label>
+
                 <ion-input
                   v-model.number="item.amount"
                   type="number"
@@ -259,23 +231,38 @@
                 ></ion-input>
               </ion-item>
 
-                <ion-item class="transparent">
-                  <ion-select
-                    v-model="item.accountId"
-                    label="Cuenta"
-                    label-placement="stacked"
-                    :validate="true"
-                    error-text="Selecciona una cuenta"
+              <ion-item class="transparent">
+                <ion-select
+                  v-model="item.accountId"
+                  label="Cuenta"
+                  label-placement="stacked"
+                  :validate="true"
+                  error-text="Selecciona una cuenta"
+                >
+                  <ion-select-option
+                    v-for="acc in availableAccountsForItem(index)"
+                    :key="acc.id"
+                    :value="acc.id"
                   >
-                    <ion-select-option
-                      v-for="acc in availableAccountsForItem(index)"
-                      :key="acc.id"
-                      :value="acc.id"
-                    >
-                      {{ acc.name }}
-                    </ion-select-option>
-                  </ion-select>
-                </ion-item>
+                    {{ acc.name }}
+                  </ion-select-option>
+                </ion-select>
+                <ion-button
+                  slot="end"
+                  fill="clear"
+                  size="small"
+                  @click="openQuickAccountAlert(index)"
+                >
+                  <ion-icon :icon="addOutline"></ion-icon>
+                </ion-button>
+              </ion-item>
+              <ion-note
+                v-if="accountsList.length === 0"
+                color="warning"
+                class="ion-padding-start"
+              >
+                No hay cuentas. Crea una para continuar.
+              </ion-note>
             </div>
           </div>
         </ion-list>
@@ -288,11 +275,17 @@
               v-for="p in providersTodayWithData"
               :key="p.id"
               lines="full"
-              button
-              @click="() => selectProvider(p)"
+              :button="!!p.accountId"
+              :disabled="!p.accountId"
+              @click="() => p.accountId && selectProvider(p)"
             >
-              <ion-label>{{ p.name }}</ion-label>
-              <ion-note slot="end" color="primary">
+              <ion-label>
+                {{ p.name }}
+                <p v-if="!p.accountId" style="color: var(--ion-color-warning)">
+                  Sin cuenta asignada
+                </p>
+              </ion-label>
+              <ion-note slot="end" :color="p.accountId ? 'primary' : 'medium'">
                 {{ formatProviderAmount(p) }}
               </ion-note>
             </ion-item>
@@ -316,12 +309,14 @@
                 label-placement="stacked"
               >
                 <ion-select-option value="ingreso">Ingreso</ion-select-option>
+
                 <ion-select-option value="egreso">Egreso</ion-select-option>
               </ion-select>
             </ion-item>
 
             <ion-item class="transparent" lines="none">
               <ion-label position="stacked">Nombre</ion-label>
+
               <ion-input
                 v-model="editEntryModalData.name"
                 placeholder="Nombre"
@@ -333,6 +328,7 @@
         <ion-list class="transparent">
           <ion-list-header>
             <ion-label>Detalles</ion-label>
+
             <ion-button :disabled="!canAddMoreItems" @click="addEntryItem">
               <ion-icon :icon="addOutline"></ion-icon>
               Agregar
@@ -371,7 +367,22 @@
                     {{ acc.name }}
                   </ion-select-option>
                 </ion-select>
+                <ion-button
+                  slot="end"
+                  fill="clear"
+                  size="small"
+                  @click="openQuickAccountAlert(index)"
+                >
+                  <ion-icon :icon="addOutline"></ion-icon>
+                </ion-button>
               </ion-item>
+              <ion-note
+                v-if="accountsList.length === 0"
+                color="warning"
+                class="ion-padding-horizontal"
+              >
+                No hay cuentas. Crea una para continuar.
+              </ion-note>
 
               <ion-item class="transparent" lines="none">
                 <ion-button slot="end" color="danger" fill="clear"
@@ -401,6 +412,14 @@
     ]"
     @did-dismiss="showDeleteAlert = false"
   ></ion-alert>
+
+  <ion-alert
+    :is-open="showQuickAccountAlert"
+    header="Nueva Cuenta"
+    :inputs="quickAccountInputs"
+    :buttons="quickAccountButtons"
+    @did-dismiss="showQuickAccountAlert = false"
+  ></ion-alert>
 </template>
 
 <script setup lang="ts">
@@ -425,6 +444,8 @@ import {
   IonTitle,
   IonButtons,
   IonCard,
+  IonCardTitle,
+  IonCardContent,
   IonSegment,
   IonSegmentButton,
   IonAlert,
@@ -435,24 +456,80 @@ import {
   saveOutline,
   transgenderOutline,
   trashOutline,
+  informationCircleOutline,
 } from 'ionicons/icons';
 import AccountCards from './components/AccountCards.vue';
+import EditProviderModal from './components/EditProviderModal.vue';
 import { computed, ref, onMounted, reactive, watch } from 'vue';
 import budgetController from '@/controllers/budgetController';
 import accountsController from '@/controllers/accountsController';
+import suppliersController from '@/controllers/suppliersController';
 
 const addEntrySegment = ref('entry');
 const showDeleteAlert = ref(false);
 
+// Quick account creation
+const showQuickAccountAlert = ref(false);
+const quickAccountTargetIndex = ref<number | null>(null);
+
+const quickAccountInputs = [
+  {
+    name: 'accountName',
+    type: 'text',
+    placeholder: 'Nombre de la cuenta',
+  },
+  {
+    name: 'initialBalance',
+    type: 'number',
+    placeholder: 'Balance inicial (opcional)',
+    value: 0,
+  },
+];
+
+const quickAccountButtons = [
+  {
+    text: 'Cancelar',
+    role: 'cancel',
+  },
+  {
+    text: 'Crear',
+    handler: (data: { accountName: string; initialBalance: string }) => {
+      if (!data.accountName || data.accountName.trim() === '') {
+        return false;
+      }
+      createQuickAccount(data.accountName.trim(), Number(data.initialBalance) || 0);
+      return true;
+    },
+  },
+];
+
+function openQuickAccountAlert(itemIndex: number) {
+  quickAccountTargetIndex.value = itemIndex;
+  showQuickAccountAlert.value = true;
+}
+
+async function createQuickAccount(name: string, initialBalance: number) {
+  const newAccount = await accountsController.addAccount({
+    name,
+    initialBalance,
+  });
+  
+  if (newAccount && quickAccountTargetIndex.value !== null) {
+    const idx = quickAccountTargetIndex.value;
+    if (entryItems.value[idx]) {
+      entryItems.value[idx].accountId = newAccount.id;
+    }
+  }
+  
+  quickAccountTargetIndex.value = null;
+}
+
 const editProviderModalOpen = ref(false);
-const editProviderModalData = ref({
-  name: '',
-  efectivo: '',
-  tarjeta: '',
-  accountId: null as number | null,
-  estimated: '',
-});
-let editProviderModalProviderId: string | number | null = null;
+const editProviderData = ref<any>(null);
+const allSuppliers = computed(() => suppliersController.getSuppliers());
+
+// Track the entry ID being edited (for provider entries)
+const editingProviderEntryId = ref<string | number | null>(null);
 
 const editEntryModalOpen = ref(false);
 const editEntryModalData = ref({
@@ -472,7 +549,7 @@ const getDefaultAccountId = () => {
   return accounts.length > 0 ? accounts[0].id : null;
 };
 
-const entryItems = ref([{ amount: 0, accountId: null }]);
+const entryItems = ref<Array<{ amount: number; accountId: any }>>([{ amount: 0, accountId: null }]);
 
 const entryFormState = reactive({
   name: '',
@@ -482,7 +559,7 @@ const entryFormState = reactive({
 
 const isItemsValid = computed(() => {
   return entryFormState.items.every(
-    (item) => Number(item.amount) > 0 && item.accountId != null
+    item => Number(item.amount) > 0 && item.accountId != null
   );
 });
 
@@ -497,8 +574,8 @@ const isFormValid = computed(() => {
 
 watch(
   () => entryItems.value,
-  (newItems) => {
-    entryFormState.items = newItems.map((item) => ({
+  newItems => {
+    entryFormState.items = newItems.map(item => ({
       amount: Number(item.amount) || 0,
       accountId: item.accountId,
     }));
@@ -508,14 +585,14 @@ watch(
 
 watch(
   () => editEntryModalData.value.name,
-  (newName) => {
+  newName => {
     entryFormState.name = newName;
   }
 );
 
 watch(
   () => editEntryModalData.value.entryType,
-  (newType) => {
+  newType => {
     entryFormState.entryType = newType;
   }
 );
@@ -566,36 +643,10 @@ function calculateAccountBalance(acc: any, accountId: string | number) {
   };
 }
 
-function calculateNoAccountStats() {
-  const entriesWithoutAccount = budgetController.getEntries().filter(
-    (e: any) => e.accountId == null || e.accountId === ''
-  );
-
-  const noAccountIngresos = entriesWithoutAccount
-    .filter((e: any) => e.entryType === 'ingreso')
-    .reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
-
-  const noAccountEgresos = entriesWithoutAccount
-    .filter((e: any) => e.entryType === 'egreso')
-    .reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
-
-  return {
-    id: null,
-    name: 'Sin cuenta',
-    initialBalance: 0,
-    ingresos: noAccountIngresos,
-    egresos: noAccountEgresos,
-    balance: noAccountIngresos - noAccountEgresos,
-    hasTransactions: noAccountIngresos > 0 || noAccountEgresos > 0,
-  };
-}
-
 const accountsWithBalance = computed(() => {
   const result = accountsList.value.map((acc: any) =>
     calculateAccountBalance(acc, acc.id)
   );
-
-  const noAccount = calculateNoAccountStats();
 
   const withTransactions = result
     .filter((acc: any) => acc.hasTransactions)
@@ -605,26 +656,56 @@ const accountsWithBalance = computed(() => {
     .filter((acc: any) => !acc.hasTransactions)
     .sort((a: any, b: any) => a.name.localeCompare(b.name));
 
-  return [noAccount, ...withTransactions, ...withoutTransactions];
+  return [...withTransactions, ...withoutTransactions];
+});
+
+// Totales para la card de resultado
+const totalIngresos = computed(() => {
+  return budgetController
+    .getEntries()
+    .filter((e: any) => e.entryType === 'ingreso')
+    .reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
+});
+
+const totalEgresos = computed(() => {
+  return budgetController
+    .getEntries()
+    .filter((e: any) => e.entryType === 'egreso')
+    .reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
+});
+
+const totalDifference = computed(() => {
+  return totalIngresos.value - totalEgresos.value;
+});
+
+const totalDifferenceLabel = computed(() => {
+  const d = totalDifference.value;
+  if (d === 0) return '$0';
+  const formatted = formatCurrencyLocal({ v: Math.abs(d) });
+  return d > 0 ? `+${formatted}` : `-${formatted}`;
+});
+
+const totalDifferenceColor = computed(() => {
+  const d = totalDifference.value;
+  if (d === 0) return undefined;
+  return d > 0 ? 'success' : 'danger';
 });
 
 const providersToday = computed(() => {
   const sel = String(budgetController.getSelectedDate() || '').slice(0, 10);
   if (!sel) return [];
   const addedIds = budgetController.getProviderIdsWithEntries();
-  return budgetController.getProviders().filter(
-    (p: any) => String(p.date || '').slice(0, 10) === sel && !addedIds.has(p.id)
-  );
+  return budgetController
+    .getProviders()
+    .filter(
+      (p: any) =>
+        String(p.date || '').slice(0, 10) === sel && !addedIds.has(p.id)
+    );
 });
 
 const providersTodayWithData = computed(() => {
   return providersToday.value.filter((p: any) => {
-    return (
-      Number(p?.efectivo) > 0 ||
-      Number(p?.tarjeta) > 0 ||
-      Number(p?.accountId) > 0 ||
-      Number(p?.estimated) > 0
-    );
+    return Number(p?.estimated) > 0;
   });
 });
 
@@ -666,16 +747,16 @@ function openAddEntryModal() {
 }
 
 function formatProviderAmount(provider: any) {
-  const amounts = [];
-  if (Number(provider?.efectivo) > 0) amounts.push(`EF: $${provider.efectivo}`);
-  if (Number(provider?.tarjeta) > 0) amounts.push(`TA: $${provider.tarjeta}`);
-  if (Number(provider?.estimated) > 0)
-    amounts.push(`EST: $${provider.estimated}`);
-  return amounts.join(' | ');
+  return formatCurrencyLocal({ v: Number(provider?.estimated) || 0 });
 }
 
 function selectProvider(provider: any) {
+  if (!provider.accountId) {
+    // El proveedor no tiene cuenta asignada, no se puede crear la entrada
+    return;
+  }
   budgetController.addProviderEgresos(provider);
+  budgetController.saveData();
   editEntryModalOpen.value = false;
 }
 
@@ -685,11 +766,11 @@ function blockKey(block: any, idx: number) {
 }
 
 function getAccountName(accountId: string | number | null | undefined) {
-  if (!accountId) return 'Sin cuenta';
+  if (!accountId) return '';
   const account = accountsList.value.find(
     (a: any) => String(a.id) === String(accountId)
   );
-  return account?.name || 'Sin cuenta';
+  return account?.name || '';
 }
 
 function getEntryAccountInfo(item: any) {
@@ -702,7 +783,8 @@ function getEntryAccountInfo(item: any) {
     if (uniqueAccountIds.length > 1) {
       return { name: 'Varios', accountId: null };
     }
-    const accountId = (uniqueAccountIds[0] as string | number | undefined) ?? null;
+    const accountId =
+      (uniqueAccountIds[0] as string | number | undefined) ?? null;
     return { name: getAccountName(accountId), accountId };
   }
   return {
@@ -764,79 +846,109 @@ function isProviderEntry(item: any) {
   );
 }
 
-function openEditProviderModal(item: any) {
-  const groupId = item._fromProviderGroupId;
-  let providerId: string | number | null = null;
-
-  if (groupId) {
-    const match = String(groupId).match(/^prov-(.+)-\d+$/);
-    providerId = match ? match[1] : null;
-  }
-
-  let provider = providerId
-    ? budgetController.getProviders().find((p: any) => String(p.id) === String(providerId))
-    : null;
-
-  if (!provider && item._providerName) {
-    provider = budgetController.getProviders().find((p: any) => p.name === item._providerName);
-  }
-
-  if (provider) {
-    editProviderModalProviderId = provider.id;
-    editProviderModalData.value = {
-      name: provider.name || '',
-      efectivo: provider.efectivo?.toString() || '',
-      tarjeta: provider.tarjeta?.toString() || '',
-      accountId: provider.accountId || null,
-      estimated: provider.estimated?.toString() || '',
-    };
-    editProviderModalOpen.value = true;
+function handleEntryClick(item: any) {
+  if (isProviderEntry(item)) {
+    openEditProviderModal(item);
+  } else {
+    openEditEntryModal(item);
   }
 }
 
-function saveProviderChanges() {
-  if (editProviderModalProviderId) {
-    budgetController.updateProvider(editProviderModalProviderId, {
-      name: editProviderModalData.value.name,
-      efectivo: Number(editProviderModalData.value.efectivo) || 0,
-      tarjeta: Number(editProviderModalData.value.tarjeta) || 0,
-      accountId: editProviderModalData.value.accountId || 0,
-      estimated: Number(editProviderModalData.value.estimated) || 0,
+async function openEditProviderModal(item: any) {
+  // Store the entry ID for later use when saving
+  editingProviderEntryId.value = item.id;
+  
+  // Load suppliers to get full product data
+  await suppliersController.listSuppliers();
+  
+  // Find full supplier data
+  const providerName = item._providerName || item.name || '';
+  const supplierId = item._supplierId || item._fromProviderGroupId;
+  
+  let fullSupplier: any = null;
+  if (supplierId) {
+    fullSupplier = allSuppliers.value.find(
+      (s: any) => String(s.id) === String(supplierId)
+    );
+  }
+  if (!fullSupplier) {
+    fullSupplier = allSuppliers.value.find(
+      (s: any) => s.name?.toLowerCase() === providerName.toLowerCase()
+    );
+  }
+  
+  // Build provider object compatible with the modal
+  editProviderData.value = {
+    id: item.id, // This is the entry ID
+    name: providerName,
+    estimated: Number(item.amount) || 0,
+    accountId: item.accountId,
+    _supplierId: fullSupplier?.id || supplierId,
+    _supplierName: providerName,
+    products: fullSupplier?.products || [],
+  };
+  
+  editProviderModalOpen.value = true;
+}
+
+function handleProviderEntrySaved(payload: {
+  providerId?: string | number;
+  providerName?: string;
+  items: Array<{ amount: number; accountId: any }>;
+  totalAmount: number;
+}) {
+  const entryId = editingProviderEntryId.value;
+  if (entryId) {
+    const groups = payload.items.map(item => ({
+      amount: Number(item.amount) || 0,
+      accountId: item.accountId,
+    }));
+    
+    budgetController.updateIngreso(entryId, {
+      amount: payload.totalAmount,
+      accountId: groups[0]?.accountId || null,
+      groups: groups.length > 1 ? groups : undefined,
+      _providerName: payload.providerName,
     });
     budgetController.saveData();
   }
   editProviderModalOpen.value = false;
-  editProviderModalProviderId = null;
+  editProviderData.value = null;
+  editingProviderEntryId.value = null;
+}
+
+function handleProviderEntryDeleted(entryId: string | number) {
+  budgetController.removeIngreso(entryId);
+  budgetController.saveData();
+  editProviderModalOpen.value = false;
+  editProviderData.value = null;
+  editingProviderEntryId.value = null;
 }
 
 function openEditEntryModal(item: any) {
-  if (isProviderEntry(item)) {
-    openEditProviderModal(item);
-  } else {
-    editEntryModalData.value = {
-      id: item.id,
-      entryType: item.entryType || 'ingreso',
-      name: item.name || '',
-    };
+  editEntryModalData.value = {
+    id: item.id,
+    entryType: item.entryType || 'ingreso',
+    name: item.name || '',
+  };
 
-    if (item.groups && Array.isArray(item.groups) && item.groups.length > 0) {
-      entryItems.value = item.groups.map((g: any) => ({
-        amount: Number(g.amount) || 0,
-        accountId: g.accountId ?? getDefaultAccountId(),
-      }));
-    } else {
-      entryItems.value = [
-        {
-          amount: Number(item.amount) || 0,
-          accountId: item.accountId || getDefaultAccountId(),
-        },
-      ];
-    }
-    entryFormState.items = [...entryItems.value];
-    entryFormState.name = item.name || '';
-    entryFormState.entryType = item.entryType || 'ingreso';
-    editEntryModalOpen.value = true;
+  if (item.groups && Array.isArray(item.groups) && item.groups.length > 0) {
+    entryItems.value = item.groups.map((g: any) => ({
+      amount: Number(g.amount) || 0,
+      accountId: g.accountId ?? getDefaultAccountId(),
+    }));
+  } else {
+    entryItems.value = [
+      {
+        amount: Number(item.amount) || 0,
+        accountId: item.accountId || getDefaultAccountId(),
+      },
+    ];
   }
+  entryFormState.items = [...entryItems.value];
+  entryFormState.name = item.name || '';
+  entryFormState.entryType = item.entryType || 'ingreso';
+  editEntryModalOpen.value = true;
 }
 
 function addEntryItem() {

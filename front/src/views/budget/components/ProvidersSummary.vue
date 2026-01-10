@@ -18,13 +18,24 @@
           </ion-label>
 
           <ion-label slot="end" class="ion-text-end">
-            <h2 :style="{ color: acc.diff >= 0 ? 'var(--ion-color-success)' : 'var(--ion-color-danger)' }">
+            <h2
+              :style="{
+                color:
+                  acc.diff >= 0
+                    ? 'var(--ion-color-success)'
+                    : 'var(--ion-color-danger)',
+              }"
+            >
               {{ acc.diffLabel }}
             </h2>
             <p v-if="acc.ingreso > 0 || acc.total > 0">
-              <span style="color: var(--ion-color-success)">+{{ formatCurrency(acc.ingreso) }}</span>
+              <span style="color: var(--ion-color-success)"
+                >+{{ formatCurrency(acc.ingreso) }}</span
+              >
               /
-              <span style="color: var(--ion-color-danger)">-{{ formatCurrency(acc.total) }}</span>
+              <span style="color: var(--ion-color-danger)"
+                >-{{ formatCurrency(acc.total) }}</span
+              >
             </p>
           </ion-label>
 
@@ -65,9 +76,13 @@
 
     <ion-card-content>
       <p>
-        <span style="color: var(--ion-color-success)">Ingresos: {{ formatCurrency(totalIngresos) }}</span>
+        <span style="color: var(--ion-color-success)"
+          >Ingresos: {{ formatCurrency(totalIngresos) }}</span
+        >
         <br />
-        <span style="color: var(--ion-color-danger)">Gastos: {{ formatCurrency(totalProvidersRequired) }}</span>
+        <span style="color: var(--ion-color-danger)"
+          >Gastos: {{ formatCurrency(totalProvidersRequired) }}</span
+        >
       </p>
     </ion-card-content>
   </ion-card>
@@ -95,12 +110,14 @@ const budgetStore = useBudgetStore();
 const accountsStore = useAccountsStore();
 
 // Get account name by id from accounts store
-function getAccountNameById(accountId: string | number | null | undefined): string {
-  if (!accountId) return 'Sin cuenta';
+function getAccountNameById(
+  accountId: string | number | null | undefined
+): string {
+  if (!accountId) return '';
   const account = accountsStore.accounts.find(
-    (a) => String(a.id) === String(accountId)
+    a => String(a.id) === String(accountId)
   );
-  return account?.name || 'Sin cuenta';
+  return account?.name || '';
 }
 
 // Group by account and sum totals (providers + egresos) and ingresos
@@ -156,7 +173,8 @@ const accountsSummary = computed(() => {
       total: data.total,
       ingreso: data.ingreso,
       diff,
-      diffLabel: diff === 0 ? '$0' : `${diff > 0 ? '+' : ''}${formatCurrency(diff)}`,
+      diffLabel:
+        diff === 0 ? '$0' : `${diff > 0 ? '+' : ''}${formatCurrency(diff)}`,
       diffColor: diff === 0 ? undefined : diff > 0 ? 'success' : 'danger',
     };
   });
@@ -174,7 +192,8 @@ const totalIngresos = computed(() => {
 
 // difference: ingresos - required (positive => sobrante, negative => faltante)
 const difference = computed(
-  () => Number(totalIngresos.value || 0) - Number(totalProvidersRequired.value || 0)
+  () =>
+    Number(totalIngresos.value || 0) - Number(totalProvidersRequired.value || 0)
 );
 
 const differenceLabel = computed(() => {

@@ -1,3 +1,37 @@
+## [v0.28.0] - 2026-01-10
+
+### Added
+
+- Add reusable `EditProviderModal.vue` component for editing providers and provider entries
+- Add total income/expense result card in InicioViewComponent showing balance difference
+- Add quick account creation button in entry modal for creating accounts on the fly
+- Add account requirement validation for providers before allowing entry creation
+
+### Changed
+
+- Refactor `addProviderEgresos` in budgetController to use single entry with `estimated` field instead of multiple entries for efectivo/tarjeta/credito
+- Refactor InicioViewComponent to use EditProviderModal for provider entry editing
+- Refactor ProvidersComponent to use EditProviderModal for provider add/edit functionality
+- Simplify provider amount display to show only estimated value
+- Remove "Sin cuenta" (no account) category from account cards and displays
+- Update `handleProviderDeleted` to also remove linked egresos entries
+
+### Refactor
+
+- Extract provider modal logic from InicioViewComponent and ProvidersComponent into shared EditProviderModal component
+- Consolidate provider selection and editing workflow into unified modal interface
+
+### Files Changed
+
+- front/src/controllers/budgetController.ts (modified)
+- front/src/views/budget/InicioViewComponent.vue (modified)
+- front/src/views/budget/ProviderCardComponent.vue (modified)
+- front/src/views/budget/ProvidersComponent.vue (modified)
+- front/src/views/budget/components/EditProviderModal.vue (added)
+- front/src/views/budget/components/ProvidersSummary.vue (modified)
+
+---
+
 ## [v0.27.1] - 2026-01-10
 
 ### Fixed
