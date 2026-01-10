@@ -211,40 +211,25 @@ class BudgetController {
   }
 
   addProviderEgresos(provider: Provider) {
-    const toAdd: Income[] = [];
     const now = Date.now();
+    const amount = Number(provider.estimated || 0);
 
-    const pushIf = (
-      amount: number,
-      label: string,
-      paymentType: 'cash' | 'digital'
-    ) => {
-      const v = Number(amount || 0);
-      if (v > 0) {
-        toAdd.push({
-          id: Date.now() + Math.random(),
-          name: `${provider.name}${label ? ' - ' + label : ''}`,
-          amount: v,
-          date: this.store.selectedDate,
-          paymentType,
-          entryType: 'egreso',
-          createdAt: now,
-        });
-      }
+    if (amount <= 0) return;
+
+    const newEntry: Income = {
+      id: Date.now() + Math.random(),
+      name: provider.name,
+      amount,
+      date: this.store.selectedDate,
+      paymentType: 'cash',
+      entryType: 'egreso',
+      createdAt: now,
+      accountId: provider.accountId,
+      _providerName: provider.name,
+      _fromProviderGroupId: `prov-${provider.id}-${Date.now()}`,
     };
 
-    pushIf(provider.efectivo, 'efectivo', 'cash');
-    pushIf(provider.tarjeta, 'tarjeta', 'digital');
-    pushIf(provider.credito, 'credito', 'cash');
-
-    if (toAdd.length) {
-      const groupId = `prov-${provider.id}-${Date.now()}`;
-      toAdd.forEach(t => {
-        t._fromProviderGroupId = groupId;
-        t._providerName = provider.name;
-      });
-      toAdd.forEach(entry => this.store.addEntry(entry));
-    }
+    this.store.addEntry(newEntry);
   }
 
   updateIngreso(id: string | number, changes: Partial<Income>) {

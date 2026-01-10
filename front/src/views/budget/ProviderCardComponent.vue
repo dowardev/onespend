@@ -373,13 +373,13 @@ function isPaymentPrimary(params: { provider?: Provider } | any) {
 
 const accountDisplay = computed(() => {
   const accountId = props.provider.accountId;
-  if (!accountId) return 'Sin cuenta';
+  if (!accountId) return '';
   
   const account = accountsStore.accounts.find(
     (a) => String(a.id) === String(accountId)
   );
   
-  if (!account) return 'Sin cuenta';
+  if (!account) return '';
   return account.name;
 });
 
