@@ -1,3 +1,23 @@
+## [v0.28.1] - 2026-01-10
+
+### Refactor
+
+- Move statistics period components to performance directory for better co-location
+- Relocate `PeriodLayout.vue`, `PeriodChartWrapper.vue`, and `PeriodSnapshots.vue` from `components/statistics/` to `views/statistics/performance/components/`
+- Update imports in all performance view components to use relative paths
+
+### Files Changed
+
+- front/src/views/statistics/performance/components/PeriodLayout.vue (moved)
+- front/src/views/statistics/performance/components/PeriodChartWrapper.vue (moved)
+- front/src/views/statistics/performance/components/PeriodSnapshots.vue (moved)
+- front/src/views/statistics/performance/day/DayPerformanceComponent.vue (modified)
+- front/src/views/statistics/performance/month/MonthPerformanceComponent.vue (modified)
+- front/src/views/statistics/performance/week/WeekPerformanceComponent.vue (modified)
+- front/src/views/statistics/performance/year/YearPerformanceComponent.vue (modified)
+
+---
+
 ## [v0.28.0] - 2026-01-10
 
 ### Added

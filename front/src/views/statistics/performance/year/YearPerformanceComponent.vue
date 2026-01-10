@@ -374,9 +374,9 @@ ChartJS.register(
 );
 
 // Components
-import PeriodLayout from '@/components/statistics/PeriodLayout.vue';
-import PeriodChartWrapper from '@/components/statistics/PeriodChartWrapper.vue';
-import PeriodSnapshots from '@/components/statistics/PeriodSnapshots.vue';
+import PeriodLayout from '../components/PeriodLayout.vue';
+import PeriodChartWrapper from '../components/PeriodChartWrapper.vue';
+import PeriodSnapshots from '../components/PeriodSnapshots.vue';
 // end components
 
 // Controllers
