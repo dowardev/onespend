@@ -6,7 +6,10 @@
           <ion-list-header>
             <ion-label>Registro</ion-label>
 
-            <ion-button @click="openAddEntryModal">
+            <ion-button
+              :disabled="budgetStore.isDayClosed"
+              @click="openAddEntryModal"
+            >
               <ion-icon :icon="addOutline"></ion-icon>
             </ion-button>
           </ion-list-header>
@@ -42,6 +45,7 @@
                     "
                     class="transparent"
                     button
+                    :disabled="budgetStore.isDayClosed"
                     @click="handleEntryClick(block.item)"
                   >
                     <ion-label>
@@ -158,12 +162,13 @@
             v-if="editEntryModalData.id"
             fill="clear"
             color="danger"
+            :disabled="budgetStore.isDayClosed"
             @click="deleteEntry"
           >
             <ion-icon :icon="trashOutline"></ion-icon>
           </ion-button>
 
-          <ion-button :disabled="!isFormValid" @click="saveEntryChanges">
+          <ion-button :disabled="!isFormValid || budgetStore.isDayClosed" @click="saveEntryChanges">
             <ion-icon :icon="saveOutline"></ion-icon>
           </ion-button>
         </ion-buttons>
@@ -188,41 +193,44 @@
       </ion-grid>
 
       <template v-if="!editEntryModalData.id && addEntrySegment === 'entry'">
-        <ion-list class="transparent">
-          <div class="list-content">
-            <ion-item lines="full" class="transparent">
-              <ion-select
-                v-model="editEntryModalData.entryType"
-                interface="popover"
-                label="Tipo"
-                label-placement="stacked"
+          <ion-list class="transparent">
+            <div class="list-content">
+              <ion-item lines="full" class="transparent">
+                <ion-select
+                  v-model="editEntryModalData.entryType"
+                  interface="popover"
+                  label="Tipo"
+                  label-placement="stacked"
+                >
+                  <ion-select-option value="ingreso">Ingreso</ion-select-option>
+
+                  <ion-select-option value="egreso">Egreso</ion-select-option>
+                </ion-select>
+              </ion-item>
+
+              <ion-item class="transparent" lines="none">
+                <ion-label position="stacked">Nombre</ion-label>
+
+                <ion-input
+                  v-model="editEntryModalData.name"
+                  placeholder="Nombre"
+                ></ion-input>
+              </ion-item>
+            </div>
+          </ion-list>
+
+          <ion-list class="transparent">
+            <ion-list-header>
+              <ion-label>Detalles</ion-label>
+
+              <ion-button
+                :disabled="!canAddMoreItems || budgetStore.isDayClosed"
+                @click="addEntryItem"
               >
-                <ion-select-option value="ingreso">Ingreso</ion-select-option>
-
-                <ion-select-option value="egreso">Egreso</ion-select-option>
-              </ion-select>
-            </ion-item>
-
-            <ion-item class="transparent" lines="none">
-              <ion-label position="stacked">Nombre</ion-label>
-
-              <ion-input
-                v-model="editEntryModalData.name"
-                placeholder="Nombre"
-              ></ion-input>
-            </ion-item>
-          </div>
-        </ion-list>
-
-        <ion-list class="transparent">
-          <ion-list-header>
-            <ion-label>Detalles</ion-label>
-
-            <ion-button :disabled="!canAddMoreItems" @click="addEntryItem">
-              <ion-icon :icon="addOutline"></ion-icon>
-              Agregar
-            </ion-button>
-          </ion-list-header>
+                <ion-icon :icon="addOutline"></ion-icon>
+                Agregar
+              </ion-button>
+            </ion-list-header>
 
           <div class="list-content">
             <ion-card
@@ -262,6 +270,7 @@
                   slot="end"
                   fill="clear"
                   size="small"
+                  :disabled="budgetStore.isDayClosed"
                   @click="openQuickAccountAlert(index)"
                 >
                   <ion-icon :icon="addOutline"></ion-icon>
@@ -287,9 +296,9 @@
               v-for="p in providersTodayWithData"
               :key="p.id"
               lines="full"
-              :button="!!p.accountId"
-              :disabled="!p.accountId"
-              @click="() => p.accountId && selectProvider(p)"
+              :button="!!p.accountId && !budgetStore.isDayClosed"
+              :disabled="!p.accountId || budgetStore.isDayClosed"
+              @click="() => p.accountId && !budgetStore.isDayClosed && selectProvider(p)"
             >
               <ion-label>
                 {{ p.name }}
@@ -341,7 +350,10 @@
           <ion-list-header>
             <ion-label>Detalles</ion-label>
 
-            <ion-button :disabled="!canAddMoreItems" @click="addEntryItem">
+            <ion-button
+              :disabled="!canAddMoreItems || budgetStore.isDayClosed"
+              @click="addEntryItem"
+            >
               <ion-icon :icon="addOutline"></ion-icon>
               Agregar
             </ion-button>
@@ -383,6 +395,7 @@
                   slot="end"
                   fill="clear"
                   size="small"
+                  :disabled="budgetStore.isDayClosed"
                   @click="openQuickAccountAlert(index)"
                 >
                   <ion-icon :icon="addOutline"></ion-icon>
@@ -397,7 +410,11 @@
               </ion-note>
 
               <ion-item class="transparent" lines="none">
-                <ion-button slot="end" color="danger" fill="clear"
+                <ion-button
+                  slot="end"
+                  color="danger"
+                  fill="clear"
+                  :disabled="budgetStore.isDayClosed"
                   >Eliminar</ion-button
                 >
               </ion-item>
@@ -476,6 +493,9 @@ import { computed, ref, onMounted, reactive, watch } from 'vue';
 import budgetController from '@/controllers/budgetController';
 import accountsController from '@/controllers/accountsController';
 import suppliersController from '@/controllers/suppliersController';
+import { useBudgetStore } from '@/stores/budgetStore';
+
+const budgetStore = useBudgetStore();
 
 const addEntrySegment = ref('entry');
 const showDeleteAlert = ref(false);
@@ -632,7 +652,11 @@ const canAddMoreItems = computed(() => {
 function calculateAccountBalance(acc: any, accountId: string | number) {
   const initialBalance = Number(acc.initialBalance) || 0;
 
-  const entriesForAccount = budgetController.getEntries().filter((e: any) => {
+  const entries = budgetStore.isDayClosed && budgetStore.frozenSnapshot
+    ? budgetStore.frozenSnapshot.entries
+    : budgetController.getEntries();
+    
+  const entriesForAccount = entries.filter((e: any) => {
     if (String(e.accountId) === String(accountId)) return true;
     if (e.groups && Array.isArray(e.groups)) {
       return e.groups.some(
@@ -678,15 +702,19 @@ const accountsWithBalance = computed(() => {
 
 // Totales para la card de resultado
 const totalIngresos = computed(() => {
-  return budgetController
-    .getEntries()
+  const entries = budgetStore.isDayClosed && budgetStore.frozenSnapshot
+    ? budgetStore.frozenSnapshot.entries
+    : budgetController.getEntries();
+  return entries
     .filter((e: any) => e.entryType === 'ingreso')
     .reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
 });
 
 const totalEgresos = computed(() => {
-  return budgetController
-    .getEntries()
+  const entries = budgetStore.isDayClosed && budgetStore.frozenSnapshot
+    ? budgetStore.frozenSnapshot.entries
+    : budgetController.getEntries();
+  return entries
     .filter((e: any) => e.entryType === 'egreso')
     .reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
 });
@@ -727,8 +755,10 @@ const providersTodayWithData = computed(() => {
 });
 
 const renderedEntries = computed(() => {
-  const list = budgetController.getEntries();
-  return list.map((item: any) => ({ type: 'item', item }));
+  const entries = budgetStore.isDayClosed && budgetStore.frozenSnapshot
+    ? budgetStore.frozenSnapshot.entries
+    : budgetController.getEntries();
+  return entries.map((item: any) => ({ type: 'item', item }));
 });
 
 function formatCurrencyLocal(params: { v: number }) {
@@ -822,7 +852,11 @@ function getAccountRemaining(
 
   const initialBalance = Number(account.initialBalance) || 0;
 
-  const entriesForAccount = budgetController.getEntries().filter((e: any) => {
+  const entries = budgetStore.isDayClosed && budgetStore.frozenSnapshot
+    ? budgetStore.frozenSnapshot.entries
+    : budgetController.getEntries();
+    
+  const entriesForAccount = entries.filter((e: any) => {
     if (String(e.accountId) === String(accountId)) return true;
     if (e.groups && Array.isArray(e.groups)) {
       return e.groups.some(

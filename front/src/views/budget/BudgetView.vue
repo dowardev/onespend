@@ -23,19 +23,17 @@
             <ion-segment
               v-model="activeView"
               scrollable
-              :disabled="budgetController.getIsDayClosed()"
             >
               <ion-segment-button value="inicio">Inicio</ion-segment-button>
-              <ion-segment-button value="proveedores"
-                >Proveedores</ion-segment-button
-              >
+              <ion-segment-button value="proveedores">Proveedores</ion-segment-button>
+              <ion-segment-button v-if="budgetController.getIsDayClosed()" value="form">Form</ion-segment-button>
+              <ion-segment-button v-if="budgetController.getIsDayClosed()" value="resumen">Resumen</ion-segment-button>
             </ion-segment>
           </ion-buttons>
 
           <ion-buttons slot="end">
             <ion-button
               title="Retroceder"
-              :disabled="budgetController.getIsDayClosed()"
               @click="goBack"
             >
               <ion-icon :icon="chevronBackOutline"></ion-icon>
@@ -43,7 +41,6 @@
 
             <ion-button
               title="Seleccionar fecha"
-              :disabled="budgetController.getIsDayClosed()"
               @click="openDatePicker($event)"
             >
               {{ formattedSelectedDate }}
@@ -51,7 +48,6 @@
 
             <ion-button
               title="Avanzar"
-              :disabled="budgetController.getIsDayClosed()"
               @click="goForward"
             >
               <ion-icon :icon="chevronForwardOutline"></ion-icon>
@@ -60,7 +56,7 @@
         </ion-item>
       </section>
 
-      <section v-if="!budgetController.getIsDayClosed()">
+      <section>
         <ion-grid v-if="activeView === 'inicio'">
           <ion-row>
             <ion-col size="12">
@@ -76,14 +72,84 @@
             </ion-col>
           </ion-row>
         </ion-grid>
-      </section>
 
-      <section v-else>
-        <ion-row>
-          <ion-col size="12">
-            <FinishDayForm :finish-day="finishDay" @save="saveFinishDay" />
-          </ion-col>
-        </ion-row>
+        <ion-grid v-if="activeView === 'form'">
+          <ion-row>
+            <ion-col size="12">
+              <FinishDayForm :finish-day="finishDay" @save="onFinishDaySaved" />
+            </ion-col>
+          </ion-row>
+        </ion-grid>
+
+        <ion-grid v-if="activeView === 'resumen'">
+          <ion-row class="ion-justify-content-center">
+            <ion-col size="12" size-md="8" size-lg="6">
+              <ion-card class="shadow1">
+                <ion-card-header>
+                  <ion-card-title>Resumen del Día</ion-card-title>
+                  <ion-card-subtitle>{{ formattedSelectedDate }}</ion-card-subtitle>
+                </ion-card-header>
+                <ion-card-content>
+                  <ion-list>
+                    <ion-item>
+                      <ion-label>
+                        <h3>Proveedores</h3>
+                        <p>{{ daySummary.providersCount }} proveedores</p>
+                      </ion-label>
+                      <ion-note slot="end" color="primary">
+                        {{ formatCurrency(daySummary.totalEstimated) }}
+                      </ion-note>
+                    </ion-item>
+                    <ion-item>
+                      <ion-label>
+                        <h3>Ingresos</h3>
+                        <p>{{ daySummary.incomeCount }} registros</p>
+                      </ion-label>
+                      <ion-note slot="end" color="success">
+                        {{ formatCurrency(daySummary.totalIncome) }}
+                      </ion-note>
+                    </ion-item>
+                    <ion-item>
+                      <ion-label>
+                        <h3>Gastos</h3>
+                        <p>{{ daySummary.expenseCount }} registros</p>
+                      </ion-label>
+                      <ion-note slot="end" color="danger">
+                        {{ formatCurrency(daySummary.totalExpense) }}
+                      </ion-note>
+                    </ion-item>
+                    <ion-item>
+                      <ion-label>
+                        <h3>Balance</h3>
+                        <p>Total del día</p>
+                      </ion-label>
+                      <ion-note
+                        slot="end"
+                        :color="daySummary.balance >= 0 ? 'success' : 'danger'"
+                      >
+                        {{ formatCurrency(daySummary.balance) }}
+                      </ion-note>
+                    </ion-item>
+                  </ion-list>
+                  <ion-item lines="none" class="ion-margin-top">
+                    <ion-icon :icon="timeOutline" slot="start" color="medium"></ion-icon>
+                    <ion-label>
+                      <p>Inicio del día</p>
+                      <h3>{{ daySummary.startTime }}</h3>
+                    </ion-label>
+                  </ion-item>
+                  <ion-item lines="none">
+                    <ion-icon :icon="timeOutline" slot="start" color="medium"></ion-icon>
+                    <ion-label>
+                      <p>Final del día</p>
+                      <h3>{{ daySummary.endTime }}</h3>
+                    </ion-label>
+                  </ion-item>
+                </ion-card-content>
+              </ion-card>
+            </ion-col>
+          </ion-row>
+        </ion-grid>
       </section>
 
       <!-- popovers -->
@@ -124,6 +190,7 @@
           <ion-item lines="none" button>
             <ion-toggle
               :checked="!budgetController.getIsDayClosed()"
+              :disabled="isDayOfficiallyClosed"
               enable-on-off-labels
               @ion-change="
                 budgetController.toggleDayClosed(!$event.detail.checked)
@@ -148,7 +215,7 @@
             ></ion-icon>
             <ion-label>Vaciar día</ion-label>
           </ion-item>
-          <ion-item v-if="isDev" button @click="insertTestData">
+          <ion-item v-if="isDev && !isDayOfficiallyClosed" button @click="insertTestData">
             <ion-icon slot="start" :icon="addOutline" color="success"></ion-icon>
             <ion-label color="success">Insertar datos prueba</ion-label>
           </ion-item>
@@ -198,6 +265,14 @@ import {
   IonToolbar,
   IonToggle,
   IonAlert,
+  IonCard,
+  IonCardHeader,
+  IonCardTitle,
+  IonCardSubtitle,
+  IonCardContent,
+  IonList,
+  IonListHeader,
+  IonNote,
 } from '@ionic/vue';
 import { computed, ref, onMounted } from 'vue';
 import {
@@ -206,6 +281,7 @@ import {
   ellipsisVerticalOutline,
   trashOutline,
   addOutline,
+  timeOutline,
 } from 'ionicons/icons';
 import { format } from 'date-fns';
 import { parseLocalDate, formatLocalDate } from '@/utils/date';
@@ -219,7 +295,7 @@ import InicioViewComponent from './InicioViewComponent.vue';
 import ProvidersComponent from './ProvidersComponent.vue';
 import FinishDayForm from './FinishDayForm.vue';
 
-const activeView = ref<'inicio' | 'proveedores'>('inicio');
+const activeView = ref<'inicio' | 'proveedores' | 'form' | 'resumen'>('inicio');
 const showDatePicker = ref(false);
 const showMoreOptions = ref(false);
 const showClearConfirm = ref(false);
@@ -227,12 +303,74 @@ const datePickerEvent = ref<Event | null>(null);
 const moreOptionsEvent = ref<Event | null>(null);
 const designMode = computed(() => systemController.getDesignMode());
 const isDev = computed(() => import.meta.env.DEV);
+const isDayOfficiallyClosed = computed(() => {
+  const finishDayData = budgetController.getFinishDayData();
+  return (
+    budgetController.getIsDayClosed() &&
+    (finishDayData.totalSalesEfectivo > 0 ||
+      finishDayData.totalSalesTarjeta > 0 ||
+      finishDayData.totalSalesCredito > 0 ||
+      finishDayData.margin > 0)
+  );
+});
 
 const finishDay = computed(() => budgetController.getFinishDayData());
 
-function saveFinishDay() {
+const daySummary = computed(() => {
+  const entries = budgetController.getEntries();
+  const providers = budgetController.getProviders();
+
+  const ingresos = entries.filter((e: any) => e.entryType === 'ingreso');
+  const egresos = entries.filter((e: any) => e.entryType === 'egreso');
+
+  const totalIncome = ingresos.reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
+  const totalExpense = egresos.reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
+  const totalEstimated = providers.reduce((sum: number, p: any) => sum + Number(p.estimated || 0), 0);
+
+  const allTimestamps = entries
+    .map((e: any) => Number(e.createdAt))
+    .filter((t: number) => t > 0)
+    .sort((a: number, b: number) => a - b);
+
+  const startTime = allTimestamps.length > 0 ? formatTime(allTimestamps[0]) : '--:--';
+  const endTime = allTimestamps.length > 0 ? formatTime(allTimestamps[allTimestamps.length - 1]) : '--:--';
+
+  return {
+    providersCount: providers.length,
+    providers,
+    incomeCount: ingresos.length,
+    incomes: ingresos,
+    expenseCount: egresos.length,
+    expenses: egresos,
+    totalIncome,
+    totalExpense,
+    totalEstimated,
+    balance: totalIncome - totalExpense,
+    startTime,
+    endTime,
+  };
+});
+
+function onFinishDaySaved() {
   budgetController.saveData();
   showMoreOptions.value = false;
+  activeView.value = 'resumen';
+  isDayOfficiallyClosed.value = true;
+}
+
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat('es-MX', {
+    style: 'currency',
+    currency: 'MXN',
+  }).format(value || 0);
+}
+
+function formatTime(timestamp: number) {
+  if (!timestamp) return '--:--';
+  return new Date(timestamp).toLocaleTimeString('es-MX', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 const formattedSelectedDate = computed(() => {

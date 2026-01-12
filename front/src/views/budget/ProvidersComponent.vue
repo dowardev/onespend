@@ -6,11 +6,17 @@
           <ion-list-header>
             <ion-label>Proveedores</ion-label>
 
-            <ion-button @click="addEmptyProvider">
+            <ion-button
+              :disabled="budgetStore.isDayClosed"
+              @click="addEmptyProvider"
+            >
               <ion-icon :icon="addOutline"></ion-icon>
             </ion-button>
 
-            <ion-button @click="openTemplatesModal">
+            <ion-button
+              :disabled="budgetStore.isDayClosed"
+              @click="openTemplatesModal"
+            >
               <ion-icon :icon="documentOutline"></ion-icon>
             </ion-button>
           </ion-list-header>
@@ -22,6 +28,7 @@
                 :key="p.id"
                 :provider="p"
                 :has-products="false"
+                :is-closed="budgetStore.isDayClosed"
                 :is-disabled="providerIdsWithEntries.has(p.id)"
                 @update-provider="handleUpdateProvider"
                 @confirm-remove-proveedor="confirmRemoveProveedor"
@@ -239,10 +246,18 @@ const allSuppliers = computed(() => suppliersController.getSuppliers());
 const allAccounts = ref<any[]>([]);
 
 // Computed for reactive providers list
-const providers = computed(() => budgetStore.providers);
-const providerIdsWithEntries = computed(
-  () => budgetStore.providerIdsWithEntries
-);
+const providers = computed(() => {
+  if (budgetStore.isDayClosed && budgetStore.frozenSnapshot) {
+    return budgetStore.frozenSnapshot.providers;
+  }
+  return budgetStore.providers;
+});
+const providerIdsWithEntries = computed(() => {
+  if (budgetStore.isDayClosed && budgetStore.frozenSnapshot) {
+    return new Set(budgetStore.frozenSnapshot.providers.map(p => p.id));
+  }
+  return budgetStore.providerIdsWithEntries;
+});
 const editingProvider = ref<any>(null);
 const showTemplatesModal = ref(false);
 const showConflictModal = ref(false);
@@ -274,6 +289,10 @@ onMounted(async () => {
 
   const suppliersStore = useSuppliersStore();
   unsubscribeFromSuppliers = suppliersStore.subscribeToChanges(suppliers => {
+    if (budgetStore.isDayClosed) {
+      console.log('[Suppliers Change] Day is closed, ignoring supplier update');
+      return;
+    }
     console.log(
       '[Suppliers Change] Received update, suppliers count:',
       suppliers.length
@@ -386,6 +405,7 @@ const deleteConfirm = reactive({
 });
 
 function addEmptyProvider() {
+  if (budgetStore.isDayClosed) return;
   openAddProviderModal();
 }
 

@@ -60,6 +60,12 @@ export const useBudgetStore = defineStore('budget', () => {
   });
 
   const isLoading = ref(false);
+  const frozenSnapshot = ref<{
+    entries: Income[];
+    providers: Provider[];
+    finishDayData: FinishDayData;
+    timestamp: number;
+  } | null>(null);
 
   const ingresos = computed(() =>
     entries.filter(e => e.entryType === 'ingreso')
@@ -177,6 +183,10 @@ export const useBudgetStore = defineStore('budget', () => {
 
   function setIsDayClosed(value: boolean) {
     isDayClosed.value = value;
+  }
+
+  function setFrozenSnapshot(snapshot: typeof frozenSnapshot.value) {
+    frozenSnapshot.value = snapshot;
   }
 
   function setEntries(data: Income[]) {
@@ -330,9 +340,11 @@ export const useBudgetStore = defineStore('budget', () => {
     egresosEfectivo,
     egresosTarjeta,
     providerIdsWithEntries,
+    frozenSnapshot,
     setSelectedDate,
     setIsLoading,
     setIsDayClosed,
+    setFrozenSnapshot,
     setEntries,
     setProviders,
     setFinishDayData,

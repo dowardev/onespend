@@ -1,3 +1,34 @@
+## [v0.29.0] - 2026-01-12
+
+### Added
+
+- Add day closure feature that creates immutable frozen snapshot of entries, providers, and finish day data
+- Add "Form" and "Resumen" views in BudgetView for viewing/editing after day is closed
+- Add day summary card displaying providers count, income/expense totals, balance, and start/end timestamps
+- Add frozen snapshot functionality in budgetController and budgetStore for data preservation
+- Add warning message in FinishDayForm about data becoming immutable after saving
+
+### Changed
+
+- Refactor BudgetView to allow navigation and date selection even when day is closed
+- Refactor all budget views (InicioViewComponent, ProvidersComponent, AccountCards) to disable editing when day is closed
+- Update ProviderCardComponent to show "Día cerrado" state and disable all interactions
+- Update FinishDayForm with warning icon and styling for better UX
+- Translate console logs to Spanish for consistency
+
+### Files Changed
+
+- front/src/controllers/budgetController.ts (modified)
+- front/src/stores/budgetStore.ts (modified)
+- front/src/views/budget/BudgetView.vue (modified)
+- front/src/views/budget/FinishDayForm.vue (modified)
+- front/src/views/budget/InicioViewComponent.vue (modified)
+- front/src/views/budget/ProviderCardComponent.vue (modified)
+- front/src/views/budget/ProvidersComponent.vue (modified)
+- front/src/views/budget/components/AccountCards.vue (modified)
+
+---
+
 ## [v0.28.3] - 2026-01-11
 
 ### Added
