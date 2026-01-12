@@ -1,7 +1,7 @@
 <template>
   <ion-grid>
     <ion-row class="ion-justify-content-center">
-      <ion-col size="12" size-md="4" size-lg="6" size-xl="3">
+      <ion-col size="12" size-md="4" size-lg="6" size-xl="4">
         <ion-list class="transparent">
           <ion-list-header>
             <ion-label>Registro</ion-label>
@@ -84,7 +84,7 @@
         </ion-list>
       </ion-col>
 
-      <ion-col size="12" size-md="4" size-lg="6" size-xl="3">
+      <ion-col size="12" size-md="4" size-lg="6" size-xl="4">
         <AccountCards :accounts="accountsWithBalance" />
 
         <!-- Resultado Total Card -->

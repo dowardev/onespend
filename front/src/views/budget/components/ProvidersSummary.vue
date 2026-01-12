@@ -28,6 +28,7 @@
             >
               {{ acc.diffLabel }}
             </h2>
+
             <p v-if="acc.ingreso > 0 || acc.total > 0">
               <span style="color: var(--ion-color-success)"
                 >+{{ formatCurrency(acc.ingreso) }}</span
@@ -59,31 +60,28 @@
 
   <!-- Resultado Total Card -->
   <ion-card class="shadow1">
-    <div
-      class="ion-padding-start ion-padding-top"
-      style="display: flex; justify-content: space-between; align-items: center"
-    >
-      <div style="display: flex; align-items: center">
-        <ion-card-title :color="differenceColor">{{
-          differenceLabel
-        }}</ion-card-title>
-      </div>
-
-      <ion-button fill="clear">
-        <ion-icon :icon="informationCircleOutline"></ion-icon>
-      </ion-button>
-    </div>
+    <ion-card-header>
+      <ion-card-title :color="differenceColor">{{
+        differenceLabel
+      }}</ion-card-title>
+    </ion-card-header>
 
     <ion-card-content>
-      <p>
-        <span style="color: var(--ion-color-success)"
-          >Ingresos: {{ formatCurrency(totalIngresos) }}</span
-        >
-        <br>
-        <span style="color: var(--ion-color-danger)"
-          >Gastos: {{ formatCurrency(totalProvidersRequired) }}</span
-        >
-      </p>
+      <ion-item class="transparent">
+        <ion-label>Ingresos</ion-label>
+
+        <ion-label slot="end" color="success">{{
+          formatCurrency(totalIngresos)
+        }}</ion-label>
+      </ion-item>
+
+      <ion-item class="transparent">
+        <ion-label>Egresos</ion-label>
+
+        <ion-label slot="end" color="danget">{{
+          formatCurrency(totalProvidersRequired)
+        }}</ion-label>
+      </ion-item>
     </ion-card-content>
   </ion-card>
 </template>

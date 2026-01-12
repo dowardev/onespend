@@ -1,3 +1,29 @@
+## [v0.28.3] - 2026-01-11
+
+### Added
+
+- Add breakpoint detection and logging functions in main.ts for development debugging
+- Log current Ionic breakpoint (xs, sm, md, lg, xl) on app mount and window resize
+
+### Changed
+
+- Improve responsive layout in InicioViewComponent by adjusting size-xl column from 3 to 4 for better desktop display
+- Increase budget summary card width for improved visibility on large screens
+
+### Refactor
+
+- Redesign ProvidersSummary Resultado Total Card with ion-card-header and ion-item components
+- Replace custom div layout with native Ionic components for better accessibility and styling
+- Update ingresos/egresos display to use color-coded ion-label slots for improved visual hierarchy
+
+### Files Changed
+
+- front/src/main.ts (modified)
+- front/src/views/budget/InicioViewComponent.vue (modified)
+- front/src/views/budget/components/ProvidersSummary.vue (modified)
+
+---
+
 ## [v0.28.2] - 2026-01-11
 
 ### Added
