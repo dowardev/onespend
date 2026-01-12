@@ -2,11 +2,11 @@
   <ion-grid>
     <ion-row class="ion-justify-content-center">
       <ion-col size="12" size-md="8" size-lg="6" size-xl="4">
-        <ion-item class="transparent" lines="none">
-          <ion-label
-            >Completa los siguientes datos requeridos para los datos
-            estadisticos</ion-label
-          >
+        <ion-item class="transparent warning-item" lines="none">
+          <ion-icon :icon="warningOutline" color="warning" slot="start"></ion-icon>
+          <ion-label class="warning-label">
+            Una vez guardado el día, los datos no podrán modificarse
+          </ion-label>
         </ion-item>
 
         <ion-item class="transparent" lines="full">
@@ -64,9 +64,9 @@
     <!-- toasts  -->
     <ion-toast
       :is-open="showToast"
-      message="Datos actualizados"
-      duration="2000"
-      color="dark"
+      message="Datos guardados correctamente"
+      duration="3000"
+      color="success"
       @did-dismiss="showToast = false"
     ></ion-toast>
     <!-- end toasts  -->
@@ -85,17 +85,34 @@ import {
   IonSelect,
   IonSelectOption,
   IonToast,
+  IonIcon,
 } from '@ionic/vue';
-import { ref } from 'vue';
+import { ref, toRef } from 'vue';
+import { warningOutline } from 'ionicons/icons';
 
 const props = defineProps<{ finishDay: any }>();
 const emit = defineEmits(['save']);
 
-const finishDay = props.finishDay;
+const finishDay = toRef(props, 'finishDay');
 const showToast = ref(false);
 
 function handleSave() {
+  console.log('[FinishDayForm] handleSave llamado - emitiendo save');
   emit('save');
+  console.log('[FinishDayForm] Toast mostrándose');
   showToast.value = true;
 }
 </script>
+
+<style scoped>
+.warning-item {
+  --background: rgba(255, 193, 7, 0.1);
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.warning-label {
+  color: var(--ion-color-warning);
+  font-weight: 500;
+}
+</style>

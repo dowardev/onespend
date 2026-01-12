@@ -3,7 +3,8 @@
     class="transparent"
     lines="full"
     button
-    @click="$emit('open-edit-modal', { provider: props.provider })"
+    :disabled="isClosed"
+    @click="!isClosed && $emit('open-edit-modal', { provider: props.provider })"
   >
     <ion-label>
       {{ props.provider._supplierName || props.provider.name || 'Sin nombre' }}
@@ -52,14 +53,19 @@
   >
     <ion-content>
       <ion-list>
-        <ion-item button lines="none" @click="onMoveFromOptions($event)">
+        <ion-item
+          v-if="!isClosed"
+          button
+          lines="none"
+          @click="onMoveFromOptions($event)"
+        >
           <ion-icon slot="start" :icon="swapHorizontalOutline"></ion-icon>
 
           <ion-label>Mover</ion-label>
         </ion-item>
 
         <ion-item
-          v-if="props.hasProducts"
+          v-if="props.hasProducts && !isClosed"
           button
           lines="none"
           @click="onProductsFromOptions($event)"
@@ -75,10 +81,19 @@
           <ion-label>Notas</ion-label>
         </ion-item>
 
-        <ion-item button lines="none" @click="onDeleteFromOptions($event)">
+        <ion-item
+          v-if="!isClosed"
+          button
+          lines="none"
+          @click="onDeleteFromOptions($event)"
+        >
           <ion-icon slot="start" :icon="trashOutline" color="danger"></ion-icon>
 
           <ion-label class="danger">Eliminar</ion-label>
+        </ion-item>
+
+        <ion-item v-if="isClosed" lines="none">
+          <ion-label class="danger">Día cerrado</ion-label>
         </ion-item>
       </ion-list>
     </ion-content>

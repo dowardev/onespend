@@ -315,13 +315,12 @@ class BudgetController {
       const finishDayDataPlain = this.toPlainObject({ ...this.store.finishDayData });
 
       const dateKey = `budget:${this.store.selectedDate}`;
-      console.log('[BudgetController.saveData] Saving data:', {
+      console.log('[BudgetController.saveData] Guardando datos...', {
         dateKey,
-        entriesCount: entriesData.length,
-        providersCount: providersData.length,
-        entries: entriesData,
-        providers: providersData,
+        isDayClosed: this.store.isDayClosed,
+        finishDayData: finishDayDataPlain,
       });
+      
       await dixieController.putEntry({
         entry: {
           id: dateKey,
@@ -333,10 +332,33 @@ class BudgetController {
           },
         },
       });
-      console.log('[BudgetController.saveData] Data saved successfully');
+      
+      console.log('[BudgetController.saveData] Datos guardados correctamente');
+      
+      if (this.store.isDayClosed) {
+        console.log('[BudgetController.saveData] Creando instantánea congelada...');
+        this.createFrozenSnapshot();
+      }
+      
+      console.log('[BudgetController.saveData] Proceso completado');
     } catch (e) {
-      console.error('saveData error', e);
+      console.error('[BudgetController.saveData] Error:', e);
     }
+  }
+
+  private createFrozenSnapshot() {
+    const snapshot = {
+      entries: this.toPlainObject(this.store.entries),
+      providers: this.toPlainObject(this.store.providers),
+      finishDayData: this.toPlainObject({ ...this.store.finishDayData }),
+      timestamp: Date.now(),
+    };
+    
+    this.store.setFrozenSnapshot(snapshot);
+  }
+
+  getFrozenSnapshot() {
+    return this.store.frozenSnapshot;
   }
 
   private toPlainObject(obj: any): any {
