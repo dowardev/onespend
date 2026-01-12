@@ -1,7 +1,7 @@
 <template>
   <ion-grid>
     <ion-row class="ion-justify-content-center">
-      <ion-col size="12" size-md="4">
+      <ion-col size="12" size-md="4" size-lg="6" size-xl="3">
         <ion-list class="transparent">
           <ion-list-header>
             <ion-label>Registro</ion-label>
@@ -11,11 +11,13 @@
             </ion-button>
           </ion-list-header>
 
-          <div
-            class="list-content"
-            style="flex: 1 1 auto; overflow-y: auto; min-height: 0"
-          >
-            <div class="color-legend">
+          <div class="list-content" style="flex: 1 1 auto; min-height: 0">
+            <div
+              class="color-legend"
+              style="
+                border-bottom: 1px solid var(--ion-background-color-step-200);
+              "
+            >
               <span class="legend-item">
                 <span class="legend-color success"></span>
                 Ingreso
@@ -26,67 +28,74 @@
                 Egreso
               </span>
             </div>
-            <hr />
 
-            <template v-if="budgetController.getEntries().length > 0">
-              <template
-                v-for="(block, bIdx) in renderedEntries"
-                :key="blockKey(block, bIdx)"
-              >
-                <ion-item
-                  v-if="block.type === 'item'"
-                  lines="full"
-                  class="transparent"
-                  button
-                  @click="handleEntryClick(block.item)"
+            <div class="scroll-content">
+              <template v-if="budgetController.getEntries().length > 0">
+                <template
+                  v-for="(block, bIdx) in renderedEntries"
+                  :key="blockKey(block, bIdx)"
                 >
-                  <ion-label>
-                    {{ block.item._providerName || block.item.name || '-' }}
-                    <p>{{ formatTimeLocal(block.item.createdAt) }}</p>
-                  </ion-label>
-
-                  <ion-label
-                    slot="end"
-                    class="ion-text-end"
-                    :style="`color: ${block.item.entryType === 'egreso' ? 'var(--ion-color-danger)' : 'var(--ion-color-success)'}`"
+                  <ion-item
+                    v-if="block.type === 'item'"
+                    :lines="
+                      bIdx === renderedEntries.length - 1 ? 'none' : 'full'
+                    "
+                    class="transparent"
+                    button
+                    @click="handleEntryClick(block.item)"
                   >
-                    {{ formatCurrencyLocal({ v: block.item.amount || 0 }) }}
+                    <ion-label>
+                      {{ block.item._providerName || block.item.name || '-' }}
+                      <p>{{ formatTimeLocal(block.item.createdAt) }}</p>
+                    </ion-label>
 
-                    <p>
-                      {{ getEntryAccountInfo(block.item).name }}:
-                      {{
-                        formatCurrencyLocal({
-                          v: getAccountRemaining(
-                            getEntryAccountInfo(block.item).accountId,
-                            block.item.id
-                          ),
-                        })
-                      }}
-                    </p>
-                  </ion-label>
-                </ion-item>
+                    <ion-label
+                      slot="end"
+                      class="ion-text-end"
+                      :style="`color: ${block.item.entryType === 'egreso' ? 'var(--ion-color-danger)' : 'var(--ion-color-success)'}`"
+                    >
+                      {{ formatCurrencyLocal({ v: block.item.amount || 0 }) }}
+
+                      <p>
+                        {{ getEntryAccountInfo(block.item).name }}:
+                        {{
+                          formatCurrencyLocal({
+                            v: getAccountRemaining(
+                              getEntryAccountInfo(block.item).accountId,
+                              block.item.id
+                            ),
+                          })
+                        }}
+                      </p>
+                    </ion-label>
+                  </ion-item>
+                </template>
               </template>
-            </template>
 
-            <template v-else>
-              <div class="ion-padding">
-                <ion-label
-                  >Pulsa el botón "+" para agregar un nuevo ingreso</ion-label
-                >
-              </div>
-            </template>
+              <template v-else>
+                <div class="ion-padding">
+                  <ion-label
+                    >Pulsa el botón "+" para agregar un nuevo ingreso</ion-label
+                  >
+                </div>
+              </template>
+            </div>
           </div>
         </ion-list>
       </ion-col>
 
-      <ion-col size="12" size-md="3">
+      <ion-col size="12" size-md="4" size-lg="6" size-xl="3">
         <AccountCards :accounts="accountsWithBalance" />
 
         <!-- Resultado Total Card -->
         <ion-card class="shadow1">
           <div
             class="ion-padding-start ion-padding-top"
-            style="display: flex; justify-content: space-between; align-items: center"
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+            "
           >
             <div style="display: flex; align-items: center">
               <ion-card-title :color="totalDifferenceColor">{{
@@ -104,7 +113,7 @@
               <span style="color: var(--ion-color-success)"
                 >Ingresos: {{ formatCurrencyLocal({ v: totalIngresos }) }}</span
               >
-              <br />
+              <br>
               <span style="color: var(--ion-color-danger)"
                 >Gastos: {{ formatCurrencyLocal({ v: totalEgresos }) }}</span
               >
@@ -130,7 +139,6 @@
   <ion-modal
     :is-open="editEntryModalOpen"
     :keep-contents-mounted="true"
-    style="--height: 85%"
     @did-dismiss="editEntryModalOpen = false"
   >
     <ion-header class="ion-no-border" mode="ios">
@@ -182,9 +190,10 @@
       <template v-if="!editEntryModalData.id && addEntrySegment === 'entry'">
         <ion-list class="transparent">
           <div class="list-content">
-            <ion-item lines="none" class="transparent">
+            <ion-item lines="full" class="transparent">
               <ion-select
                 v-model="editEntryModalData.entryType"
+                interface="popover"
                 label="Tipo"
                 label-placement="stacked"
               >
@@ -207,7 +216,7 @@
 
         <ion-list class="transparent">
           <ion-list-header>
-            <ion-label>etalles</ion-label>
+            <ion-label>Detalles</ion-label>
 
             <ion-button :disabled="!canAddMoreItems" @click="addEntryItem">
               <ion-icon :icon="addOutline"></ion-icon>
@@ -216,12 +225,12 @@
           </ion-list-header>
 
           <div class="list-content">
-            <div
+            <ion-card
               v-for="(item, index) in entryItems"
               :key="index"
-              :class="{ 'ion-padding-bottom': index !== entryItems.length - 1 }"
+              class="shadow1"
             >
-              <ion-item class="transparent">
+              <ion-item lines="full" class="transparent">
                 <ion-label position="stacked">Cantidad</ion-label>
 
                 <ion-input
@@ -231,9 +240,11 @@
                 ></ion-input>
               </ion-item>
 
-              <ion-item class="transparent">
+              <ion-item class="transparent" lines="none">
                 <ion-select
                   v-model="item.accountId"
+                  interface="popover"
+                  style="--border-width: 0px"
                   label="Cuenta"
                   label-placement="stacked"
                   :validate="true"
@@ -256,21 +267,22 @@
                   <ion-icon :icon="addOutline"></ion-icon>
                 </ion-button>
               </ion-item>
-              <ion-note
-                v-if="accountsList.length === 0"
-                color="warning"
-                class="ion-padding-start"
-              >
-                No hay cuentas. Crea una para continuar.
-              </ion-note>
-            </div>
+            </ion-card>
+
+            <ion-note
+              v-if="accountsList.length === 0"
+              color="warning"
+              class="ion-padding-start"
+            >
+              No hay cuentas. Crea una para continuar.
+            </ion-note>
           </div>
         </ion-list>
       </template>
 
       <template v-if="!editEntryModalData.id && addEntrySegment === 'provider'">
         <ion-list>
-          <template v-if="providersTodayWithData.length">
+          <div v-if="providersTodayWithData.length" class="list-content">
             <ion-item
               v-for="p in providersTodayWithData"
               :key="p.id"
@@ -289,7 +301,7 @@
                 {{ formatProviderAmount(p) }}
               </ion-note>
             </ion-item>
-          </template>
+          </div>
 
           <template v-else>
             <div class="ion-padding ion-text-center">
@@ -497,7 +509,10 @@ const quickAccountButtons = [
       if (!data.accountName || data.accountName.trim() === '') {
         return false;
       }
-      createQuickAccount(data.accountName.trim(), Number(data.initialBalance) || 0);
+      createQuickAccount(
+        data.accountName.trim(),
+        Number(data.initialBalance) || 0
+      );
       return true;
     },
   },
@@ -513,14 +528,14 @@ async function createQuickAccount(name: string, initialBalance: number) {
     name,
     initialBalance,
   });
-  
+
   if (newAccount && quickAccountTargetIndex.value !== null) {
     const idx = quickAccountTargetIndex.value;
     if (entryItems.value[idx]) {
       entryItems.value[idx].accountId = newAccount.id;
     }
   }
-  
+
   quickAccountTargetIndex.value = null;
 }
 
@@ -549,7 +564,9 @@ const getDefaultAccountId = () => {
   return accounts.length > 0 ? accounts[0].id : null;
 };
 
-const entryItems = ref<Array<{ amount: number; accountId: any }>>([{ amount: 0, accountId: null }]);
+const entryItems = ref<Array<{ amount: number; accountId: any }>>([
+  { amount: 0, accountId: null },
+]);
 
 const entryFormState = reactive({
   name: '',
@@ -857,14 +874,14 @@ function handleEntryClick(item: any) {
 async function openEditProviderModal(item: any) {
   // Store the entry ID for later use when saving
   editingProviderEntryId.value = item.id;
-  
+
   // Load suppliers to get full product data
   await suppliersController.listSuppliers();
-  
+
   // Find full supplier data
   const providerName = item._providerName || item.name || '';
   const supplierId = item._supplierId || item._fromProviderGroupId;
-  
+
   let fullSupplier: any = null;
   if (supplierId) {
     fullSupplier = allSuppliers.value.find(
@@ -876,7 +893,7 @@ async function openEditProviderModal(item: any) {
       (s: any) => s.name?.toLowerCase() === providerName.toLowerCase()
     );
   }
-  
+
   // Build provider object compatible with the modal
   editProviderData.value = {
     id: item.id, // This is the entry ID
@@ -887,7 +904,7 @@ async function openEditProviderModal(item: any) {
     _supplierName: providerName,
     products: fullSupplier?.products || [],
   };
-  
+
   editProviderModalOpen.value = true;
 }
 
@@ -903,7 +920,7 @@ function handleProviderEntrySaved(payload: {
       amount: Number(item.amount) || 0,
       accountId: item.accountId,
     }));
-    
+
     budgetController.updateIngreso(entryId, {
       amount: payload.totalAmount,
       accountId: groups[0]?.accountId || null,
@@ -1070,7 +1087,11 @@ onMounted(() => {
 
 .list-content {
   max-height: calc(100vh - 210px);
+}
+
+.scroll-content {
   overflow-y: auto;
+  max-height: calc(100vh - 245px);
 }
 
 .legend-item {

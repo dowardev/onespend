@@ -7,10 +7,10 @@
     <div class="list-content">
       <template v-if="accountsSummary.length > 0">
         <ion-item
-          v-for="acc in accountsSummary"
+          v-for="(acc, index) in accountsSummary"
           :key="acc.name"
           class="transparent"
-          lines="full"
+          :lines="index === accountsSummary.length - 1 ? 'none' : 'full'"
         >
           <ion-label>
             <h2>{{ acc.name }}</h2>
@@ -79,7 +79,7 @@
         <span style="color: var(--ion-color-success)"
           >Ingresos: {{ formatCurrency(totalIngresos) }}</span
         >
-        <br />
+        <br>
         <span style="color: var(--ion-color-danger)"
           >Gastos: {{ formatCurrency(totalProvidersRequired) }}</span
         >

@@ -1,3 +1,28 @@
+## [v0.28.2] - 2026-01-11
+
+### Added
+
+- Add icons to MainMenu navigation items for improved visual navigation
+- Add wallet, document, business, layers, statsChart, speedometer, construct, and colorPalette icons to menu items
+- Add test data insertion feature for development mode in BudgetView
+- Add responsive layout breakpoints (size-lg, size-xl) for better tablet and desktop support
+
+### Changed
+
+- Redesign MainMenu with cleaner styling: remove transparent class, add icons, change lines to none
+- Refactor InicioViewComponent with improved responsive layout and scroll behavior
+- Simplify ProviderCardComponent from card design to ion-item for cleaner list appearance
+- Major refactor EditProviderModal with new UI: save button in header, improved search, better segment navigation
+- Remove borders and adjust background styles in variables.css for cleaner visual hierarchy
+- Remove modal height restriction from AccountCards for better content flexibility
+
+### Fixed
+
+- Fix typo "etalles" to "Detalles" in InicioViewComponent entry form
+- Fix ion-button order in AddAccountComponent for consistent button placement
+
+---
+
 ## [v0.28.1] - 2026-01-10
 
 ### Refactor

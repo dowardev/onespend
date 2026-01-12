@@ -52,7 +52,6 @@
     </div>
 
     <ion-modal
-      class="accounts__modal"
       :is-open="showModal"
       :backdrop-dismiss="false"
       @did-dismiss="cancelModal"
@@ -165,10 +164,6 @@ async function onDeleteAccount(id: string | number) {
   width: 80px;
   height: 40px;
   margin-left: 8px;
-}
-
-.accounts__modal {
-  --height: 80dvh;
 }
 
 </style>

@@ -16,7 +16,7 @@
           <ion-button v-if="selectedId" color="danger" @click="confirmRemove">
             <ion-icon :icon="trashOutline"></ion-icon>
           </ion-button>
-          <ion-button @click="onSubmit" :disabled="!isFormValid">
+          <ion-button :disabled="!isFormValid" @click="onSubmit">
             <ion-icon :icon="saveOutline"></ion-icon>
           </ion-button>
         </ion-buttons>

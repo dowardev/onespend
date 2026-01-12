@@ -1,7 +1,7 @@
 <template>
   <ion-grid>
     <ion-row class="ion-justify-content-center">
-      <ion-col size="4">
+      <ion-col size="4" size-lg="6" size-xl="4">
         <ion-list class="transparent">
           <ion-list-header>
             <ion-label>Proveedores</ion-label>
@@ -42,7 +42,7 @@
         </ion-list>
       </ion-col>
 
-      <ion-col size="3">
+      <ion-col size="3" size-lg="6" size-xl="4">
         <ProvidersSummary />
       </ion-col>
     </ion-row>
@@ -303,9 +303,9 @@ function openAddProviderModal() {
 async function openEditProviderModal(payload: { provider: any }) {
   console.log('openEditProviderModal - payload:', payload);
   const provider = payload.provider;
-  
+
   await loadSuppliers();
-  
+
   // Find full supplier data
   let fullSupplier: any = null;
   const supplierId = provider._supplierId || provider._supplierKey;
@@ -332,7 +332,7 @@ async function openEditProviderModal(payload: { provider: any }) {
     _supplierName: provider._supplierName || provider.name,
     products: fullSupplier?.products || [],
   };
-  
+
   showAddProviderModal.value = true;
 }
 

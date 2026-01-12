@@ -1,47 +1,24 @@
 <template>
-  <ion-card
-    :class="[
-      'provider-card',
-      'shadow2',
-      {
-        'provider-just-added': props.provider._justAdded,
-        'provider-disabled': props.isDisabled,
-      },
-    ]"
+  <ion-item
+    class="transparent"
+    lines="full"
     button
     @click="$emit('open-edit-modal', { provider: props.provider })"
   >
-    <div class="provider-content">
-      <div class="provider-header">
-        <ion-icon :icon="businessOutline" class="provider-icon"></ion-icon>
-        <ion-label class="provider-name">{{ props.provider._supplierName || props.provider.name || 'Sin nombre' }}</ion-label>
-      </div>
-
-      <div class="provider-details">
-        <div class="detail-row">
+    <ion-label>
+      {{ props.provider._supplierName || props.provider.name || 'Sin nombre' }}
+      <div style="display: flex">
+        <div style="display: flex; align-items: center; margin-right: 4px">
           <ion-icon :icon="walletOutline" class="detail-icon"></ion-icon>
-          <ion-label class="account-label">
-            {{ accountDisplay }}
-          </ion-label>
         </div>
-
-        <div class="total-row">
-          <ion-label class="total-label">
-            {{ formatCurrency({ v: props.provider.estimated || 0 }) }}
-          </ion-label>
-        </div>
+        <div>{{ accountDisplay }}</div>
       </div>
-    </div>
+    </ion-label>
 
-    <ion-button
-      slot="end"
-      fill="clear"
-      class="options-btn"
-      @click.stop="openOptionsPopover($event)"
-    >
-      <ion-icon :icon="ellipsisVerticalOutline"></ion-icon>
-    </ion-button>
-  </ion-card>
+    <ion-label slot="end">{{
+      formatCurrency({ v: props.provider.estimated || 0 })
+    }}</ion-label>
+  </ion-item>
 
   <!-- popovers -->
   <ion-popover
@@ -374,11 +351,11 @@ function isPaymentPrimary(params: { provider?: Provider } | any) {
 const accountDisplay = computed(() => {
   const accountId = props.provider.accountId;
   if (!accountId) return '';
-  
+
   const account = accountsStore.accounts.find(
-    (a) => String(a.id) === String(accountId)
+    a => String(a.id) === String(accountId)
   );
-  
+
   if (!account) return '';
   return account.name;
 });
