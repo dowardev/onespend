@@ -36,9 +36,24 @@ import './theme/variables.css';
 
 import { createPinia } from 'pinia';
 
+function getIonicBreakpoint(): string {
+  const width = window.innerWidth;
+  if (width >= 1200) return 'xl';
+  if (width >= 992) return 'lg';
+  if (width >= 768) return 'md';
+  if (width >= 576) return 'sm';
+  return 'xs';
+}
+
+function logBreakpoint() {
+  console.log(`Ionic Breakpoint: ${getIonicBreakpoint()} (width: ${window.innerWidth}px)`);
+}
+
 const pinia = createPinia();
 const app = createApp(App).use(IonicVue).use(router).use(pinia);
 
 router.isReady().then(() => {
   app.mount('#app');
+  logBreakpoint();
+  window.addEventListener('resize', logBreakpoint);
 });
