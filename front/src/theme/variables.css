@@ -30,7 +30,6 @@ ion-card.no-shadow {
 ion-item.transparent,
 ion-item-divider.transparent {
   --background: transparent;
-  border-bottom: 1px solid var(--ion-background-color-step-200) !important;
 }
 ion-item.border-rounded {
   border-radius: 4px;
@@ -46,7 +45,7 @@ ion-list > div.list-content {
   border: 1px solid var(--ion-background-color-step-300);
   border-radius: 4px;
   margin: 10px;
-  background: var(--background-contrast) !important;
+  background: var(--background-contrast) ;
 }
 /* ion list */
 

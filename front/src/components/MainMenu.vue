@@ -13,48 +13,48 @@
 
     <ion-content>
       <ion-list>
-        <div class="list-content">
+        <div >
           <ion-item
-            class="transparent"
             button
-            lines="full"
+            lines="none"
             :class="{ 'menu-active': isBudget }"
             :aria-current="isBudget ? 'page' : undefined"
             @click="navigate({ path: '/budget' })"
           >
+            <ion-icon slot="start" :icon="walletOutline"></ion-icon>
             <ion-label>Presupuesto</ion-label>
           </ion-item>
 
           <ion-item
-            class="transparent"
             button
-            lines="full"
+            lines="none"
             :class="{ 'menu-active': isTemplates }"
             :aria-current="isTemplates ? 'page' : undefined"
             @click="navigate({ path: '/templates' })"
           >
+            <ion-icon slot="start" :icon="documentTextOutline"></ion-icon>
             <ion-label>Templates</ion-label>
           </ion-item>
 
           <ion-item
-            class="transparent"
             button
-            lines="full"
+            lines="none"
             :class="{ 'menu-active': isSuppliers }"
             :aria-current="isSuppliers ? 'page' : undefined"
             @click="navigate({ path: '/suppliers' })"
           >
+            <ion-icon slot="start" :icon="businessOutline"></ion-icon>
             <ion-label>Provedores</ion-label>
           </ion-item>
 
           <ion-item
-            class="transparent"
             button
-            lines="full"
+            lines="none"
             :class="{ 'menu-active': isSuppliersAccounts }"
             :aria-current="isSuppliersAccounts ? 'page' : undefined"
             @click="navigate({ path: '/suppliers/accounts' })"
           >
+            <ion-icon slot="start" :icon="layersOutline"></ion-icon>
             <ion-label>Cuentas</ion-label>
           </ion-item>
         </div>
@@ -65,26 +65,26 @@
           <ion-label>Estadisticas</ion-label>
         </ion-list-header>
 
-        <div class="list-content">
+        <div>
           <ion-item
-            class="transparent"
             button
-            lines="full"
+            lines="none"
             :class="{ 'menu-active': isStatisticsCashFlow }"
             :aria-current="isStatisticsCashFlow ? 'page' : undefined"
             @click="navigate({ path: '/statistics/cash-flow' })"
           >
+            <ion-icon slot="start" :icon="statsChartOutline"></ion-icon>
             <ion-label>Flujo de caja</ion-label>
           </ion-item>
 
           <ion-item
-            class="transparent"
             button
-            lines="full"
+            lines="none"
             :class="{ 'menu-active': isStatisticsPerformance }"
             :aria-current="isStatisticsPerformance ? 'page' : undefined"
             @click="navigate({ path: '/statistics/performance' })"
           >
+            <ion-icon slot="start" :icon="speedometerOutline"></ion-icon>
             <ion-label>Rendimiento</ion-label>
           </ion-item>
         </div>
@@ -95,15 +95,15 @@
           <ion-label>Administracion</ion-label>
         </ion-list-header>
 
-        <div class="list-content">
+        <div>
           <ion-item
-            class="transparent"
             button
-            lines="full"
+            lines="none"
             :class="{ 'menu-active': isAdmin }"
             :aria-current="isAdmin ? 'page' : undefined"
             @click="navigate({ name: 'MaintenancePage' })"
           >
+            <ion-icon slot="start" :icon="constructOutline"></ion-icon>
             <ion-label>Mantenimiento</ion-label>
             <ion-badge
               v-if="(needsNormalize || needsEntries) && !migrationDismissed"
@@ -114,13 +114,13 @@
           </ion-item>
 
           <ion-item
-            class="transparent"
             button
-            lines="full"
+            lines="none"
             :class="{ 'menu-active': isPersonalization }"
             :aria-current="isPersonalization ? 'page' : undefined"
             @click="navigate({ name: 'PersonalizationPage' })"
           >
+            <ion-icon slot="start" :icon="colorPaletteOutline"></ion-icon>
             <ion-label>Personalización</ion-label>
           </ion-item>
         </div>
@@ -141,10 +141,21 @@ import {
   IonLabel,
   IonBadge,
   IonListHeader,
+  IonIcon,
   menuController,
 } from '@ionic/vue';
 import { ref, computed } from 'vue';
 import { useRoute } from 'vue-router';
+import {
+  walletOutline,
+  documentTextOutline,
+  businessOutline,
+  layersOutline,
+  statsChartOutline,
+  speedometerOutline,
+  constructOutline,
+  colorPaletteOutline,
+} from 'ionicons/icons';
 
 const emit = defineEmits<{
   (e: 'navigate', params: { path?: string; name?: string }): void;
@@ -201,6 +212,7 @@ async function navigate(params: { path?: string; name?: string }) {
 .menu-active {
   border-left: 4px solid var(--ion-color-primary);
   --padding-start: 12px;
+  --background: rgba(var(--ion-color-primary-rgb), 0.08);
 }
 ion-menu .menu-active {
   border-left-width: 4px;

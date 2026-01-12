@@ -125,9 +125,15 @@
             <ion-toggle
               :checked="!budgetController.getIsDayClosed()"
               enable-on-off-labels
-              @ion-change="budgetController.toggleDayClosed(!$event.detail.checked)"
+              @ion-change="
+                budgetController.toggleDayClosed(!$event.detail.checked)
+              "
             >
-              {{ budgetController.getIsDayClosed() ? 'Día cerrado' : 'Día abierto' }}
+              {{
+                budgetController.getIsDayClosed()
+                  ? 'Día cerrado'
+                  : 'Día abierto'
+              }}
             </ion-toggle>
           </ion-item>
           <ion-item
@@ -141,6 +147,10 @@
               color="danger"
             ></ion-icon>
             <ion-label>Vaciar día</ion-label>
+          </ion-item>
+          <ion-item v-if="isDev" button @click="insertTestData">
+            <ion-icon slot="start" :icon="addOutline" color="success"></ion-icon>
+            <ion-label color="success">Insertar datos prueba</ion-label>
           </ion-item>
         </ion-content>
       </ion-popover>
@@ -195,6 +205,7 @@ import {
   chevronForwardOutline,
   ellipsisVerticalOutline,
   trashOutline,
+  addOutline,
 } from 'ionicons/icons';
 import { format } from 'date-fns';
 import { parseLocalDate, formatLocalDate } from '@/utils/date';
@@ -202,6 +213,8 @@ import { es as esLocale } from 'date-fns/locale';
 
 import systemController from '@/controllers/systemConfigController';
 import budgetController from '@/controllers/budgetController';
+import accountsController from '@/controllers/accountsController';
+import { useAccountsStore, type Account } from '@/stores/accountsStore';
 import InicioViewComponent from './InicioViewComponent.vue';
 import ProvidersComponent from './ProvidersComponent.vue';
 import FinishDayForm from './FinishDayForm.vue';
@@ -213,6 +226,7 @@ const showClearConfirm = ref(false);
 const datePickerEvent = ref<Event | null>(null);
 const moreOptionsEvent = ref<Event | null>(null);
 const designMode = computed(() => systemController.getDesignMode());
+const isDev = computed(() => import.meta.env.DEV);
 
 const finishDay = computed(() => budgetController.getFinishDayData());
 
@@ -285,6 +299,51 @@ function performClearDay() {
   budgetController.clearDay();
   budgetController.saveData();
   showClearConfirm.value = false;
+}
+
+async function insertTestData() {
+  try {
+    await accountsController.loadAll();
+  } catch {
+    // Store may not exist yet, continue
+  }
+  
+  let accounts = accountsController.getAccounts();
+  
+  if (accounts.length === 0) {
+    const store = useAccountsStore();
+    const now = Date.now();
+    const acc1: Account = { id: Date.now() + 1, name: 'Caja Principal', initialBalance: 0, createdAt: now, updatedAt: now };
+    const acc2: Account = { id: Date.now() + 2, name: 'Banco', initialBalance: 0, createdAt: now, updatedAt: now };
+    store.accounts.push(acc1, acc2);
+    await accountsController.addAccount({ name: 'Caja Principal', initialBalance: 0 });
+    await accountsController.addAccount({ name: 'Banco', initialBalance: 0 });
+    accounts = [acc1, acc2];
+  }
+  
+  const accountId1 = accounts[0].id;
+  const accountId2 = accounts.length > 1 ? accounts[1].id : accountId1;
+  
+  budgetController.addIngreso({ name: 'Venta mostrador 1', amount: 1500, paymentType: 'cash', accountId: accountId1 });
+  budgetController.addIngreso({ name: 'Venta mostrador 2', amount: 2300, paymentType: 'digital', accountId: accountId2 });
+  budgetController.addIngreso({ name: 'Venta online', amount: 4500, paymentType: 'cash', accountId: accountId1 });
+  budgetController.addIngreso({ name: 'Pedido mayorista', amount: 12000, paymentType: 'digital', accountId: accountId2 });
+  budgetController.addIngreso({ name: 'Venta telefónica', amount: 3500, paymentType: 'cash', accountId: accountId1 });
+  
+  budgetController.addEgreso({ name: 'Compra inventario', amount: 8000, paymentType: 'cash', accountId: accountId1 });
+  budgetController.addEgreso({ name: 'Pago servicios', amount: 2500, paymentType: 'digital', accountId: accountId2 });
+  budgetController.addEgreso({ name: 'Transporte', amount: 800, paymentType: 'cash', accountId: accountId1 });
+  
+  budgetController.addProvider({ name: 'Proveedor A', estimated: 500, accountId: accountId1 });
+  budgetController.addProvider({ name: 'Proveedor B', estimated: 800, accountId: accountId2 });
+  budgetController.addProvider({ name: 'Proveedor C', estimated: 1200, accountId: accountId1 });
+  budgetController.addProvider({ name: 'Proveedor D', estimated: 600, accountId: accountId2 });
+  budgetController.addProvider({ name: 'Proveedor E', estimated: 950, accountId: accountId1 });
+  budgetController.addProvider({ name: 'Proveedor F', estimated: 1500, accountId: accountId2 });
+  budgetController.addProvider({ name: 'Proveedor G', estimated: 450, accountId: accountId1 });
+  
+  budgetController.saveData();
+  showMoreOptions.value = false;
 }
 
 onMounted(async () => {
