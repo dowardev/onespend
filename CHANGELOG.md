@@ -1,3 +1,21 @@
+## [v0.29.1] - 2026-01-12
+
+### Refactor
+
+- Extract inline entry modal from InicioViewComponent into reusable EditEntryModal component
+- Extract inline templates modal from ProvidersComponent into reusable TemplatesModal component
+- Extract inline notes modal from ProvidersComponent into reusable NotesModal component
+
+### Files Changed
+
+- front/src/views/budget/InicioViewComponent.vue (modified)
+- front/src/views/budget/ProvidersComponent.vue (modified)
+- front/src/views/budget/components/EditEntryModal.vue (added)
+- front/src/views/budget/components/NotesModal.vue (added)
+- front/src/views/budget/components/TemplatesModal.vue (added)
+
+---
+
 ## [v0.29.0] - 2026-01-12
 
 ### Added

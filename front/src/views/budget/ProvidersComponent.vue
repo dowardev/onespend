@@ -56,83 +56,21 @@
   </ion-grid>
 
   <!-- modals -->
-  <ion-modal
+  <TemplatesModal
     :is-open="showTemplatesModal"
-    :keep-contents-mounted="true"
-    @did-dismiss="showTemplatesModal = false"
-  >
-    <ion-header class="ion-no-border" mode="ios">
-      <ion-toolbar>
-        <ion-buttons>
-          <ion-button @click="showTemplatesModal = false">
-            <ion-icon :icon="closeOutline"></ion-icon>
-          </ion-button>
-        </ion-buttons>
-        <ion-title>Aplicar template</ion-title>
-      </ion-toolbar>
-    </ion-header>
+    :templates-list="templatesList"
+    @dismiss="showTemplatesModal = false"
+    @select-template="checkTemplateConflict"
+  />
 
-    <ion-content>
-      <ion-card class="shadow1">
-        <ion-list class="transparent">
-          <template v-if="templatesList.length">
-            <ion-item
-              v-for="tmpl in templatesList"
-              :key="tmpl.id"
-              lines="full"
-              button
-              class="transparent"
-              @click.stop="checkTemplateConflict(tmpl)"
-            >
-              <ion-label>
-                <h2>{{ tmpl.name }}</h2>
-                <p>{{ tmpl.description }}</p>
-              </ion-label>
-            </ion-item>
-          </template>
-
-          <template v-else>
-            <ion-item>
-              <ion-label>No hay templates</ion-label>
-            </ion-item>
-          </template>
-        </ion-list>
-      </ion-card>
-    </ion-content>
-  </ion-modal>
-
-  <ion-modal
+  <NotesModal
     :is-open="showNotesModal"
-    :keep-contents-mounted="true"
-    @did-dismiss="showNotesModal = false"
-  >
-    <ion-header class="ion-no-border" mode="ios">
-      <ion-toolbar>
-        <ion-buttons>
-          <ion-button @click="showNotesModal = false">
-            <ion-icon :icon="closeOutline"></ion-icon>
-          </ion-button>
-        </ion-buttons>
-        <ion-title>Notas - {{ notesProvider?.name }}</ion-title>
-        <ion-buttons slot="end">
-          <ion-button @click="saveNotes">Guardar</ion-button>
-        </ion-buttons>
-      </ion-toolbar>
-    </ion-header>
-
-    <ion-content>
-      <ion-card class="shadow1">
-        <ion-item lines="none">
-          <ion-textarea
-            v-model="notesContent"
-            placeholder="Escribe las notas aquí..."
-            auto-grow
-            :rows="10"
-          ></ion-textarea>
-        </ion-item>
-      </ion-card>
-    </ion-content>
-  </ion-modal>
+    :provider-name="notesProvider?.name || ''"
+    :notes="notesContent"
+    @dismiss="showNotesModal = false"
+    @save="saveNotes"
+    @update-notes="notesContent = $event"
+  />
   <!-- end modals -->
 
   <!-- Edit/Add Provider Modal -->
@@ -210,12 +148,7 @@ import {
   IonIcon,
   IonItem,
   IonAlert,
-  IonModal,
-  IonHeader,
-  IonToolbar,
-  IonTitle,
   IonCard,
-  IonTextarea,
   IonButtons,
   IonContent,
   onIonViewWillEnter,
@@ -224,13 +157,14 @@ import { ref, reactive, computed, onMounted, onUnmounted } from 'vue';
 import {
   addOutline,
   documentOutline,
-  closeOutline,
   trashOutline,
 } from 'ionicons/icons';
 
 import ProviderCardComponent from './ProviderCardComponent.vue';
 import ProvidersSummary from './components/ProvidersSummary.vue';
 import EditProviderModal from './components/EditProviderModal.vue';
+import TemplatesModal from './components/TemplatesModal.vue';
+import NotesModal from './components/NotesModal.vue';
 import budgetController from '@/controllers/budgetController';
 import TemplateController from '@/controllers/TempalteController';
 import { buildPayloadFromTemplate } from '@/controllers/templateService';
