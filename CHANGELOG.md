@@ -1,3 +1,53 @@
+## [v0.30.0] - 2026-01-13
+
+### Added
+
+- Add complete authentication system with Laravel Breeze scaffolding
+- Add user registration, login, logout, email verification, and password reset functionality
+- Add Laravel Sanctum for secure API token-based authentication
+- Add frontend authentication views: LoginView and RegisterView
+- Add authStore for managing authentication state in Vue application
+- Add authController for authentication API calls and state management
+- Add API routes for authentication endpoints (auth.php, api.php)
+- Add CORS configuration for frontend-backend communication
+- Add personal_access_tokens table migration for Sanctum
+
+### Features
+
+- Backend authentication supports login with either email or username
+- Password reset URLs redirect to frontend application
+- Email verification middleware protects API endpoints
+- Session-based authentication with Sanctum token support
+
+### Breaking Changes
+
+- User model now requires 'user' (username) field in addition to email
+- Database migration adds 'user' column to users table
+
+### Backend Files Changed
+
+- back/app/Http/Controllers/Auth/*.php (6 new controllers added)
+- back/app/Http/Middleware/EnsureEmailIsVerified.php (new middleware)
+- back/app/Http/Requests/Auth/LoginRequest.php (new form request)
+- back/app/Models/User.php (added 'user' field)
+- back/app/Providers/AppServiceProvider.php (password reset URL configuration)
+- back/bootstrap/app.php (API middleware configuration)
+- back/composer.json (added laravel/sanctum, laravel/breeze)
+- back/config/cors.php (new configuration)
+- back/config/sanctum.php (new configuration)
+- back/database/migrations/* (personal_access_tokens table)
+
+### Frontend Files Changed
+
+- front/src/controllers/authController.ts (new)
+- front/src/stores/authStore.ts (new)
+- front/src/router/index.ts (auth routes added)
+- front/src/components/MainMenu.vue (auth-related items)
+- front/src/views/auth/LoginView.vue (new)
+- front/src/views/auth/RegisterView.vue (new)
+
+---
+
 ## [v0.29.1] - 2026-01-12
 
 ### Refactor
