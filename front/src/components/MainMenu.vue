@@ -12,6 +12,40 @@
     </ion-header>
 
     <ion-content>
+      <div v-if="!isAuthenticated" class="auth-section">
+        <ion-item
+          button
+          lines="none"
+          :class="{ 'menu-active': isLogin }"
+          :aria-current="isLogin ? 'page' : undefined"
+          @click="navigate({ path: '/login' })"
+        >
+          <ion-icon slot="start" :icon="logInOutline"></ion-icon>
+          <ion-label>Iniciar Sesión</ion-label>
+        </ion-item>
+
+        <ion-item
+          button
+          lines="none"
+          :class="{ 'menu-active': isRegister }"
+          :aria-current="isRegister ? 'page' : undefined"
+          @click="navigate({ path: '/register' })"
+        >
+          <ion-icon slot="start" :icon="personAddOutline"></ion-icon>
+          <ion-label>Registrarse</ion-label>
+        </ion-item>
+      </div>
+
+      <div v-else class="user-section">
+        <div class="user-info">
+          <ion-icon :icon="personCircleOutline" class="user-avatar"></ion-icon>
+          <ion-label class="user-name">{{ userName }}</ion-label>
+          <ion-button fill="clear" size="small" @click="handleLogout" class="logout-button">
+            <ion-icon :icon="logOutOutline"></ion-icon>
+          </ion-button>
+        </div>
+      </div>
+
       <ion-list>
         <div >
           <ion-item
@@ -142,9 +176,11 @@ import {
   IonBadge,
   IonListHeader,
   IonIcon,
+  IonButton,
   menuController,
+  alertController,
 } from '@ionic/vue';
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import {
   walletOutline,
@@ -155,7 +191,12 @@ import {
   speedometerOutline,
   constructOutline,
   colorPaletteOutline,
+  logInOutline,
+  personAddOutline,
+  personCircleOutline,
+  logOutOutline,
 } from 'ionicons/icons';
+import authController from '@/controllers/authController';
 
 const emit = defineEmits<{
   (e: 'navigate', params: { path?: string; name?: string }): void;
@@ -185,6 +226,37 @@ const isAdmin = computed(() => route.path.startsWith('/admin/maintenance'));
 const isPersonalization = computed(
   () => route.path === '/admin/personalization'
 );
+
+const isLogin = computed(() => route.path === '/login');
+const isRegister = computed(() => route.path === '/register');
+
+const isAuthenticated = computed(() => authController.getIsAuthenticated());
+const userName = computed(() => authController.getUserName());
+
+onMounted(async () => {
+  await authController.checkAuth();
+});
+
+async function handleLogout() {
+  const alert = await alertController.create({
+    header: 'Cerrar Sesión',
+    message: '¿Estás seguro de que quieres cerrar sesión?',
+    buttons: [
+      {
+        text: 'Cancelar',
+        role: 'cancel',
+      },
+      {
+        text: 'Cerrar Sesión',
+        role: 'confirm',
+        handler: async () => {
+          await authController.logout();
+        },
+      },
+    ],
+  });
+  await alert.present();
+}
 
 defineProps<{
   needsNormalize: boolean;
@@ -216,5 +288,30 @@ async function navigate(params: { path?: string; name?: string }) {
 }
 ion-menu .menu-active {
   border-left-width: 4px;
+}
+.auth-section {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--ion-color-step-150);
+}
+.user-section {
+  padding: 16px;
+  border-bottom: 1px solid var(--ion-color-step-150);
+}
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.user-avatar {
+  font-size: 40px;
+  color: var(--ion-color-primary);
+}
+.user-name {
+  flex: 1;
+  font-weight: 600;
+  font-size: 16px;
+}
+.logout-button {
+  --color: var(--ion-color-medium);
 }
 </style>

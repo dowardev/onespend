@@ -37,6 +37,7 @@ import { useRouter } from 'vue-router';
 import MainMenu from '@/components/MainMenu.vue';
 import systemController from '@/controllers/systemConfigController';
 import dixieController from '@/controllers/dixie';
+import authController from '@/controllers/authController';
 import {
   needsNormalizeCheck,
   migrateNormalizeBackupDates,
@@ -83,6 +84,8 @@ onMounted(async () => {
   setDesignMode();
   setupThemeListener();
   await applyTheme();
+
+  await authController.checkAuth();
 
   // Check whether the user already dismissed the migration notice
   migrationDismissed.value = !!systemController.getMigrationNoticeDismissed();

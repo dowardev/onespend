@@ -11,6 +11,8 @@ import MaintenancePage from '@/views/admin/MaintenancePage.vue';
 import MigrateDates from '@/views/admin/maintenance/MigrateDates.vue';
 import MigrateEntries from '@/views/admin/maintenance/MigrateEntries.vue';
 import PersonalizationPage from '@/views/admin/PersonalizationPage.vue';
+import LoginView from '../views/auth/LoginView.vue';
+import RegisterView from '../views/auth/RegisterView.vue';
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -21,6 +23,16 @@ const routes: Array<RouteRecordRaw> = [
     path: '/home',
     name: 'Home',
     component: HomePage,
+  },
+  {
+    path: '/login',
+    name: 'Login',
+    component: LoginView,
+  },
+  {
+    path: '/register',
+    name: 'Register',
+    component: RegisterView,
   },
   {
     path: '/budget',
