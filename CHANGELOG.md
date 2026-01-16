@@ -1,3 +1,39 @@
+## [v0.31.0] - 2026-01-16
+
+### Changed
+
+- Migrate authentication from session-based cookies to Bearer tokens
+- API endpoints now return user data and token on login/register
+- Replace CSRF token flow with stateless Bearer token authentication
+- Remove session middleware from API routes (no longer needed)
+
+### Added
+
+- Add `tokenStorage.ts` service for hybrid token storage (localStorage for web, prepared for Capacitor Preferences)
+- Add `HasApiTokens` trait to User model for Sanctum token generation
+- Login and register endpoints now return `{ user, token }` response
+
+### Improved
+
+- Authentication now works seamlessly across different ports/domains
+- Prepared for Capacitor native app deployment (Android/iOS)
+- Simplified API middleware configuration
+
+### Backend Files Changed
+
+- `back/app/Http/Controllers/Auth/AuthenticatedSessionController.php` - Returns token on login, revokes on logout
+- `back/app/Http/Controllers/Auth/RegisteredUserController.php` - Returns token on registration
+- `back/app/Models/User.php` - Added HasApiTokens trait
+- `back/bootstrap/app.php` - Removed session middleware for API
+- `back/routes/api.php` - Grouped protected routes, logout requires auth
+
+### Frontend Files Changed
+
+- `front/src/controllers/authController.ts` - Uses Bearer tokens instead of cookies
+- `front/src/services/tokenStorage.ts` - New hybrid storage service for auth tokens
+
+---
+
 ## [v0.30.0] - 2026-01-13
 
 ### Added

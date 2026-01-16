@@ -1,6 +1,7 @@
 import { useAuthStore, type User } from '@/stores/authStore';
+import { saveToken, getToken, removeToken } from '@/services/tokenStorage';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001';
 
 interface LoginParams {
   login: string;
@@ -20,9 +21,13 @@ interface AuthResponse {
   error?: string;
 }
 
+interface ApiAuthResponse {
+  user: User;
+  token: string;
+}
+
 class AuthController {
   private _store: ReturnType<typeof useAuthStore> | null = null;
-  private csrfToken: string | null = null;
 
   private get store(): ReturnType<typeof useAuthStore> {
     if (!this._store) {
@@ -31,39 +36,28 @@ class AuthController {
     return this._store;
   }
 
-  private getCsrfToken(): string | null {
-    const match = document.cookie.match(new RegExp('(^| )XSRF-TOKEN=([^;]+)'));
-    if (match) {
-      return decodeURIComponent(match[2]);
-    }
-    return null;
-  }
-
-  private async csrf(): Promise<void> {
-    await fetch(`${API_URL}/sanctum/csrf-cookie`, {
-      credentials: 'include',
-    });
-    this.csrfToken = this.getCsrfToken();
-  }
-
+  /**
+   * Realiza una petición HTTP con el token Bearer si está disponible
+   */
   private async request<T>(
     endpoint: string,
-    options: RequestInit
+    options: RequestInit = {}
   ): Promise<T> {
+    const token = await getToken();
+    
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
       ...(options.headers as Record<string, string>),
     };
 
-    if (this.csrfToken) {
-      headers['X-XSRF-TOKEN'] = this.csrfToken;
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
     }
 
     const response = await fetch(`${API_URL}${endpoint}`, {
       ...options,
       headers,
-      credentials: 'include',
     });
 
     if (!response.ok) {
@@ -75,23 +69,23 @@ class AuthController {
     return text ? JSON.parse(text) : null;
   }
 
+  /**
+   * Inicia sesión con email/usuario y contraseña
+   */
   async login(params: LoginParams): Promise<AuthResponse> {
     this.store.setIsLoading(true);
     this.store.setError(null);
 
     try {
-      await this.csrf();
-      await this.request('/api/login', {
+      const response = await this.request<ApiAuthResponse>('/api/login', {
         method: 'POST',
         body: JSON.stringify(params),
       });
 
-      const user = await this.fetchUser();
-      if (user) {
-        this.store.setUser(user);
-        return { user };
-      }
-      return { error: 'No se pudo obtener la información del usuario' };
+      await saveToken(response.token);
+      this.store.setUser(response.user);
+      
+      return { user: response.user };
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : 'Error al iniciar sesión';
       this.store.setError(errorMessage);
@@ -101,25 +95,23 @@ class AuthController {
     }
   }
 
+  /**
+   * Registra un nuevo usuario
+   */
   async register(params: RegisterParams): Promise<AuthResponse> {
     this.store.setIsLoading(true);
     this.store.setError(null);
 
     try {
-      await this.csrf();
-      await this.request('/api/register', {
+      const response = await this.request<ApiAuthResponse>('/api/register', {
         method: 'POST',
         body: JSON.stringify(params),
       });
 
-      const user = await this.fetchUser();
-      if (user) {
-        this.store.setUser(user);
-        return { user };
-      } else {
-        this.store.setUser(null);
-        return { error: 'No se pudo obtener la información del usuario' };
-      }
+      await saveToken(response.token);
+      this.store.setUser(response.user);
+      
+      return { user: response.user };
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : 'Error al registrar';
       this.store.setError(errorMessage);
@@ -129,22 +121,28 @@ class AuthController {
     }
   }
 
+  /**
+   * Cierra la sesión del usuario
+   */
   async logout(): Promise<void> {
     this.store.setIsLoading(true);
 
     try {
-      await this.csrf();
       await this.request('/api/logout', {
         method: 'POST',
       });
     } catch (e) {
       console.error('Logout error:', e);
     } finally {
+      await removeToken();
       this.store.logout();
       this.store.setIsLoading(false);
     }
   }
 
+  /**
+   * Obtiene los datos del usuario autenticado
+   */
   async fetchUser(): Promise<User | null> {
     try {
       const user = await this.request<User>('/api/user', {
@@ -157,19 +155,31 @@ class AuthController {
     }
   }
 
+  /**
+   * Verifica si hay una sesión activa (al iniciar la app)
+   */
   async checkAuth(): Promise<boolean> {
     this.store.setIsLoading(true);
 
     try {
-      await this.csrf();
+      const token = await getToken();
+      if (!token) {
+        this.store.setUser(null);
+        return false;
+      }
+
       const user = await this.fetchUser();
       if (user) {
         this.store.setUser(user);
         return true;
       }
+      
+      // Token inválido o expirado
+      await removeToken();
       this.store.setUser(null);
       return false;
     } catch (e) {
+      await removeToken();
       this.store.setUser(null);
       return false;
     } finally {
