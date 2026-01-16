@@ -44,6 +44,9 @@
             <ion-icon :icon="logOutOutline"></ion-icon>
           </ion-button>
         </div>
+        <div class="sync-indicator">
+          <SyncStatus />
+        </div>
       </div>
 
       <ion-list>
@@ -197,6 +200,7 @@ import {
   logOutOutline,
 } from 'ionicons/icons';
 import authController from '@/controllers/authController';
+import SyncStatus from './SyncStatus.vue';
 
 const emit = defineEmits<{
   (e: 'navigate', params: { path?: string; name?: string }): void;
@@ -313,5 +317,10 @@ ion-menu .menu-active {
 }
 .logout-button {
   --color: var(--ion-color-medium);
+}
+.sync-indicator {
+  margin-top: 8px;
+  padding: 8px;
+  border-top: 1px solid var(--ion-color-step-150);
 }
 </style>

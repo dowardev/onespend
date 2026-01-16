@@ -1,3 +1,63 @@
+## [v0.32.0] - 2026-01-16
+
+### Added
+
+- Add complete bidirectional offline-first synchronization system
+- Add SyncService with offline operation queue and automatic retry (max 3 attempts)
+- Add SyncController with endpoints: `/sync/changes`, `/sync/merge`, `/sync/full`, `/sync/resolve-conflict`
+- Add SyncStatus.vue component for visual sync indicator in main menu
+- Add useSync composable for integrating synchronization with Vue stores
+- Add sync_id field to all entities for consistent cross-device identification
+- Add conflict resolution with last-write-wins strategy using timestamps
+
+### New Files (Backend)
+
+- `back/app/Http/Controllers/SyncController.php` - Main sync API controller
+- `back/app/Models/Account.php` - Account model with sync fields
+- `back/app/Models/Income.php` - Income/Expense model with sync fields
+- `back/app/Models/Supplier.php` - Supplier model with sync fields
+- `back/app/Models/Template.php` - Template model with sync fields
+- `back/app/Models/SyncMetadata.php` - Sync state tracking model
+- `back/database/migrations/2026_01_16_000001_create_sync_metadata_table.php`
+- `back/database/migrations/2026_01_16_000002_create_accounts_table.php`
+- `back/database/migrations/2026_01_16_000003_create_incomes_table.php`
+- `back/database/migrations/2026_01_16_000004_create_suppliers_table.php`
+- `back/database/migrations/2026_01_16_000005_create_templates_table.php`
+
+### New Files (Frontend)
+
+- `front/src/services/syncService.ts` - Sync queue and API service
+- `front/src/composables/useSync.ts` - Sync composable for stores
+- `front/src/components/SyncStatus.vue` - Visual sync status indicator
+
+### Changed Files (Backend)
+
+- `back/routes/api.php` - Added sync routes with authentication middleware
+
+### Changed Files (Frontend)
+
+- `front/src/controllers/suppliersController.ts` - Added sync integration for create/update/delete
+- `front/src/stores/accountsStore.ts` - Added sync integration
+- `front/src/stores/templatesStore.ts` - Added sync integration
+- `front/src/views/suppliers/SuppliersPage.vue` - Added sync_id handling for updates
+- `front/src/views/suppliers/modals/AddSupliersComponent.vue` - Pass sync_id in payload
+- `front/src/components/MainMenu.vue` - Added SyncStatus component
+
+### Fixed
+
+- Fix timestamp format issue (milliseconds to seconds conversion for MySQL datetime)
+- Fix ID field truncation error when updating entities
+- Fix sync_id persistence between create and update operations
+
+### How Sync Works
+
+1. **Offline-First**: All changes are saved locally first, then queued for sync
+2. **Auto-Sync**: When online, queued operations are processed automatically
+3. **Conflict Resolution**: Last-write-wins using timestamps; conflicts stored in sync_metadata
+4. **Visual Feedback**: SyncStatus shows online/offline state, pending changes count, last sync time
+
+---
+
 ## [v0.31.0] - 2026-01-16
 
 ### Changed

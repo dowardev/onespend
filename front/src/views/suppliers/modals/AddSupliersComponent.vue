@@ -395,6 +395,7 @@ function onSubmit() {
     products: form.products && form.products.length ? form.products : undefined,
   };
   if (selectedId.value != null) payload.id = selectedId.value;
+  if (props.supplier?.sync_id) payload.sync_id = props.supplier.sync_id;
 
   emit('saved', payload);
 }

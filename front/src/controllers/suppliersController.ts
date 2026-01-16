@@ -1,6 +1,7 @@
 import { DixieController } from './dixie';
 import { reactive, ref } from 'vue';
 import { useSuppliersStore } from '../stores/suppliersStore';
+import { useSync } from '@/composables/useSync';
 
 export type Product = {
   name: string;
@@ -10,6 +11,7 @@ export type Product = {
 
 export type Supplier = {
   id?: IDBValidKey;
+  sync_id?: string;
   name: string;
   contact?: string;
   phone?: string;
@@ -17,6 +19,7 @@ export type Supplier = {
   products?: Product[];
   createdAt?: number;
   updatedAt?: number;
+  _synced?: boolean;
 };
 
 class SuppliersController {
@@ -44,11 +47,15 @@ class SuppliersController {
         updatedAt: now,
       };
 
+      const { syncProvider } = useSync();
+      syncProvider(entry, 'create');
+
       const id = await ctrl.addEntry({ entry });
       const result = { ...(entry as any), id };
 
       store.suppliers = [result, ...store.suppliers];
       store.notifyChange();
+
       return result;
     } catch (e) {
       store.error = e as Error;
@@ -74,6 +81,9 @@ class SuppliersController {
         updatedAt: Date.now(),
       };
 
+      const { syncProvider } = useSync();
+      syncProvider(entry, 'update');
+
       await ctrl.putEntry({ entry });
 
       store.suppliers = store.suppliers.map(x =>
@@ -96,10 +106,16 @@ class SuppliersController {
     store.error = null;
     try {
       const ctrl = this.getController();
+      const supplier = store.suppliers.find(s => s.id === id);
       await ctrl.deleteBackup(id);
 
       store.suppliers = store.suppliers.filter(s => s.id !== id);
       store.notifyChange();
+
+      if (supplier) {
+        const { syncProvider } = useSync();
+        syncProvider(supplier, 'delete');
+      }
     } catch (e) {
       store.error = e as Error;
       throw e;
