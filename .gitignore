@@ -13,24 +13,52 @@ Thumbs.db
 UserInterfaceState.xcuserstate
 $RECYCLE.BIN/
 
+# Logs
 *.log
 log.txt
 npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
+# Environment files
+.env
+.env.local
+.env.*.local
+.env.production
+
+# IDE
 /.idea
+/.vscode/*
+!/.vscode/extensions.json
+*.swp
+*.swo
+
+# Backend (Laravel)
+vendor/
+.env.backup
+.env.production
+.phpunit.result.cache
+.phpactor.json
+Homestead.json
+Homestead.yaml
+auth.json
+
+# Frontend (Node/Vite)
+node_modules/
+dist/
+coverage/
+.nyc_output/
+
+# Build outputs
 /.ionic
 /.sass-cache
 /.sourcemaps
 /.versions
-/.vscode/*
-!/.vscode/extensions.json
-/coverage
-/dist
-/node_modules
-/platforms
 /plugins
 /www
-
+build/
+*.exe
+*.dmg
 /release/
 /build/icons/
 /squashfs-root/
