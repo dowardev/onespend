@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\RegisteredUserController;
+use App\Http\Controllers\SyncController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -15,4 +16,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
         return $request->user();
     });
     Route::post('/logout', [AuthenticatedSessionController::class, 'destroy']);
+    
+    // Sync API
+    Route::get('/sync/changes', [SyncController::class, 'getChanges']);
+    Route::post('/sync/merge', [SyncController::class, 'merge']);
+    Route::get('/sync/full', [SyncController::class, 'fullSync']);
+    Route::post('/sync/resolve-conflict', [SyncController::class, 'resolveConflict']);
 });
