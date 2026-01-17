@@ -1,3 +1,21 @@
+## [v0.32.2] - 2026-01-16
+
+### Fixed
+
+- Fix template editing to properly pass sync_id between TemplatesView and AddTemplateComponent
+- Add sync_id field to TemplateSummary type in AddTemplateComponent
+- Add editingTemplate ref in TemplatesView to properly track the template being edited
+- Add sync_id generation and persistence in TempalteController for templates without sync_id
+- Fix tempalteController.saveTemplate to use existing sync_id for update operations
+
+### Changed Files
+
+- `front/src/views/templates/TemplatesView.vue` - Added editingTemplate ref, proper template passing to modal
+- `front/src/views/templates/modals/AddTemplateComponent.vue` - Added sync_id to TemplateSummary type
+- `front/src/controllers/TempalteController.ts` - Added sync_id support for templates
+
+---
+
 ## [v0.32.1] - 2026-01-16
 
 ### Fixed
