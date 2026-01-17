@@ -128,6 +128,7 @@ import { parseProvidersFromDescription } from '@/controllers/templateService';
 // intefaces
 type TemplateSummary = {
   id: string | number | null;
+  sync_id?: string;
   name: string;
   description?: string;
   suppliers?: any[];
@@ -296,6 +297,9 @@ async function submitTemplate() {
 
     if (isEditMode.value && props.editingTmpl && props.editingTmpl.id) {
       payloadTemplate.id = props.editingTmpl.id;
+      if (props.editingTmpl.sync_id) {
+        payloadTemplate.sync_id = props.editingTmpl.sync_id;
+      }
     }
 
     await TemplateController.saveTemplate({ template: payloadTemplate });

@@ -79,11 +79,7 @@
         @did-dismiss="showModal = false"
       >
         <AddTemplateComponent
-          :editing-tmpl="
-            editingTemplateId != null
-              ? TemplateController.templates.find(t => t.id === editingTemplateId)
-              : null
-          "
+          :editing-tmpl="editingTemplate"
           @saved="onAddTemplateSaved"
           @close="
             () => {
@@ -265,6 +261,7 @@ const applySelectedDate = ref(format(new Date(), 'yyyy-MM-dd'));
 const applyTargetTemplate = ref<TemplateSummary | null>(null);
 const isEditMode = ref(false);
 const editingTemplateId = ref<string | number | null>(null);
+const editingTemplate = ref<TemplateSummary | null>(null);
 // References the searchbar element so we can focus it when opening the search
 const _supplierSearchbar = ref<InstanceType<typeof IonSearchbar> | null>(null);
 const _searchVisible = ref(false);
@@ -358,6 +355,7 @@ function resetForm() {
   form.supplierIds.splice(0, form.supplierIds.length);
   isEditMode.value = false;
   editingTemplateId.value = null;
+  editingTemplate.value = null;
 }
 
 // Open new template modal ensuring supplier list is up-to-date
@@ -406,6 +404,7 @@ async function editTemplate(params: { tmpl: TemplateSummary }) {
   // Set edit mode
   isEditMode.value = true;
   editingTemplateId.value = tmpl.id;
+  editingTemplate.value = tmpl;
 
   // Open modal
   showModal.value = true;
@@ -428,8 +427,6 @@ async function onAddTemplateSaved() {
 
 function applyTemplate(params: { tmpl: TemplateSummary }) {
   const { tmpl } = params as { tmpl: TemplateSummary };
-  console.log('applyTemplate called', tmpl);
-  // small toast to help debug UI flow
   try {
     toast.message = `Aplicando template: ${tmpl?.name || 'n/a'}`;
     toast.open = true;
