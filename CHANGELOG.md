@@ -1,3 +1,19 @@
+## [v0.32.1] - 2026-01-16
+
+### Fixed
+
+- Fix sync_id not being passed in account modal payload when editing accounts
+- Fix accountsController to properly handle sync_id for create/update/delete operations
+- Fix sync_id generation and persistence in loadAll() to ensure all accounts have sync_id
+- Fix AddAccountComponent to include sync_id in the saved payload for proper update operations
+
+### Changed Files
+
+- `front/src/controllers/accountsController.ts` - Added sync_id generation, proper handling in loadAll/add/update/delete
+- `front/src/views/suppliers/accounts/modals/AddAccountComponent.vue` - Pass sync_id in payload when editing
+
+---
+
 ## [v0.32.0] - 2026-01-16
 
 ### Added
