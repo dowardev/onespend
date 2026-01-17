@@ -1,7 +1,12 @@
 import { DixieController } from './dixie';
-import { ref, computed, toRefs } from 'vue';
+import { ref, computed } from 'vue';
 import { useAccountsStore } from '@/stores/accountsStore';
+import { useSync } from '@/composables/useSync';
 import type { Account } from '@/stores/accountsStore';
+
+function generateSyncId(): string {
+  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+}
 
 class AccountsController {
   private isLoading = ref(false);
@@ -40,17 +45,16 @@ class AccountsController {
         if (store.accounts.length === 0) {
           const newAccounts: Account[] = suppliers.map((s) => ({
             id: s.id || undefined,
+            sync_id: generateSyncId(),
             name: s.name,
             initialBalance: s.initialBalance ?? 0,
             createdAt: s.createdAt || Date.now(),
             updatedAt: s.updatedAt || Date.now(),
           }));
           store.accounts.splice(0, store.accounts.length, ...newAccounts);
-          console.log(`Migrated ${suppliers.length} suppliers to accounts`);
         }
       }
     } catch (_e) {
-      // Migration is optional, ignore errors
     }
   }
 
@@ -58,7 +62,15 @@ class AccountsController {
     this.isLoading.value = true;
     try {
       const ctrl = this.getController();
-      const all = (await ctrl.listBackups()) as Account[];
+      let all = (await ctrl.listBackups()) as Account[];
+      
+      for (const account of all) {
+        if (!account.sync_id) {
+          account.sync_id = generateSyncId();
+          await ctrl.putEntry({ entry: account });
+        }
+      }
+
       const sorted = (all || [])
         .slice()
         .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
@@ -78,16 +90,22 @@ class AccountsController {
     }
   }
 
-  async addAccount(a: Omit<Account, 'id' | 'createdAt' | 'updatedAt'>) {
+  async addAccount(a: Omit<Account, 'id' | 'sync_id' | 'createdAt' | 'updatedAt'>) {
     const ctrl = this.getController();
     const now = Date.now();
 
+    const sync_id = generateSyncId();
+    
     const entry: Account = {
       name: String(a.name),
       initialBalance: Number(a.initialBalance) || 0,
+      sync_id,
       createdAt: now,
       updatedAt: now,
     };
+
+    const { syncAccount } = useSync();
+    syncAccount(entry, 'create');
 
     const id = await ctrl.addEntry({ entry });
     const newAccount: Account = { ...entry, id };
@@ -106,9 +124,13 @@ class AccountsController {
       name: String(a.name),
       initialBalance: Number(a.initialBalance) || 0,
       id: a.id,
+      sync_id: a.sync_id,
       createdAt: a.createdAt,
       updatedAt: Date.now(),
     };
+
+    const { syncAccount } = useSync();
+    syncAccount(entry, 'update');
 
     await ctrl.putEntry({ entry });
 
@@ -123,12 +145,19 @@ class AccountsController {
 
   async deleteAccount(id: IDBValidKey) {
     const ctrl = this.getController();
+    const store = this.getAccountsStore();
+    const account = store.accounts.find(acc => acc.id === id);
+    
     await ctrl.deleteBackup(id);
 
-    const store = this.getAccountsStore();
     const idx = store.accounts.findIndex(acc => acc.id === id);
     if (idx >= 0) {
       store.accounts.splice(idx, 1);
+    }
+
+    if (account) {
+      const { syncAccount } = useSync();
+      syncAccount(account, 'delete');
     }
   }
 }

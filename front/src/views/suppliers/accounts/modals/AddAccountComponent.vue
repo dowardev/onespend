@@ -139,6 +139,7 @@ async function onSubmit() {
     initialBalance: form.initialBalance,
   };
   if (selectedId.value != null) payload.id = selectedId.value;
+  if (props.account?.sync_id) payload.sync_id = props.account.sync_id;
 
   emit('saved', payload);
 }
