@@ -331,10 +331,10 @@ const isItemsValid = computed(() => {
 
 const isFormValid = computed(() => {
   return (
-    entryFormState.name.trim().length > 0 &&
-    entryFormState.entryType &&
-    entryFormState.items.length > 0 &&
-    isItemsValid.value
+    editEntryModalData.value.name.trim().length > 0 &&
+    editEntryModalData.value.entryType &&
+    entryItems.value.length > 0 &&
+    entryItems.value.every(item => Number(item.amount) > 0 && item.accountId != null)
   );
 });
 
@@ -737,39 +737,38 @@ function addEntryItem() {
   }
 }
 
-async function saveEntryChanges() {
-  if (!isFormValid.value) return;
-
-  const totalAmount = entryItems.value.reduce(
-    (sum, item) => sum + (Number(item.amount) || 0),
-    0
-  );
-
-  const accountIdToSave = entryItems.value[0]?.accountId ?? null;
+async function saveEntryChanges(data: {
+  entryType: string;
+  name: string;
+  amount: number;
+  accountId: any;
+  groups: Array<{ amount: number; accountId: any }>;
+}) {
+  const { entryType, name, amount, accountId, groups } = data;
 
   if (editEntryModalData.value.id) {
     budgetController.updateIngreso(editEntryModalData.value.id, {
-      entryType: editEntryModalData.value.entryType,
-      name: editEntryModalData.value.name,
-      amount: totalAmount,
-      accountId: accountIdToSave,
-      groups: entryItems.value,
+      entryType,
+      name,
+      amount,
+      accountId,
+      groups,
     });
   } else {
-    if (totalAmount > 0) {
-      if (editEntryModalData.value.entryType === 'ingreso') {
+    if (amount > 0) {
+      if (entryType === 'ingreso') {
         budgetController.addIngreso({
-          name: editEntryModalData.value.name,
-          amount: totalAmount,
-          accountId: accountIdToSave,
-          groups: entryItems.value,
+          name,
+          amount,
+          accountId,
+          groups,
         });
       } else {
         budgetController.addEgreso({
-          name: editEntryModalData.value.name,
-          amount: totalAmount,
-          accountId: accountIdToSave,
-          groups: entryItems.value,
+          name,
+          amount,
+          accountId,
+          groups,
         });
       }
     }

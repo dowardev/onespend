@@ -1,3 +1,19 @@
+## [v0.32.3] - 2026-01-18
+
+### Fixed
+
+- Fix save button not working when creating new budget entries
+- Fix saveEntryChanges function to properly receive data from EditEntryModal emit event
+- Fix isFormValid computed to use editEntryModalData and entryItems directly instead of entryFormState
+- Fix EditEntryModal watcher to only reset entryItems when entry ID changes, preventing user input from being overwritten
+
+### Changed Files
+
+- `front/src/views/budget/InicioViewComponent.vue` - Fix saveEntryChanges to accept emitted data parameter, fix isFormValid computed
+- `front/src/views/budget/components/EditEntryModal.vue` - Fix watcher to track props.entryData.id instead of deep watching entire object
+
+---
+
 ## [v0.32.2] - 2026-01-16
 
 ### Fixed

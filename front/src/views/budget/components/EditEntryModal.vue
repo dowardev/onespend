@@ -12,7 +12,9 @@
           </ion-button>
         </ion-buttons>
 
-        <ion-title>{{ entryData.id ? 'Editar Entrada' : 'Nueva Entrada' }}</ion-title>
+        <ion-title>{{
+          entryData.id ? 'Editar Entrada' : 'Nueva Entrada'
+        }}</ion-title>
 
         <ion-buttons slot="end">
           <ion-button
@@ -25,7 +27,10 @@
             <ion-icon :icon="trashOutline"></ion-icon>
           </ion-button>
 
-          <ion-button :disabled="!isFormValid || isDayClosed" @click="handleSave">
+          <ion-button
+            :disabled="!isFormValid || isDayClosed"
+            @click="handleSave"
+          >
             <ion-icon :icon="saveOutline"></ion-icon>
           </ion-button>
         </ion-buttons>
@@ -50,44 +55,44 @@
       </ion-grid>
 
       <template v-if="!entryData.id && addEntrySegment === 'entry'">
-          <ion-list class="transparent">
-            <div class="list-content">
-              <ion-item lines="full" class="transparent">
-                <ion-select
-                  v-model="entryData.entryType"
-                  interface="popover"
-                  label="Tipo"
-                  label-placement="stacked"
-                >
-                  <ion-select-option value="ingreso">Ingreso</ion-select-option>
-
-                  <ion-select-option value="egreso">Egreso</ion-select-option>
-                </ion-select>
-              </ion-item>
-
-              <ion-item class="transparent" lines="none">
-                <ion-label position="stacked">Nombre</ion-label>
-
-                <ion-input
-                  v-model="entryData.name"
-                  placeholder="Nombre"
-                ></ion-input>
-              </ion-item>
-            </div>
-          </ion-list>
-
-          <ion-list class="transparent">
-            <ion-list-header>
-              <ion-label>Detalles</ion-label>
-
-              <ion-button
-                :disabled="!canAddMoreItems || isDayClosed"
-                @click="addEntryItem"
+        <ion-list class="transparent">
+          <div class="list-content">
+            <ion-item lines="full" class="transparent">
+              <ion-select
+                v-model="entryData.entryType"
+                interface="popover"
+                label="Tipo"
+                label-placement="stacked"
               >
-                <ion-icon :icon="addOutline"></ion-icon>
-                Agregar
-              </ion-button>
-            </ion-list-header>
+                <ion-select-option value="ingreso">Ingreso</ion-select-option>
+
+                <ion-select-option value="egreso">Egreso</ion-select-option>
+              </ion-select>
+            </ion-item>
+
+            <ion-item class="transparent" lines="none">
+              <ion-label position="stacked">Nombre</ion-label>
+
+              <ion-input
+                v-model="entryData.name"
+                placeholder="Nombre"
+              ></ion-input>
+            </ion-item>
+          </div>
+        </ion-list>
+
+        <ion-list class="transparent">
+          <ion-list-header>
+            <ion-label>Detalles</ion-label>
+
+            <ion-button
+              :disabled="!canAddMoreItems || isDayClosed"
+              @click="addEntryItem"
+            >
+              <ion-icon :icon="addOutline"></ion-icon>
+              Agregar
+            </ion-button>
+          </ion-list-header>
 
           <div class="list-content">
             <ion-card
@@ -308,7 +313,12 @@ import {
   IonSegment,
   IonSegmentButton,
 } from '@ionic/vue';
-import { addOutline, closeOutline, saveOutline, trashOutline } from 'ionicons/icons';
+import {
+  addOutline,
+  closeOutline,
+  saveOutline,
+  trashOutline,
+} from 'ionicons/icons';
 import { computed, ref, watch } from 'vue';
 
 const props = defineProps<{
@@ -320,10 +330,21 @@ const props = defineProps<{
   };
   accountsList: Array<{ id: string | number; name: string }>;
   isDayClosed: boolean;
-  providersTodayWithData: Array<{ id: string | number; name: string; estimated: number; accountId: string | number | null }>;
+  providersTodayWithData: Array<{
+    id: string | number;
+    name: string;
+    estimated: number;
+    accountId: string | number | null;
+  }>;
 }>();
 
-const emit = defineEmits(['dismiss', 'save', 'delete', 'quick-account', 'select-provider']);
+const emit = defineEmits([
+  'dismiss',
+  'save',
+  'delete',
+  'quick-account',
+  'select-provider',
+]);
 
 const addEntrySegment = ref('entry');
 const entryItems = ref<Array<{ amount: number; accountId: any }>>([
@@ -335,32 +356,46 @@ const isFormValid = computed(() => {
     entryData.value.name.trim().length > 0 &&
     entryData.value.entryType &&
     entryItems.value.length > 0 &&
-    entryItems.value.every(item => Number(item.amount) > 0 && item.accountId != null)
+    entryItems.value.every(
+      item => Number(item.amount) > 0 && item.accountId != null
+    )
   );
 });
 
 const entryData = computed(() => props.entryData);
 
-watch(() => props.entryData, (newData) => {
-  if (newData.id) {
-    if (newData.groups && Array.isArray(newData.groups) && newData.groups.length > 0) {
-      entryItems.value = newData.groups.map((g: any) => ({
-        amount: Number(g.amount) || 0,
-        accountId: g.accountId ?? getDefaultAccountId(),
-      }));
-    } else {
-      entryItems.value = [
-        {
-          amount: Number(newData.amount) || 0,
-          accountId: newData.accountId || getDefaultAccountId(),
-        },
-      ];
+watch(
+  () => props.entryData.id,
+  (newId, oldId) => {
+    if (newId !== oldId) {
+      if (newId) {
+        const newData = props.entryData;
+        if (
+          newData.groups &&
+          Array.isArray(newData.groups) &&
+          newData.groups.length > 0
+        ) {
+          entryItems.value = newData.groups.map((g: any) => ({
+            amount: Number(g.amount) || 0,
+            accountId: g.accountId ?? getDefaultAccountId(),
+          }));
+        } else {
+          entryItems.value = [
+            {
+              amount: Number(newData.amount) || 0,
+              accountId: newData.accountId || getDefaultAccountId(),
+            },
+          ];
+        }
+      } else if (entryItems.value.length === 0 || 
+                 (entryItems.value.length === 1 && entryItems.value[0].amount === 0)) {
+        entryItems.value = [{ amount: 0, accountId: getDefaultAccountId() }];
+        addEntrySegment.value = 'entry';
+      }
     }
-  } else {
-    entryItems.value = [{ amount: 0, accountId: getDefaultAccountId() }];
-    addEntrySegment.value = 'entry';
-  }
-}, { immediate: true, deep: true });
+  },
+  { immediate: true }
+);
 
 function getDefaultAccountId() {
   return props.accountsList.length > 0 ? props.accountsList[0].id : null;
