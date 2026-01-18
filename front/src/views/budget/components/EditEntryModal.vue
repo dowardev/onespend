@@ -327,6 +327,8 @@ const props = defineProps<{
     id: string | number | null;
     entryType: 'ingreso' | 'egreso';
     name: string;
+    amount?: number;
+    groups?: Array<{ amount: number; accountId: string | number | null }>;
   };
   accountsList: Array<{ id: string | number; name: string }>;
   isDayClosed: boolean;
