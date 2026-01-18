@@ -3,7 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Account;
-use App\Models\Income;
+use App\Models\Budget;
+use App\Models\Entry;
 use App\Models\Supplier;
 use App\Models\Template;
 use App\Models\SyncMetadata;
@@ -16,7 +17,8 @@ class SyncController extends Controller
 {
     private const ENTITY_TYPES = [
         'account' => Account::class,
-        'income' => Income::class,
+        'budget' => Budget::class,
+        'entry' => Entry::class,
         'supplier' => Supplier::class,
         'template' => Template::class,
     ];
@@ -121,7 +123,8 @@ class SyncController extends Controller
 
         $data = [
             'accounts' => Account::forUser($user->id)->active()->get(),
-            'incomes' => Income::forUser($user->id)->active()->get(),
+            'budgets' => Budget::forUser($user->id)->active()->get(),
+            'entries' => Entry::forUser($user->id)->active()->get(),
             'suppliers' => Supplier::forUser($user->id)->active()->get(),
             'templates' => Template::forUser($user->id)->active()->get(),
         ];

@@ -1,3 +1,44 @@
+## [v0.33.0] - 2026-01-18
+
+### Features
+
+- Added budget/day synchronization with backend
+- Created Budget model and migration for storing day metadata (date, isDayClosed, finishDayData)
+- Added syncBudget() function to sync budget state with server
+- Added Entry model (renamed from Income) with proper table naming
+- Implemented automatic sync of entries (create/update/delete) to backend
+- Added 'budget' and 'entry' entity types to sync system
+
+### Breaking Changes
+
+- Renamed database table from `incomes` to `entries`
+- Renamed model from `Income` to `Entry`
+- Updated sync entity type from 'income' to 'entry'
+
+### Bug Fixes
+
+- Fixed EditEntryModal not displaying amount when editing entries
+- Added missing `amount` and `groups` props to entryData type
+- Updated openEditEntryModal to pass amount and groups data
+
+### Changed Files
+
+**Backend:**
+- `back/app/Models/Budget.php` - New Budget model for day metadata
+- `back/app/Models/Entry.php` - New Entry model (renamed from Income)
+- `back/app/Http/Controllers/SyncController.php` - Added budget and entry entity types
+- `back/database/migrations/2026_01_16_000006_create_budgets_table.php` - Budgets table migration
+- `back/database/migrations/2026_01_16_000007_rename_incomes_to_entries_table.php` - Rename migration
+
+**Frontend:**
+- `front/src/services/syncService.ts` - Added budget and entry entity types
+- `front/src/composables/useSync.ts` - Added syncBudget function, updated syncEntry to use 'entry' type
+- `front/src/controllers/budgetController.ts` - Added automatic sync for entry create/update/delete
+- `front/src/views/budget/InicioViewComponent.vue` - Pass amount/groups to EditEntryModal
+- `front/src/views/budget/components/EditEntryModal.vue` - Added amount and groups to entryData type
+
+---
+
 ## [v0.32.3] - 2026-01-18
 
 ### Fixed

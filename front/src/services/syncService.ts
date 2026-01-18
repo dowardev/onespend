@@ -8,7 +8,7 @@ const PENDING_OPERATIONS_KEY = 'pending_operations';
 
 export interface SyncItem {
   id: string;
-  entityType: 'account' | 'income' | 'supplier' | 'template';
+  entityType: 'account' | 'budget' | 'entry' | 'supplier' | 'template';
   operation: 'create' | 'update' | 'delete';
   data: any;
   timestamp: number;
@@ -131,7 +131,8 @@ class SyncService {
       const headers = await this.getAuthHeaders();
       const data: Record<string, any[]> = {
         account: [],
-        income: [],
+        budget: [],
+        entry: [],
         supplier: [],
         template: [],
       };

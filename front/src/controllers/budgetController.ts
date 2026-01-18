@@ -1,6 +1,7 @@
 import { useBudgetStore, type Income, type Provider } from '@/stores/budgetStore';
 import dixieController from '@/controllers/dixie';
 import { formatLocalDate } from '@/utils/date';
+import { useSync } from '@/composables/useSync';
 
 class BudgetController {
   private _store: ReturnType<typeof useBudgetStore> | null = null;
@@ -178,6 +179,9 @@ class BudgetController {
     };
 
     this.store.addEntry(newIngreso);
+    
+    const { syncEntry } = useSync();
+    syncEntry(newIngreso, 'create');
   }
 
   addEgreso(params: {
@@ -208,6 +212,9 @@ class BudgetController {
     };
 
     this.store.addEntry(newEgreso);
+    
+    const { syncEntry } = useSync();
+    syncEntry(newEgreso, 'create');
   }
 
   addProviderEgresos(provider: Provider) {
@@ -230,14 +237,29 @@ class BudgetController {
     };
 
     this.store.addEntry(newEntry);
+    
+    const { syncEntry } = useSync();
+    syncEntry(newEntry, 'create');
   }
 
   updateIngreso(id: string | number, changes: Partial<Income>) {
     this.store.updateEntry(id, changes);
+    
+    const entry = this.store.entries.find(e => e.id === id);
+    if (entry) {
+      const { syncEntry } = useSync();
+      syncEntry(entry, 'update');
+    }
   }
 
   removeIngreso(id: string | number) {
+    const entry = this.store.entries.find(e => e.id === id);
     this.store.removeEntry(id);
+    
+    if (entry) {
+      const { syncEntry } = useSync();
+      syncEntry(entry, 'delete');
+    }
   }
 
   removeEgresosGroup(groupId: string | number) {
@@ -334,6 +356,14 @@ class BudgetController {
       });
       
       console.log('[BudgetController.saveData] Datos guardados correctamente');
+      
+      const { syncBudget } = useSync();
+      syncBudget({
+        id: dateKey,
+        date: this.store.selectedDate,
+        isDayClosed: this.store.isDayClosed,
+        finishDayData: finishDayDataPlain,
+      }, this.store.isDayClosed ? 'update' : 'update');
       
       if (this.store.isDayClosed) {
         console.log('[BudgetController.saveData] Creando instantánea congelada...');

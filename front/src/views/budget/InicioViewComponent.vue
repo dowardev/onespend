@@ -710,6 +710,8 @@ function openEditEntryModal(item: any) {
     id: item.id,
     entryType: item.entryType || 'ingreso',
     name: item.name || '',
+    amount: item.amount,
+    groups: item.groups,
   };
 
   if (item.groups && Array.isArray(item.groups) && item.groups.length > 0) {

@@ -32,7 +32,7 @@ export function useSync() {
     
     const syncItem: Omit<SyncItem, 'timestamp' | 'retryCount'> = {
       id: syncId,
-      entityType: 'income',
+      entityType: 'entry',
       operation,
       data: {
         name: entry.name,
@@ -129,6 +129,29 @@ export function useSync() {
     pendingChanges.value = syncService.getQueueCount();
   }
 
+  function syncBudget(budgetData: any, operation: 'create' | 'update' | 'delete' = 'create') {
+    let syncId = budgetData.sync_id;
+    
+    if (!syncId) {
+      syncId = budgetData.sync_id = String(budgetData.id || `budget-${budgetData.date}`);
+    }
+    
+    const syncItem: Omit<SyncItem, 'timestamp' | 'retryCount'> = {
+      id: syncId,
+      entityType: 'budget',
+      operation,
+      data: {
+        date: budgetData.date,
+        is_day_closed: budgetData.isDayClosed,
+        finish_day_data: budgetData.finishDayData,
+        updated_at: Date.now(),
+      },
+    };
+
+    syncService.queueOperation(syncItem);
+    pendingChanges.value = syncService.getQueueCount();
+  }
+
   async function syncNow(): Promise<boolean> {
     if (!isOnline.value) {
       syncError.value = 'Cannot sync while offline';
@@ -182,34 +205,34 @@ export function useSync() {
 
     if (!changes) return;
 
-    if (changes.income) {
-      const incomes = Array.isArray(changes.income) ? changes.income : [];
-      for (const income of incomes) {
-        if (income._deleted) {
-          const localId = income.id;
+    if (changes.entry) {
+      const entries = Array.isArray(changes.entry) ? changes.entry : [];
+      for (const entry of entries) {
+        if (entry._deleted) {
+          const localId = entry.id;
           budgetStore.removeEntry(localId);
         } else {
-          const existing = budgetStore.entries.find(e => String(e.id) === String(income.id));
+          const existing = budgetStore.entries.find(e => String(e.id) === String(entry.id));
           if (existing) {
-            budgetStore.updateEntry(income.id, {
-              name: income.name,
-              amount: income.amount,
-              date: income.date,
-              paymentType: income.payment_type,
-              entryType: income.entry_type,
-              accountId: income.account_id,
-              groups: income.groups,
+            budgetStore.updateEntry(entry.id, {
+              name: entry.name,
+              amount: entry.amount,
+              date: entry.date,
+              paymentType: entry.payment_type,
+              entryType: entry.entry_type,
+              accountId: entry.account_id,
+              groups: entry.groups,
             });
           } else {
             budgetStore.addEntry({
-              id: income.id,
-              name: income.name,
-              amount: income.amount,
-              date: income.date,
-              paymentType: income.payment_type,
-              entryType: income.entry_type,
-              accountId: income.account_id,
-              groups: income.groups,
+              id: entry.id,
+              name: entry.name,
+              amount: entry.amount,
+              date: entry.date,
+              paymentType: entry.payment_type,
+              entryType: entry.entry_type,
+              accountId: entry.account_id,
+              groups: entry.groups,
               createdAt: Date.now(),
             });
           }
@@ -286,6 +309,22 @@ export function useSync() {
         }
       }
     }
+
+    if (changes.budget) {
+      const budgets = Array.isArray(changes.budget) ? changes.budget : [];
+      for (const budget of budgets) {
+        if (budget._deleted) {
+          const localId = budget.id;
+          budgetStore.clearAll();
+        } else {
+          budgetStore.setSelectedDate(budget.date);
+          budgetStore.setIsDayClosed(!!budget.is_day_closed);
+          if (budget.finish_day_data) {
+            budgetStore.setFinishDayData(budget.finish_day_data);
+          }
+        }
+      }
+    }
   }
 
   function startAutoSync(intervalMs: number = 30000) {
@@ -326,6 +365,7 @@ export function useSync() {
     syncProvider,
     syncAccount,
     syncTemplate,
+    syncBudget,
     syncNow,
     pullFromServer,
     startAutoSync,
