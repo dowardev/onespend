@@ -1,3 +1,20 @@
+## [v0.34.1] - 2026-01-20
+
+### Fixed
+
+- Fix supplier/provider lookups to use sync_id (MySQL ID) instead of local id
+- Add fallback to local id when sync_id is not found in suppliers list
+- Add sync_id field to provider objects for consistent cross-device identification
+- Update InicioViewComponent, ProvidersComponent, and EditProviderModal to use sync_id-based lookups
+
+### Changed Files
+
+- `front/src/views/budget/InicioViewComponent.vue` - Updated supplier lookup to use sync_id with id fallback
+- `front/src/views/budget/ProvidersComponent.vue` - Updated provider edit to use sync_id with id fallback
+- `front/src/views/budget/components/EditProviderModal.vue` - Added sync_id field, updated provider lookups
+
+---
+
 ## [v0.34.0] - 2026-01-20
 
 ### Features

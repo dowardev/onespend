@@ -507,7 +507,7 @@ function handleSave() {
   console.log('EditProviderModal.handleSave - filtered products:', products);
 
   emit('saved', {
-    providerId: selectedProvider.value?.id,
+    providerId: selectedProvider.value?.sync_id || selectedProvider.value?.id,
     providerName: selectedProvider.value?.name,
     entryId: entryData.value?.entryId,
     items: items.value.map(item => ({
@@ -542,10 +542,14 @@ watch(isOpen, async newVal => {
       providerProducts.value = [];
     } else if (provider.value) {
       // Provider mode with existing provider - load data
-      const supplierId = provider.value._supplierId || provider.value.id;
+      // _supplierId ahora contiene el sync_id del supplier (ID de MySQL)
+      const supplierSyncId = provider.value._supplierId || provider.value.id;
       const fullSupplier =
         suppliers.value.find(
-          (s: Supplier) => String(s.id) === String(supplierId)
+          (s: Supplier) => String(s.sync_id) === String(supplierSyncId)
+        ) ||
+        suppliers.value.find(
+          (s: Supplier) => String(s.id) === String(supplierSyncId)
         ) ||
         suppliers.value.find(
           (s: Supplier) =>
@@ -553,7 +557,8 @@ watch(isOpen, async newVal => {
         );
 
       selectedProvider.value = {
-        id: supplierId,
+        id: fullSupplier?.id || supplierSyncId,
+        sync_id: fullSupplier?.sync_id || supplierSyncId,
         name: provider.value._supplierName || provider.value.name,
         products: fullSupplier?.products || provider.value.products || [],
       };
@@ -592,10 +597,14 @@ watch(
   () => props.provider,
   newProvider => {
     if (isOpen.value && newProvider && !isEntryMode.value) {
-      const supplierId = newProvider._supplierId || newProvider.id;
+      // _supplierId ahora contiene el sync_id del supplier (ID de MySQL)
+      const supplierSyncId = newProvider._supplierId || newProvider.id;
       const fullSupplier =
         suppliers.value.find(
-          (s: Supplier) => String(s.id) === String(supplierId)
+          (s: Supplier) => String(s.sync_id) === String(supplierSyncId)
+        ) ||
+        suppliers.value.find(
+          (s: Supplier) => String(s.id) === String(supplierSyncId)
         ) ||
         suppliers.value.find(
           (s: Supplier) =>
@@ -603,7 +612,8 @@ watch(
         );
 
       selectedProvider.value = {
-        id: supplierId,
+        id: fullSupplier?.id || supplierSyncId,
+        sync_id: fullSupplier?.sync_id || supplierSyncId,
         name: newProvider._supplierName || newProvider.name,
         products: fullSupplier?.products || newProvider.products || [],
       };
