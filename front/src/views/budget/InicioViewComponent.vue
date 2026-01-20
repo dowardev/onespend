@@ -643,13 +643,18 @@ async function openEditProviderModal(item: any) {
 
   // Find full supplier data
   const providerName = item._providerName || item.name || '';
-  const supplierId = item._supplierId || item._fromProviderGroupId;
+  // _supplierId ahora contiene el sync_id del supplier (ID de MySQL)
+  const supplierSyncId = item._supplierId || item._fromProviderGroupId;
 
   let fullSupplier: any = null;
-  if (supplierId) {
-    fullSupplier = allSuppliers.value.find(
-      (s: any) => String(s.id) === String(supplierId)
-    );
+  if (supplierSyncId) {
+    fullSupplier =
+      allSuppliers.value.find(
+        (s: any) => String(s.sync_id) === String(supplierSyncId)
+      ) ||
+      allSuppliers.value.find(
+        (s: any) => String(s.id) === String(supplierSyncId)
+      );
   }
   if (!fullSupplier) {
     fullSupplier = allSuppliers.value.find(
@@ -663,7 +668,7 @@ async function openEditProviderModal(item: any) {
     name: providerName,
     estimated: Number(item.amount) || 0,
     accountId: item.accountId,
-    _supplierId: fullSupplier?.id || supplierId,
+    _supplierId: fullSupplier?.sync_id || supplierSyncId || fullSupplier?.id,
     _supplierName: providerName,
     products: fullSupplier?.products || [],
   };
