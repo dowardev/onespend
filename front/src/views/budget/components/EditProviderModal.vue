@@ -188,13 +188,9 @@
                       slot="end"
                       type="number"
                       placeholder="0"
-                      :value="productQuantities[product.name]"
+                      :value="getProductQuantity(product, product.name, product.price)"
                       style="width: 80px; text-align: end"
-                      @ion-input="
-                        productQuantities[product.name] = Number(
-                          $event.detail.value
-                        )
-                      "
+                      @ion-input="setProductQuantity(product, product.name, product.price, Number($event.detail.value))"
                     ></ion-input>
                   </ion-item>
                 </div>
@@ -259,7 +255,14 @@ interface Account {
 interface Supplier {
   id?: string | number;
   name: string;
-  products?: Array<{ name: string; price: number }>;
+  products?: Array<{ id: string | number; name: string; price: number }>;
+}
+
+interface ProviderProduct {
+  supplierProductId: string | number;
+  productName: string;
+  productPrice: number;
+  quantity: number;
 }
 
 interface Props {
@@ -297,7 +300,7 @@ const emit = defineEmits<{
       entryId?: string | number | null;
       items: ProviderItem[];
       totalAmount: number;
-      productQuantities?: Record<string, number>;
+      products?: ProviderProduct[];
     }
   ): void;
   (e: 'deleted', id: string | number): void;
@@ -310,7 +313,7 @@ const { isOpen, provider, entryData, suppliers, accounts, mode } =
 const searchQuery = ref('');
 const selectedProvider = ref<Supplier | null>(null);
 const selectedSegment = ref('inicio');
-const productQuantities = ref<Record<string, number>>({});
+const providerProducts = ref<ProviderProduct[]>([]);
 const items = ref<ProviderItem[]>([{ amount: 0, accountId: null }]);
 
 // Computed
@@ -354,16 +357,15 @@ const filteredProviders = computed(() => {
 const productsTotal = computed(() => {
   if (!selectedProvider.value?.products) return 0;
   return selectedProvider.value.products.reduce((sum: number, product: any) => {
-    const qty = productQuantities.value[product.name] || 0;
+    const providerProduct = providerProducts.value.find(p => p.supplierProductId === product.id);
+    const qty = providerProduct?.quantity || 0;
     return sum + qty * (product.price || 0);
   }, 0);
 });
 
 const hasProductsWithQuantity = computed(() => {
   if (!selectedProvider.value?.products) return false;
-  return selectedProvider.value.products.some((product: any) => {
-    return (productQuantities.value[product.name] || 0) > 0;
-  });
+  return providerProducts.value.some(p => (p.quantity || 0) > 0);
 });
 
 const productsCoverage = computed(() => {
@@ -457,11 +459,52 @@ function removeItem(index: number) {
   }
 }
 
+function getProductQuantity(product: any, productName: string, productPrice: number): number {
+  const productId = product?.id ?? product?.sync_id;
+  // Use productId (id or sync_id) if available, otherwise find by name+price
+  const found = providerProducts.value.find(p => {
+    if (productId) {
+      return String(p.supplierProductId) === String(productId);
+    }
+    // Fallback: match by name and price
+    return p.productName === productName && p.productPrice === productPrice;
+  });
+  return found?.quantity || 0;
+}
+
+function setProductQuantity(product: any, productName: string, productPrice: number, quantity: number) {
+  const productId = product?.id ?? product?.sync_id;
+  console.log('setProductQuantity - product:', JSON.stringify(product), 'productName:', productName, 'productId:', productId);
+  // Use productId (id or sync_id) if available, otherwise match by name+price
+  const existing = providerProducts.value.find(p => {
+    if (productId) {
+      return String(p.supplierProductId) === String(productId);
+    }
+    return p.productName === productName && p.productPrice === productPrice;
+  });
+  
+  if (existing) {
+    existing.quantity = quantity;
+  } else {
+    providerProducts.value.push({
+      supplierProductId: productId || null,
+      productName,
+      productPrice,
+      quantity,
+    });
+  }
+}
+
 function handleSave() {
   const totalAmount = items.value.reduce(
     (sum, item) => sum + (Number(item.amount) || 0),
     0
   );
+
+  const products = providerProducts.value.filter(p => (p.quantity || 0) > 0);
+  
+  console.log('EditProviderModal.handleSave - providerProducts.value:', providerProducts.value);
+  console.log('EditProviderModal.handleSave - filtered products:', products);
 
   emit('saved', {
     providerId: selectedProvider.value?.id,
@@ -474,7 +517,7 @@ function handleSave() {
         : (item.accountId?.id ?? item.accountId),
     })),
     totalAmount,
-    productQuantities: productQuantities.value,
+    products: products.length > 0 ? products : undefined,
   });
 }
 
@@ -496,9 +539,9 @@ watch(isOpen, async newVal => {
         amount: Number(item.amount) || 0,
         accountId: item.accountId,
       }));
+      providerProducts.value = [];
     } else if (provider.value) {
       // Provider mode with existing provider - load data
-      // Find the full supplier from the suppliers list to get products
       const supplierId = provider.value._supplierId || provider.value.id;
       const fullSupplier =
         suppliers.value.find(
@@ -522,13 +565,24 @@ watch(isOpen, async newVal => {
             : getDefaultAccountId(),
         },
       ];
+      // Load existing products
+      if (provider.value.products && Array.isArray(provider.value.products)) {
+        providerProducts.value = provider.value.products.map((p: any) => ({
+          supplierProductId: p.supplierProductId || p.sync_id || p.id || `${p.name}-${p.price}`,
+          productName: p.productName || p.name || '',
+          productPrice: p.productPrice || p.price || 0,
+          quantity: p.quantity || 0,
+        }));
+      } else {
+        providerProducts.value = [];
+      }
     } else {
       // Provider mode - new provider
       selectedProvider.value = null;
+      providerProducts.value = [];
       items.value = [{ amount: 0, accountId: getDefaultAccountId() }];
     }
     selectedSegment.value = 'inicio';
-    productQuantities.value = {};
     searchQuery.value = '';
   }
 });
@@ -538,7 +592,6 @@ watch(
   () => props.provider,
   newProvider => {
     if (isOpen.value && newProvider && !isEntryMode.value) {
-      // Find the full supplier from the suppliers list to get products
       const supplierId = newProvider._supplierId || newProvider.id;
       const fullSupplier =
         suppliers.value.find(
@@ -562,6 +615,16 @@ watch(
             : getDefaultAccountId(),
         },
       ];
+      if (newProvider.products && Array.isArray(newProvider.products)) {
+        providerProducts.value = newProvider.products.map((p: any) => ({
+          supplierProductId: p.supplierProductId || p.sync_id || p.id || `${p.name}-${p.price}`,
+          productName: p.productName || p.name || '',
+          productPrice: p.productPrice || p.price || 0,
+          quantity: p.quantity || 0,
+        }));
+      } else {
+        providerProducts.value = [];
+      }
     }
   },
   { deep: true }

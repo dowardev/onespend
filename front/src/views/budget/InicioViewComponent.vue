@@ -676,6 +676,12 @@ function handleProviderEntrySaved(payload: {
   providerName?: string;
   items: Array<{ amount: number; accountId: any }>;
   totalAmount: number;
+  products?: Array<{
+    supplierProductId: string | number;
+    productName: string;
+    productPrice: number;
+    quantity: number;
+  }>;
 }) {
   const entryId = editingProviderEntryId.value;
   if (entryId) {
@@ -691,10 +697,25 @@ function handleProviderEntrySaved(payload: {
       _providerName: payload.providerName,
     });
     budgetController.saveData();
+  } else if (editingProviderId.value) {
+    budgetController.updateProvider(editingProviderId.value, {
+      estimated: payload.totalAmount,
+      products: payload.products,
+    });
+    budgetController.saveData();
+  } else {
+    console.log('InicioViewComponent.onProviderSaved - payload:', payload);
+    budgetController.addProvider({
+      name: payload.providerName || 'Proveedor',
+      estimated: payload.totalAmount,
+      products: payload.products,
+    });
+    budgetController.saveData();
   }
   editProviderModalOpen.value = false;
   editProviderData.value = null;
   editingProviderEntryId.value = null;
+  editingProviderId.value = null;
 }
 
 function handleProviderEntryDeleted(entryId: string | number) {

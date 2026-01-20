@@ -19,6 +19,15 @@ export interface Income {
   _providerName?: string;
 }
 
+export interface BudgetProviderProduct {
+  id?: string | number;
+  sync_id?: string;
+  supplierProductId: string | number;
+  productName: string;
+  productPrice: number;
+  quantity: number;
+}
+
 export interface Provider {
   id: string | number;
   name: string;
@@ -28,6 +37,7 @@ export interface Provider {
   efectivo: number;
   tarjeta: number;
   credito: number;
+  products?: BudgetProviderProduct[];
   notes: string;
   visited: boolean;
   _justAdded?: boolean;

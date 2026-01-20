@@ -2,8 +2,10 @@ import { DixieController } from './dixie';
 import { reactive, ref } from 'vue';
 import { useSuppliersStore } from '../stores/suppliersStore';
 import { useSync } from '@/composables/useSync';
+import { syncService } from '@/services/syncService';
 
 export type Product = {
+  id?: string | number;
   name: string;
   price: number;
   imageBase64?: string | null;
@@ -47,14 +49,35 @@ class SuppliersController {
         updatedAt: now,
       };
 
-      const { syncProvider } = useSync();
+      const { syncProvider, syncSupplierProduct } = useSync();
+      
+      if (!entry.sync_id) {
+        entry.sync_id = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      }
+      
       syncProvider(entry, 'create');
 
-      const id = await ctrl.addEntry({ entry });
-      const result = { ...(entry as any), id };
+      const localId = await ctrl.addEntry({ entry });
+      entry.id = localId;
+      const result = entry as any;
+
+      if (entry.products && entry.products.length > 0) {
+        for (const product of entry.products) {
+          syncSupplierProduct({
+            supplierId: entry.sync_id,
+            ...product,
+          }, 'create');
+        }
+      }
 
       store.suppliers = [result, ...store.suppliers];
       store.notifyChange();
+
+      console.log('addSupplier - Waiting for sync to complete...');
+      await syncService.processQueue();
+      console.log('addSupplier - Sync completed, reloading suppliers...');
+      await this.listSuppliers();
+      console.log('addSupplier - Done');
 
       return result;
     } catch (e) {
@@ -66,7 +89,7 @@ class SuppliersController {
   }
 
   async updateSupplier(s: Supplier) {
-    if (s.id == null) throw new Error('Supplier must have id to be updated');
+    if (s.sync_id == null) throw new Error('Supplier must have sync_id to be updated');
     const store = this.getStore();
     store.loading = true;
     store.error = null;
@@ -78,13 +101,23 @@ class SuppliersController {
       const entry: Supplier = {
         ...clean,
         id: s.id,
+        sync_id: s.sync_id,
         updatedAt: Date.now(),
       };
 
-      const { syncProvider } = useSync();
+      const { syncProvider, syncSupplierProduct } = useSync();
       syncProvider(entry, 'update');
 
       await ctrl.putEntry({ entry });
+
+      if (entry.products && entry.products.length > 0) {
+        for (const product of entry.products) {
+          syncSupplierProduct({
+            supplierId: entry.sync_id,  // Use sync_id for backend relation
+            ...product,
+          }, product.id ? 'update' : 'create');
+        }
+      }
 
       store.suppliers = store.suppliers.map(x =>
         x.id === entry.id ? entry : x
@@ -132,6 +165,30 @@ class SuppliersController {
       const ctrl = this.getController();
       const all = (await ctrl.listBackups()) as Supplier[];
 
+      console.log('suppliersController.listSuppliers - IndexedDB suppliers count:', all?.length || 0);
+
+      // If no suppliers in IndexedDB, do a full sync to get data from backend
+      if (!all || all.length === 0) {
+        console.log('suppliersController.listSuppliers - No suppliers in IndexedDB, fetching from backend...');
+        try {
+          const { syncService } = await import('@/services/syncService');
+          console.log('suppliersController.listSuppliers - Calling fullSyncAndSave...');
+          await syncService.fullSyncAndSave();
+          console.log('suppliersController.listSuppliers - fullSyncAndSave completed');
+          
+          // Retry reading from IndexedDB after sync
+          const allAfterSync = (await ctrl.listBackups()) as Supplier[];
+          console.log('suppliersController.listSuppliers - Suppliers after sync:', allAfterSync?.length || 0);
+          store.suppliers = allAfterSync as any;
+          return allAfterSync;
+        } catch (syncError) {
+          console.error('suppliersController.listSuppliers - Sync error:', syncError);
+          // Continue with empty list on sync error
+          store.suppliers = [];
+          return [];
+        }
+      }
+
       const sorted = (all || [])
         .slice()
         .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
@@ -140,6 +197,7 @@ class SuppliersController {
       return sorted;
     } catch (e) {
       store.error = e as Error;
+      console.error('suppliersController.listSuppliers - Error:', e);
       throw e;
     } finally {
       store.loading = false;

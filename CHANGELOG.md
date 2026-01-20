@@ -1,3 +1,50 @@
+## [v0.34.0] - 2026-01-20
+
+### Features
+
+- Add supplier products management with sync support
+- Add budget providers with products tracking and sync integration
+- Implement new sync entity types: budget_provider, budget_provider_product, supplier_product
+- Add full bidirectional sync for suppliers, products, and budget providers
+- Add frontend functions: syncSupplierProduct, syncBudgetProvider, syncBudgetProviderProduct
+- Add backend processing for nested product data within budget provider sync operations
+
+### New Files (Backend)
+
+- `back/app/Models/BudgetProvider.php` - Model for budget provider (day visit) data
+- `back/app/Models/BudgetProviderProduct.php` - Model for budget provider products with quantities
+- `back/app/Models/SupplierProduct.php` - Model for supplier product catalog
+
+### New Migrations (Backend)
+
+- `2026_01_16_000008_create_budget_providers_table.php` - Budget providers table
+- `2026_01_16_000009_add_product_quantities_to_budget_providers.php` - JSON product quantities field
+- `2026_01_16_000010_create_budget_provider_products_table.php` - Budget provider products table
+- `2026_01_16_000011_create_supplier_products_table.php` - Supplier products table
+- `2026_01_16_000012_add_supplier_product_fk_to_budget_provider_products.php` - Foreign key
+- `2026_01_16_000013_change_supplier_id_to_string_in_supplier_products.php` - Use sync_id
+- `2026_01_16_000014_add_sync_id_to_supplier_products.php` - Sync ID support
+- `2026_01_16_000015_change_budget_provider_id_to_string_in_budget_provider_products.php` - Use sync_id
+
+### Changed Files (Backend)
+
+- `back/app/Http/Controllers/SyncController.php` - Added budget_provider, budget_provider_product, supplier_product entity types
+- `back/app/Models/Supplier.php` - Added supplierProducts relationship
+- `back/app/Models/User.php` - Added suppliers and accounts relationships
+
+### Changed Files (Frontend)
+
+- `front/src/composables/useSync.ts` - Added syncSupplierProduct, syncBudgetProvider, syncBudgetProviderProduct functions
+- `front/src/controllers/budgetController.ts` - Added sync integration for providers with products
+- `front/src/controllers/suppliersController.ts` - Added product sync and fullSyncAndSave functionality
+- `front/src/services/syncService.ts` - Added new entity types, fullSyncAndSave, debounced sync processing
+- `front/src/stores/budgetStore.ts` - Added Provider.products support
+- `front/src/views/budget/InicioViewComponent.vue` - Updated for provider product handling
+- `front/src/views/budget/ProvidersComponent.vue` - Updated for provider sync
+- `front/src/views/budget/components/EditProviderModal.vue` - Updated for product management
+
+---
+
 ## [v0.33.0] - 2026-01-18
 
 ### Features
