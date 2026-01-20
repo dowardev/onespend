@@ -46,4 +46,14 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    public function suppliers()
+    {
+        return $this->hasMany(\App\Models\Supplier::class);
+    }
+
+    public function accounts()
+    {
+        return $this->hasMany(\App\Models\Account::class);
+    }
 }

@@ -168,6 +168,7 @@ class BudgetController {
 
     const newIngreso: Income = {
       id: Date.now() + Math.random(),
+      sync_id: `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       name,
       amount: Number(amount) || 0,
       date: this.store.selectedDate,
@@ -201,6 +202,7 @@ class BudgetController {
 
     const newEgreso: Income = {
       id: Date.now() + Math.random(),
+      sync_id: `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       name,
       amount: Number(amount) || 0,
       date: this.store.selectedDate,
@@ -225,6 +227,7 @@ class BudgetController {
 
     const newEntry: Income = {
       id: Date.now() + Math.random(),
+      sync_id: `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       name: provider.name,
       amount,
       date: this.store.selectedDate,
@@ -273,6 +276,7 @@ class BudgetController {
     allowEmpty?: boolean;
     _supplierId?: string | number;
     _supplierName?: string;
+    products?: Array<{ supplierProductId: string | number; productName: string; productPrice: number; quantity: number }>;
   }) {
     const {
       name = '',
@@ -281,11 +285,15 @@ class BudgetController {
       allowEmpty = false,
       _supplierId,
       _supplierName,
+      products,
     } = params;
     if (!name && !allowEmpty) return;
 
+    const localId = Date.now() + Math.random();
+    
     const newProvider: Provider = {
-      id: Date.now() + Math.random(),
+      id: localId,
+      sync_id: `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       name,
       date: this.store.selectedDate,
       estimated: Number(estimated) || 0,
@@ -298,9 +306,15 @@ class BudgetController {
       _justAdded: true,
       _supplierId,
       _supplierName,
+      _pendingProducts: products,
+      products,
     };
 
     this.store.addProvider(newProvider);
+    
+    const { syncBudgetProvider } = useSync();
+    console.log('budgetController.addProvider - sincronizando provider con productos');
+    syncBudgetProvider(newProvider, 'create', products);
 
     setTimeout(() => {
       const provider = this.store.providers.find(p => p.id === newProvider.id);
@@ -311,7 +325,28 @@ class BudgetController {
   }
 
   updateProvider(id: string | number, changes: Partial<Provider>) {
+    console.log('budgetController.updateProvider - id:', id, 'changes:', JSON.stringify(changes, null, 2));
+    
+    const provider = this.store.providers.find(p => p.id === id);
+    const productsToSync = changes.products || (provider?.products || []);
+    
     this.store.updateProvider(id, changes);
+    
+    if (provider) {
+      const { syncBudgetProvider } = useSync();
+      
+      syncBudgetProvider({ ...provider, ...changes }, 'update', productsToSync);
+    }
+  }
+
+  removeProvider(id: string | number) {
+    const provider = this.store.providers.find(p => p.id === id);
+    this.store.removeProvider(id);
+    
+    if (provider) {
+      const { syncBudgetProvider } = useSync();
+      syncBudgetProvider(provider, 'delete');
+    }
   }
 
   removeProvider(id: string | number) {

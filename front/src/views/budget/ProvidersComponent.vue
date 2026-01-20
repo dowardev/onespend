@@ -172,6 +172,7 @@ import suppliersController from '@/controllers/suppliersController';
 import accountsController from '@/controllers/accountsController';
 import { useBudgetStore } from '@/stores/budgetStore';
 import { useSuppliersStore } from '@/stores/suppliersStore';
+import { syncService } from '@/services/syncService';
 
 const budgetStore = useBudgetStore();
 
@@ -206,10 +207,17 @@ let unsubscribeFromSuppliers: (() => void) | null = null;
 
 async function loadSuppliers() {
   const list = await suppliersController.listSuppliers();
-  // allSuppliers is a computed that reads from suppliersController.getSuppliers()
-  // so we just need to trigger the reload
   const budgetStore = useBudgetStore();
   budgetStore.syncProvidersWithSuppliers((list || []) as any);
+}
+
+async function forceSyncSuppliers() {
+  console.log('forceSyncSuppliers - Starting sync...');
+  const result = await syncService.processQueue();
+  if (result) {
+    console.log('forceSyncSuppliers - Sync completed:', result);
+  }
+  await loadSuppliers();
 }
 
 async function loadAccounts() {
@@ -249,7 +257,7 @@ onIonViewWillEnter(async () => {
 
 function openAddProviderModal() {
   editingProvider.value = null;
-  void loadSuppliers();
+  void forceSyncSuppliers();
   showAddProviderModal.value = true;
 }
 
@@ -257,7 +265,7 @@ async function openEditProviderModal(payload: { provider: any }) {
   console.log('openEditProviderModal - payload:', payload);
   const provider = payload.provider;
 
-  await loadSuppliers();
+  await forceSyncSuppliers();
 
   // Find full supplier data
   let fullSupplier: any = null;
@@ -294,7 +302,9 @@ function handleProviderSaved(payload: {
   providerName?: string;
   items: Array<{ amount: number; accountId: any }>;
   totalAmount: number;
+  products?: Array<any>;
 }) {
+  console.log('ProvidersComponent.handleProviderSaved - payload:', payload);
   const firstItem = payload.items[0];
   const firstAccountId = firstItem?.accountId;
 
@@ -305,6 +315,7 @@ function handleProviderSaved(payload: {
       accountId: firstAccountId || 0,
       _supplierId: payload.providerId,
       _supplierName: payload.providerName,
+      products: payload.products,
     });
   } else {
     // Adding new provider
@@ -315,6 +326,7 @@ function handleProviderSaved(payload: {
       allowEmpty: true,
       _supplierId: payload.providerId,
       _supplierName: payload.providerName,
+      products: payload.products,
     });
   }
   budgetController.saveData();

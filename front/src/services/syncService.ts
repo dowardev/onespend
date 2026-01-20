@@ -8,7 +8,7 @@ const PENDING_OPERATIONS_KEY = 'pending_operations';
 
 export interface SyncItem {
   id: string;
-  entityType: 'account' | 'budget' | 'entry' | 'supplier' | 'template';
+  entityType: 'account' | 'budget' | 'budget_provider' | 'budget_provider_product' | 'entry' | 'supplier' | 'supplier_product' | 'template';
   operation: 'create' | 'update' | 'delete';
   data: any;
   timestamp: number;
@@ -28,6 +28,7 @@ export interface SyncResult {
 class SyncService {
   private isOnline: boolean = true;
   private syncInProgress: boolean = false;
+  private syncTimeout: number | null = null;
   private onlineListeners: Set<(online: boolean) => void> = new Set();
 
   constructor() {
@@ -66,12 +67,17 @@ class SyncService {
     return hasToken();
   }
 
-  private async getAuthHeaders(): Promise<HeadersInit> {
+  private async getAuthHeaders(contentType = 'application/json'): Promise<HeadersInit> {
     const token = await getToken();
-    return {
-      'Content-Type': 'application/json',
+    const headers: HeadersInit = {
       'Authorization': `Bearer ${token}`,
     };
+    
+    if (contentType) {
+      headers['Content-Type'] = contentType;
+    }
+    
+    return headers;
   }
 
   private getQueue(): SyncItem[] {
@@ -92,6 +98,8 @@ class SyncService {
       retryCount: 0,
     };
 
+    console.log('syncService.queueOperation - Queued:', syncItem);
+
     const queue = this.getQueue();
     const existingIndex = queue.findIndex(
       q => q.id === syncItem.id && q.entityType === syncItem.entityType
@@ -110,8 +118,17 @@ class SyncService {
 
     this.saveQueue(queue);
 
+    // Don't process immediately - wait for multiple items to be queued
+    // processQueue will be called after a short delay or manually
     if (this.isOnline) {
-      this.processQueue();
+      // Debounce the sync call to wait for multiple items
+      if (this.syncTimeout) {
+        clearTimeout(this.syncTimeout);
+      }
+      this.syncTimeout = setTimeout(async () => {
+        const result = await this.processQueue();
+        console.log('syncService.queueOperation - processQueue result:', JSON.stringify(result, null, 2));
+      }, 100);
     }
   }
 
@@ -132,8 +149,11 @@ class SyncService {
       const data: Record<string, any[]> = {
         account: [],
         budget: [],
+        budget_provider: [],
+        budget_provider_product: [],
         entry: [],
         supplier: [],
+        supplier_product: [],
         template: [],
       };
 
@@ -158,6 +178,8 @@ class SyncService {
         data[item.entityType].push(formattedItem);
         processedIds.push(item.id);
       }
+
+      console.log('syncService.processQueue - Sending to backend:', { data });
 
       const response = await fetch(`${API_URL}/api/sync/merge`, {
         method: 'POST',
@@ -265,7 +287,7 @@ class SyncService {
       throw new Error('Cannot full sync while offline');
     }
 
-    const headers = await this.getAuthHeaders();
+    const headers = await this.getAuthHeaders(null);
     const response = await fetch(`${API_URL}/api/sync/full`, { headers });
 
     if (!response.ok) {
@@ -279,6 +301,68 @@ class SyncService {
     }
 
     return result.data || {};
+  }
+
+  async fullSyncAndSave(): Promise<void> {
+    console.log('syncService.fullSyncAndSave - Starting...');
+    
+    const data = await this.fullSync();
+    console.log('syncService.fullSyncAndSave - Data received:', JSON.stringify({
+      accounts: data.accounts?.length,
+      suppliers: data.suppliers?.length,
+      supplier_products: data.supplier_products?.length,
+      templates: data.templates?.length,
+      budgets: data.budgets?.length,
+      entries: data.entries?.length,
+      budget_providers: data.budget_providers?.length,
+      budget_provider_products: data.budget_provider_products?.length,
+    }));
+
+    // Save each entity type to its corresponding store
+    if (data.accounts && data.accounts.length > 0) {
+      console.log('syncService - Saving accounts:', data.accounts.length);
+      await this.saveEntitiesToStore('accounts', data.accounts);
+    }
+    if (data.suppliers && data.suppliers.length > 0) {
+      console.log('syncService - Saving suppliers:', data.suppliers.length);
+      console.log('syncService - First supplier products:', JSON.stringify(data.suppliers[0].products));
+      await this.saveEntitiesToStore('suppliers', data.suppliers);
+    }
+    if (data.supplier_products && data.supplier_products.length > 0) {
+      console.log('syncService - Saving supplier_products:', data.supplier_products.length);
+      await this.saveEntitiesToStore('supplier_products', data.supplier_products);
+    }
+    if (data.templates && data.templates.length > 0) {
+      await this.saveEntitiesToStore('templates', data.templates);
+    }
+    if (data.budgets && data.budgets.length > 0) {
+      await this.saveEntitiesToStore('budgets', data.budgets);
+    }
+    if (data.entries && data.entries.length > 0) {
+      await this.saveEntitiesToStore('entries', data.entries);
+    }
+    if (data.budget_providers && data.budget_providers.length > 0) {
+      await this.saveEntitiesToStore('budget_providers', data.budget_providers);
+    }
+    if (data.budget_provider_products && data.budget_provider_products.length > 0) {
+      await this.saveEntitiesToStore('budget_provider_products', data.budget_provider_products);
+    }
+
+    console.log('syncService.fullSyncAndSave - Data saved successfully');
+  }
+
+  private async saveEntitiesToStore(storeName: string, entities: any[]): Promise<void> {
+    const { DixieController } = await import('@/controllers/dixie');
+    const ctrl = new DixieController({ name: 'ABOgazDB', storeName });
+    
+    for (const entity of entities) {
+      const entry = { ...entity };
+      if (entry.id != null) {
+        entry.sync_id = entry.id;
+        delete entry.id;
+      }
+      await ctrl.putEntry({ entry });
+    }
   }
 
   getQueueCount(): number {

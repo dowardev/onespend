@@ -129,6 +129,35 @@ export function useSync() {
     pendingChanges.value = syncService.getQueueCount();
   }
 
+  function syncSupplierProduct(product: any, operation: 'create' | 'update' | 'delete' = 'create') {
+    let syncId = product.sync_id;
+    
+    if (!syncId) {
+      // Generate a unique sync_id for the product
+      // Use supplier_id + name + price as base for consistency, or generate random
+      const baseId = product.supplierId 
+        ? `${product.supplierId}-${product.name}-${product.price}`
+        : `${product.name}-${product.price}-${Date.now()}`;
+      syncId = product.sync_id = `sp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    }
+    
+    const syncItem: Omit<SyncItem, 'timestamp' | 'retryCount'> = {
+      id: syncId,
+      entityType: 'supplier_product',
+      operation,
+      data: {
+        supplier_id: product.supplierId || product.supplier_id,
+        name: product.name,
+        price: product.price,
+        image_base64: product.imageBase64 || product.image_base64,
+        updated_at: Date.now(),
+      },
+    };
+
+    syncService.queueOperation(syncItem);
+    pendingChanges.value = syncService.getQueueCount();
+  }
+
   function syncBudget(budgetData: any, operation: 'create' | 'update' | 'delete' = 'create') {
     let syncId = budgetData.sync_id;
     
@@ -152,6 +181,70 @@ export function useSync() {
     pendingChanges.value = syncService.getQueueCount();
   }
 
+  function syncBudgetProvider(provider: any, operation: 'create' | 'update' | 'delete' = 'create', products?: any[]) {
+    let syncId = provider.sync_id;
+    
+    if (!syncId) {
+      syncId = provider.sync_id = String(provider.id || generateSyncId());
+    }
+    
+    const syncItem: Omit<SyncItem, 'timestamp' | 'retryCount'> = {
+      id: syncId,
+      entityType: 'budget_provider',
+      operation,
+      data: {
+        date: provider.date,
+        name: provider.name,
+        estimated: provider.estimated,
+        account_id: provider.accountId,
+        efectivo: provider.efectivo,
+        tarjeta: provider.tarjeta,
+        credito: provider.credito,
+        notes: provider.notes,
+        visited: provider.visited,
+        _supplier_id: provider._supplierId,
+        _supplier_name: provider._supplierName,
+        products: products || [],
+        updated_at: Date.now(),
+      },
+    };
+
+    console.log('syncBudgetProvider - Enviando payload:', JSON.stringify({
+      id: syncItem.id,
+      entityType: syncItem.entityType,
+      operation: syncItem.operation,
+      data: syncItem.data,
+    }, null, 2));
+
+    syncService.queueOperation(syncItem);
+    pendingChanges.value = syncService.getQueueCount();
+  }
+
+  function syncBudgetProviderProduct(product: any, operation: 'create' | 'update' | 'delete' = 'create') {
+    let syncId = product.sync_id;
+    
+    if (!syncId) {
+      syncId = product.sync_id = String(product.id || generateSyncId());
+    }
+    
+    const syncItem: Omit<SyncItem, 'timestamp' | 'retryCount'> = {
+      id: syncId,
+      entityType: 'budget_provider_product',
+      operation,
+      data: {
+        budget_provider_id: product.budgetProviderId || product.budget_provider_id,
+        supplier_product_id: product.supplierProductId || product.supplier_product_id,
+        product_name: product.productName || product.product_name,
+        product_price: product.productPrice || product.product_price,
+        quantity: product.quantity,
+        updated_at: Date.now(),
+      },
+    };
+
+    syncService.queueOperation(syncItem);
+    pendingChanges.value = syncService.getQueueCount();
+  }
+
   async function syncNow(): Promise<boolean> {
     if (!isOnline.value) {
       syncError.value = 'Cannot sync while offline';
@@ -163,6 +256,8 @@ export function useSync() {
 
     try {
       const result = await syncService.processQueue();
+      
+      console.log('syncNow - result from server:', JSON.stringify(result, null, 2));
       
       if (result) {
         await applyServerChanges(result);
@@ -325,6 +420,73 @@ export function useSync() {
         }
       }
     }
+
+    if (changes.budget_provider) {
+      const providers = Array.isArray(changes.budget_provider) ? changes.budget_provider : [];
+      for (const provider of providers) {
+        if (provider._deleted) {
+          const localId = provider.id;
+          budgetStore.removeProvider(localId);
+        } else {
+          const existing = budgetStore.providers.find(p => String(p.id) === String(provider.id));
+          if (existing) {
+            budgetStore.updateProvider(provider.id, {
+              name: provider.name,
+              date: provider.date,
+              estimated: provider.estimated,
+              accountId: provider.account_id,
+              efectivo: provider.efectivo,
+              tarjeta: provider.tarjeta,
+              credito: provider.credito,
+              notes: provider.notes,
+              visited: provider.visited,
+            });
+          } else {
+            budgetStore.addProvider({
+              id: provider.id,
+              name: provider.name,
+              date: provider.date,
+              estimated: provider.estimated,
+              accountId: provider.account_id,
+              efectivo: provider.efectivo,
+              tarjeta: provider.tarjeta,
+              credito: provider.credito,
+              notes: provider.notes,
+              visited: provider.visited,
+            });
+          }
+        }
+      }
+    }
+
+    if (changes.budget_provider_product) {
+      const products = Array.isArray(changes.budget_provider_product) ? changes.budget_provider_product : [];
+      const productsByProvider: Record<string, any[]> = {};
+      
+      for (const product of products) {
+        if (!product._deleted) {
+          const providerId = product.budget_provider_id;
+          if (!productsByProvider[providerId]) {
+            productsByProvider[providerId] = [];
+          }
+          productsByProvider[providerId].push({
+            id: product.id,
+            sync_id: product.id,
+            supplierProductId: product.supplier_product_id,
+            productName: product.product_name,
+            productPrice: product.product_price,
+            quantity: product.quantity,
+          });
+        }
+      }
+      
+      for (const [providerId, prods] of Object.entries(productsByProvider)) {
+        const provider = budgetStore.providers.find(p => String(p.id) === String(providerId));
+        if (provider) {
+          budgetStore.updateProvider(Number(providerId), { products: prods });
+        }
+      }
+    }
   }
 
   function startAutoSync(intervalMs: number = 30000) {
@@ -366,6 +528,9 @@ export function useSync() {
     syncAccount,
     syncTemplate,
     syncBudget,
+    syncBudgetProvider,
+    syncBudgetProviderProduct,
+    syncSupplierProduct,
     syncNow,
     pullFromServer,
     startAutoSync,
