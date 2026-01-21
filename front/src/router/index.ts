@@ -11,6 +11,7 @@ import MaintenancePage from '@/views/admin/MaintenancePage.vue';
 import MigrateDates from '@/views/admin/maintenance/MigrateDates.vue';
 import MigrateEntries from '@/views/admin/maintenance/MigrateEntries.vue';
 import PersonalizationPage from '@/views/admin/PersonalizationPage.vue';
+import SyncView from '@/views/sync/SyncView.vue';
 import LoginView from '../views/auth/LoginView.vue';
 import RegisterView from '../views/auth/RegisterView.vue';
 
@@ -73,6 +74,11 @@ const routes: Array<RouteRecordRaw> = [
     path: '/admin/personalization',
     name: 'PersonalizationPage',
     component: PersonalizationPage,
+  },
+  {
+    path: '/sync',
+    name: 'Sync',
+    component: SyncView,
   },
   {
     path: '/admin/migrate-dates',

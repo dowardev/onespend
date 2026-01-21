@@ -1,5 +1,7 @@
 import { useAuthStore, type User } from '@/stores/authStore';
 import { saveToken, getToken, removeToken } from '@/services/tokenStorage';
+import { clearAllUserData } from '@/services/dataClearService';
+import { syncService } from '@/services/syncService';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001';
 
@@ -124,7 +126,20 @@ class AuthController {
   /**
    * Cierra la sesión del usuario
    */
-  async logout(): Promise<void> {
+  async logout(): Promise<boolean> {
+    const pendingItems = syncService.getQueueCount();
+
+    if (pendingItems > 0) {
+      const confirmed = window.confirm(
+        `Tienes ${pendingItems} cambio(s) pendiente(s) de sincronizar. ` +
+        `Si cierras sesión ahora, estos datos se perderán. ¿Deseas continuar?`
+      );
+
+      if (!confirmed) {
+        return false;
+      }
+    }
+
     this.store.setIsLoading(true);
 
     try {
@@ -135,9 +150,12 @@ class AuthController {
       console.error('Logout error:', e);
     } finally {
       await removeToken();
+      await clearAllUserData();
       this.store.logout();
       this.store.setIsLoading(false);
     }
+
+    return true;
   }
 
   /**
