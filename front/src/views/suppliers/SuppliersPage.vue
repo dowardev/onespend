@@ -189,6 +189,7 @@ function openModal() {
 
 function edit(params: { s: any }) {
   const { s } = params;
+  console.log('Supplier data:', s);
   modalSupplier.value = s;
   showModal.value = true;
 }

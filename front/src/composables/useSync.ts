@@ -53,10 +53,18 @@ export function useSync() {
   }
 
   function syncProvider(provider: any, operation: 'create' | 'update' | 'delete' = 'create') {
+    console.log('%c[useSync] 🔵 syncProvider LLAMADO', 'color: blue; font-weight: bold', {
+      name: provider.name,
+      operation,
+      sync_id: provider.sync_id,
+      id: provider.id
+    });
+    
     let syncId = provider.sync_id;
     
     if (!syncId) {
       syncId = provider.sync_id = String(provider.id || generateSyncId());
+      console.log('[useSync] syncId generado:', syncId);
     }
     
     const syncItem: Omit<SyncItem, 'timestamp' | 'retryCount'> = {
@@ -79,8 +87,13 @@ export function useSync() {
       },
     };
 
+    console.log('[useSync] syncItem creado:', syncItem);
+    console.log('[useSync] Llamando syncService.queueOperation...');
+    
     syncService.queueOperation(syncItem);
     pendingChanges.value = syncService.getQueueCount();
+    
+    console.log('[useSync] ✅ queueOperation completado, pendingChanges:', pendingChanges.value);
   }
 
   function syncAccount(account: any, operation: 'create' | 'update' | 'delete' = 'create') {
@@ -130,6 +143,13 @@ export function useSync() {
   }
 
   function syncSupplierProduct(product: any, operation: 'create' | 'update' | 'delete' = 'create') {
+    console.log('%c[useSync] 🔵 syncSupplierProduct LLAMADO', 'color: purple; font-weight: bold', {
+      name: product.name,
+      operation,
+      sync_id: product.sync_id,
+      supplierId: product.supplierId
+    });
+    
     let syncId = product.sync_id;
     
     if (!syncId) {
@@ -139,6 +159,7 @@ export function useSync() {
         ? `${product.supplierId}-${product.name}-${product.price}`
         : `${product.name}-${product.price}-${Date.now()}`;
       syncId = product.sync_id = `sp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      console.log('[useSync] syncId generado para producto:', syncId);
     }
     
     const syncItem: Omit<SyncItem, 'timestamp' | 'retryCount'> = {
@@ -181,7 +202,7 @@ export function useSync() {
     pendingChanges.value = syncService.getQueueCount();
   }
 
-  function syncBudgetProvider(provider: any, operation: 'create' | 'update' | 'delete' = 'create', products?: any[]) {
+  function syncBudgetProvider(provider: any, operation: 'create' | 'update' | 'delete' = 'create', products?: any[], supplierSyncId?: string) {
     let syncId = provider.sync_id;
     
     if (!syncId) {
@@ -202,9 +223,16 @@ export function useSync() {
         credito: provider.credito,
         notes: provider.notes,
         visited: provider.visited,
-        _supplier_id: provider._supplierId,
+        _supplier_id: provider._supplierId || supplierSyncId,
         _supplier_name: provider._supplierName,
-        products: products || [],
+        products: products ? products.map((p: any) => ({
+          sync_id: p.sync_id,
+          supplier_product_id: p.supplierProductId || p.supplier_product_id,
+          product_name: p.productName || p.product_name,
+          product_price: p.productPrice || p.product_price,
+          quantity: p.quantity,
+          updated_at: p.updated_at || Date.now(),
+        })) : [],
         updated_at: Date.now(),
       },
     };
@@ -214,6 +242,11 @@ export function useSync() {
       entityType: syncItem.entityType,
       operation: syncItem.operation,
       data: syncItem.data,
+      productsDetails: syncItem.data.products?.map((p: any) => ({
+        supplier_product_id: p.supplier_product_id,
+        product_name: p.product_name,
+        quantity: p.quantity
+      }))
     }, null, 2));
 
     syncService.queueOperation(syncItem);

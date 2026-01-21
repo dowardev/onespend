@@ -9,33 +9,111 @@ class DixieController {
 
   async openDB(): Promise<IDBDatabase> {
     const name = this.name;
-    const storeName = this.storeName;
 
-    // Open without version to obtain the existing DB (avoids DOMException due to higher version)
-    const db = (await new Promise<IDBDatabase>((resolve, reject) => {
+    return new Promise((resolve, reject) => {
+      // Try to open with a random delay to avoid race conditions
       const req = indexedDB.open(name);
-      req.onsuccess = () => resolve(req.result);
+      
+      req.onupgradeneeded = (event) => {
+        const d = (event.target as IDBOpenDBRequest).result;
+        const allStores = ['suppliers', 'accounts', 'templates', 'budget', 'backups', 'config'];
+        for (const store of allStores) {
+          if (!d.objectStoreNames.contains(store)) {
+            d.createObjectStore(store, {
+              keyPath: 'id',
+              autoIncrement: true,
+            });
+          }
+        }
+      };
+      
+      req.onsuccess = () => {
+        const db = req.result;
+        
+        // Check if all stores exist
+        const allStores = ['suppliers', 'accounts', 'templates', 'budget', 'backups', 'config'];
+        const missingStores = allStores.filter(store => !db.objectStoreNames.contains(store));
+        
+        if (missingStores.length > 0) {
+          // Stores are missing, need to upgrade
+          db.close();
+          
+          // Get current version
+          const getVersionReq = indexedDB.open(name);
+          getVersionReq.onsuccess = () => {
+            const currentDb = getVersionReq.result;
+            const currentVersion = currentDb.version;
+            currentDb.close();
+            
+            // Upgrade to new version
+            const upgradeReq = indexedDB.open(name, currentVersion + 1);
+            upgradeReq.onupgradeneeded = () => {
+              const d = upgradeReq.result;
+              for (const store of allStores) {
+                if (!d.objectStoreNames.contains(store)) {
+                  d.createObjectStore(store, {
+                    keyPath: 'id',
+                    autoIncrement: true,
+                  });
+                }
+              }
+            };
+            upgradeReq.onsuccess = () => resolve(upgradeReq.result);
+            upgradeReq.onerror = () => reject(upgradeReq.error);
+          };
+          getVersionReq.onerror = () => reject(getVersionReq.error);
+        } else {
+          resolve(db);
+        }
+      };
+      
       req.onerror = () => reject(req.error);
-    })) as IDBDatabase;
+    });
+  }
 
-    // If the objectStore already exists, return the DB
-    if (db.objectStoreNames.contains(storeName)) {
-      return db;
-    }
+  private getDBVersion(name: string): Promise<number | null> {
+    return new Promise((resolve) => {
+      try {
+        const req = indexedDB.open(name);
+        req.onsuccess = () => {
+          const version = req.result.version;
+          req.result.close();
+          resolve(version);
+        };
+        req.onerror = () => resolve(null);
+      } catch {
+        resolve(null);
+      }
+    });
+  }
 
-    // Si no existe, cerramos y reabrimos con una versión mayor para crear el store
-    const newVersion = db.version + 1;
-    db.close();
+  private async checkDBExists(name: string): Promise<boolean> {
+    return new Promise((resolve) => {
+      const req = indexedDB.open(name);
+      req.onsuccess = () => {
+        req.result.close();
+        resolve(true);
+      };
+      req.onerror = () => resolve(false);
+    });
+  }
 
+  private async upgradeDB(name: string, storeName: string): Promise<IDBDatabase> {
+    const currentVersion = await this.getDBVersion(name);
+    const newVersion = (currentVersion || 1) + 1;
+    
     return new Promise((resolve, reject) => {
       const req = indexedDB.open(name, newVersion);
       req.onupgradeneeded = () => {
         const d = req.result;
-        if (!d.objectStoreNames.contains(storeName)) {
-          d.createObjectStore(storeName, {
-            keyPath: 'id',
-            autoIncrement: true,
-          });
+        const allStores = ['suppliers', 'accounts', 'templates', 'budget', 'backups', 'config'];
+        for (const store of allStores) {
+          if (!d.objectStoreNames.contains(store)) {
+            d.createObjectStore(store, {
+              keyPath: 'id',
+              autoIncrement: true,
+            });
+          }
         }
       };
       req.onsuccess = () => resolve(req.result);
@@ -317,8 +395,25 @@ class DixieController {
       } else {
         entryToPut = { value: entry };
       }
+      
       const req = store.put(entryToPut);
       req.onsuccess = () => {
+        if (this.storeName === 'suppliers' && entryToPut && typeof entryToPut === 'object') {
+          const entryObj = entryToPut as any;
+          if (entryObj.products && Array.isArray(entryObj.products)) {
+            console.log('DixieController.putEntry - Supplier saved:', {
+              id: entryObj.id,
+              sync_id: entryObj.sync_id,
+              name: entryObj.name,
+              products: entryObj.products.map((p: any) => ({
+                id: p.id,
+                sync_id: p.sync_id,
+                name: p.name,
+                price: p.price
+              }))
+            });
+          }
+        }
         resolve(req.result);
       };
       req.onerror = (ev: unknown) => {
@@ -394,7 +489,23 @@ class DixieController {
       const tx = db.transaction(this.storeName, 'readonly');
       const store = tx.objectStore(this.storeName);
       const req = store.getAll();
-      req.onsuccess = () => resolve(req.result);
+      req.onsuccess = () => {
+        if (this.storeName === 'suppliers') {
+          console.log('DixieController.listBackups - Suppliers from IndexedDB:', req.result.map((s: any) => ({
+            id: s.id,
+            sync_id: s.sync_id,
+            name: s.name,
+            productsCount: s.products?.length || 0,
+            firstProduct: s.products?.[0] ? {
+              id: s.products[0].id,
+              sync_id: s.products[0].sync_id,
+              name: s.products[0].name,
+              price: s.products[0].price
+            } : null
+          })));
+        }
+        resolve(req.result);
+      };
       req.onerror = () => reject(req.error);
       tx.oncomplete = () => db.close();
     });
@@ -412,6 +523,28 @@ class DixieController {
       };
       req.onerror = () => reject(req.error);
       tx.oncomplete = () => db.close();
+    });
+  }
+
+  async getEntry(syncId: string): Promise<any | null> {
+    const db = await this.openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(this.storeName, 'readonly');
+      const store = tx.objectStore(this.storeName);
+      const req = store.getAll();
+      req.onsuccess = () => {
+        const results = req.result as any[];
+        const found = results.find((entry) => entry.sync_id === syncId);
+        resolve(found || null);
+      };
+      req.onerror = () => reject(req.error);
+      tx.oncomplete = () => {
+        try {
+          db.close();
+        } catch (e) {
+          /* noop */
+        }
+      };
     });
   }
 

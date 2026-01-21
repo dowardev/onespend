@@ -340,23 +340,50 @@ function toggleProductSearch() {
 }
 
 function addProduct() {
-  if (!newProduct.name) return;
-  if (editingIndex.value != null && form.products[editingIndex.value]) {
-    form.products.splice(editingIndex.value, 1, {
-      name: newProduct.name,
-      price: Number(newProduct.price),
-      imageBase64: newProduct.imageBase64 || null,
-    });
-  } else {
-    form.products.push({
-      name: newProduct.name,
-      price: Number(newProduct.price),
-      imageBase64: newProduct.imageBase64 || null,
-    });
+  console.log('[AddSupliersComponent] 🔵 addProduct llamado');
+  
+  // Get the native input values to ensure we have the latest value
+  const inputElements = document.querySelectorAll('input[placeholder="Nombre del producto"]');
+  const inputElement = inputElements.length > 1 ? inputElements[1] : inputElements[0];
+  const priceElements = document.querySelectorAll('input[placeholder="Precio"]');
+  const priceInputElement = priceElements.length > 1 ? priceElements[1] : priceElements[0];
+  
+  const productName = (inputElement?.value || newProduct.name || '').trim();
+  const productPrice = priceInputElement ? parseFloat(priceInputElement.value) : Number(newProduct.price);
+  
+  console.log('[AddSupliersComponent] productName from input:', productName);
+  console.log('[AddSupliersComponent] inputElement:', inputElement?.value);
+  console.log('[AddSupliersComponent] newProduct.name:', newProduct.name);
+  
+  if (!productName) {
+    console.log('[AddSupliersComponent] ⚠️ productName está vacío');
+    return;
   }
+  
+  const productData = {
+    name: productName,
+    price: isNaN(productPrice) ? 0 : productPrice,
+    imageBase64: newProduct.imageBase64 || null,
+  };
+  
+  console.log('[AddSupliersComponent] Product data:', JSON.stringify(productData, null, 2));
+  
+  if (editingIndex.value != null && form.products[editingIndex.value]) {
+    console.log('[AddSupliersComponent] Editando producto en índice:', editingIndex.value);
+    form.products.splice(editingIndex.value, 1, productData);
+  } else {
+    console.log('[AddSupliersComponent] Agregando nuevo producto');
+    form.products.push(productData);
+  }
+  
+  console.log('[AddSupliersComponent] ✅ form.products ahora tiene:', form.products.length, 'productos');
+  
+  // Clear the inputs
   editingIndex.value = null;
   newProduct.name = '';
   newProduct.price = 0;
+  if (inputElement) inputElement.value = '';
+  if (priceInputElement) priceInputElement.value = '';
   showNewProductFields.value = false;
 }
 
@@ -389,15 +416,27 @@ function editProduct(params: { idx: number }) {
 }
 
 function onSubmit() {
-  if (!form.name) return;
+  console.log('[AddSupliersComponent] 🔵 onSubmit llamado');
+  console.log('[AddSupliersComponent] form.name:', form.name);
+  console.log('[AddSupliersComponent] form.products.length:', form.products.length);
+  
+  if (!form.name) {
+    console.log('[AddSupliersComponent] ⚠️ form.name está vacío');
+    return;
+  }
+  
   const payload: any = {
     name: form.name,
     products: form.products && form.products.length ? form.products : undefined,
   };
+  
+  console.log('[AddSupliersComponent] Payload a emitir:', JSON.stringify(payload, null, 2));
+  
   if (selectedId.value != null) payload.id = selectedId.value;
   if (props.supplier?.sync_id) payload.sync_id = props.supplier.sync_id;
 
   emit('saved', payload);
+  console.log('[AddSupliersComponent] ✅ emitted saved');
 }
 </script>
 

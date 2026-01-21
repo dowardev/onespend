@@ -7,6 +7,8 @@ export type EntryType = 'ingreso' | 'egreso';
 
 export interface Income {
   id: string | number;
+  sync_id?: string;
+  serverId?: number | null;
   name: string;
   amount: number;
   date: string;
@@ -15,6 +17,7 @@ export interface Income {
   accountId?: string | number | null;
   groups?: Array<{ amount: number; accountId: string | number | null }>;
   createdAt: number;
+  synced_at?: number;
   _fromProviderGroupId?: string;
   _providerName?: string;
 }
@@ -22,6 +25,7 @@ export interface Income {
 export interface BudgetProviderProduct {
   id?: string | number;
   sync_id?: string;
+  serverId?: number | null;
   supplierProductId: string | number;
   productName: string;
   productPrice: number;
@@ -30,6 +34,8 @@ export interface BudgetProviderProduct {
 
 export interface Provider {
   id: string | number;
+  sync_id?: string;
+  serverId?: number | null;
   name: string;
   date: string;
   estimated: number;
@@ -40,8 +46,10 @@ export interface Provider {
   products?: BudgetProviderProduct[];
   notes: string;
   visited: boolean;
+  synced_at?: number;
   _justAdded?: boolean;
   _fromTemplate?: boolean;
+  _pendingProducts?: BudgetProviderProduct[];
   _supplierKey?: string;
   _supplierId?: string | number;
   _supplierName?: string;
@@ -298,12 +306,13 @@ export const useBudgetStore = defineStore('budget', () => {
     finishDayData.margin = 0;
   }
 
-  function syncProvidersWithSuppliers(suppliers: Array<{ id: any; name: string; products?: Array<{ name: string; price: number }> }>) {
+  function syncProvidersWithSuppliers(suppliers: Array<{ id: any; sync_id?: any; name: string; products?: Array<{ id?: any; sync_id?: string; name: string; price: number }> }>) {
     for (let i = 0; i < providers.length; i++) {
       const provider = providers[i];
       if (provider._supplierId) {
+        const supplierSyncId = provider._supplierId;
         const matchingSupplier = suppliers.find(
-          s => String(s.id) === String(provider._supplierId)
+          s => String(s.sync_id) === String(supplierSyncId) || String(s.id) === String(supplierSyncId)
         );
 
         if (matchingSupplier) {
@@ -316,7 +325,20 @@ export const useBudgetStore = defineStore('budget', () => {
           }
 
           if (matchingSupplier.products && matchingSupplier.products.length > 0) {
-            (provider as any)._supplierProducts = matchingSupplier.products;
+            const serverProducts = matchingSupplier.products;
+            const localProducts = (provider as any)._supplierProducts || [];
+
+            const syncedProducts = serverProducts.map((serverProduct: any) => {
+              const localMatch = localProducts.find(
+                (lp: any) => lp.name === serverProduct.name && lp.price === serverProduct.price
+              );
+              return {
+                ...serverProduct,
+                sync_id: serverProduct.sync_id || serverProduct.id,
+              };
+            });
+
+            (provider as any)._supplierProducts = syncedProducts;
           }
 
           if (needsUpdate) {

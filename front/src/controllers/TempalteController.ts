@@ -9,12 +9,14 @@ function generateSyncId(): string {
 export type TemplateRecord = {
   id?: number | string;
   sync_id?: string;
+  serverId?: number | null;
   name: string;
   description?: string;
   suppliers?: IDBValidKey[];
   suppliersSnapshot?: { id: IDBValidKey; name?: string }[];
   createdAt?: number;
   updatedAt?: number;
+  synced_at?: number;
 };
 
 class TemplateController {
@@ -80,19 +82,25 @@ class TemplateController {
     }
   }
 
-  async saveTemplate(params: {
-    template: Partial<Omit<TemplateRecord, 'createdAt'>> & { id?: IDBValidKey };
-  }) {
+  async saveTemplate(params: { template: any }) {
     const { template } = params;
 
     if (!template.sync_id) {
       template.sync_id = generateSyncId();
     }
 
+    const createdAt = template.createdAt || Date.now();
     const entry: TemplateRecord = {
-      ...(template as Omit<TemplateRecord, 'createdAt'>),
-      createdAt: template.createdAt || Date.now(),
+      id: template.id,
+      name: template.name,
+      sync_id: template.sync_id,
+      createdAt,
       updatedAt: Date.now(),
+      description: template.description,
+      suppliers: template.suppliers,
+      suppliersSnapshot: template.suppliersSnapshot,
+      serverId: template.serverId,
+      synced_at: template.synced_at,
     };
 
     const { syncTemplate } = useSync();
@@ -140,7 +148,8 @@ class TemplateController {
     const { id } = params;
     
     const store = useTemplatesStore();
-    const template = store.templates.find(t => String(t.id) === String(id));
+    const templates = JSON.parse(JSON.stringify(store.templates)) as any[];
+    const template = templates.find(t => String(t.id) === String(id));
 
     try {
       const numericId =

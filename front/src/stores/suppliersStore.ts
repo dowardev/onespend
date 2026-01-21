@@ -17,7 +17,8 @@ export const useSuppliersStore = defineStore('suppliers', () => {
   }
 
   function notifyChange() {
-    onChangeCallbacks.forEach(cb => cb(suppliers.value));
+    const current = JSON.parse(JSON.stringify(suppliers.value));
+    onChangeCallbacks.forEach(cb => cb(current));
   }
 
   return {

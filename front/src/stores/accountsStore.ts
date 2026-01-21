@@ -6,15 +6,17 @@ import { useSync } from '@/composables/useSync';
 export type Account = {
   id?: IDBValidKey;
   sync_id?: string;
+  serverId?: number | null;
   name: string;
   initialBalance: number;
   createdAt?: number;
   updatedAt?: number;
+  synced_at?: number;
   _synced?: boolean;
 };
 
 export const useAccountsStore = defineStore('accounts', () => {
-  const accounts = reactive<Account[]>([]);
+  const accounts: Account[] = reactive([]);
   const { syncAccount } = useSync();
 
   async function loadAccounts() {

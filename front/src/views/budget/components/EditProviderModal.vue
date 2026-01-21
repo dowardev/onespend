@@ -188,9 +188,9 @@
                       slot="end"
                       type="number"
                       placeholder="0"
-                      :value="getProductQuantity(product, product.name, product.price)"
+                      :value="getProductQuantity(product)"
                       style="width: 80px; text-align: end"
-                      @ion-input="setProductQuantity(product, product.name, product.price, Number($event.detail.value))"
+                      @ion-input="e => setProductQuantity(product, product.price, Number(e.detail.value))"
                     ></ion-input>
                   </ion-item>
                 </div>
@@ -254,6 +254,7 @@ interface Account {
 
 interface Supplier {
   id?: string | number;
+  sync_id?: string;
   name: string;
   products?: Array<{ id: string | number; name: string; price: number }>;
 }
@@ -314,6 +315,7 @@ const searchQuery = ref('');
 const selectedProvider = ref<Supplier | null>(null);
 const selectedSegment = ref('inicio');
 const providerProducts = ref<ProviderProduct[]>([]);
+const productQuantities = ref<Record<string, number>>({});
 const items = ref<ProviderItem[]>([{ amount: 0, accountId: null }]);
 
 // Computed
@@ -420,7 +422,29 @@ const availableAccountsForItem = (currentIndex: number) => {
 };
 
 function selectProvider(p: Supplier) {
+  console.log('selectProvider - supplier:', JSON.stringify({
+    id: p.id,
+    sync_id: p.sync_id,
+    name: p.name,
+    products: p.products?.map((prod: any) => ({
+      id: prod.id,
+      sync_id: prod.sync_id,
+      name: prod.name,
+      price: prod.price
+    }))
+  }));
+  
   selectedProvider.value = p;
+  
+  // Reset products when selecting a new supplier
+  providerProducts.value = p.products?.map((prod: any) => ({
+    supplierProductId: prod.sync_id ?? prod.id,
+    productName: prod.name,
+    productPrice: prod.price,
+    quantity: 0,
+  })) || [];
+  
+  console.log('selectProvider - providerProducts reset:', JSON.stringify(providerProducts.value));
 }
 
 function changeProvider() {
@@ -459,8 +483,10 @@ function removeItem(index: number) {
   }
 }
 
-function getProductQuantity(product: any, productName: string, productPrice: number): number {
+function getProductQuantity(product: any): number {
   const productId = product?.id ?? product?.sync_id;
+  const productName = product?.name;
+  const productPrice = product?.price;
   // Use productId (id or sync_id) if available, otherwise find by name+price
   const found = providerProducts.value.find(p => {
     if (productId) {
@@ -469,12 +495,20 @@ function getProductQuantity(product: any, productName: string, productPrice: num
     // Fallback: match by name and price
     return p.productName === productName && p.productPrice === productPrice;
   });
-  return found?.quantity || 0;
+
+  return found ? found.quantity : 0;
 }
 
-function setProductQuantity(product: any, productName: string, productPrice: number, quantity: number) {
-  const productId = product?.id ?? product?.sync_id;
-  console.log('setProductQuantity - product:', JSON.stringify(product), 'productName:', productName, 'productId:', productId);
+function setProductQuantity(product: any, productPrice: number, quantity: number) {
+  const productId = product?.sync_id ?? product?.id ?? product?.supplierProductId;
+  const productName = product?.name;
+  console.log('setProductQuantity - product:', JSON.stringify({
+    id: product?.id,
+    sync_id: product?.sync_id,
+    supplierProductId: product?.supplierProductId,
+    name: product?.name,
+    price: product?.price
+  }), 'productName:', productName, 'productId:', productId, 'quantity:', quantity);
   // Use productId (id or sync_id) if available, otherwise match by name+price
   const existing = providerProducts.value.find(p => {
     if (productId) {
@@ -486,8 +520,13 @@ function setProductQuantity(product: any, productName: string, productPrice: num
   if (existing) {
     existing.quantity = quantity;
   } else {
+    // Generate a consistent ID for products without id/sync_id
+    const fallbackId = productId 
+      ? productId 
+      : `manual_${String(productName).toLowerCase().replace(/\s+/g, '_')}_${productPrice}`;
+    
     providerProducts.value.push({
-      supplierProductId: productId || null,
+      supplierProductId: fallbackId,
       productName,
       productPrice,
       quantity,
@@ -560,7 +599,7 @@ watch(isOpen, async newVal => {
         id: fullSupplier?.id || supplierSyncId,
         sync_id: fullSupplier?.sync_id || supplierSyncId,
         name: provider.value._supplierName || provider.value.name,
-        products: fullSupplier?.products || provider.value.products || [],
+        products: fullSupplier?.products || [],
       };
       items.value = [
         {
@@ -571,11 +610,18 @@ watch(isOpen, async newVal => {
         },
       ];
       // Load existing products
-      if (provider.value.products && Array.isArray(provider.value.products)) {
+      if (fullSupplier?.products && Array.isArray(fullSupplier.products)) {
+        providerProducts.value = fullSupplier.products.map((p: any) => ({
+          supplierProductId: p.sync_id ?? p.id,
+          productName: p.name,
+          productPrice: p.price,
+          quantity: 0,
+        }));
+      } else if (provider.value.products && Array.isArray(provider.value.products)) {
         providerProducts.value = provider.value.products.map((p: any) => ({
-          supplierProductId: p.supplierProductId || p.sync_id || p.id || `${p.name}-${p.price}`,
-          productName: p.productName || p.name || '',
-          productPrice: p.productPrice || p.price || 0,
+          supplierProductId: p.supplierProductId || p.supplier_product_id || p.sync_id || p.id || `manual_${String(p.productName || p.name).toLowerCase().replace(/\s+/g, '_')}_${p.productPrice || p.price}`,
+          productName: p.productName || p.product_name || p.name || '',
+          productPrice: p.productPrice || p.product_price || p.price || 0,
           quantity: p.quantity || 0,
         }));
       } else {

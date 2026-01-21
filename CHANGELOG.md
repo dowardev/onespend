@@ -1,3 +1,42 @@
+## [v0.34.2] - 2026-01-21
+
+### Fixed
+
+- Enhance sync responses to return both sync_id and MySQL server ID for created/updated entities
+- Update local IndexedDB records with server IDs after successful sync operations
+- Fix budget_provider_product sync_id resolution to handle supplier_product references properly
+- Improve supplier product sync with proper sync_id generation and mapping
+- Add robust IndexedDB store creation and migration handling for new stores
+
+### Changed
+
+- Add id_server field to sync payloads for server-side primary key tracking
+- Add serverId and synced_at fields to all syncable entities for ID mapping
+- Add debug logging throughout sync flow for troubleshooting
+- Update DixieController with improved getEntry method for sync_id lookups
+
+### Files Changed
+
+**Backend:**
+- `back/app/Http/Controllers/SyncController.php` - Enhanced response format with server IDs
+
+**Frontend:**
+- `front/src/controllers/dixie.ts` - Improved IndexedDB handling and store creation
+- `front/src/controllers/suppliersController.ts` - Added serverId fields and product sync improvements
+- `front/src/services/syncService.ts` - Added updateLocalRecordsWithMysqlIds function
+- `front/src/controllers/TempalteController.ts` - Added serverId and synced_at fields
+- `front/src/controllers/accountsController.ts` - Store state management improvements
+- `front/src/controllers/budgetController.ts` - Supplier sync_id handling
+- `front/src/stores/accountsStore.ts` - Added serverId field to Account type
+- `front/src/stores/budgetStore.ts` - Added serverId and sync_id fields
+- `front/src/stores/templatesStore.ts` - Added synced_at field
+- `front/src/composables/useSync.ts` - Enhanced provider sync with supplierSyncId parameter
+- `front/src/views/budget/components/EditProviderModal.vue` - Updated for sync_id-based lookups
+- `front/src/views/suppliers/SuppliersPage.vue` - Sync improvements
+- `front/src/views/suppliers/modals/AddSupliersComponent.vue` - Sync handling
+
+---
+
 ## [v0.34.1] - 2026-01-20
 
 ### Fixed
