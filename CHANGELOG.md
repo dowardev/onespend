@@ -1,3 +1,30 @@
+## [v0.35.0] - 2026-01-21
+
+### Added
+
+- Add SyncView.vue component with complete sync status management UI
+- Add pending changes counter badge in main menu with real-time updates
+- Add dataClearService.ts for comprehensive user data clearing (localStorage + IndexedDB)
+- Add /sync route for accessing sync management page
+
+### Changed
+
+- Enhance logout flow with warning dialog when pending sync changes exist
+- Clear all user data (auth tokens, sync queue, IndexedDB stores) on logout
+- Update MainMenu to show sync status with pending changes count
+- Add useSync composable integration to MainMenu for reactive sync state
+
+### Files Changed
+
+**Frontend:**
+- `front/src/components/MainMenu.vue` - Added sync menu item with pendingChanges badge
+- `front/src/controllers/authController.ts` - Enhanced logout with pending sync warning and data clearing
+- `front/src/router/index.ts` - Added /sync route for SyncView
+- `front/src/services/dataClearService.ts` - New service for clearing user data on logout
+- `front/src/views/sync/SyncView.vue` - New sync status and management page
+
+---
+
 ## [v0.34.2] - 2026-01-21
 
 ### Fixed

@@ -94,6 +94,22 @@
             <ion-icon slot="start" :icon="layersOutline"></ion-icon>
             <ion-label>Cuentas</ion-label>
           </ion-item>
+
+          <ion-item
+            button
+            lines="none"
+            :class="{ 'menu-active': isSync }"
+            :aria-current="isSync ? 'page' : undefined"
+            @click="navigate({ path: '/sync' })"
+          >
+            <ion-icon slot="start" :icon="syncOutline"></ion-icon>
+            <ion-label>Sincronización</ion-label>
+            <ion-badge
+              v-if="pendingChanges > 0"
+              slot="end"
+              color="secondary"
+            >{{ pendingChanges }}</ion-badge>
+          </ion-item>
         </div>
       </ion-list>
 
@@ -190,6 +206,7 @@ import {
   documentTextOutline,
   businessOutline,
   layersOutline,
+  syncOutline,
   statsChartOutline,
   speedometerOutline,
   constructOutline,
@@ -200,6 +217,7 @@ import {
   logOutOutline,
 } from 'ionicons/icons';
 import authController from '@/controllers/authController';
+import { useSync } from '@/composables/useSync';
 import SyncStatus from './SyncStatus.vue';
 
 const emit = defineEmits<{
@@ -209,6 +227,8 @@ const emit = defineEmits<{
 
 const menuRef = ref();
 const route = useRoute();
+
+const { pendingChanges } = useSync();
 
 const appName =
   (import.meta as unknown as { env?: Record<string, string | undefined> }).env
@@ -220,6 +240,7 @@ const isSuppliers = computed(() => route.path === '/suppliers');
 const isSuppliersAccounts = computed(
   () => route.path === '/suppliers/accounts'
 );
+const isSync = computed(() => route.path === '/sync');
 const isStatisticsCashFlow = computed(
   () => route.path === '/statistics/cash-flow'
 );
