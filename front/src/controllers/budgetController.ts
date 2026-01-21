@@ -291,6 +291,9 @@ class BudgetController {
 
     const localId = Date.now() + Math.random();
     
+    const supplierSyncId = _supplierId as string | undefined;
+    console.log('budgetController.addProvider - _supplierId:', _supplierId, 'supplierSyncId:', supplierSyncId);
+    
     const newProvider: Provider = {
       id: localId,
       sync_id: `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -304,7 +307,7 @@ class BudgetController {
       notes: '',
       visited: false,
       _justAdded: true,
-      _supplierId,
+      _supplierId: supplierSyncId,
       _supplierName,
       _pendingProducts: products,
       products,
@@ -314,7 +317,7 @@ class BudgetController {
     
     const { syncBudgetProvider } = useSync();
     console.log('budgetController.addProvider - sincronizando provider con productos');
-    syncBudgetProvider(newProvider, 'create', products);
+    syncBudgetProvider(newProvider, 'create', products, supplierSyncId);
 
     setTimeout(() => {
       const provider = this.store.providers.find(p => p.id === newProvider.id);
@@ -329,13 +332,14 @@ class BudgetController {
     
     const provider = this.store.providers.find(p => p.id === id);
     const productsToSync = changes.products || (provider?.products || []);
+    const supplierSyncId = (provider?._supplierId || changes._supplierId) as string | undefined;
     
     this.store.updateProvider(id, changes);
     
     if (provider) {
       const { syncBudgetProvider } = useSync();
       
-      syncBudgetProvider({ ...provider, ...changes }, 'update', productsToSync);
+      syncBudgetProvider({ ...provider, ...changes }, 'update', productsToSync, supplierSyncId);
     }
   }
 
@@ -347,10 +351,6 @@ class BudgetController {
       const { syncBudgetProvider } = useSync();
       syncBudgetProvider(provider, 'delete');
     }
-  }
-
-  removeProvider(id: string | number) {
-    this.store.removeProvider(id);
   }
 
   clearAllProviders() {

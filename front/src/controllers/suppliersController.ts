@@ -6,14 +6,18 @@ import { syncService } from '@/services/syncService';
 
 export type Product = {
   id?: string | number;
+  sync_id?: string;
+  serverId?: number | null;
   name: string;
   price: number;
   imageBase64?: string | null;
+  synced_at?: number;
 };
 
 export type Supplier = {
   id?: IDBValidKey;
   sync_id?: string;
+  serverId?: number | null;
   name: string;
   contact?: string;
   phone?: string;
@@ -21,6 +25,7 @@ export type Supplier = {
   products?: Product[];
   createdAt?: number;
   updatedAt?: number;
+  synced_at?: number;
   _synced?: boolean;
 };
 
@@ -34,10 +39,15 @@ class SuppliersController {
   }
 
   async addSupplier(s: Omit<Supplier, 'id' | 'createdAt' | 'updatedAt'>) {
+    console.log('%c[suppliersController] 🔵 addSupplier INICIADO', 'color: blue; font-size: 14px; font-weight: bold');
+    console.log('%c[suppliersController] Datos recibidos:', 'color: blue', s);
+    
     const store = this.getStore();
     store.loading = true;
     store.error = null;
     try {
+      console.log('[suppliersController] addSupplier called with:', JSON.stringify(s, null, 2));
+      
       const ctrl = this.getController();
       const now = Date.now();
 
@@ -49,38 +59,72 @@ class SuppliersController {
         updatedAt: now,
       };
 
+      console.log('[suppliersController] Entry before sync:', JSON.stringify(entry, null, 2));
+      console.log('[suppliersController] Products in entry:', entry.products ? entry.products.length : 0);
+      if (entry.products && entry.products.length > 0) {
+        console.log('[suppliersController] First product:', JSON.stringify(entry.products[0], null, 2));
+      } else {
+        console.log('[suppliersController] ⚠️ NO hay productos en entry');
+      }
+
       const { syncProvider, syncSupplierProduct } = useSync();
+      console.log('[suppliersController] useSync imported');
       
       if (!entry.sync_id) {
         entry.sync_id = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       }
       
+      console.log('[suppliersController] 🔵 Sincronizando proveedor:', entry.sync_id);
+      
+      // Sincronizar productos PRIMERO
+      if (entry.products && entry.products.length > 0) {
+        console.log('[suppliersController] 🔵 Sincronizando', entry.products.length, 'productos');
+        entry.products = entry.products.map((product: any) => {
+          const tempProductSyncId = `temp_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+          console.log('[suppliersController] 🔵 syncSupplierProduct para:', product.name);
+          syncSupplierProduct({
+            supplierId: entry.sync_id,
+            ...product,
+            sync_id: tempProductSyncId,
+          }, 'create');
+          console.log('[suppliersController] ✅ syncSupplierProduct completado');
+          return {
+            ...product,
+            sync_id: tempProductSyncId,
+          };
+        });
+        console.log('[suppliersController] Productos sincronizados:', entry.products.length);
+      } else {
+        console.log('[suppliersController] ⚠️ NO hay productos para sincronizar');
+      }
+      
+      // Luego sincronizar el proveedor
+      console.log('[suppliersController] 🔵 LLAMANDO syncProvider');
       syncProvider(entry, 'create');
+      console.log('[suppliersController] ✅ syncProvider ejecutado');
 
       const localId = await ctrl.addEntry({ entry });
       entry.id = localId;
       const result = entry as any;
+      console.log('[suppliersController] Guardado en IndexedDB con localId:', localId);
 
-      if (entry.products && entry.products.length > 0) {
-        for (const product of entry.products) {
-          syncSupplierProduct({
-            supplierId: entry.sync_id,
-            ...product,
-          }, 'create');
-        }
-      }
+      await ctrl.putEntry({ entry });
 
       store.suppliers = [result, ...store.suppliers];
       store.notifyChange();
 
-      console.log('addSupplier - Waiting for sync to complete...');
+      console.log('[suppliersController] Esperando sincronizacion...');
+      console.log('%c[suppliersController] 🔄 LLAMANDO syncService.processQueue()', 'color: orange; font-size: 14px');
       await syncService.processQueue();
-      console.log('addSupplier - Sync completed, reloading suppliers...');
+      console.log('%c[suppliersController] ✅ Sincronizacion completada', 'color: green; font-size: 14px');
+      
+      console.log('[suppliersController] Recargando proveedores...');
       await this.listSuppliers();
-      console.log('addSupplier - Done');
+      console.log('%c[suppliersController] 🔵 addSupplier FINALIZADO', 'color: blue; font-size: 14px; font-weight: bold');
 
       return result;
     } catch (e) {
+      console.error('[suppliersController] ❌ ERROR:', e);
       store.error = e as Error;
       throw e;
     } finally {
@@ -106,22 +150,32 @@ class SuppliersController {
       };
 
       const { syncProvider, syncSupplierProduct } = useSync();
-      syncProvider(entry, 'update');
+      syncProvider(entry, 'create');
+
+      // Update products with sync_id before saving to IndexedDB
+      if (entry.products && entry.products.length > 0) {
+        entry.products = entry.products.map((product: any) => {
+          const tempProductSyncId = `temp_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+          syncSupplierProduct({
+            supplierId: entry.sync_id,
+            ...product,
+            sync_id: tempProductSyncId,
+          }, 'create');
+          return {
+            ...product,
+            sync_id: tempProductSyncId,
+          };
+        });
+      }
 
       await ctrl.putEntry({ entry });
 
-      if (entry.products && entry.products.length > 0) {
-        for (const product of entry.products) {
-          syncSupplierProduct({
-            supplierId: entry.sync_id,  // Use sync_id for backend relation
-            ...product,
-          }, product.id ? 'update' : 'create');
-        }
+      // Update in store
+      const suppliers = store.suppliers as any[];
+      const idx = suppliers.findIndex(x => x.id === entry.id);
+      if (idx !== -1) {
+        suppliers[idx] = entry;
       }
-
-      store.suppliers = store.suppliers.map(x =>
-        x.id === entry.id ? entry : x
-      );
       store.notifyChange();
 
       return entry;
@@ -139,10 +193,11 @@ class SuppliersController {
     store.error = null;
     try {
       const ctrl = this.getController();
-      const supplier = store.suppliers.find(s => s.id === id);
+      const allSuppliers = store.suppliers as any[];
+      const supplier = allSuppliers.find(s => s.id === id);
       await ctrl.deleteBackup(id);
 
-      store.suppliers = store.suppliers.filter(s => s.id !== id);
+      store.suppliers = allSuppliers.filter(s => s.id !== id);
       store.notifyChange();
 
       if (supplier) {
@@ -192,6 +247,20 @@ class SuppliersController {
       const sorted = (all || [])
         .slice()
         .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+      console.log('suppliersController.listSuppliers - Suppliers loaded:', sorted.map((s: any) => ({
+        id: s.id,
+        sync_id: s.sync_id,
+        serverId: s.serverId,
+        name: s.name,
+        productsCount: s.products?.length || 0,
+        firstProduct: s.products?.[0] ? {
+          id: s.products[0].id,
+          sync_id: s.products[0].sync_id,
+          name: s.products[0].name,
+          price: s.products[0].price
+        } : null
+      })));
 
       store.suppliers = sorted as any;
       return sorted;

@@ -96,9 +96,9 @@ class SyncController extends Controller
                     $result = $this->processItem('supplier', $item, $user->id);
                     
                     if ($result['status'] === 'created') {
-                        $results['created']['supplier'][] = $result['sync_id'];
+                        $results['created']['supplier'][] = ['sync_id' => $result['sync_id'], 'id' => $result['id']];
                     } elseif ($result['status'] === 'updated') {
-                        $results['updated']['supplier'][] = $result['sync_id'];
+                        $results['updated']['supplier'][] = ['sync_id' => $result['sync_id'], 'id' => $result['id'] ?? null];
                     } elseif ($result['status'] === 'deleted') {
                         $results['deleted']['supplier'][] = $result['sync_id'];
                     } elseif ($result['status'] === 'conflict') {
@@ -116,9 +116,9 @@ class SyncController extends Controller
                     $result = $this->processItem('supplier_product', $item, $user->id);
                     
                     if ($result['status'] === 'created') {
-                        $results['created']['supplier_product'][] = $result['sync_id'];
+                        $results['created']['supplier_product'][] = ['sync_id' => $result['sync_id'], 'id' => $result['id']];
                     } elseif ($result['status'] === 'updated') {
-                        $results['updated']['supplier_product'][] = $result['sync_id'];
+                        $results['updated']['supplier_product'][] = ['sync_id' => $result['sync_id'], 'id' => $result['id'] ?? null];
                     } elseif ($result['status'] === 'deleted') {
                         $results['deleted']['supplier_product'][] = $result['sync_id'];
                     } elseif ($result['status'] === 'conflict') {
@@ -135,18 +135,21 @@ class SyncController extends Controller
                 foreach ($items as $item) {
                     $result = $this->processItem('budget_provider', $item, $user->id);
                     $syncId = $result['sync_id'];
-                    $providerId = null;
                     
-                    // Get the real MySQL ID after creating/updating
-                    $budgetProvider = BudgetProvider::where('sync_id', $syncId)->first();
-                    if ($budgetProvider) {
-                        $providerId = $budgetProvider->id;
+                    // Get the real MySQL ID after creating/updating - prefer ID from result
+                    $providerId = $result['id'] ?? null;
+                    if (!$providerId) {
+                        // Fallback: query for existing budget_provider
+                        $budgetProvider = BudgetProvider::where('sync_id', $syncId)->first();
+                        if ($budgetProvider) {
+                            $providerId = $budgetProvider->id;
+                        }
                     }
                     
                     if ($result['status'] === 'created') {
-                        $results['created']['budget_provider'][] = $syncId;
+                        $results['created']['budget_provider'][] = ['sync_id' => $syncId, 'id' => $providerId];
                     } elseif ($result['status'] === 'updated') {
-                        $results['updated']['budget_provider'][] = $syncId;
+                        $results['updated']['budget_provider'][] = ['sync_id' => $syncId, 'id' => $providerId];
                     } elseif ($result['status'] === 'deleted') {
                         $results['deleted']['budget_provider'][] = $syncId;
                     } elseif ($result['status'] === 'conflict') {
@@ -160,6 +163,12 @@ class SyncController extends Controller
                         Log::info("SyncController::merge - Processing products for budget_provider {$syncId} (real ID: {$providerId})", ['products_count' => count($products)]);
                         
                         foreach ($products as $product) {
+                            Log::info("SyncController::merge - Processing product", [
+                                'product_keys' => array_keys($product),
+                                'supplier_product_id' => $product['supplier_product_id'] ?? $product['supplierProductId'] ?? 'NOT SET',
+                                'sync_id' => $product['sync_id'] ?? 'NOT SET',
+                                'product_name' => $product['product_name'] ?? $product['productName'] ?? 'NOT SET',
+                            ]);
                             $productSyncId = $product['sync_id'] ?? uniqid('bpp_', true);
                             
                             // Determine operation: check if item was marked for deletion or if product already exists
@@ -188,9 +197,9 @@ class SyncController extends Controller
                             $productResult = $this->processItem('budget_provider_product', $productData, $user->id);
                             
                             if ($productResult['status'] === 'created') {
-                                $results['created']['budget_provider_product'][] = $productResult['sync_id'];
+                                $results['created']['budget_provider_product'][] = ['sync_id' => $productResult['sync_id'], 'id' => $productResult['id']];
                             } elseif ($productResult['status'] === 'updated') {
-                                $results['updated']['budget_provider_product'][] = $productResult['sync_id'];
+                                $results['updated']['budget_provider_product'][] = ['sync_id' => $productResult['sync_id'], 'id' => $productResult['id'] ?? null];
                             } elseif ($productResult['status'] === 'deleted') {
                                 $results['deleted']['budget_provider_product'][] = $productResult['sync_id'];
                             } elseif ($productResult['status'] === 'conflict') {
@@ -207,12 +216,18 @@ class SyncController extends Controller
                 Log::info("SyncController::merge - Processing entityType: budget_provider_product", ['items_count' => count($items)]);
                 
                 foreach ($items as $item) {
+                    // Ignorar productos sin budget_provider_id (no deberían existir, los productos van dentro de budget_provider)
+                    if (empty($item['budget_provider_id'])) {
+                        Log::debug("Skipping orphan budget_provider_product without budget_provider_id", ['item' => $item]);
+                        continue;
+                    }
+                    
                     $result = $this->processItem('budget_provider_product', $item, $user->id);
                     
                     if ($result['status'] === 'created') {
-                        $results['created']['budget_provider_product'][] = $result['sync_id'];
+                        $results['created']['budget_provider_product'][] = ['sync_id' => $result['sync_id'], 'id' => $result['id']];
                     } elseif ($result['status'] === 'updated') {
-                        $results['updated']['budget_provider_product'][] = $result['sync_id'];
+                        $results['updated']['budget_provider_product'][] = ['sync_id' => $result['sync_id'], 'id' => $result['id'] ?? null];
                     } elseif ($result['status'] === 'deleted') {
                         $results['deleted']['budget_provider_product'][] = $result['sync_id'];
                     } elseif ($result['status'] === 'conflict') {
@@ -239,9 +254,9 @@ class SyncController extends Controller
                     $result = $this->processItem($entityType, $item, $user->id);
                     
                     if ($result['status'] === 'created') {
-                        $results['created'][$entityType][] = $result['sync_id'];
+                        $results['created'][$entityType][] = ['sync_id' => $result['sync_id'], 'id' => $result['id']];
                     } elseif ($result['status'] === 'updated') {
-                        $results['updated'][$entityType][] = $result['sync_id'];
+                        $results['updated'][$entityType][] = ['sync_id' => $result['sync_id'], 'id' => $result['id'] ?? null];
                     } elseif ($result['status'] === 'deleted') {
                         $results['deleted'][$entityType][] = $result['sync_id'];
                     } elseif ($result['status'] === 'conflict') {
@@ -333,6 +348,7 @@ class SyncController extends Controller
         Log::info("formatItem - entityType: " . $entityType);
         $data = $item->toArray();
         $data['id'] = $item->sync_id;
+        $data['id_server'] = $item->id; // Include server's primary key ID
         unset($data['sync_id'], $data['user_id'], $data['deleted_at']);
 
         // Include supplier products with their IDs for supplier entity
@@ -346,9 +362,10 @@ class SyncController extends Controller
 
             Log::info("formatItem - supplier products count: " . count($supplierProducts), ['products' => $supplierProducts]);
 
-            // Map products to include 'id' field (not 'sync_id')
+            // Map products to include 'sync_id' field (use supplier_product's id if no sync_id)
             $data['products'] = array_map(function($product) {
                 return [
+                    'sync_id' => $product['sync_id'] ?? $product['id'],
                     'id' => $product['id'],
                     'name' => $product['name'],
                     'price' => $product['price'],
@@ -397,10 +414,29 @@ class SyncController extends Controller
             // Exclude 'id' from create - it's auto-generated
             $createData = $item;
             unset($createData['id']);
-            
-            $modelClass::create($createData);
+
+            // If creating a budget_provider_product, ensure supplier_product_id is the
+            // real MySQL PK from supplier_products table. The client may send a
+            // sync_id (string) or the real id; normalize to the real id here.
+            if ($entityType === 'budget_provider_product' && isset($createData['supplier_product_id'])) {
+                $spId = $createData['supplier_product_id'];
+                // If it's not numeric, try to resolve by sync_id
+                if (!is_numeric($spId)) {
+                    $sp = SupplierProduct::where('sync_id', $spId)->first();
+                    if ($sp) {
+                        $createData['supplier_product_id'] = $sp->id;
+                    } else {
+                        // As a fallback, try by id (in case client sent stringified numeric)
+                        $createData['supplier_product_id'] = is_numeric($spId) ? (int)$spId : null;
+                    }
+                } else {
+                    $createData['supplier_product_id'] = (int)$spId;
+                }
+            }
+
+            $created = $modelClass::create($createData);
             $this->updateSyncMetadata($entityType, $syncId, 'synced', $userId);
-            return ['status' => 'created', 'sync_id' => $syncId];
+            return ['status' => 'created', 'sync_id' => $syncId, 'id' => $created->id];
         }
 
         $localUpdatedAt = $existing->updated_at->timestamp;

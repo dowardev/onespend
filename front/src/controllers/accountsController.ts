@@ -51,7 +51,8 @@ class AccountsController {
             createdAt: s.createdAt || Date.now(),
             updatedAt: s.updatedAt || Date.now(),
           }));
-          store.accounts.splice(0, store.accounts.length, ...newAccounts);
+          const copy = JSON.parse(JSON.stringify(newAccounts));
+          store.accounts.splice(0, store.accounts.length, ...copy);
         }
       }
     } catch (_e) {
@@ -78,8 +79,9 @@ class AccountsController {
       await this.migrateFromSuppliers();
 
       const store = this.getAccountsStore();
-      store.accounts.splice(0, store.accounts.length, ...sorted);
-      return [...sorted];
+      const copy = JSON.parse(JSON.stringify(sorted));
+      store.accounts.splice(0, store.accounts.length, ...copy);
+      return [...copy];
     } catch (e) {
       console.error('accountsController.loadAll error', e);
       const store = this.getAccountsStore();
@@ -108,10 +110,17 @@ class AccountsController {
     syncAccount(entry, 'create');
 
     const id = await ctrl.addEntry({ entry });
-    const newAccount: Account = { ...entry, id };
+    const newAccount: Account = {
+      id,
+      name: entry.name,
+      initialBalance: entry.initialBalance,
+      sync_id: entry.sync_id,
+      createdAt: entry.createdAt,
+      updatedAt: entry.updatedAt,
+    };
 
-    const store = this.getAccountsStore();
-    store.accounts.push(newAccount);
+    const store = this.getAccountsStore() as any;
+    store.accounts = [...store.accounts, newAccount];
 
     return newAccount;
   }
@@ -134,10 +143,17 @@ class AccountsController {
 
     await ctrl.putEntry({ entry });
 
-    const store = this.getAccountsStore();
-    const idx = store.accounts.findIndex(acc => acc.id === a.id);
+    const store = this.getAccountsStore() as any;
+    const idx = store.accounts.findIndex((acc: any) => acc.id === a.id);
     if (idx >= 0) {
-      store.accounts[idx] = entry;
+      store.accounts[idx] = {
+        id: entry.id,
+        name: entry.name,
+        initialBalance: entry.initialBalance,
+        sync_id: entry.sync_id,
+        createdAt: entry.createdAt,
+        updatedAt: entry.updatedAt,
+      };
     }
 
     return entry;
@@ -145,12 +161,12 @@ class AccountsController {
 
   async deleteAccount(id: IDBValidKey) {
     const ctrl = this.getController();
-    const store = this.getAccountsStore();
-    const account = store.accounts.find(acc => acc.id === id);
+    const store = this.getAccountsStore() as any;
+    const account = store.accounts.find((acc: any) => acc.id === id);
     
     await ctrl.deleteBackup(id);
 
-    const idx = store.accounts.findIndex(acc => acc.id === id);
+    const idx = store.accounts.findIndex((acc: any) => acc.id === id);
     if (idx >= 0) {
       store.accounts.splice(idx, 1);
     }

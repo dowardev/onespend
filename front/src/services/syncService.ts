@@ -18,8 +18,8 @@ export interface SyncItem {
 
 export interface SyncResult {
   success: boolean;
-  created: Record<string, string[]>;
-  updated: Record<string, string[]>;
+  created: Record<string, Array<{ sync_id: string; id: number }>>;
+  updated: Record<string, Array<{ sync_id: string; id?: number }>>;
   deleted: Record<string, string[]>;
   conflicts: Record<string, any[]>;
   serverTime: number;
@@ -98,9 +98,12 @@ class SyncService {
       retryCount: 0,
     };
 
-    console.log('syncService.queueOperation - Queued:', syncItem);
+    console.log('[SyncService] queueOperation:', syncItem.entityType, syncItem.operation, syncItem.id);
+    console.log('[SyncService] isOnline:', this.isOnline);
 
     const queue = this.getQueue();
+    console.log('[SyncService] Current queue length:', queue.length);
+
     const existingIndex = queue.findIndex(
       q => q.id === syncItem.id && q.entityType === syncItem.entityType
     );
@@ -118,27 +121,33 @@ class SyncService {
 
     this.saveQueue(queue);
 
-    // Don't process immediately - wait for multiple items to be queued
-    // processQueue will be called after a short delay or manually
     if (this.isOnline) {
-      // Debounce the sync call to wait for multiple items
       if (this.syncTimeout) {
         clearTimeout(this.syncTimeout);
       }
       this.syncTimeout = setTimeout(async () => {
+        console.log('[SyncService] Calling processQueue after debounce...');
         const result = await this.processQueue();
-        console.log('syncService.queueOperation - processQueue result:', JSON.stringify(result, null, 2));
+        console.log('[SyncService] processQueue result:', JSON.stringify(result, null, 2));
       }, 100);
+    } else {
+      console.log('[SyncService] Currently OFFLINE, not processing');
     }
   }
 
   async processQueue(): Promise<SyncResult | null> {
+    console.log('[SyncService] processQueue called, isOnline:', this.isOnline, 'syncInProgress:', this.syncInProgress);
+    
     if (this.syncInProgress || !this.isOnline) {
+      console.log('[SyncService] processQueue - Skipping, not online or sync in progress');
       return null;
     }
 
     const queue = this.getQueue();
+    console.log('[SyncService] processQueue - Queue length:', queue.length);
+
     if (queue.length === 0) {
+      console.log('[SyncService] processQueue - Empty queue, returning null');
       return null;
     }
 
@@ -179,7 +188,8 @@ class SyncService {
         processedIds.push(item.id);
       }
 
-      console.log('syncService.processQueue - Sending to backend:', { data });
+      console.log('[SyncService] processQueue - Sending to backend, items per type:', 
+        Object.entries(data).map(([k, v]) => `${k}: ${v.length}`).join(', '));
 
       const response = await fetch(`${API_URL}/api/sync/merge`, {
         method: 'POST',
@@ -192,6 +202,13 @@ class SyncService {
       }
 
       const result = await response.json();
+
+      if (result.success && result.results) {
+        console.log('[SyncService] syncQueue - Server response:', result);
+        await this.updateLocalRecordsWithMysqlIds(result.results);
+      } else {
+        console.warn('[SyncService] syncQueue - Server response without results:', result);
+      }
 
       const remainingQueue = queue.filter(item => !processedIds.includes(item.id));
 
@@ -256,6 +273,106 @@ class SyncService {
     };
   }
 
+  private async updateLocalRecordsWithMysqlIds(results: Record<string, Record<string, Array<{ sync_id: string; id?: number | null }>>>): Promise<void> {
+    console.log('[SyncService] 🔵 updateLocalRecordsWithMysqlIds - Starting');
+    console.log('[SyncService] Results structure:', JSON.stringify(results, null, 2));
+
+    const { DixieController } = await import('@/controllers/dixie');
+
+    const entityTypeToStore: Record<string, string> = {
+      'account': 'accounts',
+      'budget': 'budget',
+      'budget_provider': 'budget_providers',
+      'budget_provider_product': 'budget_provider_products',
+      'entry': 'entries',
+      'supplier': 'suppliers',
+      'supplier_product': 'supplier_products',
+      'template': 'templates',
+    };
+
+    let updatedCount = 0;
+
+    // Primero,收集 todos los IDs de productos de todos los statuses
+    const allProductIds: Map<string, number> = new Map();
+    for (const [status, entityMap] of Object.entries(results)) {
+      for (const [entityType, ids] of Object.entries(entityMap)) {
+        if (entityType === 'supplier_product' && Array.isArray(ids)) {
+          for (const idEntry of ids) {
+              if (idEntry.sync_id && idEntry.id) {
+                allProductIds.set(idEntry.sync_id, idEntry.id);
+                console.log(`[SyncService] Mapped product sync_id ${idEntry.sync_id} -> serverId ${idEntry.id}`);
+              }
+          }
+        }
+      }
+    }
+
+    // Procesar proveedores y actualizar sus productos embebidos
+    for (const [status, entityMap] of Object.entries(results)) {
+      for (const [entityType, ids] of Object.entries(entityMap)) {
+        if (entityType !== 'supplier') continue;
+        
+        const storeName = 'suppliers';
+        if (!Array.isArray(ids)) continue;
+
+        console.log(`[SyncService] Processing supplier (${status}), count: ${ids.length}`);
+
+        const ctrl = new DixieController({ name: 'ABOgazDB', storeName });
+
+        for (const idEntry of ids) {
+          const syncId = idEntry.sync_id;
+          const mysqlId = idEntry.id;
+
+          if (!syncId) continue;
+
+          console.log(`[SyncService] Looking for supplier sync_id: ${syncId}`);
+
+          try {
+            const existing = await ctrl.getEntry(syncId);
+            if (existing) {
+              console.log(`[SyncService] Found supplier ${existing.name}`);
+
+              const updatedEntry: any = {
+                ...existing,
+                serverId: mysqlId,
+                synced_at: Date.now(),
+              };
+
+              // Actualizar productos embebidos si existen
+              if (existing.products && Array.isArray(existing.products)) {
+                console.log(`[SyncService] Processing ${existing.products.length} embedded products`);
+                
+                updatedEntry.products = existing.products.map((product: any) => {
+                  const productServerId = allProductIds.get(product.sync_id);
+                  if (productServerId) {
+                    console.log(`[SyncService] ✅ Product ${product.name} sync_id ${product.sync_id} got serverId ${productServerId}`);
+                    return {
+                      ...product,
+                      serverId: productServerId,
+                      synced_at: Date.now(),
+                    };
+                  }
+                  console.log(`[SyncService] Product ${product.name} sync_id ${product.sync_id} NOT found in server response`);
+                  return product;
+                });
+              }
+
+              await ctrl.putEntry({ entry: updatedEntry });
+              console.log(`[SyncService] ✅ Updated supplier ${syncId} with serverId ${mysqlId}`);
+              updatedCount++;
+            } else {
+              console.warn(`[SyncService] No existing supplier found for sync_id: ${syncId}`);
+            }
+          } catch (error) {
+            console.error(`[SyncService] Failed to update supplier ${syncId}:`, error);
+          }
+        }
+      }
+    }
+
+    console.log(`[SyncService] 🔵 updateLocalRecordsWithMysqlIds - Complete. Updated ${updatedCount} records.`);
+  }
+
   async pullChanges(): Promise<Record<string, any[]>> {
     if (!this.isOnline) {
       throw new Error('Cannot pull changes while offline');
@@ -287,7 +404,7 @@ class SyncService {
       throw new Error('Cannot full sync while offline');
     }
 
-    const headers = await this.getAuthHeaders(null);
+    const headers = await this.getAuthHeaders(undefined);
     const response = await fetch(`${API_URL}/api/sync/full`, { headers });
 
     if (!response.ok) {
@@ -325,7 +442,7 @@ class SyncService {
     }
     if (data.suppliers && data.suppliers.length > 0) {
       console.log('syncService - Saving suppliers:', data.suppliers.length);
-      console.log('syncService - First supplier products:', JSON.stringify(data.suppliers[0].products));
+      console.log('syncService - First supplier products (before save):', JSON.stringify(data.suppliers[0].products?.map((p: any) => ({ id: p.id, sync_id: p.sync_id, name: p.name, price: p.price }))));
       await this.saveEntitiesToStore('suppliers', data.suppliers);
     }
     if (data.supplier_products && data.supplier_products.length > 0) {
@@ -360,6 +477,26 @@ class SyncService {
       if (entry.id != null) {
         entry.sync_id = entry.id;
         delete entry.id;
+      }
+      if (entry.serverId != null) {
+        entry.serverId = entry.serverId;
+      }
+      // Process products array for suppliers - move id to sync_id
+      if (storeName === 'suppliers' && entry.products && Array.isArray(entry.products)) {
+        console.log('saveEntitiesToStore - Processing products for supplier:', entry.name);
+        entry.products = entry.products.map((product: any) => {
+          const syncId = product.sync_id ?? product.id;
+          if (syncId === undefined) {
+            console.warn('saveEntitiesToStore - Product without ID:', { name: product.name, price: product.price });
+          }
+          const result = {
+            ...product,
+            sync_id: syncId,
+            id: undefined,
+          };
+          console.log('saveEntitiesToStore - Product processed:', { id: product.id, sync_id: result.sync_id, name: result.name });
+          return result;
+        });
       }
       await ctrl.putEntry({ entry });
     }
@@ -401,3 +538,8 @@ class SyncService {
 }
 
 export const syncService = new SyncService();
+
+// Exponer para debugging en consola
+if (typeof window !== 'undefined') {
+  (window as any).syncService = syncService;
+}
