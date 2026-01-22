@@ -210,6 +210,7 @@ import {
   buildPayloadFromTemplate,
   hasBackupMeaningfulContent,
   buildAndSaveTemplateApplication,
+  type TemplateApplicationPayload,
 } from '@/controllers/templateService';
 // End Controllers
 
@@ -218,11 +219,11 @@ type TemplateSummary = {
   id: string | number | null;
   name: string;
   description?: string;
-  suppliers?: any[];
-  suppliersSnapshot?: any[];
+  suppliers?: Array<IDBValidKey>;
+  suppliersSnapshot?: Array<{ id: IDBValidKey; name?: string }>;
 };
 
-type Supplier = any;
+type Supplier = unknown;
 
 const router = useRouter();
 
@@ -240,7 +241,7 @@ const toast = reactive({
 });
 const form = reactive({
   name: '',
-  supplierIds: [] as any[],
+  supplierIds: [] as Array<IDBValidKey>,
 });
 
 const suppliers = reactive<Supplier[]>([]);
@@ -261,7 +262,7 @@ void _supplierQuery.value;
 
 const showApplyConflict = ref(false);
 const applyConflictMessage = ref('');
-const pendingApplyPayload = ref<any | null>(null);
+const pendingApplyPayload = ref<TemplateApplicationPayload | null>(null);
 // End Vars
 
 // Functions
@@ -579,10 +580,11 @@ async function loadTemplates() {
 
 async function loadSuppliers() {
   try {
-    const list =
-      (await suppliersController.listSuppliers()) as unknown as any[];
+    const list = await suppliersController.listSuppliers();
     suppliers.length = 0;
-    for (const it of list) (suppliers as any).push(it);
+    for (const it of list) {
+      suppliers.push(it as Supplier);
+    }
   } catch (_e) {
     console.error('loadSuppliers error', _e);
   }
@@ -601,14 +603,14 @@ const designMode = computed(() => systemController.getDesignMode());
 
 const groupedTemplates = computed(() => {
   const list = (unref(TemplateController.templates) || []).slice();
-  list.sort((a: any, b: any) => {
+  list.sort((a: TemplateSummary, b: TemplateSummary) => {
     const na = (a.name || '').toString().toLowerCase();
     const nb = (b.name || '').toString().toLowerCase();
     return na.localeCompare(nb);
   });
 
-  const map = new Map<string, any[]>();
-  list.forEach((t: any) => {
+  const map = new Map<string, TemplateSummary[]>();
+  list.forEach((t: TemplateSummary) => {
     const name = (t.name || '').toString().trim();
     const letter = name ? name[0].toUpperCase() : '#';
     if (!map.has(letter)) map.set(letter, []);

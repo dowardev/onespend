@@ -123,16 +123,23 @@ import { addOutline, trashOutline } from 'ionicons/icons';
 
 // Components
 import AddSupliersComponent from '../suppliers/modals/AddSupliersComponent.vue';
+import type { Product } from '../controllers/suppliersController';
+
+interface SupplierGroup {
+  letter: string;
+  items: Supplier[];
+}
 // End Components
 
 // Controllers
 import systemController from '@/controllers/systemConfigController';
 import suppliersController from '@/controllers/suppliersController';
+import type { Supplier } from '@/controllers/suppliersController';
 // End Controllers
 
 // Vars
 const showModal = ref(false);
-const modalSupplier = ref<any | null>(null);
+const modalSupplier = ref<Supplier | null>(null);
 const searchTerm = ref('');
 const deleteConfirmSupplier = reactive({
   open: false,
@@ -148,10 +155,10 @@ function openModal() {
   showModal.value = true;
 }
 
-function edit(params: { s: any }) {
-  const { s } = params;
-  console.log('Supplier data:', s);
-  modalSupplier.value = s;
+function edit(params: { supplier: Supplier }) {
+  const { supplier } = params;
+  console.log('Supplier data:', supplier);
+  modalSupplier.value = supplier;
   showModal.value = true;
 }
 
@@ -194,7 +201,7 @@ async function removeSupplierConfirmed() {
   deleteConfirmSupplier.supplierName = '';
 
   if (id == null) return;
-  await remove(id as any);
+  await remove(id);
 }
 
 function onDeleteAlertDidDismissSupplier() {
@@ -203,11 +210,11 @@ function onDeleteAlertDidDismissSupplier() {
   deleteConfirmSupplier.supplierName = '';
 }
 
-async function onModalSaved(payload: any) {
+async function onModalSaved(payload: Supplier) {
   if (!payload) return;
   
   if (payload.id != null) {
-    const existingSupplier = suppliers.value.find((s: any) => String(s.id) === String(payload.id));
+    const existingSupplier = suppliers.value.find((s: Supplier) => String(s.id) === String(payload.id));
     if (existingSupplier && existingSupplier.sync_id) {
       payload.sync_id = existingSupplier.sync_id;
     }
@@ -226,11 +233,38 @@ async function remove(id: IDBValidKey | undefined) {
   await suppliersController.listSuppliers();
 }
 
-// End Functions
+const filteredSuppliers = computed(() => {
+  const term = (searchTerm.value || '').toString().toLowerCase().trim();
+  const list = unref(suppliers) || [];
+  if (!term) return list;
+  return list.filter((s: Supplier) => {
+    const name = (s.name || '').toString().toLowerCase();
+    const products = (s.products || [])
+      .map((p: Product) => (p.name || '').toString().toLowerCase())
+      .join(' ');
+    return name.includes(term) || products.includes(term);
+  });
+});
 
-// Life cycle
-onMounted(() => {
-  suppliersController.listSuppliers();
+const groupedSuppliers = computed(() => {
+  const list = (unref(filteredSuppliers) || []).slice();
+  list.sort((a: Supplier, b: Supplier) => {
+    const na = (a.name || '').toString().toLowerCase();
+    const nb = (b.name || '').toString().toLowerCase();
+    return na.localeCompare(nb);
+  });
+
+  const map = new Map<string, Supplier[]>();
+  list.forEach((s: Supplier) => {
+    const name = (s.name || '').toString().trim();
+    const letter = name ? name[0].toUpperCase() : '#';
+    if (!map.has(letter)) map.set(letter, []);
+    map.get(letter)!.push(s);
+  });
+
+  return Array.from(map.keys())
+    .sort()
+    .map(letter => ({ letter, items: map.get(letter) || [] }));
 });
 
 // End Life cycle
@@ -244,10 +278,10 @@ const filteredSuppliers = computed(() => {
   const term = (searchTerm.value || '').toString().toLowerCase().trim();
   const list = unref(suppliers) || [];
   if (!term) return list;
-  return list.filter((s: any) => {
+  return list.filter((s: Supplier) => {
     const name = (s.name || '').toString().toLowerCase();
     const products = (s.products || [])
-      .map((p: any) => (p.name || '').toString().toLowerCase())
+      .map((p: Product) => (p.name || '').toString().toLowerCase())
       .join(' ');
     return name.includes(term) || products.includes(term);
   });
@@ -255,14 +289,14 @@ const filteredSuppliers = computed(() => {
 
 const groupedSuppliers = computed(() => {
   const list = (unref(filteredSuppliers) || []).slice();
-  list.sort((a: any, b: any) => {
+  list.sort((a: Supplier, b: Supplier) => {
     const na = (a.name || '').toString().toLowerCase();
     const nb = (b.name || '').toString().toLowerCase();
     return na.localeCompare(nb);
   });
 
   const map = new Map<string, any[]>();
-  list.forEach((s: any) => {
+  list.forEach((s: Supplier) => {
     const name = (s.name || '').toString().trim();
     const letter = name ? name[0].toUpperCase() : '#';
     if (!map.has(letter)) map.set(letter, []);

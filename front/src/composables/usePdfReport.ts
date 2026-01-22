@@ -1,12 +1,22 @@
 import { ref, Ref } from 'vue';
 import { format } from 'date-fns';
 
+export type Html2CanvasOptions = Record<string, unknown>;
+
+export type JsPdfOrientation = 'portrait' | 'landscape';
+export type JsPdfUnit = 'pt' | 'mm' | 'cm' | 'in' | 'px';
+export type JsPdfFormat = 'a4' | 'letter' | 'legal' | 'tabloid' | 'executive' | 'a3' | 'a5' | 'a6' | 'b4' | 'b5' | 'b6' | 'c7' | 'custom';
+
 export type UsePdfReportOptions = {
   containerRef: Ref<HTMLElement | null>;
-  buttonSelector?: string; // selector for the button to hide while capturing
-  filenameFactory?: () => string; // function that returns the filename
-  html2canvasOptions?: Record<string, any>;
-  jspdfOptions?: { orientation?: any; unit?: any; format?: any };
+  buttonSelector?: string;
+  filenameFactory?: () => string;
+  html2canvasOptions?: Html2CanvasOptions;
+  jspdfOptions?: {
+    orientation?: JsPdfOrientation;
+    unit?: JsPdfUnit;
+    format?: JsPdfFormat | [number, number];
+  };
 };
 
 export function usePdfReport() {
@@ -24,10 +34,10 @@ export function usePdfReport() {
     isGeneratingPdf.value = true;
 
     try {
-      const html2canvasModule: any = await import('html2canvas');
+      const html2canvasModule = await import('html2canvas');
       const html2canvas =
         html2canvasModule && (html2canvasModule.default ?? html2canvasModule);
-      const jsPDFModule: any = await import('jspdf');
+      const jsPDFModule = await import('jspdf');
       const jsPDF =
         jsPDFModule &&
         (jsPDFModule.jsPDF ?? jsPDFModule.default ?? jsPDFModule);

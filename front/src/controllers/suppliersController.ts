@@ -52,7 +52,7 @@ class SuppliersController {
       const ctrl = this.getController();
       const now = Date.now();
 
-      const clean = JSON.parse(JSON.stringify(s)) as any;
+      const clean = JSON.parse(JSON.stringify(s)) as Omit<Supplier, 'id' | 'createdAt' | 'updatedAt'>;
 
       const entry: Supplier = {
         ...clean,
@@ -80,7 +80,7 @@ class SuppliersController {
       // Sincronizar productos PRIMERO
       if (entry.products && entry.products.length > 0) {
         console.log('[suppliersController] 🔵 Sincronizando', entry.products.length, 'productos');
-        entry.products = entry.products.map((product: any) => {
+        entry.products = entry.products.map((product: Product) => {
           const tempProductSyncId = `temp_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
           console.log('[suppliersController] 🔵 syncSupplierProduct para:', product.name);
           syncSupplierProduct({
@@ -106,7 +106,7 @@ class SuppliersController {
 
       const localId = await ctrl.addEntry({ entry });
       entry.id = localId;
-      const result = entry as any;
+      const result = entry as Supplier;
       console.log('[suppliersController] Guardado en IndexedDB con localId:', localId);
 
       await ctrl.putEntry({ entry });
@@ -156,7 +156,7 @@ class SuppliersController {
 
       // Update products with sync_id before saving to IndexedDB
       if (entry.products && entry.products.length > 0) {
-        entry.products = entry.products.map((product: any) => {
+        entry.products = entry.products.map((product: Product) => {
           const tempProductSyncId = `temp_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
           syncSupplierProduct({
             supplierId: entry.sync_id,
@@ -172,12 +172,7 @@ class SuppliersController {
 
       await ctrl.putEntry({ entry });
 
-      // Update in store
-      const suppliers = store.suppliers as any[];
-      const idx = suppliers.findIndex(x => x.id === entry.id);
-      if (idx !== -1) {
-        suppliers[idx] = entry;
-      }
+      store.suppliers = store.suppliers.map(s => s.id === entry.id ? entry : s);
       store.notifyChange();
 
       return entry;
@@ -196,7 +191,7 @@ class SuppliersController {
     store.error = null;
     try {
       const ctrl = this.getController();
-      const allSuppliers = store.suppliers as any[];
+      const allSuppliers = store.suppliers;
       const supplier = allSuppliers.find(s => s.id === id);
       await ctrl.deleteBackup({ id });
 
@@ -237,7 +232,7 @@ class SuppliersController {
           // Retry reading from IndexedDB after sync
           const allAfterSync = (await ctrl.listBackups()) as Supplier[];
           console.log('suppliersController.listSuppliers - Suppliers after sync:', allAfterSync?.length || 0);
-          store.suppliers = allAfterSync as any;
+          store.suppliers = allAfterSync;
           return allAfterSync;
         } catch (syncError) {
           console.error('suppliersController.listSuppliers - Sync error:', syncError);
@@ -251,7 +246,7 @@ class SuppliersController {
         .slice()
         .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 
-      console.log('suppliersController.listSuppliers - Suppliers loaded:', sorted.map((s: any) => ({
+      console.log('suppliersController.listSuppliers - Suppliers loaded:', sorted.map((s: Supplier) => ({
         id: s.id,
         sync_id: s.sync_id,
         serverId: s.serverId,
@@ -265,7 +260,7 @@ class SuppliersController {
         } : null
       })));
 
-      store.suppliers = sorted as any;
+      store.suppliers = sorted;
       return sorted;
     } catch (e) {
       store.error = e as Error;
@@ -290,7 +285,7 @@ class SuppliersController {
     return null;
   }
 
-  subscribeToChanges(params?: { callback?: (suppliers: any[]) => void }) {
+  subscribeToChanges(params?: { callback?: (suppliers: Array<Supplier>) => void }) {
     const store = this.getStore();
     if (params?.callback) {
       return store.subscribeToChanges(params.callback);

@@ -5,15 +5,27 @@ interface MigrationOptions {
   verbose?: boolean;
 }
 
+interface BackupEntry {
+  id?: string | number | null;
+  data?: BackupData;
+  meta?: Record<string, unknown>;
+}
+
+interface BackupData {
+  ingresos?: Array<Record<string, unknown>>;
+  entries?: Array<Record<string, unknown>>;
+  [key: string]: unknown;
+}
+
 export async function migrateAddEntriesToBackups(params: { opts?: MigrationOptions }) {
   const { opts } = params;
   const { dryRun = true, verbose = true } = opts || {};
-  const all = (await dixieController.listBackups()) as any[];
+  const all = (await dixieController.listBackups()) as Array<BackupEntry>;
   const results: Array<{
-    id: any;
+    id: string | number | null;
     changed: boolean;
-    before?: any;
-    after?: any;
+    before?: BackupData;
+    after?: BackupData;
   }> = [];
 
   for (const entry of all) {
@@ -57,9 +69,9 @@ export async function migrateAddEntriesToBackups(params: { opts?: MigrationOptio
         if (verbose) console.log('Updated entry', id);
       }
     } catch (e) {
-      console.error('Failed to process entry', entry && (entry as any).id, e);
+      console.error('Failed to process entry', entry && entry.id, e);
       results.push({
-        id: (entry && (entry as any).id) || null,
+        id: entry && entry.id,
         changed: false,
       });
     }
@@ -69,7 +81,7 @@ export async function migrateAddEntriesToBackups(params: { opts?: MigrationOptio
 }
 
 export async function needsEntriesKeyCheck() {
-  const all = (await dixieController.listBackups()) as any[];
+  const all = (await dixieController.listBackups()) as Array<BackupEntry>;
   try {
     // console.log(
     //   'needsEntriesKeyCheck: found backups ->',
@@ -93,7 +105,7 @@ export async function needsEntriesKeyCheck() {
     } catch (e) {
       console.error(
         'needsEntriesKeyCheck: error checking entry',
-        entry && (entry as any).id,
+        entry && entry.id,
         e
       );
       // ignore and continue

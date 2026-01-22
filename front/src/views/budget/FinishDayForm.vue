@@ -97,7 +97,15 @@ import { warningOutline } from 'ionicons/icons';
 // End Components
 
 // Vars
-const props = defineProps<{ finishDay: any }>();
+interface FinishDayData {
+  totalSalesEfectivo: number;
+  totalSalesTarjeta: number;
+  totalSalesCredito: number;
+  type: string;
+  margin: number;
+}
+
+const props = defineProps<{ finishDay: FinishDayData }>();
 const emit = defineEmits(['save']);
 
 const finishDay = toRef(props, 'finishDay');

@@ -435,16 +435,16 @@ const {
   hovered: statisticsController.getHovered(),
   setHover: (key: string, value: boolean) => statisticsController.setHover(key, value),
   isoDate: (d: Date) => statisticsController.isoDate({ d }),
-  providerValue: (p: any) => statisticsController.providerValue(p),
-  formatCurrency: (val: any) => statisticsController.formatCurrency(val),
-  formatPercent: (val: any) => statisticsController.formatPercent(val),
+  providerValue: (p: ProviderValue) => statisticsController.providerValue({ params: { p } }),
+  formatCurrency: (val: number | null | undefined) => statisticsController.formatCurrency({ params: { val } }),
+  formatPercent: (val: number | null | undefined) => statisticsController.formatPercent({ params: { val } }),
 };
 
 // Shared snapshots & modal state
 const { snapshots, modalOpen, setSnapshots } = {
   snapshots: statisticsController.getSnapshots(),
   modalOpen: statisticsController.getModalOpen(),
-  setSnapshots: (val: any) => statisticsController.setSnapshots(val),
+  setSnapshots: (val: Snapshots) => statisticsController.setSnapshots({ params: { val } }),
 };
 
 // selected date for the popover datetime (YYYY-MM)
@@ -474,7 +474,7 @@ const monthlyProfit = ref<number>(0);
 const previousMonthlyProfit = ref<number>(0);
 const providersSumMonth = ref<number>(0);
 const previousProvidersSum = ref<number>(0);
-const monthDays = ref<any[]>([]);
+const monthDays = ref<Array<MonthDay>>([]);
 const income = reactive({
   salesCash: 0,
   salesCard: 0,
@@ -610,7 +610,7 @@ function nextMonth() {
   void loadMonthData();
 }
 
-function onPopoverDateChange(e: any) {
+function onPopoverDateChange(e: CustomEvent) {
   try {
     const val = e?.detail?.value || selectedDate.value;
     // value format for month presentation might be "YYYY-MM"
@@ -630,16 +630,16 @@ function onPopoverDateChange(e: any) {
 // Load data for the month defined by monthOffset (0 = current month)
 async function loadMonthData() {
   try {
-    const all = ((await dixieController.listBackups()) as any[]) || [];
+    const all = ((await dixieController.listBackups()) as Backup[]) || [];
 
     // Load statistics config fields (statisticsFields store) and sum their amounts
     try {
       const statsDixie = new DixieController({ storeName: 'statisticsFields' });
-      const statsList = ((await statsDixie.listBackups()) as any[]) || [];
+      const statsList = ((await statsDixie.listBackups()) as StatsField[]) || [];
       let fixedSum = 0;
       if (Array.isArray(statsList)) {
         fixedSum = statsList.reduce(
-          (s: number, it: any) => s + (Number(it.amount ?? 0) || 0),
+          (s: number, it: StatsField) => s + (Number(it.amount ?? 0) || 0),
           0
         );
       }
@@ -715,13 +715,13 @@ async function loadMonthData() {
         const d = entry.data;
         if (Array.isArray(d.ingresos || d.entries)) {
           ingresosSum += (d.ingresos || d.entries).reduce(
-            (s: number, i: any) => s + (Number(i.amount || 0) || 0),
+            (s: number, i: Income) => s + (Number(i.amount || 0) || 0),
             0
           );
         }
         if (Array.isArray(d.proveedores)) {
           proveedoresSum += d.proveedores.reduce(
-            (s: number, p: any) => s + (Number(providerValue(p) || 0) || 0),
+            (s: number, p: Provider) => s + (Number(providerValue(p) || 0) || 0),
             0
           );
         }
@@ -921,13 +921,13 @@ async function loadMonthData() {
           const d = entry.data;
           if (Array.isArray(d.ingresos || d.entries)) {
             prevIngresosSum += (d.ingresos || d.entries).reduce(
-              (s: number, i: any) => s + (Number(i.amount || 0) || 0),
+              (s: number, i: Income) => s + (Number(i.amount || 0) || 0),
               0
             );
           }
           if (Array.isArray(d.proveedores)) {
             prevProveedoresSum += d.proveedores.reduce(
-              (s: number, p: any) => s + (Number(providerValue(p) || 0) || 0),
+              (s: number, p: Provider) => s + (Number(providerValue(p) || 0) || 0),
               0
             );
           }
@@ -963,7 +963,7 @@ async function loadMonthData() {
 
       // build monthDays list (one entry per day in the target month)
       try {
-        const days: any[] = [];
+        const days: Array<MonthDay> = [];
         for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
           const iso = isoDate({ d });
           // find matches and finish entries for this iso date
@@ -986,20 +986,20 @@ async function loadMonthData() {
               ) === iso
           );
 
-          for (const mm of dayMatches) {
-            try {
-              const dd = mm.data;
-              if (Array.isArray(dd.ingresos || dd.entries))
-                dayIngresos += (dd.ingresos || dd.entries).reduce(
-                  (s: number, i: any) => s + (Number(i.amount || 0) || 0),
-                  0
-                );
-              if (Array.isArray(dd.proveedores))
-                dayProveedores += dd.proveedores.reduce(
-                  (s: number, p: any) =>
-                    s + (Number(providerValue(p) || 0) || 0),
-                  0
-                );
+            for (const mm of dayMatches) {
+              try {
+                const dd = mm.data;
+                if (Array.isArray(dd.ingresos || dd.entries))
+                  dayIngresos += (dd.ingresos || dd.entries).reduce(
+                    (s: number, i: Income) => s + (Number(i.amount || 0) || 0),
+                    0
+                  );
+                if (Array.isArray(dd.proveedores))
+                  dayProveedores += dd.proveedores.reduce(
+                    (s: number, p: Provider) =>
+                      s + (Number(providerValue(p) || 0) || 0),
+                    0
+                  );
             } catch (_e) {
               void _e;
             }
@@ -1031,13 +1031,13 @@ async function loadMonthData() {
 
         // Set chart to show each day of the month (labels: dd)
         try {
-          chartData.labels = monthDays.value.map((x: any) => x.label);
-          chartData.datasets = [
-            {
-              label: 'Ventas (día)',
-              data: monthDays.value.map((x: any) => Number(x.totalSales || 0)),
-            },
-          ];
+        chartData.labels = monthDays.value.map((x: MonthDay) => x.label);
+        chartData.datasets = [
+          {
+            label: 'Ventas (día)',
+            data: monthDays.value.map((x: MonthDay) => Number(x.totalSales || 0)),
+          },
+        ];
         } catch (_e) {
           // noop
         }

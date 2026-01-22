@@ -227,7 +227,10 @@ import budgetController from '@/controllers/budgetController';
 import { BudgetController } from '@/controllers/budgetController';
 import accountsController from '@/controllers/accountsController';
 import suppliersController from '@/controllers/suppliersController';
-// End Controllers
+import type { Supplier } from '@/controllers/suppliersController';
+import type { Account } from '@/stores/accountsStore';
+import type { Income, EntryType, PaymentType, Provider } from '@/stores/budgetStore';
+import type { AccountWithBalance, EntryGroup, PendingProduct, ProviderEditData, ProviderProduct } from './components/EditProviderModal.vue';
 
 // Components
 
@@ -275,7 +278,7 @@ const quickAccountButtons = [
 ];
 
 const editProviderModalOpen = ref(false);
-const editProviderData = ref<any>(null);
+const editProviderData = ref<ProviderEditData | null>(null);
 const allSuppliers = computed(() => suppliersController.getSuppliers());
 
 const editingProviderEntryId = ref<string | number | null>(null);
@@ -287,7 +290,7 @@ const editEntryModalData = ref({
   name: '',
 });
 
-const entryItems = ref<Array<{ amount: number; accountId: any }>>([
+const entryItems = ref<Array<EntryGroup>>([
   { amount: 0, accountId: null },
 ]);
 
@@ -307,8 +310,8 @@ const frozenSnapshot = computed(() => budgetCtrl.getFrozenSnapshot());
 
 const accountsList = computed(() => {
   const list = accountsController.getAccounts();
-  if (!list || !Array.isArray(list)) return [] as any[];
-  return list.filter((acc: any) => acc != null && acc.id != null) as any[];
+  if (!list || !Array.isArray(list)) return [];
+  return list.filter((acc: Account) => acc != null && acc.id != null);
 });
 
 const isItemsValid = computed(() => {
@@ -328,11 +331,11 @@ const isFormValid = computed(() => {
 
 const availableAccountsForItem = (currentIndex: number) => {
   const usedAccountIds = entryItems.value
-    .filter((_: any, idx: number) => idx !== currentIndex)
-    .map((item: any) => String(item.accountId))
+    .filter((_: unknown, idx: number) => idx !== currentIndex)
+    .map((item: EntryItem) => String(item.accountId))
     .filter((id: string) => id !== 'null' && id !== 'undefined' && id !== '');
   return accountsList.value.filter(
-    (acc: any) => !usedAccountIds.includes(String(acc.id))
+    (acc: Account) => !usedAccountIds.includes(String(acc.id))
   );
 };
 
@@ -341,30 +344,30 @@ const canAddMoreItems = computed(() => {
   return entryItems.value.length < availableAccounts + 2;
 });
 
-function calculateAccountBalance(acc: any, accountId: string | number) {
+function calculateAccountBalance(acc: Account, accountId: string | number) {
   const initialBalance = Number(acc.initialBalance) || 0;
 
   const entries = isDayClosed.value && frozenSnapshot.value
     ? frozenSnapshot.value.entries
     : budgetController.getEntries();
 
-  const entriesForAccount = entries.filter((e: any) => {
+  const entriesForAccount = entries.filter((e: Income) => {
     if (String(e.accountId) === String(accountId)) return true;
     if (e.groups && Array.isArray(e.groups)) {
       return e.groups.some(
-        (g: any) => String(g.accountId) === String(accountId)
+        (g: EntryGroup) => String(g.accountId) === String(accountId)
       );
     }
     return false;
   });
 
   const ingresos = entriesForAccount
-    .filter((e: any) => e.entryType === 'ingreso')
-    .reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
+    .filter((e: Income) => e.entryType === 'ingreso')
+    .reduce((sum: number, e: Income) => sum + Number(e.amount || 0), 0);
 
   const egresos = entriesForAccount
-    .filter((e: any) => e.entryType === 'egreso')
-    .reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
+    .filter((e: Income) => e.entryType === 'egreso')
+    .reduce((sum: number, e: Income) => sum + Number(e.amount || 0), 0);
 
   return {
     ...acc,
@@ -377,17 +380,17 @@ function calculateAccountBalance(acc: any, accountId: string | number) {
 }
 
 const accountsWithBalance = computed(() => {
-  const result = accountsList.value.map((acc: any) =>
+  const result = accountsList.value.map((acc: Account) =>
     calculateAccountBalance(acc, acc.id)
   );
 
   const withTransactions = result
-    .filter((acc: any) => acc.hasTransactions)
-    .sort((a: any, b: any) => b.balance - a.balance);
+    .filter((acc: AccountWithBalance) => acc.hasTransactions)
+    .sort((a: AccountWithBalance, b: AccountWithBalance) => b.balance - a.balance);
 
   const withoutTransactions = result
-    .filter((acc: any) => !acc.hasTransactions)
-    .sort((a: any, b: any) => a.name.localeCompare(b.name));
+    .filter((acc: AccountWithBalance) => !acc.hasTransactions)
+    .sort((a: AccountWithBalance, b: AccountWithBalance) => a.name.localeCompare(b.name));
 
   return [...withTransactions, ...withoutTransactions];
 });
@@ -397,8 +400,8 @@ const totalIngresos = computed(() => {
     ? frozenSnapshot.value.entries
     : budgetController.getEntries();
   return entries
-    .filter((e: any) => e.entryType === 'ingreso')
-    .reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
+    .filter((e: Income) => e.entryType === 'ingreso')
+    .reduce((sum: number, e: Income) => sum + Number(e.amount || 0), 0);
 });
 
 const totalEgresos = computed(() => {
@@ -406,8 +409,8 @@ const totalEgresos = computed(() => {
     ? frozenSnapshot.value.entries
     : budgetController.getEntries();
   return entries
-    .filter((e: any) => e.entryType === 'egreso')
-    .reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
+    .filter((e: Income) => e.entryType === 'egreso')
+    .reduce((sum: number, e: Income) => sum + Number(e.amount || 0), 0);
 });
 
 const totalDifference = computed(() => {
@@ -434,13 +437,13 @@ const providersToday = computed(() => {
   return budgetController
     .getProviders()
     .filter(
-      (p: any) =>
+      (p: Provider) =>
         String(p.date || '').slice(0, 10) === sel && !addedIds.has(p.id)
     );
 });
 
 const providersTodayWithData = computed(() => {
-  return providersToday.value.filter((p: any) => {
+  return providersToday.value.filter((p: Provider) => {
     return Number(p?.estimated) > 0;
   });
 });
@@ -449,7 +452,7 @@ const renderedEntries = computed(() => {
   const entries = isDayClosed.value && frozenSnapshot.value
     ? frozenSnapshot.value.entries
     : budgetController.getEntries();
-  return entries.map((item: any) => ({ type: 'item', item }));
+  return entries.map((item: Income) => ({ type: 'item', item }));
 });
 
 // End Computed
@@ -550,11 +553,11 @@ function openAddEntryModal() {
   console.log('editEntryModalData.id after set:', editEntryModalData.value.id);
 }
 
-function formatProviderAmount(provider: any) {
+function formatProviderAmount(provider: Provider) {
   return formatCurrencyLocal({ v: Number(provider?.estimated) || 0 });
 }
 
-function selectProvider(provider: any) {
+function selectProvider(provider: Provider) {
   if (!provider.accountId) {
     return;
   }
@@ -563,7 +566,7 @@ function selectProvider(provider: any) {
   editEntryModalOpen.value = false;
 }
 
-function blockKey(block: any, idx: number) {
+function blockKey(block: { type: string; item: Income }, idx: number) {
   if (!block) return `b-${idx}`;
   return `i-${String((block.item && block.item.id) || idx)}`;
 }
@@ -571,16 +574,16 @@ function blockKey(block: any, idx: number) {
 function getAccountName(accountId: string | number | null | undefined) {
   if (!accountId) return '';
   const account = accountsList.value.find(
-    (a: any) => String(a.id) === String(accountId)
+    (a: Account) => String(a.id) === String(accountId)
   );
   return account?.name || '';
 }
 
-function getEntryAccountInfo(item: any) {
+function getEntryAccountInfo(item: Income) {
   if (item.groups && Array.isArray(item.groups) && item.groups.length > 0) {
     const accountIds = item.groups
-      .map((g: any) => g.accountId)
-      .filter((id: any) => id != null);
+      .map((g: EntryGroup) => g.accountId)
+      .filter((id: unknown) => id != null);
     const uniqueAccountIds = [...new Set(accountIds.map(String))];
 
     if (uniqueAccountIds.length > 1) {
@@ -602,7 +605,7 @@ function getAccountRemaining(
 ) {
   if (!accountId) return 0;
   const account = accountsList.value.find(
-    (a: any) => String(a.id) === String(accountId)
+    (a: Account) => String(a.id) === String(accountId)
   );
   if (!account) return 0;
 
@@ -612,11 +615,11 @@ function getAccountRemaining(
     ? frozenSnapshot.value.entries
     : budgetController.getEntries();
 
-  const entriesForAccount = entries.filter((e: any) => {
+  const entriesForAccount = entries.filter((e: Income) => {
     if (String(e.accountId) === String(accountId)) return true;
     if (e.groups && Array.isArray(e.groups)) {
       return e.groups.some(
-        (g: any) => String(g.accountId) === String(accountId)
+        (g: EntryGroup) => String(g.accountId) === String(accountId)
       );
     }
     return false;
@@ -624,7 +627,7 @@ function getAccountRemaining(
 
   let cutoffTime = Infinity;
   if (entryId) {
-    const currentEntry = entriesForAccount.find((e: any) => e.id === entryId);
+    const currentEntry = entriesForAccount.find((e: Income) => e.id === entryId);
     if (currentEntry) {
       cutoffTime = Number(currentEntry.createdAt) || Infinity;
     }
@@ -633,27 +636,27 @@ function getAccountRemaining(
   const filteredEntries =
     cutoffTime === Infinity
       ? entriesForAccount
-      : entriesForAccount.filter((e: any) => Number(e.createdAt) <= cutoffTime);
+      : entriesForAccount.filter((e: Income) => Number(e.createdAt) <= cutoffTime);
 
   const ingresos = filteredEntries
-    .filter((e: any) => e.entryType === 'ingreso')
-    .reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
+    .filter((e: Income) => e.entryType === 'ingreso')
+    .reduce((sum: number, e: Income) => sum + Number(e.amount || 0), 0);
 
   const egresos = filteredEntries
-    .filter((e: any) => e.entryType === 'egreso')
-    .reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
+    .filter((e: Income) => e.entryType === 'egreso')
+    .reduce((sum: number, e: Income) => sum + Number(e.amount || 0), 0);
 
   return initialBalance + ingresos - egresos;
 }
 
-function isProviderEntry(item: any) {
+function isProviderEntry(item: Income) {
   return (
     item.entryType === 'egreso' &&
     (item._fromProviderGroupId || item._providerName)
   );
 }
 
-function handleEntryClick(item: any) {
+function handleEntryClick(item: Income) {
   if (isProviderEntry(item)) {
     openEditProviderModal(item);
   } else {
@@ -661,7 +664,7 @@ function handleEntryClick(item: any) {
   }
 }
 
-async function openEditProviderModal(item: any) {
+async function openEditProviderModal(item: Income) {
   editingProviderEntryId.value = item.id;
 
   await suppliersController.listSuppliers();
@@ -669,19 +672,19 @@ async function openEditProviderModal(item: any) {
   const providerName = item._providerName || item.name || '';
   const supplierSyncId = item._supplierId || item._fromProviderGroupId;
 
-  let fullSupplier: any = null;
+  let fullSupplier: Supplier | null = null;
   if (supplierSyncId) {
     fullSupplier =
       allSuppliers.value.find(
-        (s: any) => String(s.sync_id) === String(supplierSyncId)
+        (s: Supplier) => String(s.sync_id) === String(supplierSyncId)
       ) ||
       allSuppliers.value.find(
-        (s: any) => String(s.id) === String(supplierSyncId)
+        (s: Supplier) => String(s.id) === String(supplierSyncId)
       );
   }
   if (!fullSupplier) {
     fullSupplier = allSuppliers.value.find(
-      (s: any) => s.name?.toLowerCase() === providerName.toLowerCase()
+      (s: Supplier) => s.name?.toLowerCase() === providerName.toLowerCase()
     );
   }
 
@@ -701,14 +704,9 @@ async function openEditProviderModal(item: any) {
 function handleProviderEntrySaved(payload: {
   providerId?: string | number;
   providerName?: string;
-  items: Array<{ amount: number; accountId: any }>;
+  items: Array<EntryGroup>;
   totalAmount: number;
-  products?: Array<{
-    supplierProductId: string | number;
-    productName: string;
-    productPrice: number;
-    quantity: number;
-  }>;
+  products?: Array<ProviderProduct>;
 }) {
   const entryId = editingProviderEntryId.value;
   if (entryId) {
@@ -759,7 +757,7 @@ function handleProviderEntryDeleted(entryId: string | number) {
   editingProviderEntryId.value = null;
 }
 
-function openEditEntryModal(item: any) {
+function openEditEntryModal(item: Income) {
   editEntryModalData.value = {
     id: item.id,
     entryType: item.entryType || 'ingreso',
@@ -769,7 +767,7 @@ function openEditEntryModal(item: any) {
   };
 
   if (item.groups && Array.isArray(item.groups) && item.groups.length > 0) {
-    entryItems.value = item.groups.map((g: any) => ({
+    entryItems.value = item.groups.map((g: EntryGroup) => ({
       amount: Number(g.amount) || 0,
       accountId: g.accountId ?? getDefaultAccountId(),
     }));
@@ -793,12 +791,12 @@ function addEntryItem() {
   }
 }
 
-async function saveEntryChanges(data: {
-  entryType: string;
+function saveEntryChanges(data: {
+  entryType: EntryType;
   name: string;
   amount: number;
-  accountId: any;
-  groups: Array<{ amount: number; accountId: any }>;
+  accountId: string | number | null;
+  groups: Array<EntryGroup>;
 }) {
   const { entryType, name, amount, accountId, groups } = data;
 
@@ -836,7 +834,7 @@ async function saveEntryChanges(data: {
   editEntryModalOpen.value = false;
   editEntryModalData.value = {
     id: null,
-    entryType: 'ingreso',
+    entryType: 'ingreso' as EntryType,
     name: '',
   };
   entryItems.value = [{ amount: 0, accountId: null }];
@@ -857,13 +855,13 @@ function confirmDelete() {
   editEntryModalOpen.value = false;
   editEntryModalData.value = {
     id: null,
-    entryType: 'ingreso',
+    entryType: 'ingreso' as EntryType,
     name: '',
   };
   entryItems.value = [{ amount: 0, accountId: getDefaultAccountId() }];
   entryFormState.items = [...entryItems.value];
   entryFormState.name = '';
-  entryFormState.entryType = 'ingreso';
+  entryFormState.entryType = 'ingreso' as EntryType;
 }
 // End Functions
 </script>

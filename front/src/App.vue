@@ -132,7 +132,7 @@ async function handleNavigate(params: { path?: string; name?: string }) {
   try {
     if (params.name) {
       try {
-        if ((router as any).hasRoute && (router as any).hasRoute(params.name)) {
+        if ('hasRoute' in router && typeof router.hasRoute === 'function' && (router as VueRouter).hasRoute(params.name)) {
           await router.push({ name: params.name });
         } else if (params.path) {
           await router.push(params.path);

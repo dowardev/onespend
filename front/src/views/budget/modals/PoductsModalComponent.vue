@@ -54,7 +54,7 @@
               placeholder="Buscar productos"
               :debounce="300"
               @ion-clear="searchQuery = ''"
-              @ion-input="e => (searchQuery = (e.target as any)?.value || '')"
+              @ion-input="e => (searchQuery = (e.target as HTMLIonSearchbarElement)?.value || '')"
             ></ion-searchbar>
 
             <ion-button slot="end" fill="clear" @click="hideSearch"
@@ -423,23 +423,20 @@ async function focusNext(params: { currentIndex: number; ev?: Event }) {
     ev?.preventDefault?.();
     ev?.stopPropagation?.();
     if (ev) {
-      const e = ev as any;
-      e.stopImmediatePropagation?.();
+      ev.stopImmediatePropagation?.();
     }
   } catch (_e) {
     /* noop */
   }
 
-  // If a filter is active, navigate among visible products; otherwise, use linear next.
   const visible = filteredOriginalIndices.value;
   const currentPos = visible.indexOf(currentIndex);
 
   if (currentPos >= 0 && currentPos < visible.length - 1) {
-    // next visible index
     const nextOriginalIndex = visible[currentPos + 1];
     const nextElement = document.getElementById(
       `prod-input-${nextOriginalIndex}`
-    ) as any;
+    ) as HTMLIonInputElement | null;
     if (nextElement) {
       if (typeof nextElement.getInputElement === 'function') {
         const nativeInput = await nextElement.getInputElement();
@@ -452,14 +449,13 @@ async function focusNext(params: { currentIndex: number; ev?: Event }) {
     return;
   }
 
-  // fallback: behave like before (move to next index if available)
   const nextIndex = currentIndex + 1;
   const totalProducts = props.products?.length || 0;
 
   if (nextIndex < totalProducts) {
     const nextElement = document.getElementById(
       `prod-input-${nextIndex}`
-    ) as any;
+    ) as HTMLIonInputElement | null;
     if (nextElement) {
       if (typeof nextElement.getInputElement === 'function') {
         const nativeInput = await nextElement.getInputElement();
@@ -472,7 +468,63 @@ async function focusNext(params: { currentIndex: number; ev?: Event }) {
   } else {
     const currentElement = document.getElementById(
       `prod-input-${currentIndex}`
-    ) as any;
+    ) as HTMLIonInputElement | null;
+    if (currentElement) {
+      if (typeof currentElement.getInputElement === 'function') {
+        const nativeInput = await currentElement.getInputElement();
+        nativeInput.focus();
+      } else {
+        currentElement.setFocus?.();
+      }
+      await ensureVisible({ index: currentIndex });
+    }
+  }
+}
+  } catch (_e) {
+    /* noop */
+  }
+
+  // If a filter is active, navigate among visible products; otherwise, use linear next.
+  const visible = filteredOriginalIndices.value;
+  const currentPos = visible.indexOf(currentIndex);
+
+  if (currentPos >= 0 && currentPos < visible.length - 1) {
+    const nextOriginalIndex = visible[currentPos + 1];
+    const nextElement = document.getElementById(
+      `prod-input-${nextOriginalIndex}`
+    ) as HTMLIonInputElement | null;
+    if (nextElement) {
+      if (typeof nextElement.getInputElement === 'function') {
+        const nativeInput = await nextElement.getInputElement();
+        nativeInput.focus();
+      } else {
+        nextElement.setFocus?.();
+      }
+      await ensureVisible({ index: nextOriginalIndex });
+    }
+    return;
+  }
+
+  const nextIndex = currentIndex + 1;
+  const totalProducts = props.products?.length || 0;
+
+  if (nextIndex < totalProducts) {
+    const nextElement = document.getElementById(
+      `prod-input-${nextIndex}`
+    ) as HTMLIonInputElement | null;
+    if (nextElement) {
+      if (typeof nextElement.getInputElement === 'function') {
+        const nativeInput = await nextElement.getInputElement();
+        nativeInput.focus();
+      } else {
+        nextElement.setFocus?.();
+      }
+      await ensureVisible({ index: nextIndex });
+    }
+  } else {
+    const currentElement = document.getElementById(
+      `prod-input-${currentIndex}`
+    ) as HTMLIonInputElement | null;
     if (currentElement) {
       if (typeof currentElement.getInputElement === 'function') {
         const nativeInput = await currentElement.getInputElement();
@@ -490,9 +542,8 @@ async function focusPrev(params: { currentIndex: number; ev?: Event }) {
   try {
     ev?.preventDefault?.();
     ev?.stopPropagation?.();
-    if (ev) (ev as any).stopImmediatePropagation?.();
+    if (ev) ev.stopImmediatePropagation?.();
   } catch (_e) {
-    // intentionally ignore errors
     void 0;
   }
 
@@ -500,7 +551,7 @@ async function focusPrev(params: { currentIndex: number; ev?: Event }) {
   if (prevIndex >= 0) {
     const prevElement = document.getElementById(
       `prod-input-${prevIndex}`
-    ) as any;
+    ) as HTMLIonInputElement | null;
     if (prevElement) {
       if (typeof prevElement.getInputElement === 'function') {
         const nativeInput = await prevElement.getInputElement();
@@ -509,15 +560,12 @@ async function focusPrev(params: { currentIndex: number; ev?: Event }) {
         prevElement.setFocus?.();
       }
 
-      // Ensure the newly focused element (previous) is fully visible
       await ensureVisible({ index: prevIndex });
     }
   } else {
-    // If this is the first one, do not blur or allow the event to bubble:
-    // keep focus on the current input to avoid modal scrolling.
     const currentElement = document.getElementById(
       `prod-input-${currentIndex}`
-    ) as any;
+    ) as HTMLIonInputElement | null;
     if (currentElement) {
       if (typeof currentElement.getInputElement === 'function') {
         const nativeInput = await currentElement.getInputElement();
@@ -526,7 +574,6 @@ async function focusPrev(params: { currentIndex: number; ev?: Event }) {
         currentElement.setFocus?.();
       }
 
-      // Also ensure the (current) element remains visible
       await ensureVisible({ index: currentIndex });
     }
     return;
@@ -538,12 +585,8 @@ function handleEnter(params: { currentIndex: number; ev?: Event }) {
   try {
     ev?.preventDefault?.();
     ev?.stopPropagation?.();
-    if (ev) {
-      const e = ev as any;
-      e.stopImmediatePropagation?.();
-    }
+    if (ev) ev.stopImmediatePropagation?.();
   } catch (_e) {
-    // intentionally ignore errors
     void 0;
   }
 
@@ -551,11 +594,10 @@ function handleEnter(params: { currentIndex: number; ev?: Event }) {
   if (idx < total - 1) {
     focusNext({ currentIndex: idx, ev });
   } else {
-    // Si es el último, no avanzamos
-    const currentElement = document.getElementById(`prod-input-${idx}`) as any;
+    const currentElement = document.getElementById(`prod-input-${idx}`) as HTMLIonInputElement | null;
     if (currentElement) {
       if (typeof currentElement.getInputElement === 'function') {
-        currentElement.getInputElement().then((native: any) => native.focus());
+        currentElement.getInputElement().then((native: HTMLInputElement) => native.focus());
       } else {
         currentElement.setFocus?.();
       }
@@ -568,22 +610,17 @@ function handleArrowUp(params: { currentIndex: number; ev?: Event }) {
   try {
     ev?.preventDefault?.();
     ev?.stopPropagation?.();
-    if (ev) {
-      const e = ev as any;
-      e.stopImmediatePropagation?.();
-    }
+    if (ev) ev.stopImmediatePropagation?.();
   } catch (_e) {
-    // Suppressing errors intentionally
   }
 
   if (idx > 0) {
     focusPrev({ currentIndex: idx, ev });
   } else {
-    // If this is the first one, keep focus
-    const currentElement = document.getElementById(`prod-input-${idx}`) as any;
+    const currentElement = document.getElementById(`prod-input-${idx}`) as HTMLIonInputElement | null;
     if (currentElement) {
       if (typeof currentElement.getInputElement === 'function') {
-        currentElement.getInputElement().then((native: any) => native.focus());
+        currentElement.getInputElement().then((native: HTMLInputElement) => native.focus());
       } else {
         currentElement.setFocus?.();
       }
@@ -596,23 +633,18 @@ function handleArrowDown(params: { currentIndex: number; ev?: Event }) {
   try {
     ev?.preventDefault?.();
     ev?.stopPropagation?.();
-    if (ev) {
-      const e = ev as any;
-      e.stopImmediatePropagation?.();
-    }
+    if (ev) ev.stopImmediatePropagation?.();
   } catch (_e) {
-    // Suppressing errors intentionally
   }
 
   const total = props.products?.length || 0;
   if (idx < total - 1) {
     focusNext({ currentIndex: idx, ev });
   } else {
-    // Si es el último, mantenemos el foco
-    const currentElement = document.getElementById(`prod-input-${idx}`) as any;
+    const currentElement = document.getElementById(`prod-input-${idx}`) as HTMLIonInputElement | null;
     if (currentElement) {
       if (typeof currentElement.getInputElement === 'function') {
-        currentElement.getInputElement().then((native: any) => native.focus());
+        currentElement.getInputElement().then((native: HTMLInputElement) => native.focus());
       } else {
         currentElement.setFocus?.();
       }
@@ -621,34 +653,29 @@ function handleArrowDown(params: { currentIndex: number; ev?: Event }) {
 }
 
 function toggleSearch({ ev }: { ev?: Event } = {}) {
-  // If an event is provided, prevent default and stop propagation safely
   try {
     ev?.preventDefault?.();
     ev?.stopPropagation?.();
-    if (ev) (ev as any).stopImmediatePropagation?.();
+    if (ev) ev.stopImmediatePropagation?.();
   } catch (_e) {
     /* noop */
   }
 
   showSearch.value = !showSearch.value;
   if (showSearch.value) {
-    // wait for DOM update then focus the searchbar
     nextTick(() => {
       try {
-        const el: any = searchbarRef.value;
+        const el = searchbarRef.value as HTMLIonSearchbarElement | null;
         if (el) {
-          // Ionic searchbar is a Web Component; try available focus helpers
           el.setFocus?.();
           if (typeof el.getInputElement === 'function') {
-            el.getInputElement().then((native: any) => native.focus());
+            el.getInputElement().then((native: HTMLInputElement) => native.focus());
           }
         }
       } catch (_e) {
-        // ignore
       }
     });
   } else {
-    // if we're hiding the searchbar, clear the query so the list shows all items
     searchQuery.value = '';
   }
 }

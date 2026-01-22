@@ -232,10 +232,23 @@ import {
 } from 'ionicons/icons';
 
 // main
-const props = defineProps<{ supplier: any | null }>();
+interface SupplierProduct {
+  name: string;
+  price: number;
+  imageBase64?: string | null;
+}
+
+interface SavedPayload {
+  name: string;
+  products?: SupplierProduct[];
+  id?: IDBValidKey;
+  sync_id?: string;
+}
+
+const props = defineProps<{ supplier: Supplier | null }>();
 const emit = defineEmits<{
   (e: 'dismiss'): void;
-  (e: 'saved', payload: any): void;
+  (e: 'saved', payload: SavedPayload): void;
 }>();
 // end main
 
@@ -425,7 +438,7 @@ function onSubmit() {
     return;
   }
   
-  const payload: any = {
+  const payload: SavedPayload = {
     name: form.name,
     products: form.products && form.products.length ? form.products : undefined,
   };

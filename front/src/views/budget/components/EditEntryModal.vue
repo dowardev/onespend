@@ -291,36 +291,24 @@
 <script setup lang="ts">
 // Imports
 import {
-  IonModal,
-  IonHeader,
-  IonToolbar,
-  IonButtons,
-  IonButton,
-  IonIcon,
-  IonTitle,
-  IonContent,
-  IonList,
-  IonListHeader,
-  IonLabel,
-  IonItem,
-  IonInput,
-  IonSelect,
-  IonSelectOption,
-  IonNote,
-  IonCard,
-  IonGrid,
-  IonRow,
-  IonCol,
-  IonSegment,
-  IonSegmentButton,
-} from '@ionic/vue';
-import {
   addOutline,
   closeOutline,
   saveOutline,
   trashOutline,
 } from 'ionicons/icons';
 import { computed, ref, watch } from 'vue';
+
+interface EntryGroup {
+  amount: number;
+  accountId: string | number | null;
+}
+
+interface ProviderSummary {
+  id: string | number;
+  name: string;
+  estimated: number;
+  accountId: string | number | null;
+}
 // End Imports
 
 // Components
@@ -356,7 +344,7 @@ const emit = defineEmits([
 ]);
 
 const addEntrySegment = ref('entry');
-const entryItems = ref<Array<{ amount: number; accountId: any }>>([
+const entryItems = ref<Array<{ amount: number; accountId: string | number | null }>>([
   { amount: 0, accountId: null },
 ]);
 // End Vars
@@ -368,15 +356,15 @@ function getDefaultAccountId() {
 
 const availableAccountsForItem = (currentIndex: number) => {
   const usedAccountIds = entryItems.value
-    .filter((_: any, idx: number) => idx !== currentIndex)
-    .map((item: any) => String(item.accountId))
+    .filter((_: unknown, idx: number) => idx !== currentIndex)
+    .map((item: { accountId: string | number | null }) => String(item.accountId))
     .filter((id: string) => id !== 'null' && id !== 'undefined' && id !== '');
   return props.accountsList.filter(
-    (acc: any) => !usedAccountIds.includes(String(acc.id))
+    (acc: { id: string | number }) => !usedAccountIds.includes(String(acc.id))
   );
 };
 
-function formatProviderAmount(params: { provider: any }) {
+function formatProviderAmount(params: { provider: ProviderSummary }) {
   const { provider } = params;
   return new Intl.NumberFormat('es-MX', {
     style: 'currency',
@@ -384,7 +372,7 @@ function formatProviderAmount(params: { provider: any }) {
   }).format(Number(provider?.estimated) || 0);
 }
 
-function selectProvider(params: { provider: any }) {
+function selectProvider(params: { provider: ProviderSummary }) {
   const { provider } = params;
   emit('select-provider', provider);
 }
@@ -395,7 +383,7 @@ function addEntryItem() {
   }
 }
 
-function selectProvider(provider: any) {
+function selectProvider(provider: ProviderSummary) {
   emit('select-provider', provider);
 }
 
@@ -452,7 +440,7 @@ watch(
           Array.isArray(newData.groups) &&
           newData.groups.length > 0
         ) {
-          entryItems.value = newData.groups.map((g: any) => ({
+          entryItems.value = newData.groups.map((g: EntryGroup) => ({
             amount: Number(g.amount) || 0,
             accountId: g.accountId ?? getDefaultAccountId(),
           }));

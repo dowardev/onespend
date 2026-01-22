@@ -438,9 +438,9 @@ const {
   hovered: statisticsController.getHovered(),
   setHover: (key: string, value: boolean) => statisticsController.setHover(key, value),
   isoDate: (d: Date) => statisticsController.isoDate({ d }),
-  providerValue: (p: any) => statisticsController.providerValue(p),
-  formatCurrency: (val: any) => statisticsController.formatCurrency(val),
-  formatPercent: (val: any) => statisticsController.formatPercent(val),
+  providerValue: (p: ProviderValue) => statisticsController.providerValue({ params: { p } }),
+  formatCurrency: (val: number | null | undefined) => statisticsController.formatCurrency({ params: { val } }),
+  formatPercent: (val: number | null | undefined) => statisticsController.formatPercent({ params: { val } }),
 };
 
 // Shared snapshots & modal state (extracted to StatisticsController)
@@ -602,7 +602,7 @@ function nextWeek() {
   void loadWeekData();
 }
 
-function onPopoverDateChange(e: any) {
+function onPopoverDateChange(e: CustomEvent) {
   try {
     const val = e?.detail?.value || selectedDate.value;
     // parse safely using parseISO
@@ -632,7 +632,7 @@ async function loadWeekData(dateParam?: string | Date) {
         } else if (dateParam instanceof Date) {
           parsed = dateParam as Date;
         } else {
-          parsed = new Date(dateParam as any);
+          parsed = new Date(dateParam as string);
         }
         const today = new Date();
         weekOffset.value = differenceInCalendarWeeks(parsed, today, {
@@ -644,16 +644,16 @@ async function loadWeekData(dateParam?: string | Date) {
         // ignore and keep existing weekOffset
       }
     }
-    const all = ((await dixieController.listBackups()) as any[]) || [];
+    const all = ((await dixieController.listBackups()) as Backup[]) || [];
 
     // Load statistics config fields (statisticsFields store) and sum their amounts
     try {
       const statsDixie = new DixieController({ storeName: 'statisticsFields' });
-      const statsList = ((await statsDixie.listBackups()) as any[]) || [];
+      const statsList = ((await statsDixie.listBackups()) as StatsField[]) || [];
       let fixedSum = 0;
       if (Array.isArray(statsList)) {
         fixedSum = statsList.reduce(
-          (s: number, it: any) => s + (Number(it.amount ?? 0) || 0),
+          (s: number, it: StatsField) => s + (Number(it.amount ?? 0) || 0),
           0
         );
       }
@@ -725,13 +725,13 @@ async function loadWeekData(dateParam?: string | Date) {
         const d = entry.data;
         if (Array.isArray(d.ingresos || d.entries)) {
           ingresosSum += (d.ingresos || d.entries).reduce(
-            (s: number, i: any) => s + (Number(i.amount || 0) || 0),
+            (s: number, i: Income) => s + (Number(i.amount || 0) || 0),
             0
           );
         }
         if (Array.isArray(d.proveedores)) {
           proveedoresSum += d.proveedores.reduce(
-            (s: number, p: any) => s + (Number(providerValue(p) || 0) || 0),
+            (s: number, p: Provider) => s + (Number(providerValue(p) || 0) || 0),
             0
           );
         }
@@ -789,7 +789,7 @@ async function loadWeekData(dateParam?: string | Date) {
 
     // Build per-day list for the week (one entry per day)
     try {
-      const days: any[] = [];
+        const days: Array<WeekDay> = [];
       for (let i = 0; i < 7; i++) {
         const d = addDays(start, i);
         const iso = isoDate({ d });
@@ -810,16 +810,16 @@ async function loadWeekData(dateParam?: string | Date) {
               const ddata = entry.data;
               if (Array.isArray(ddata.ingresos)) {
                 dayIngresos += ddata.ingresos.reduce(
-                  (s: number, i: any) => s + (Number(i.amount || 0) || 0),
+                  (s: number, i: Income) => s + (Number(i.amount || 0) || 0),
                   0
                 );
               }
               if (Array.isArray(ddata.proveedores)) {
-                dayProveedores += ddata.proveedores.reduce(
-                  (s: number, p: any) =>
-                    s + (Number(providerValue(p) || 0) || 0),
-                  0
-                );
+            dayProveedores += ddata.proveedores.reduce(
+              (s: number, p: Provider) =>
+                s + (Number(providerValue(p) || 0) || 0),
+              0
+            );
               }
             }
           } catch (_e) {
@@ -840,7 +840,7 @@ async function loadWeekData(dateParam?: string | Date) {
           );
           if (fMatches && fMatches.length) {
             const f = fMatches.sort(
-              (a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0)
+              (a: Backup, b: Backup) => (b.createdAt || 0) - (a.createdAt || 0)
             )[0];
             const ft = f && f.data ? Number(f.data.totalSales ?? 0) || 0 : 0;
             if (ft) {
@@ -864,11 +864,11 @@ async function loadWeekData(dateParam?: string | Date) {
 
       // Set chart to show each day of the week
       try {
-        chartData.labels = weekDays.value.map((x: any) => x.label);
+        chartData.labels = weekDays.value.map((x: WeekDay) => x.label);
         chartData.datasets = [
           {
             label: 'Ventas (día)',
-            data: weekDays.value.map((x: any) => Number(x.totalSales || 0)),
+            data: weekDays.value.map((x: WeekDay) => Number(x.totalSales || 0)),
           },
         ];
       } catch (_e) {
@@ -1010,13 +1010,13 @@ async function loadWeekData(dateParam?: string | Date) {
           const d = entry.data;
           if (Array.isArray(d.ingresos || d.entries)) {
             prevIngresosSum += (d.ingresos || d.entries).reduce(
-              (s: number, i: any) => s + (Number(i.amount || 0) || 0),
+              (s: number, i: Income) => s + (Number(i.amount || 0) || 0),
               0
             );
           }
           if (Array.isArray(d.proveedores)) {
             prevProveedoresSum += d.proveedores.reduce(
-              (s: number, p: any) => s + (Number(providerValue(p) || 0) || 0),
+              (s: number, p: Provider) => s + (Number(providerValue(p) || 0) || 0),
               0
             );
           }

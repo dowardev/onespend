@@ -2,6 +2,20 @@ import { useBudgetStore, type Income, type Provider } from '@/stores/budgetStore
 import dixieController from '@/controllers/dixie';
 import { formatLocalDate } from '@/utils/date';
 import { useSync } from '@/composables/useSync';
+import type { Supplier } from './suppliersController';
+
+interface BudgetData {
+  entries: Income[];
+  proveedores: Provider[];
+  finishDayData: {
+    totalSalesEfectivo: number;
+    totalSalesTarjeta: number;
+    totalSalesCredito: number;
+    type: 'fixed' | '%' | string;
+    margin: number;
+  };
+  isDayClosed: boolean;
+}
 
 class BudgetController {
   private _store: ReturnType<typeof useBudgetStore> | null = null;
@@ -103,7 +117,7 @@ class BudgetController {
     try {
       const dateKey = `budget:${date}`;
       console.log('[BudgetController.loadDataForDate] Loading data for:', dateKey);
-      const data = (await dixieController.getBackup({ id: dateKey })) as any;
+      const data = (await dixieController.getBackup({ id: dateKey })) as unknown as { data: BudgetData } | null;
       console.log('[BudgetController.loadDataForDate] Raw data from DB:', data);
 
       if (data && data.data) {
@@ -436,12 +450,12 @@ class BudgetController {
     return this.store.frozenSnapshot;
   }
 
-  syncProvidersWithSuppliers(params: { suppliers: any[] }) {
+  syncProvidersWithSuppliers(params: { suppliers: Array<Supplier> }) {
     const { suppliers } = params;
     return this.store.syncProvidersWithSuppliers(suppliers);
   }
 
-  private toPlainObject(obj: any): any {
+  private toPlainObject(obj: unknown): unknown {
     try {
       return JSON.parse(JSON.stringify(obj));
     } catch {

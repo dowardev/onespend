@@ -1,6 +1,18 @@
 import dixieController, { DixieController } from './dixie';
 import { normalizeEntryData } from './migrationService';
 
+interface BackupEntryData {
+  selectedDate?: string;
+  [key: string]: unknown;
+}
+
+interface BackupRecord {
+  id?: IDBValidKey;
+  component?: string;
+  data?: BackupEntryData;
+  createdAt?: number;
+}
+
 class BackupController {
   private dixie: DixieController;
 
@@ -11,27 +23,23 @@ class BackupController {
   async saveBackup(params: { entry: unknown }): Promise<IDBValidKey> {
     const { entry } = params;
     try {
-      // Clone the entry to avoid mutating the caller and normalize any fields
-      // that represent a calendar day using shared migrationService.
-      let normalizedEntry: any = entry;
+      let normalizedEntry: unknown = entry;
       try {
         normalizedEntry = JSON.parse(JSON.stringify(entry));
       } catch (_e) {
-        normalizedEntry = entry as any;
+        normalizedEntry = entry;
       }
 
       try {
-        const data = normalizedEntry && (normalizedEntry as any).data;
+        const data = normalizedEntry && (normalizedEntry as { data?: BackupEntryData }).data;
         if (data && typeof data === 'object') {
           const { newData } = normalizeEntryData(data);
-          normalizedEntry.data = newData;
+          (normalizedEntry as { data: BackupEntryData }).data = newData;
         }
       } catch (_e) {
-        /* noop */
       }
 
       const key = await this.dixie.addEntry({ entry: normalizedEntry });
-      // console.log('BackupController.saveBackup: saved id=', key);
       return key;
     } catch (_e) {
       console.error('BackupController.saveBackup error', _e);
@@ -40,28 +48,19 @@ class BackupController {
   }
 
   async getLatestBackupForDate(dateISO: string) {
-    // dateISO expected in YYYY-MM-DD or full ISO; compare only date portion
-    const all = (await this.dixie.listBackups()) as Array<
-      Record<string, unknown> & {
-        id?: IDBValidKey;
-        component?: string;
-        data?: unknown;
-        createdAt?: number;
-      }
-    >;
+    const all = (await this.dixie.listBackups()) as Array<BackupRecord>;
     if (!all || !all.length) return null;
     const target = dateISO.slice(0, 10);
-    // Filter backups created by BudgetView and whose data.selectedDate matches target
     const matches = all
       .filter(
         b =>
           b &&
           b.component === 'BudgetView' &&
           b.data &&
-          (b.data as any).selectedDate
+          (b.data as BackupEntryData).selectedDate
       )
       .filter(
-        b => ((b.data as any).selectedDate as string).slice(0, 10) === target
+        b => ((b.data as BackupEntryData).selectedDate as string).slice(0, 10) === target
       )
       .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 

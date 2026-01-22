@@ -15,6 +15,13 @@ export type Account = {
   _synced?: boolean;
 };
 
+interface BackupRecord {
+  id?: string;
+  data?: {
+    accounts?: Array<Account>;
+  };
+}
+
 export const useAccountsStore = defineStore('accounts', () => {
   const accounts: Account[] = reactive([]);
   const { syncAccount } = useSync();
@@ -22,7 +29,7 @@ export const useAccountsStore = defineStore('accounts', () => {
   async function loadAccounts() {
     try {
       const result = await dixieController.listBackups();
-      const accountBackups = (result as any[]).filter((b: any) => String(b.id).startsWith('account:'));
+      const accountBackups = (result as Array<BackupRecord>).filter((b: BackupRecord) => String(b.id).startsWith('account:'));
       const loadedAccounts: Account[] = [];
       for (const backup of accountBackups) {
         if (backup.data && Array.isArray(backup.data.accounts)) {

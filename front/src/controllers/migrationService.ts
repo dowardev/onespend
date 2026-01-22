@@ -1,7 +1,7 @@
 import { formatLocalDate } from '@/utils/date';
 
-export function normalizeDateIfNeeded(params: { val: any }): {
-  value: any;
+export function normalizeDateIfNeeded(params: { val: unknown }): {
+  value: unknown;
   changed: boolean;
 } {
   const { val } = params;
@@ -16,8 +16,8 @@ export function normalizeDateIfNeeded(params: { val: any }): {
   }
 }
 
-export function normalizeEntryData(params: { data: any }): {
-  newData: any;
+export function normalizeEntryData(params: { data: Record<string, unknown> }): {
+  newData: Record<string, unknown>;
   changed: boolean;
 } {
   const { data } = params;
@@ -34,7 +34,7 @@ export function normalizeEntryData(params: { data: any }): {
     }
   }
 
-  const normArrayDates = (arr: any, key: string) => {
+  const normArrayDates = (arr: Array<Record<string, unknown>>, key: string) => {
     if (!Array.isArray(arr)) return;
     for (let i = 0; i < arr.length; i++) {
       const item = arr[i];
@@ -83,9 +83,8 @@ export function normalizeEntryData(params: { data: any }): {
   return { newData: clone, changed };
 }
 
-export function mergeBackupData(params: { existingData: any; newData: any }) {
+export function mergeBackupData(params: { existingData: Record<string, unknown>; newData: Record<string, unknown> }) {
   const { existingData, newData } = params;
-  // Merge ingresos and proveedores arrays, avoiding duplicates by name
   const existingIngresos = Array.isArray(existingData?.ingresos)
     ? existingData.ingresos
     : Array.isArray(existingData?.entries)
@@ -107,7 +106,7 @@ export function mergeBackupData(params: { existingData: any; newData: any }) {
   const mergedIngresos = existingIngresos.slice();
   for (const ni of incomingIngresos) {
     const exists = mergedIngresos.some(
-      (ei: any) => String(ei.name || '').trim() === String(ni.name || '').trim()
+      (ei: Record<string, unknown>) => String(ei.name || '').trim() === String(ni.name || '').trim()
     );
     if (!exists) mergedIngresos.push(ni);
   }
@@ -115,12 +114,12 @@ export function mergeBackupData(params: { existingData: any; newData: any }) {
   const mergedProveedores = existingProveedores.slice();
   for (const np of incomingProveedores) {
     const exists = mergedProveedores.some(
-      (ep: any) => String(ep.name || '').trim() === String(np.name || '').trim()
+      (ep: Record<string, unknown>) => String(ep.name || '').trim() === String(np.name || '').trim()
     );
     if (!exists) mergedProveedores.push(np);
   }
 
-  const totalProviders = mergedProveedores.reduce((s: number, p: any) => {
+  const totalProviders = mergedProveedores.reduce((s: number, p: Record<string, unknown>) => {
     return s + (Number(p.accountId || 0) || Number(p.estimated || 0) || 0);
   }, 0);
 
@@ -130,12 +129,12 @@ export function mergeBackupData(params: { existingData: any; newData: any }) {
     proveedores: mergedProveedores,
     totals: Object.assign({}, existingData?.totals || {}, {
       totalIngresos: (mergedIngresos || []).reduce(
-        (s: number, i: any) => s + (Number(i.amount || 0) || 0),
+        (s: number, i: Record<string, unknown>) => s + (Number(i.amount || 0) || 0),
         0
       ),
       totalProviders,
       totalVisitedProviders: (mergedProveedores || []).reduce(
-        (s: number, p: any) =>
+        (s: number, p: Record<string, unknown>) =>
           s +
           (p.visited
             ? Number(p.accountId || 0) || Number(p.estimated || 0) || 0

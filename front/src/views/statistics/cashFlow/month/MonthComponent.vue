@@ -160,7 +160,7 @@ const formattedMonthlyProfit = computed(() =>
 // end computed
 
 // helpers
-function providerValue(p: any) {
+function providerValue(p: ProviderValue) {
   try {
     const efectivo = Number(p?.efectivo || 0);
     const tarjeta = Number(p?.tarjeta || 0);
@@ -191,7 +191,7 @@ function nextMonth() {
  * from the current month start and updates monthOffset accordingly,
  * then reloads the monthly data.
  */
-function onPopoverDateChange(e: any) {
+function onPopoverDateChange(e: CustomEvent) {
   try {
     const val = e?.detail?.value || selectedDate.value;
     const parsed = parseLocalDate({ d: String(val).slice(0, 10) });
@@ -210,7 +210,7 @@ function onPopoverDateChange(e: any) {
  */
 async function loadMonthlyData() {
   try {
-    const all = ((await dixieController.listBackups()) as any[]) || [];
+    const all = ((await dixieController.listBackups()) as Backup[]) || [];
 
     const N = 12; // number of months to display
     const labels: string[] = [];
@@ -235,7 +235,7 @@ async function loadMonthlyData() {
       );
 
       // we want the latest backup per day inside this month to avoid duplicate days
-      const latestPerDay: Record<string, any> = {};
+      const latestPerDay: Record<string, Backup> = {};
       (matches || []).forEach(mb => {
         const dayKey = String(mb.data?.selectedDate || '').slice(0, 10);
         if (!dayKey) return;
@@ -248,18 +248,18 @@ async function loadMonthlyData() {
       let monthIngresos = 0;
       let monthProveedores = 0;
 
-      Object.values(latestPerDay).forEach((latest: any) => {
+      Object.values(latestPerDay).forEach((latest: BackupData) => {
         if (!latest || !latest.data) return;
         const d = latest.data;
         if (Array.isArray(d.ingresos || d.entries)) {
           monthIngresos += (d.ingresos || d.entries).reduce(
-            (s: number, i: any) => s + (Number(i.amount || 0) || 0),
+            (s: number, i: Income) => s + (Number(i.amount || 0) || 0),
             0
           );
         }
         if (Array.isArray(d.proveedores)) {
           monthProveedores += d.proveedores.reduce(
-            (s: number, p: any) => s + (Number(providerValue(p) || 0) || 0),
+            (s: number, p: Provider) => s + (Number(providerValue(p) || 0) || 0),
             0
           );
         }
@@ -270,9 +270,9 @@ async function loadMonthlyData() {
     }
 
     // assign to reactive chartData
-    chartData.labels = labels as any;
-    chartData.datasets[0].data = ingresosArr as any;
-    chartData.datasets[1].data = egresosArr as any;
+    chartData.labels = labels as string[];
+    chartData.datasets[0].data = ingresosArr as number[];
+    chartData.datasets[1].data = egresosArr as number[];
 
     // calculate current monthly profit (for the endMonth)
     try {

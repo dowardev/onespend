@@ -1,9 +1,15 @@
 import { reactive, ref } from 'vue';
 
+export interface SnapshotData {
+  totalSales?: number;
+  netProfit?: number;
+  [key: string]: unknown;
+}
+
 export function usePeriodView(initialModal = false) {
   const modalOpen = ref<boolean>(!!initialModal);
 
-  const snapshots = reactive<{ current: any; previous: any }>({
+  const snapshots = reactive<SnapshotState>({
     current: { totalSales: 0, netProfit: 0 },
     previous: { totalSales: 0, netProfit: 0 },
   });
@@ -20,7 +26,7 @@ export function usePeriodView(initialModal = false) {
     modalOpen.value = !modalOpen.value;
   }
 
-  function setSnapshots(payload: { current?: any; previous?: any }) {
+  function setSnapshots(payload: { current?: SnapshotData; previous?: SnapshotData }) {
     if (typeof payload.current !== 'undefined')
       snapshots.current = payload.current;
     if (typeof payload.previous !== 'undefined')
@@ -35,4 +41,9 @@ export function usePeriodView(initialModal = false) {
     snapshots,
     setSnapshots,
   } as const;
+}
+
+interface SnapshotState {
+  current: SnapshotData;
+  previous: SnapshotData;
 }

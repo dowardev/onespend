@@ -11,7 +11,6 @@ class DixieController {
     const name = this.name;
 
     return new Promise((resolve, reject) => {
-      // Try to open with a random delay to avoid race conditions
       const req = indexedDB.open(name);
       
       req.onupgradeneeded = (event) => {
@@ -29,23 +28,16 @@ class DixieController {
       
       req.onsuccess = () => {
         const db = req.result;
-        
-        // Check if all stores exist
         const allStores = ['suppliers', 'accounts', 'templates', 'budget', 'backups', 'config'];
         const missingStores = allStores.filter(store => !db.objectStoreNames.contains(store));
         
         if (missingStores.length > 0) {
-          // Stores are missing, need to upgrade
           db.close();
-          
-          // Get current version
           const getVersionReq = indexedDB.open(name);
           getVersionReq.onsuccess = () => {
             const currentDb = getVersionReq.result;
             const currentVersion = currentDb.version;
             currentDb.close();
-            
-            // Upgrade to new version
             const upgradeReq = indexedDB.open(name, currentVersion + 1);
             upgradeReq.onupgradeneeded = () => {
               const d = upgradeReq.result;
@@ -124,13 +116,6 @@ class DixieController {
     });
   }
 
-  /**
-   * Recursively sanitize a value so it becomes safe to store in IndexedDB.
-   * - Converts Date -> ISO string
-   * - Removes functions and symbols
-   * - Preserves primitives and arrays/objects (recursively)
-   * - Detects cycles and replaces with the string "[Circular]"
-   */
   private sanitizeForIndexedDB(params: {
     value: unknown;
     seen?: WeakMap<object, unknown>;
@@ -144,11 +129,11 @@ class DixieController {
       if (value instanceof Date) return (value as Date).toISOString();
       if (Array.isArray(value)) {
         if (seen.has(value)) return '[Circular]';
-        const out: any[] = [];
+        const out: unknown[] = [];
         seen.set(value, out);
         for (let i = 0; i < value.length; i++) {
           out.push(
-            this.sanitizeForIndexedDB({ value: (value as any)[i], seen })
+            this.sanitizeForIndexedDB({ value: value[i], seen })
           );
         }
         return out;
@@ -157,15 +142,12 @@ class DixieController {
         if (seen.has(value)) return '[Circular]';
         const out: Record<string, unknown> = {};
         seen.set(value, out);
-        // Only iterate own enumerable string keys
-        try {
-          for (const k of Object.keys(value as object)) {
+        for (const k of Object.keys(value as Record<string, unknown>)) {
             try {
-              const v = (value as any)[k];
+              const v = (value as Record<string, unknown>)[k];
               const sv = this.sanitizeForIndexedDB({ value: v, seen });
               if (sv !== undefined) out[k] = sv;
             } catch (_e) {
-              /* skip problematic property */
             }
           }
         } catch (_e) {
@@ -173,7 +155,6 @@ class DixieController {
         }
         return out;
       }
-      // Fallback: stringify
       return String(value);
     } catch (_e) {
       return undefined;
@@ -187,14 +168,12 @@ class DixieController {
       const tx = db.transaction(this.storeName, 'readwrite');
       const store = tx.objectStore(this.storeName);
 
-      // Attempt structuredClone if available, otherwise sanitize recursively
       let safeEntry: unknown = undefined;
       try {
-        if (typeof (self as any)?.structuredClone === 'function') {
+        if (typeof self.structuredClone === 'function') {
           try {
-            safeEntry = (self as any).structuredClone(entry);
+            safeEntry = self.structuredClone(entry);
           } catch (_e) {
-            // fallback to sanitizer below
             safeEntry = this.sanitizeForIndexedDB({ value: entry });
           }
         } else {
@@ -204,24 +183,11 @@ class DixieController {
         safeEntry = this.sanitizeForIndexedDB({ value: entry });
       }
 
-      try {
-        // console.log('DixieController.addEntry: adding entry (shallow):', {
-        //   keys: Object.keys((safeEntry as any) || {}),
-        // });
-      } catch (_e) {
-        /* noop */
-      }
-
       let req: IDBRequest;
-      // Ensure we store a plain, extensible object and remove any existing 'id' so
-      // the object store can generate a key when autoIncrement is enabled.
       let entryToStore: unknown;
       if (safeEntry && typeof safeEntry === 'object') {
-        // Shallow copy into a plain object to avoid frozen/non-extensible objects
-        entryToStore = Object.assign({}, safeEntry as any);
+        entryToStore = Object.assign({}, safeEntry as Record<string, unknown>);
       } else {
-        // Wrap primitives (number/string/boolean/null/undefined) so the object store
-        // can insert a generated key into the stored value.
         entryToStore = { value: safeEntry };
       }
       try {
@@ -231,18 +197,15 @@ class DixieController {
           Object.prototype.hasOwnProperty.call(entryToStore, 'id')
         ) {
           try {
-            delete (entryToStore as any).id;
+            delete (entryToStore as Record<string, unknown>).id;
           } catch (_e) {
-            /* noop */
           }
         }
       } catch (_e) {
-        /* noop */
       }
       try {
         req = store.add(entryToStore);
       } catch (syncErr) {
-        // If add throws synchronously, attempt put() as a fallback.
         console.warn(
           'DixieController.addEntry: store.add threw synchronously, trying store.put as fallback',
           syncErr
@@ -258,7 +221,6 @@ class DixieController {
           try {
             db.close();
           } catch (_e) {
-            /* noop */
           }
           reject(putSyncErr);
           return;
@@ -274,8 +236,8 @@ class DixieController {
           console.error('DixieController.addEntry: request.onerror', {
             event: ev,
             reqError: req.error,
-            name: (req.error as any)?.name,
-            message: (req.error as any)?.message,
+            name: (req.error as Error)?.name,
+            message: (req.error as Error)?.message,
           });
         } catch (e) {
           console.error(
@@ -284,16 +246,15 @@ class DixieController {
             req.error
           );
         }
-        // store last error for easier diagnosis
         try {
           const payload = {
             time: new Date().toISOString(),
             fn: 'addEntry',
             phase: 'request.onerror',
-            error: {
-              name: (req.error as any)?.name || 'UnknownError',
-              message: (req.error as any)?.message || String(req.error || ev),
-            },
+             error: {
+               name: (req.error as Error)?.name || 'UnknownError',
+               message: (req.error as Error)?.message || String(req.error || ev),
+             },
             entryPreview:
               entry && typeof entry === 'object'
                 ? this.sanitizeForIndexedDB({ value: entry })
@@ -301,7 +262,6 @@ class DixieController {
           };
           localStorage.setItem('dixie:lastError', JSON.stringify(payload));
         } catch (_e) {
-          /* noop */
         }
         reject(req.error || ev);
       };
@@ -313,7 +273,6 @@ class DixieController {
             txError: tx.error,
           });
         } catch (_e) {
-          /* noop */
         }
         try {
           const payload = {
@@ -321,8 +280,8 @@ class DixieController {
             fn: 'addEntry',
             phase: 'transaction.onabort',
             error: {
-              name: (tx.error as any)?.name || 'UnknownError',
-              message: (tx.error as any)?.message || String(tx.error || ev),
+              name: (tx.error as Error)?.name || 'UnknownError',
+              message: (tx.error as Error)?.message || String(tx.error || ev),
             },
             entryPreview:
               entry && typeof entry === 'object'
@@ -331,7 +290,6 @@ class DixieController {
           };
           localStorage.setItem('dixie:lastError', JSON.stringify(payload));
         } catch (_e) {
-          /* noop */
         }
         reject(tx.error || ev);
       };
@@ -343,7 +301,6 @@ class DixieController {
             txError: tx.error,
           });
         } catch (_e) {
-          /* noop */
         }
         try {
           const payload = {
@@ -351,8 +308,8 @@ class DixieController {
             fn: 'addEntry',
             phase: 'transaction.onerror',
             error: {
-              name: (tx.error as any)?.name || 'UnknownError',
-              message: (tx.error as any)?.message || String(tx.error || ev),
+              name: (tx.error as Error)?.name || 'UnknownError',
+              message: (tx.error as Error)?.message || String(tx.error || ev),
             },
             entryPreview:
               entry && typeof entry === 'object'
@@ -361,7 +318,6 @@ class DixieController {
           };
           localStorage.setItem('dixie:lastError', JSON.stringify(payload));
         } catch (_e) {
-          /* noop */
         }
         reject(tx.error || ev);
       };
@@ -370,7 +326,6 @@ class DixieController {
         try {
           db.close();
         } catch (e) {
-          /* noop */
         }
       };
     });
@@ -382,43 +337,15 @@ class DixieController {
     return new Promise((resolve, reject) => {
       const tx = db.transaction(this.storeName, 'readwrite');
       const store = tx.objectStore(this.storeName);
-      try {
-        console.log('DixieController.putEntry: putting entry (shallow):', {
-          keys: Object.keys(entry || {}),
-        });
-      } catch (e) {
-        /* noop */
-      }
-      // Ensure we pass a plain, extensible object to put(). If the provided entry
-      // is a primitive or a non-extensible object, wrap or shallow-copy it so
-      // the object store can insert a generated key when necessary.
       let entryToPut: unknown;
       if (entry && typeof entry === 'object') {
-        entryToPut = Object.assign({}, entry as any);
+        entryToPut = Object.assign({}, entry);
       } else {
         entryToPut = { value: entry };
       }
       
       const req = store.put(entryToPut);
-      req.onsuccess = () => {
-        if (this.storeName === 'suppliers' && entryToPut && typeof entryToPut === 'object') {
-          const entryObj = entryToPut as any;
-          if (entryObj.products && Array.isArray(entryObj.products)) {
-            console.log('DixieController.putEntry - Supplier saved:', {
-              id: entryObj.id,
-              sync_id: entryObj.sync_id,
-              name: entryObj.name,
-              products: entryObj.products.map((p: any) => ({
-                id: p.id,
-                sync_id: p.sync_id,
-                name: p.name,
-                price: p.price
-              }))
-            });
-          }
-        }
-        resolve(req.result);
-      };
+      req.onsuccess = () => resolve(req.result);
       req.onerror = (ev: unknown) => {
         console.error(
           'DixieController.putEntry: request.onerror',
@@ -439,7 +366,6 @@ class DixieController {
         try {
           db.close();
         } catch (e) {
-          /* noop */
         }
       };
     });
@@ -451,7 +377,7 @@ class DixieController {
     return new Promise((resolve, reject) => {
       const tx = db.transaction(this.storeName, 'readonly');
       const store = tx.objectStore(this.storeName);
-      const req = store.get(id as any);
+      const req = store.get(id as IDBValidKey);
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => reject(req.error);
       tx.oncomplete = () => db.close();
@@ -460,17 +386,6 @@ class DixieController {
 
   async deleteBackup(params: { id: IDBValidKey }) {
     const { id } = params;
-    try {
-      console.log(
-        'DixieController.deleteBackup: called with id',
-        id,
-        '(type:',
-        typeof id,
-        ')'
-      );
-    } catch (e) {
-      /* ignore */
-    }
     const db = await this.openDB();
     return new Promise((resolve, reject) => {
       const tx = db.transaction(this.storeName, 'readwrite');
@@ -482,7 +397,6 @@ class DixieController {
         try {
           db.close();
         } catch (e) {
-          /* noop */
         }
       };
     });
@@ -494,23 +408,7 @@ class DixieController {
       const tx = db.transaction(this.storeName, 'readonly');
       const store = tx.objectStore(this.storeName);
       const req = store.getAll();
-      req.onsuccess = () => {
-        if (this.storeName === 'suppliers') {
-          console.log('DixieController.listBackups - Suppliers from IndexedDB:', req.result.map((s: any) => ({
-            id: s.id,
-            sync_id: s.sync_id,
-            name: s.name,
-            productsCount: s.products?.length || 0,
-            firstProduct: s.products?.[0] ? {
-              id: s.products[0].id,
-              sync_id: s.products[0].sync_id,
-              name: s.products[0].name,
-              price: s.products[0].price
-            } : null
-          })));
-        }
-        resolve(req.result);
-      };
+      req.onsuccess = () => resolve(req.result);
       req.onerror = () => reject(req.error);
       tx.oncomplete = () => db.close();
     });
@@ -532,7 +430,7 @@ class DixieController {
     });
   }
 
-  async getEntry(params: { syncId: string }): Promise<any | null> {
+  async getEntry(params: { syncId: string }): Promise<unknown | null> {
     const { syncId } = params;
     const db = await this.openDB();
     return new Promise((resolve, reject) => {
@@ -540,7 +438,7 @@ class DixieController {
       const store = tx.objectStore(this.storeName);
       const req = store.getAll();
       req.onsuccess = () => {
-        const results = req.result as any[];
+        const results = req.result as Array<Record<string, unknown>>;
         const found = results.find((entry) => entry.sync_id === syncId);
         resolve(found || null);
       };
@@ -549,7 +447,6 @@ class DixieController {
         try {
           db.close();
         } catch (e) {
-          /* noop */
         }
       };
     });

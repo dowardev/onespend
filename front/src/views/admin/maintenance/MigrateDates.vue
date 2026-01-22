@@ -219,8 +219,15 @@ const stepStatus = ref<string[]>(['pending', 'pending', 'pending', 'pending']);
 const running = ref(false);
 const progressText = ref('');
 const error = ref<string | null>(null);
-const dryRunResult = ref<any[] | null>(null);
-const applyResult = ref<any[] | null>(null);
+interface MigrationResult {
+  id: string | number;
+  changed: boolean;
+  before?: unknown;
+  after?: unknown;
+}
+
+const dryRunResult = ref<MigrationResult[] | null>(null);
+const applyResult = ref<MigrationResult[] | null>(null);
 
 const successToast = reactive({ open: false, message: '' });
 const backupConfirmed = ref(false);
@@ -230,7 +237,7 @@ const confirmAlert = reactive({
     '¿Seguro que quieres aplicar la migración? Asegúrate de haber exportado una copia de seguridad.',
 });
 
-const isDev = !!(import.meta as any).env?.DEV;
+const isDev = !!(import.meta.env?.DEV);
 
 // End Vars
 
@@ -241,11 +248,11 @@ function markerLabel(params: { i: number }) {
   return String(i + 1);
 }
 
-function previewPair(params: { before: any; after: any }) {
+function previewPair(params: { before: unknown; after: unknown }) {
   const { before, after } = params;
   try {
     return JSON.stringify({ before, after }, null, 2);
-  } catch (e) {
+  } catch {
     return String(before) + ' -> ' + String(after);
   }
 }
@@ -266,9 +273,9 @@ async function exportBackups() {
     URL.revokeObjectURL(url);
     stepStatus.value[0] = 'done';
     stepIndex.value = 1;
-  } catch (e: any) {
+  } catch (e) {
     console.error(e);
-    error.value = e && e.message ? e.message : String(e);
+    error.value = e instanceof Error ? e.message : String(e);
   } finally {
     running.value = false;
     progressText.value = '';
@@ -284,23 +291,28 @@ async function runDryRun() {
       dryRun: true,
       verbose: false,
     });
-    dryRunResult.value = res as any[];
+    dryRunResult.value = res as MigrationResult[];
     stepStatus.value[1] = 'done';
     stepIndex.value = 2;
-  } catch (e: any) {
+  } catch (e) {
     console.error(e);
-    error.value = e && e.message ? e.message : String(e);
+    error.value = e instanceof Error ? e.message : String(e);
   } finally {
     running.value = false;
     progressText.value = '';
   }
 }
 
+interface BackupEntry {
+  meta: Record<string, unknown>;
+  data: Record<string, unknown>;
+}
+
 async function insertTestEntries() {
   try {
     running.value = true;
     progressText.value = 'Insertando entradas de prueba...';
-    const bulk: any[] = [];
+    const bulk: BackupEntry[] = [];
     for (let i = 0; i < 50; i++) {
       if (i % 3 === 0) {
         bulk.push({
@@ -361,64 +373,68 @@ const confirmButtons = [
     role: 'confirm',
     handler: async () => {
       try {
-        if (
-          (
-            import.meta as unknown as {
-              env?: Record<string, string | undefined>;
-            }
-          ).env?.DEV
-        ) {
+        if (import.meta.env?.DEV) {
           console.log('confirmButtons: Aplicar clicked');
         }
         confirmAlert.open = false;
         await doApplyMigration();
-        if (
-          (
-            import.meta as unknown as {
-              env?: Record<string, string | undefined>;
-            }
-          ).env?.DEV
-        ) {
+        if (import.meta.env?.DEV) {
           console.log('confirmButtons: doApplyMigration completed');
         }
       } catch (err) {
         console.error('confirmButtons handler error', err);
-        error.value = (err && (err as any).message) || String(err);
+        error.value = (err && (err as Error).message) || String(err);
       }
     },
   },
 ];
 
-function onConfirmAlertDidDismiss(params: { ev: any }) {
-  const { ev } = params;
+function onConfirmAlertDidDismiss(params: { event: CustomEvent }) {
+  const { event } = params;
   try {
-    const role = ev && ev.detail && ev.detail.role ? ev.detail.role : null;
+    const role = event?.detail?.role ?? null;
     if (role === 'confirm') {
       void doApplyMigration();
     }
-  } catch (_e) {
+  } catch {
+    console.warn('onConfirmAlertDidDismiss: error ignorado');
   } finally {
     confirmAlert.open = false;
   }
 }
 
-function onAlertDidDismiss(params: { ev: any }) {
-  const { ev } = params;
+function onAlertDidDismiss(params: { event: CustomEvent }) {
+  const { event } = params;
   try {
-    const role = ev && ev.detail && ev.detail.role ? ev.detail.role : null;
-    if (
-      (import.meta as unknown as { env?: Record<string, string | undefined> })
-        .env?.DEV
-    ) {
+    const role = event?.detail?.role ?? null;
+    if (import.meta.env?.DEV) {
       console.log('ion-alert did-dismiss, role=', role);
     }
     if (role === 'confirm') {
-      if (
-        (import.meta as unknown as { env?: Record<string, string | undefined> })
-          .env?.DEV
-      ) {
+      if (import.meta.env?.DEV) {
         console.log('onAlertDidDismiss: triggering doApplyMigration');
       }
+      void doApplyMigration();
+    }
+  } catch (err) {
+    console.error('onAlertDidDismiss error', err);
+  } finally {
+    confirmAlert.open = false;
+  }
+}
+    if (role === 'confirm') {
+      void doApplyMigration();
+    }
+  } catch (err) {
+    console.error('onAlertDidDismiss error', err);
+  } finally {
+    confirmAlert.open = false;
+  }
+}
+
+function confirmCancel() {
+  confirmAlert.open = false;
+}
       void doApplyMigration();
     }
   } catch (err) {
@@ -445,7 +461,7 @@ async function doApplyMigration() {
       dryRun: false,
       verbose: true,
     });
-    applyResult.value = res as any[];
+    applyResult.value = res as MigrationResult[];
     stepStatus.value[3] = 'done';
     stepIndex.value = 3;
 
@@ -453,9 +469,9 @@ async function doApplyMigration() {
       successToast.message = `Migración completada: ${applyChangedCount.value} entradas actualizadas.`;
       successToast.open = true;
     } catch (_e) {}
-  } catch (e: any) {
+  } catch (e) {
     console.error(e);
-    error.value = e && e.message ? e.message : String(e);
+    error.value = e instanceof Error ? e.message : String(e);
   } finally {
     running.value = false;
     progressText.value = '';
@@ -508,7 +524,7 @@ async function primaryAction() {
 onMounted(() => {
   const route = useRoute();
   try {
-    if (route && route.query && (route.query as any).autoDryRun) {
+    if (route && route.query && route.query.autoDryRun) {
       void runDryRun();
     }
   } catch (e) {
@@ -535,7 +551,7 @@ const sampleResults = computed(() => {
 
 const hasChanges = computed(() => {
   return !!(
-    dryRunResult.value && dryRunResult.value.some((r: any) => r.changed)
+    dryRunResult.value && dryRunResult.value.some((r: MigrationResult) => r.changed)
   );
 });
 

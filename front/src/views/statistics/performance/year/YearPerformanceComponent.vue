@@ -388,7 +388,7 @@ const statisticsController = new StatisticsController();
 // Get state from StatisticsController
 const snapshots = statisticsController.getSnapshots();
 const modalOpen = statisticsController.getModalOpen();
-const setSnapshots = (val: any) => statisticsController.setSnapshots(val);
+const setSnapshots = (val: Snapshots) => statisticsController.setSnapshots({ params: { val } });
 
 const {
   popovers,
@@ -402,9 +402,9 @@ const {
   popovers: statisticsController.getHovered(),
   hovered: statisticsController.getHovered(),
   setHover: (key: string, value: boolean) => statisticsController.setHover(key, value),
-  formatCurrency: (val: any) => statisticsController.formatCurrency(val),
-  formatPercent: (val: any) => statisticsController.formatPercent(val),
-  providerValue: (p: any) => statisticsController.providerValue(p),
+  formatCurrency: (val: number | null | undefined) => statisticsController.formatCurrency({ params: { val } }),
+  formatPercent: (val: number | null | undefined) => statisticsController.formatPercent({ params: { val } }),
+  providerValue: (p: ProviderValue) => statisticsController.providerValue({ params: { p } }),
   isoDate: (d: Date) => statisticsController.isoDate({ d }),
 };
 
@@ -415,7 +415,7 @@ const yearOffset = ref<number>(0);
 const yearsToCompare = ref<number>(5);
 const selectedDate = ref<string>(format(new Date(), 'yyyy'));
 
-const chartData = reactive({ labels: [], datasets: [] } as any);
+const chartData = reactive({ labels: [], datasets: [] } as ChartData<'bar'>);
 const chartOptions = reactive({
   responsive: true,
   maintainAspectRatio: false,
@@ -426,7 +426,7 @@ const chartOptions = reactive({
       text: `Comparativa anual (últimos ${yearsToCompare.value} años)`,
     },
   },
-} as any);
+} as ChartOptions<'bar'>);
 
 const yearlyProfit = ref<number>(0);
 const previousYearlyProfit = ref<number>(0);
@@ -501,7 +501,7 @@ const yearMonths = computed(() => {
     const yearStart = startOfYear(new Date());
     const baseYearStart = new Date(yearStart);
     baseYearStart.setFullYear(baseYearStart.getFullYear() + yearOffset.value);
-    const months: Array<any> = [];
+    const months: Array<MonthData> = [];
     for (let m = 0; m < 12; m++) {
       const d = addMonths(baseYearStart, m);
       const label = new Intl.DateTimeFormat('es-ES', { month: 'long' }).format(
@@ -525,7 +525,7 @@ const yearMonths = computed(() => {
 // Functions - Data loading
 async function loadYearData() {
   try {
-    const all = ((await dixieController.listBackups()) as any[]) || [];
+    const all = ((await dixieController.listBackups()) as Backup[]) || [];
 
     const yearStart = startOfYear(new Date());
     const baseYearStart = new Date(yearStart);
@@ -571,13 +571,13 @@ async function loadYearData() {
 
           if (Array.isArray(d.ingresos || d.entries)) {
             ingresosSum = (d.ingresos || d.entries).reduce(
-              (s: number, i: any) => s + (Number(i.amount || 0) || 0),
+              (s: number, i: Income) => s + (Number(i.amount || 0) || 0),
               0
             );
           }
           if (Array.isArray(d.proveedores)) {
             proveedoresSum = d.proveedores.reduce(
-              (s: number, p: any) => s + (Number(providerValue(p) || 0) || 0),
+              (s: number, p: Provider) => s + (Number(providerValue(p) || 0) || 0),
               0
             );
           }
@@ -599,8 +599,8 @@ async function loadYearData() {
       yearTotals.push(yearTotal);
     }
 
-    chartData.labels = labels as any;
-    chartData.datasets = [{ label: `Ganancia`, data: yearTotals }] as any;
+    chartData.labels = labels as string[];
+    chartData.datasets = [{ label: `Ganancia`, data: yearTotals }] as ChartDataset<'bar'>[];
 
     const selectedIndex = yearsArr.indexOf(selectedYear);
     yearlyProfit.value =
@@ -610,7 +610,7 @@ async function loadYearData() {
 
     try {
       providersSumYear.value = yearMonths.value.reduce(
-        (s: number, m: any) => s + Number(m.proveedores || 0),
+        (s: number, m: MonthData) => s + Number(m.proveedores || 0),
         0
       );
       previousProvidersSum.value = 0;
@@ -660,7 +660,7 @@ function nextYear() {
 }
 
 // Popover / Date handlers
-function onPopoverDateChange(e: any) {
+function onPopoverDateChange(e: CustomEvent) {
   try {
     const val = e?.detail?.value || selectedDate.value;
     // ion-datetime with presentation="year" may return 'YYYY' or a full date
@@ -676,7 +676,7 @@ function onPopoverDateChange(e: any) {
   void loadYearData();
 }
 
-function onMainDateClick(e: any) {
+function onMainDateClick(e: Event) {
   popovers.mainDate.event = e;
   popovers.mainDate.open = true;
 }
@@ -714,7 +714,7 @@ onMounted(() => {
 });
 
 // UI helpers
-function openItemPopover(message: any, event: any) {
+function openItemPopover(message: string, event: Event) {
   try {
     popovers.itemMessageHeleper.message = message;
     popovers.itemMessageHeleper.event = event;
