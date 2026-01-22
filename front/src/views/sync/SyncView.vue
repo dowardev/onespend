@@ -175,13 +175,20 @@ import {
   codeOutline,
   alertCircleOutline,
 } from 'ionicons/icons';
+// End Imports
+
+// Controllers
 import { SyncController } from '@/controllers/syncController';
+// End Controllers
 
 // Components
+// End Components
+
 // Vars
 const syncController = new SyncController();
 const showDebugInfo = ref(false);
 const pendingQueue = ref<any[]>([]);
+// End Vars
 
 // Functions
 async function refreshStatus() {
@@ -317,11 +324,13 @@ async function handleRefreshStatus() {
 function handleShowDebug() {
   showDebugInfo.value = !showDebugInfo.value;
 }
+// End Functions
 
 // Life cycle
 onMounted(async () => {
   await refreshStatus();
 });
+// End Life cycle
 
 // Computed
 const isOnline = computed(() => syncController.getIsOnline());
@@ -337,9 +346,10 @@ const pendingByType = computed(() => {
   }
   return counts;
 });
+// End Computed
 
 // Watch
-</script>
+// End Watch</script>
 
 <style scoped>
 .sync-container {

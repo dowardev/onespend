@@ -74,7 +74,7 @@ class AuthController {
   /**
    * Inicia sesión con email/usuario y contraseña
    */
-  async login(params: LoginParams): Promise<AuthResponse> {
+  async login(params: { login: string; password: string }): Promise<AuthResponse> {
     this.store.setIsLoading(true);
     this.store.setError(null);
 
@@ -100,7 +100,7 @@ class AuthController {
   /**
    * Registra un nuevo usuario
    */
-  async register(params: RegisterParams): Promise<AuthResponse> {
+  async register(params: { name: string; user: string; email: string; password: string; password_confirmation: string }): Promise<AuthResponse> {
     this.store.setIsLoading(true);
     this.store.setError(null);
 

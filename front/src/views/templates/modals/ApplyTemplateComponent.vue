@@ -29,7 +29,7 @@
             <ion-item
               class="transparent"
               button
-              @click="openDatePopover($event)"
+              @click="openDatePopover({ ev: $event })"
             >
               <ion-label>Fecha</ion-label>
               <ion-label slot="end">{{ formattedApplyDate }}</ion-label>
@@ -102,7 +102,7 @@
           <ion-datetime
             :value="selectedDate"
             :presentation="'date'"
-            @ion-change="onDateChange"
+            @ion-change="onDateChange({ ev: $event })"
           ></ion-datetime>
         </ion-content>
       </ion-popover>
@@ -156,7 +156,7 @@ const datePopoverEvent = ref<Event | null>(null);
 let initialDate = new Date();
 try {
   if (props.applySelectedDate) {
-    const parsed = parseLocalDate(String(props.applySelectedDate));
+    const parsed = parseLocalDate({ d: String(props.applySelectedDate) });
     if (!isNaN(parsed.getTime())) initialDate = parsed;
   }
 } catch (_e) {
@@ -170,7 +170,7 @@ const formattedApplyDate = computed(() => {
   try {
     const d = selectedDate.value;
     if (!d) return '-';
-    const parsed = parseLocalDate(String(d));
+    const parsed = parseLocalDate({ d: String(d) });
     if (isNaN(parsed.getTime())) return String(d);
     return format(parsed, "d 'de' MMMM 'de' yyyy");
   } catch (_e) {
@@ -180,9 +180,19 @@ const formattedApplyDate = computed(() => {
 // end computed
 
 // functions
-function openDatePopover(ev: Event) {
+function openDatePopover(params: { ev: Event }) {
+  const { ev } = params;
   datePopoverEvent.value = ev;
   datePopoverOpen.value = true;
+}
+
+function onDateChange(params: { ev: CustomEvent }) {
+  const { ev } = params;
+  const val =
+    (ev.detail && (ev.detail as any).value) || (ev.target as any)?.value || '';
+  if (!val) return;
+  selectedDate.value = val;
+  emit('update:applySelectedDate', val);
 }
 
 function closeDatePopover() {

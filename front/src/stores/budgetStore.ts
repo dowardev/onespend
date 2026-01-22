@@ -64,7 +64,7 @@ interface FinishDayData {
 }
 
 export const useBudgetStore = defineStore('budget', () => {
-  const selectedDate = ref(formatLocalDate(new Date()));
+  const selectedDate = ref(formatLocalDate({ d: new Date() }));
 
   const entries = reactive<Income[]>([]);
   const providers = reactive<Provider[]>([]);

@@ -63,7 +63,7 @@ const safeChartData = shallowRef<ChartData<'bar'>>(
     ? JSON.parse(
         JSON.stringify({
           ...props.chartData,
-          labels: (props.chartData.labels || []).map(translateDayLabel),
+          labels: (props.chartData.labels || []).map(l => translateDayLabel({ label: l })),
         })
       )
     : { labels: [], datasets: [] }
@@ -88,7 +88,8 @@ const pastelNeonColors = [
   { bg: 'rgba(255, 182, 182, 0.4)', border: 'rgba(255, 99, 71, 1)' }, // Coral
 ];
 
-function applyNeonStyles(data: ChartData<'bar'>): ChartData<'bar'> {
+function applyNeonStyles(params: { data: ChartData<'bar'> }): ChartData<'bar'> {
+  const { data } = params;
   if (!data.datasets) return data;
 
   data.datasets = data.datasets.map((dataset, datasetIndex) => {
@@ -140,11 +141,12 @@ function applyNeonStyles(data: ChartData<'bar'>): ChartData<'bar'> {
   return data;
 }
 
-function translateDayLabel(label: unknown): string {
+function translateDayLabel(params: { label: unknown }): string {
+  const { label } = params;
   if (label == null) return '';
   const labelStr = String(label);
   // Try parsing as date
-  const d = parseLocalDate(labelStr);
+  const d = parseLocalDate({ d: labelStr });
   if (!isNaN(d.getTime())) {
     const weekday = new Intl.DateTimeFormat('es-MX', {
       weekday: 'short',
@@ -197,7 +199,7 @@ watch(
     const cloned = v
       ? JSON.parse(JSON.stringify(v))
       : { labels: [], datasets: [] };
-    cloned.labels = (cloned.labels || []).map(translateDayLabel);
+    cloned.labels = (cloned.labels || []).map(l => translateDayLabel({ label: l }));
     safeChartData.value = applyNeonStyles(cloned);
   },
   { immediate: true, deep: true }

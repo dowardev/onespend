@@ -41,18 +41,27 @@
 // Imports
 import { IonSegment, IonSegmentButton } from '@ionic/vue';
 import { ref } from 'vue';
+// End Imports
 
 // Components
 import DayPerformanceComponent from '@/views/statistics/performance/day/DayPerformanceComponent.vue';
 import WeekComponent from '@/views/statistics/performance/week/WeekPerformanceComponent.vue';
 import MonthComponent from '@/views/statistics/performance/month/MonthPerformanceComponent.vue';
 import YearComponent from '@/views/statistics/performance/year/YearPerformanceComponent.vue';
+// End Components
 
 // Vars
 const mainSegment = ref('day' as 'day' | 'week' | 'month' | 'year');
+// End Vars
 
 // Functions
+// End Functions
+
 // Life cycle
+// End Life cycle
+
 // Computed
+// End Computed
+
 // Watch
-</script>
+// End Watch</script>

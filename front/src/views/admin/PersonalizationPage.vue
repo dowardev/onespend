@@ -97,16 +97,23 @@ import {
 } from '@ionic/vue';
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import systemController from '@/controllers/systemConfigController';
 import type { ThemeMode } from '@/stores/useSystemConfig';
 import { colorPaletteOutline, sunnyOutline, moonOutline } from 'ionicons/icons';
+// End Imports
+
+// Controllers
+import systemController from '@/controllers/systemConfigController';
+// End Controllers
 
 // Components
+// End Components
+
 // Vars
 const router = useRouter();
 const theme = ref<ThemeMode>('auto');
 const autoLightTheme = ref<ThemeMode>('light');
 const autoDarkTheme = ref<ThemeMode>('dark');
+// End Vars
 
 // Functions
 async function loadTheme() {
@@ -178,6 +185,7 @@ function applyTheme(t: ThemeMode | string) {
 function goBack() {
   router.back();
 }
+// End Functions
 
 // Life cycle
 onMounted(() => {
@@ -190,10 +198,13 @@ onMounted(() => {
     }
   });
 });
+// End Life cycle
 
 // Computed
+// End Computed
+
 // Watch
-</script>
+// End Watch</script>
 
 <style scoped>
 .info-section {

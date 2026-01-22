@@ -193,10 +193,12 @@ import { parseLocalDate } from '@/utils/date';
 import { formatLocalDate } from '@/utils/date';
 import { es as esLocale } from 'date-fns/locale';
 import { useRouter } from 'vue-router';
+// End Imports
 
 // Components
 import AddTemplateComponent from '@/views/templates/modals/AddTemplateComponent.vue';
 import ApplyTemplateComponent from '@/views/templates/modals/ApplyTemplateComponent.vue';
+// End Components
 
 // Controllers
 import TemplateController from '@/controllers/TempalteController';
@@ -209,6 +211,7 @@ import {
   hasBackupMeaningfulContent,
   buildAndSaveTemplateApplication,
 } from '@/controllers/templateService';
+// End Controllers
 
 // Vars
 type TemplateSummary = {
@@ -259,6 +262,7 @@ void _supplierQuery.value;
 const showApplyConflict = ref(false);
 const applyConflictMessage = ref('');
 const pendingApplyPayload = ref<any | null>(null);
+// End Vars
 
 // Functions
 function getSupplierNameById(id: IDBValidKey): string | null {
@@ -389,7 +393,7 @@ async function confirmApply() {
 
     if (result && result.conflict) {
       try {
-        const parsedDate = parseLocalDate(String(dateISO));
+        const parsedDate = parseLocalDate({ d: String(dateISO) });
         const pretty = isNaN(parsedDate.getTime())
           ? String(dateISO)
           : format(parsedDate, "d 'de' MMMM 'de' yyyy", { locale: esLocale });
@@ -405,7 +409,7 @@ async function confirmApply() {
 
     if (result && result.success) {
       try {
-        localStorage.setItem(STORAGE_KEY, formatLocalDate(dateISO));
+        localStorage.setItem(STORAGE_KEY, formatLocalDate({ d: dateISO }));
       } catch (_e) {
       }
 
@@ -417,7 +421,7 @@ async function confirmApply() {
 
       router.push({
         name: 'Budget',
-        query: { refresh: String(Date.now()), date: formatLocalDate(dateISO) },
+        query: { refresh: String(Date.now()), date: formatLocalDate({ d: dateISO }) },
       });
       return;
     }
@@ -453,7 +457,7 @@ async function handleApplyConflictCombine() {
     );
     if (res && res.success) {
       try {
-        localStorage.setItem(STORAGE_KEY, formatLocalDate(dateISO));
+        localStorage.setItem(STORAGE_KEY, formatLocalDate({ d: dateISO }));
       } catch (_e) {
       }
 
@@ -467,7 +471,7 @@ async function handleApplyConflictCombine() {
 
       router.push({
         name: 'Budget',
-        query: { refresh: String(Date.now()), date: formatLocalDate(dateISO) },
+        query: { refresh: String(Date.now()), date: formatLocalDate({ d: dateISO }) },
       });
       return;
     }
@@ -497,7 +501,7 @@ async function handleApplyConflictOverwrite() {
       try {
         localStorage.setItem(
           STORAGE_KEY,
-          formatLocalDate(String(payloadToSave.data?.selectedDate))
+          formatLocalDate({ d: String(payloadToSave.data?.selectedDate) })
         );
       } catch (_e) {
       }
@@ -514,7 +518,7 @@ async function handleApplyConflictOverwrite() {
         name: 'Budget',
         query: {
           refresh: String(Date.now()),
-          date: formatLocalDate(String(payloadToSave.data?.selectedDate)),
+          date: formatLocalDate({ d: String(payloadToSave.data?.selectedDate) }),
         },
       });
       return;
@@ -583,12 +587,14 @@ async function loadSuppliers() {
     console.error('loadSuppliers error', _e);
   }
 }
+// End Functions
 
 // Life cycle
 onMounted(() => {
   loadTemplates();
   loadSuppliers();
 });
+// End Life cycle
 
 // Computed
 const designMode = computed(() => systemController.getDesignMode());
@@ -613,9 +619,10 @@ const groupedTemplates = computed(() => {
     .sort()
     .map(letter => ({ letter, items: map.get(letter) || [] }));
 });
+// End Computed
 
 // Watch
-</script>
+// End Watch</script>
 
 <style scoped>
 /* Hide action buttons by default on non-touch devices */

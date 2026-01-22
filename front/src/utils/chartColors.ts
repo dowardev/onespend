@@ -12,10 +12,8 @@ export const pastelNeonColors = [
   { bg: 'rgba(255, 182, 182, 0.4)', border: 'rgba(255, 99, 71, 1)' }, // Coral
 ];
 
-export function applyNeonStyles(
-  data: ChartData<'bar'>,
-  colorIndex = 0
-): ChartData<'bar'> {
+export function applyNeonStyles(params: { data: ChartData<'bar'>; colorIndex?: number }): ChartData<'bar'> {
+  const { data, colorIndex = 0 } = params;
   if (!data.datasets) return data;
 
   data.datasets = data.datasets.map((dataset, datasetIndex) => {

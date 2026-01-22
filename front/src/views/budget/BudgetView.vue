@@ -9,7 +9,7 @@
         <ion-title>Presupuesto </ion-title>
 
         <ion-buttons slot="end">
-          <ion-button @click="openMoreOptions($event)">
+          <ion-button @click="openMoreOptions({ event: $event })">
             <ion-icon :icon="ellipsisVerticalOutline"></ion-icon>
           </ion-button>
         </ion-buttons>
@@ -41,7 +41,7 @@
 
             <ion-button
               title="Seleccionar fecha"
-              @click="openDatePicker($event)"
+              @click="openDatePicker({ event: $event })"
             >
               {{ formattedSelectedDate }}
             </ion-button>
@@ -96,39 +96,39 @@
                         <h3>Proveedores</h3>
                         <p>{{ daySummary.providersCount }} proveedores</p>
                       </ion-label>
-                      <ion-note slot="end" color="primary">
-                        {{ formatCurrency(daySummary.totalEstimated) }}
-                      </ion-note>
+             <ion-note slot="end" color="primary">
+                         {{ formatCurrency({ value: daySummary.totalEstimated }) }}
+                       </ion-note>
                     </ion-item>
                     <ion-item>
                       <ion-label>
                         <h3>Ingresos</h3>
                         <p>{{ daySummary.incomeCount }} registros</p>
                       </ion-label>
-                      <ion-note slot="end" color="success">
-                        {{ formatCurrency(daySummary.totalIncome) }}
-                      </ion-note>
+                       <ion-note slot="end" color="success">
+                         {{ formatCurrency({ value: daySummary.totalIncome }) }}
+                       </ion-note>
                     </ion-item>
                     <ion-item>
                       <ion-label>
                         <h3>Gastos</h3>
                         <p>{{ daySummary.expenseCount }} registros</p>
                       </ion-label>
-                      <ion-note slot="end" color="danger">
-                        {{ formatCurrency(daySummary.totalExpense) }}
-                      </ion-note>
+                       <ion-note slot="end" color="danger">
+                         {{ formatCurrency({ value: daySummary.totalExpense }) }}
+                       </ion-note>
                     </ion-item>
                     <ion-item>
                       <ion-label>
                         <h3>Balance</h3>
                         <p>Total del día</p>
                       </ion-label>
-                      <ion-note
-                        slot="end"
-                        :color="daySummary.balance >= 0 ? 'success' : 'danger'"
-                      >
-                        {{ formatCurrency(daySummary.balance) }}
-                      </ion-note>
+                       <ion-note
+                         slot="end"
+                         :color="daySummary.balance >= 0 ? 'success' : 'danger'"
+                       >
+                         {{ formatCurrency({ value: daySummary.balance }) }}
+                       </ion-note>
                     </ion-item>
                   </ion-list>
                   <ion-item lines="none" class="ion-margin-top">
@@ -193,7 +193,7 @@
               :disabled="isDayOfficiallyClosed"
               enable-on-off-labels
               @ion-change="
-                budgetController.toggleDayClosed(!$event.detail.checked)
+                budgetController.toggleDayClosed({ value: !$event.detail.checked })
               "
             >
               {{
@@ -287,16 +287,20 @@ import {
 import { format } from 'date-fns';
 import { parseLocalDate, formatLocalDate } from '@/utils/date';
 import { es as esLocale } from 'date-fns/locale';
+// End Imports
 
+// Controllers
 import systemController from '@/controllers/systemConfigController';
 import budgetController from '@/controllers/budgetController';
 import accountsController from '@/controllers/accountsController';
 import { AccountsController, type Account } from '@/controllers/accountsController';
+// End Controllers
 
 // Components
 import InicioViewComponent from './InicioViewComponent.vue';
 import ProvidersComponent from './ProvidersComponent.vue';
 import FinishDayForm from './FinishDayForm.vue';
+// End Components
 
 // Vars
 const activeView = ref<'inicio' | 'proveedores' | 'form' | 'resumen'>('inicio');
@@ -308,6 +312,8 @@ const moreOptionsEvent = ref<Event | null>(null);
 const designMode = computed(() => systemController.getDesignMode());
 const isDev = computed(() => import.meta.env.DEV);
 
+// End Vars
+
 // Functions
 function onFinishDaySaved() {
   budgetController.saveData();
@@ -316,14 +322,16 @@ function onFinishDaySaved() {
   isDayOfficiallyClosed.value = true;
 }
 
-function formatCurrency(value: number) {
+function formatCurrency(params: { value: number }) {
+  const { value } = params;
   return new Intl.NumberFormat('es-MX', {
     style: 'currency',
     currency: 'MXN',
   }).format(value || 0);
 }
 
-function formatTime(timestamp: number) {
+function formatTime(params: { timestamp: number }) {
+  const { timestamp } = params;
   if (!timestamp) return '--:--';
   return new Date(timestamp).toLocaleTimeString('es-MX', {
     hour: '2-digit',
@@ -331,12 +339,14 @@ function formatTime(timestamp: number) {
   });
 }
 
-function openDatePicker(event: Event) {
+function openDatePicker(params: { event: Event }) {
+  const { event } = params;
   datePickerEvent.value = event;
   showDatePicker.value = true;
 }
 
-function openMoreOptions(event: Event) {
+function openMoreOptions(params: { event: Event }) {
+  const { event } = params;
   moreOptionsEvent.value = event;
   showMoreOptions.value = true;
 }
@@ -348,9 +358,22 @@ function onDateSelected(e: any) {
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
-    budgetController.setDate(`${y}-${m}-${day}`);
-  }
+  budgetController.setDate({ date: `${y}-${m}-${day}` });
   showDatePicker.value = false;
+}
+
+function goBack() {
+  const current = budgetController.getSelectedDate();
+  const d = parseLocalDate({ d: current });
+  d.setDate(d.getDate() - 1);
+  budgetController.setDate({ date: formatLocalDate({ d }) });
+}
+
+function goForward() {
+  const current = budgetController.getSelectedDate();
+  const d = parseLocalDate({ d: current });
+  d.setDate(d.getDate() + 1);
+  budgetController.setDate({ date: formatLocalDate({ d }) });
 }
 
 function goToToday() {
@@ -358,22 +381,8 @@ function goToToday() {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
-  budgetController.setDate(`${y}-${m}-${day}`);
+budgetController.setDate({ date: `${y}-${m}-${day}` });
   showDatePicker.value = false;
-}
-
-function goBack() {
-  const current = budgetController.getSelectedDate();
-  const d = parseLocalDate(current);
-  d.setDate(d.getDate() - 1);
-  budgetController.setDate(formatLocalDate(d));
-}
-
-function goForward() {
-  const current = budgetController.getSelectedDate();
-  const d = parseLocalDate(current);
-  d.setDate(d.getDate() + 1);
-  budgetController.setDate(formatLocalDate(d));
 }
 
 function confirmClearDay() {
@@ -401,40 +410,44 @@ async function insertTestData() {
     const now = Date.now();
     const acc1: Account = { id: Date.now() + 1, name: 'Caja Principal', initialBalance: 0, createdAt: now, updatedAt: now };
     const acc2: Account = { id: Date.now() + 2, name: 'Banco', initialBalance: 0, createdAt: now, updatedAt: now };
-    await accountsCtrl.addAccount({ name: 'Caja Principal', initialBalance: 0 });
-    await accountsCtrl.addAccount({ name: 'Banco', initialBalance: 0 });
+    await accountsCtrl.addAccount({ params: { name: 'Caja Principal', initialBalance: 0 } });
+    await accountsCtrl.addAccount({ params: { name: 'Banco', initialBalance: 0 } });
     accounts = [acc1, acc2];
   }
 
   const accountId1 = accounts[0].id;
   const accountId2 = accounts.length > 1 ? accounts[1].id : accountId1;
 
-  budgetController.addIngreso({ name: 'Venta mostrador 1', amount: 1500, paymentType: 'cash', accountId: accountId1 });
-  budgetController.addIngreso({ name: 'Venta mostrador 2', amount: 2300, paymentType: 'digital', accountId: accountId2 });
-  budgetController.addIngreso({ name: 'Venta online', amount: 4500, paymentType: 'cash', accountId: accountId1 });
-  budgetController.addIngreso({ name: 'Pedido mayorista', amount: 12000, paymentType: 'digital', accountId: accountId2 });
-  budgetController.addIngreso({ name: 'Venta telefónica', amount: 3500, paymentType: 'cash', accountId: accountId1 });
+  budgetController.addIngreso({ params: { name: 'Venta mostrador 1', amount: 1500, paymentType: 'cash', accountId: accountId1 } });
+  budgetController.addIngreso({ params: { name: 'Venta mostrador 2', amount: 2300, paymentType: 'digital', accountId: accountId2 } });
+  budgetController.addIngreso({ params: { name: 'Venta online', amount: 4500, paymentType: 'cash', accountId: accountId1 } });
+  budgetController.addIngreso({ params: { name: 'Pedido mayorista', amount: 12000, paymentType: 'digital', accountId: accountId2 } });
+  budgetController.addIngreso({ params: { name: 'Venta telefónica', amount: 3500, paymentType: 'cash', accountId: accountId1 } });
 
-  budgetController.addEgreso({ name: 'Compra inventario', amount: 8000, paymentType: 'cash', accountId: accountId1 });
-  budgetController.addEgreso({ name: 'Pago servicios', amount: 2500, paymentType: 'digital', accountId: accountId2 });
-  budgetController.addEgreso({ name: 'Transporte', amount: 800, paymentType: 'cash', accountId: accountId1 });
+  budgetController.addEgreso({ params: { name: 'Compra inventario', amount: 8000, paymentType: 'cash', accountId: accountId1 } });
+  budgetController.addEgreso({ params: { name: 'Pago servicios', amount: 2500, paymentType: 'digital', accountId: accountId2 } });
+  budgetController.addEgreso({ params: { name: 'Transporte', amount: 800, paymentType: 'cash', accountId: accountId1 } });
 
-  budgetController.addProvider({ name: 'Proveedor A', estimated: 500, accountId: accountId1 });
-  budgetController.addProvider({ name: 'Proveedor B', estimated: 800, accountId: accountId2 });
-  budgetController.addProvider({ name: 'Proveedor C', estimated: 1200, accountId: accountId1 });
-  budgetController.addProvider({ name: 'Proveedor D', estimated: 600, accountId: accountId2 });
-  budgetController.addProvider({ name: 'Proveedor E', estimated: 950, accountId: accountId1 });
-  budgetController.addProvider({ name: 'Proveedor F', estimated: 1500, accountId: accountId2 });
-  budgetController.addProvider({ name: 'Proveedor G', estimated: 450, accountId: accountId1 });
+  budgetController.addProvider({ params: { name: 'Proveedor A', estimated: 500, accountId: accountId1 } });
+  budgetController.addProvider({ params: { name: 'Proveedor B', estimated: 800, accountId: accountId2 } });
+  budgetController.addProvider({ params: { name: 'Proveedor C', estimated: 1200, accountId: accountId1 } });
+  budgetController.addProvider({ params: { name: 'Proveedor D', estimated: 600, accountId: accountId2 } });
+  budgetController.addProvider({ params: { name: 'Proveedor E', estimated: 950, accountId: accountId1 } });
+  budgetController.addProvider({ params: { name: 'Proveedor F', estimated: 1500, accountId: accountId2 } });
+  budgetController.addProvider({ params: { name: 'Proveedor G', estimated: 450, accountId: accountId1 } });
 
   budgetController.saveData();
   showMoreOptions.value = false;
 }
 
+// End Functions
+
 // Life cycle
 onMounted(async () => {
   await budgetController.loadDataForCurrentDate();
 });
+
+// End Life cycle
 
 // Computed
 const isDayOfficiallyClosed = computed(() => {
@@ -466,8 +479,8 @@ const daySummary = computed(() => {
     .filter((t: number) => t > 0)
     .sort((a: number, b: number) => a - b);
 
-  const startTime = allTimestamps.length > 0 ? formatTime(allTimestamps[0]) : '--:--';
-  const endTime = allTimestamps.length > 0 ? formatTime(allTimestamps[allTimestamps.length - 1]) : '--:--';
+  const startTime = allTimestamps.length > 0 ? formatTime({ timestamp: allTimestamps[0] }) : '--:--';
+  const endTime = allTimestamps.length > 0 ? formatTime({ timestamp: allTimestamps[allTimestamps.length - 1] }) : '--:--';
 
   return {
     providersCount: providers.length,
@@ -487,11 +500,13 @@ const daySummary = computed(() => {
 
 const formattedSelectedDate = computed(() => {
   try {
-    const d = parseLocalDate(budgetController.getSelectedDate());
+    const d = parseLocalDate({ d: budgetController.getSelectedDate() });
     if (isNaN(d.getTime())) return budgetController.getSelectedDate();
     return format(d, "d 'de' MMMM 'de' yyyy", { locale: esLocale });
   } catch {
     return budgetController.getSelectedDate();
   }
 });
+
+// End Computed
 </script>

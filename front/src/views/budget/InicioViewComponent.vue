@@ -220,10 +220,14 @@ import AccountCards from './components/AccountCards.vue';
 import EditProviderModal from './components/EditProviderModal.vue';
 import EditEntryModal from './components/EditEntryModal.vue';
 import { computed, ref, onMounted, reactive, watch } from 'vue';
+// End Imports
+
+// Controllers
 import budgetController from '@/controllers/budgetController';
 import { BudgetController } from '@/controllers/budgetController';
 import accountsController from '@/controllers/accountsController';
 import suppliersController from '@/controllers/suppliersController';
+// End Controllers
 
 // Components
 
@@ -294,6 +298,8 @@ const entryFormState = reactive({
 });
 
 const editingProviderId = ref<string | number | null>(null);
+
+// End Vars
 
 // Computed
 const isDayClosed = computed(() => budgetCtrl.getIsDayClosed());
@@ -446,6 +452,8 @@ const renderedEntries = computed(() => {
   return entries.map((item: any) => ({ type: 'item', item }));
 });
 
+// End Computed
+
 // Watch
 watch(
   () => entryItems.value,
@@ -472,10 +480,14 @@ watch(
   }
 );
 
+// End Watch
+
 // Life cycle
 onMounted(() => {
   accountsController.loadAll();
 });
+
+// End Life cycle
 
 // Functions
 function getDefaultAccountId() {
@@ -490,8 +502,10 @@ function openQuickAccountAlert(itemIndex: number) {
 
 async function createQuickAccount(name: string, initialBalance: number) {
   const newAccount = await accountsController.addAccount({
-    name,
-    initialBalance,
+    a: {
+      name,
+      initialBalance,
+    },
   });
 
   if (newAccount && quickAccountTargetIndex.value !== null) {
@@ -544,7 +558,7 @@ function selectProvider(provider: any) {
   if (!provider.accountId) {
     return;
   }
-  budgetController.addProviderEgresos(provider);
+  budgetController.addProviderEgresos({ provider });
   budgetController.saveData();
   editEntryModalOpen.value = false;
 }
@@ -703,17 +717,23 @@ function handleProviderEntrySaved(payload: {
       accountId: item.accountId,
     }));
 
-    budgetController.updateIngreso(entryId, {
-      amount: payload.totalAmount,
-      accountId: groups[0]?.accountId || null,
-      groups: groups.length > 1 ? groups : undefined,
-      _providerName: payload.providerName,
+    budgetController.updateIngreso({
+      id: entryId,
+      changes: {
+        amount: payload.totalAmount,
+        accountId: groups[0]?.accountId || null,
+        groups: groups.length > 1 ? groups : undefined,
+        _providerName: payload.providerName,
+      },
     });
     budgetController.saveData();
   } else if (editingProviderId.value) {
-    budgetController.updateProvider(editingProviderId.value, {
-      estimated: payload.totalAmount,
-      products: payload.products,
+    budgetController.updateProvider({
+      id: editingProviderId.value,
+      changes: {
+        estimated: payload.totalAmount,
+        products: payload.products,
+      },
     });
     budgetController.saveData();
   } else {
@@ -732,7 +752,7 @@ function handleProviderEntrySaved(payload: {
 }
 
 function handleProviderEntryDeleted(entryId: string | number) {
-  budgetController.removeIngreso(entryId);
+  budgetController.removeIngreso({ id: entryId });
   budgetController.saveData();
   editProviderModalOpen.value = false;
   editProviderData.value = null;
@@ -783,12 +803,15 @@ async function saveEntryChanges(data: {
   const { entryType, name, amount, accountId, groups } = data;
 
   if (editEntryModalData.value.id) {
-    budgetController.updateIngreso(editEntryModalData.value.id, {
-      entryType,
-      name,
-      amount,
-      accountId,
-      groups,
+    budgetController.updateIngreso({
+      id: editEntryModalData.value.id,
+      changes: {
+        entryType,
+        name,
+        amount,
+        accountId,
+        groups,
+      },
     });
   } else {
     if (amount > 0) {
@@ -827,7 +850,7 @@ function deleteEntry() {
 
 function confirmDelete() {
   if (editEntryModalData.value.id) {
-    budgetController.removeIngreso(editEntryModalData.value.id);
+    budgetController.removeIngreso({ id: editEntryModalData.value.id });
   }
   budgetController.saveData();
   showDeleteAlert.value = false;
@@ -842,6 +865,7 @@ function confirmDelete() {
   entryFormState.name = '';
   entryFormState.entryType = 'ingreso';
 }
+// End Functions
 </script>
 
 <style scoped>

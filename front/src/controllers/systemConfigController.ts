@@ -2,12 +2,12 @@ import { useSystemConfig } from '../stores/useSystemConfig';
 import type { ThemeMode } from '../stores/useSystemConfig';
 
 class SystemConfigController {
-  init(_params: Record<string, unknown> = {}) {
+  init(params: Record<string, unknown> = {}) {
     const store = useSystemConfig();
     store.init();
   }
 
-  getDesignMode(_params: Record<string, unknown> = {}) {
+  getDesignMode(params: Record<string, unknown> = {}) {
     const store = useSystemConfig();
     return store.getDesignMode();
   }

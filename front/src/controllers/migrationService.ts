@@ -1,13 +1,14 @@
 import { formatLocalDate } from '@/utils/date';
 
-export function normalizeDateIfNeeded(val: any): {
+export function normalizeDateIfNeeded(params: { val: any }): {
   value: any;
   changed: boolean;
 } {
+  const { val } = params;
   if (val == null) return { value: val, changed: false };
   try {
     const s = String(val);
-    const normalized = formatLocalDate(s);
+    const normalized = formatLocalDate({ d: s });
     if (s === normalized) return { value: val, changed: false };
     return { value: normalized, changed: true };
   } catch (e) {
@@ -15,10 +16,11 @@ export function normalizeDateIfNeeded(val: any): {
   }
 }
 
-export function normalizeEntryData(data: any): {
+export function normalizeEntryData(params: { data: any }): {
   newData: any;
   changed: boolean;
 } {
+  const { data } = params;
   if (!data || typeof data !== 'object')
     return { newData: data, changed: false };
   let changed = false;
@@ -81,7 +83,8 @@ export function normalizeEntryData(data: any): {
   return { newData: clone, changed };
 }
 
-export function mergeBackupData(existingData: any, newData: any) {
+export function mergeBackupData(params: { existingData: any; newData: any }) {
+  const { existingData, newData } = params;
   // Merge ingresos and proveedores arrays, avoiding duplicates by name
   const existingIngresos = Array.isArray(existingData?.ingresos)
     ? existingData.ingresos

@@ -148,6 +148,8 @@ import useVuelidate from '@vuelidate/core';
 import { faker } from '@faker-js/faker';
 import authController from '@/controllers/authController';
 
+// End Imports
+
 // Components
 
 // Vars
@@ -163,6 +165,8 @@ const form = reactive({
 
 const error = ref<string | null>(null);
 const isLoading = ref(false);
+
+// End Vars
 
 // Computed
 const formRules = computed(() => ({
@@ -193,6 +197,8 @@ const isFormValid = computed(() => {
 });
 
 const isDev = computed(() => import.meta.env.DEV);
+
+// End Computed
 
 // Functions
 function generateRandomData() {
@@ -244,6 +250,7 @@ async function handleRegister() {
     isLoading.value = false;
   }
 }
+// End Functions
 </script>
 
 <style scoped>

@@ -175,7 +175,7 @@ function prevWeek() {
 function onPopoverDateChange(e: any) {
   try {
     const val = e?.detail?.value || selectedDate.value;
-    const parsed = parseLocalDate(String(val).slice(0, 10));
+    const parsed = parseLocalDate({ d: String(val).slice(0, 10) });
     selectedDate.value = format(parsed, 'yyyy-MM-dd');
     const currentWeekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
     weekOffset.value = differenceInCalendarWeeks(parsed, currentWeekStart);

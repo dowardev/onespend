@@ -160,7 +160,7 @@
               lines="full"
               :button="!!p.accountId && !isDayClosed"
               :disabled="!p.accountId || isDayClosed"
-              @click="() => p.accountId && !isDayClosed && selectProvider(p)"
+              @click="() => p.accountId && !isDayClosed && selectProvider({ provider: p })"
             >
               <ion-label>
                 {{ p.name }}
@@ -169,7 +169,7 @@
                 </p>
               </ion-label>
               <ion-note slot="end" :color="p.accountId ? 'primary' : 'medium'">
-                {{ formatProviderAmount(p) }}
+                {{ formatProviderAmount({ provider: p }) }}
               </ion-note>
             </ion-item>
           </div>
@@ -321,8 +321,11 @@ import {
   trashOutline,
 } from 'ionicons/icons';
 import { computed, ref, watch } from 'vue';
+// End Imports
 
 // Components
+
+// End Components
 
 // Vars
 const props = defineProps<{
@@ -356,6 +359,7 @@ const addEntrySegment = ref('entry');
 const entryItems = ref<Array<{ amount: number; accountId: any }>>([
   { amount: 0, accountId: null },
 ]);
+// End Vars
 
 // Functions
 function getDefaultAccountId() {
@@ -372,11 +376,17 @@ const availableAccountsForItem = (currentIndex: number) => {
   );
 };
 
-function formatProviderAmount(provider: any) {
+function formatProviderAmount(params: { provider: any }) {
+  const { provider } = params;
   return new Intl.NumberFormat('es-MX', {
     style: 'currency',
     currency: 'MXN',
   }).format(Number(provider?.estimated) || 0);
+}
+
+function selectProvider(params: { provider: any }) {
+  const { provider } = params;
+  emit('select-provider', provider);
 }
 
 function addEntryItem() {
@@ -405,8 +415,11 @@ function handleSave() {
     groups: entryItems.value,
   });
 }
+// End Functions
 
 // Life cycle
+
+// End Life cycle
 
 // Computed
 const isFormValid = computed(() => {
@@ -425,6 +438,7 @@ const entryData = computed(() => props.entryData);
 const canAddMoreItems = computed(() => {
   return entryItems.value.length < props.accountsList.length + 2;
 });
+// End Computed
 
 // Watch
 watch(
@@ -459,4 +473,5 @@ watch(
   },
   { immediate: true }
 );
+// End Watch
 </script>

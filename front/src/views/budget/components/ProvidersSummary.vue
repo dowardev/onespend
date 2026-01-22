@@ -103,13 +103,16 @@ import { informationCircleOutline } from 'ionicons/icons';
 import { computed } from 'vue';
 import { useBudgetStore } from '@/stores/budgetStore';
 import { useAccountsStore } from '@/stores/accountsStore';
+// End Imports
 
 // Components
 import AccountBarChart from './AccountBarChart.vue';
+// End Components
 
 // Vars
 const budgetStore = useBudgetStore();
 const accountsStore = useAccountsStore();
+// End Vars
 
 // Functions
 function getAccountNameById(
@@ -133,8 +136,11 @@ function formatCurrency(v: number | string) {
     return String(v || '0');
   }
 }
+// End Functions
 
 // Life cycle
+
+// End Life cycle
 
 // Computed
 const accountsSummary = computed(() => {
@@ -223,9 +229,10 @@ const differenceColor = computed(() => {
   if (d === 0) return undefined;
   return d > 0 ? 'success' : 'danger';
 });
+// End Computed
 
 // Watch
-</script>
+// End Watch</script>
 
 <style scoped>
 ion-card {

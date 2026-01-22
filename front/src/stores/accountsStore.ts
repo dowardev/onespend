@@ -35,7 +35,8 @@ export const useAccountsStore = defineStore('accounts', () => {
     }
   }
 
-  function addAccount(account: Omit<Account, 'id'>) {
+  async function addAccount(params: { account: Omit<Account, 'id'> }) {
+    const { account } = params;
     const newAccount: Account = {
       ...account,
       createdAt: Date.now(),
@@ -45,7 +46,8 @@ export const useAccountsStore = defineStore('accounts', () => {
     syncAccount(newAccount, 'create');
   }
 
-  function updateAccount(id: IDBValidKey, changes: Partial<Account>) {
+  function updateAccount(params: { id: IDBValidKey; changes: Partial<Account> }) {
+    const { id, changes } = params;
     const idx = accounts.findIndex(a => a.id === id);
     if (idx === -1) return;
     const updated = { ...accounts[idx], ...changes, updatedAt: Date.now() };
@@ -53,7 +55,8 @@ export const useAccountsStore = defineStore('accounts', () => {
     syncAccount(updated, 'update');
   }
 
-  function removeAccount(id: IDBValidKey) {
+  function removeAccount(params: { id: IDBValidKey }) {
+    const { id } = params;
     const idx = accounts.findIndex(a => a.id === id);
     if (idx === -1) return;
     const account = accounts[idx];
@@ -61,7 +64,8 @@ export const useAccountsStore = defineStore('accounts', () => {
     syncAccount(account, 'delete');
   }
 
-  function upsertAccount(account: Account) {
+  function upsertAccount(params: { account: Account }) {
+    const { account } = params;
     const existing = accounts.find(a => String(a.id) === String(account.id) || a.sync_id === account.sync_id);
     if (existing) {
       const idx = accounts.indexOf(existing);

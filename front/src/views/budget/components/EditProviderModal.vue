@@ -47,14 +47,14 @@
         </ion-item>
 
         <ion-list class="transparent">
-          <ion-item
-            v-for="p in filteredProviders"
-            :key="p.id"
-            lines="full"
-            button
-            class="transparent"
-            @click="selectProvider(p)"
-          >
+<ion-item
+              v-for="p in filteredProviders"
+              :key="p.id"
+              lines="full"
+              button
+              class="transparent"
+              @click="selectProvider({ p })"
+            >
             <ion-label>{{ p.name }}</ion-label>
           </ion-item>
         </ion-list>
@@ -135,7 +135,7 @@
                       slot="end"
                       fill="clear"
                       color="danger"
-                      @click="removeItem(index)"
+                      @click="removeItem({ index })"
                     >
                       <ion-icon :icon="trashOutline"></ion-icon>
                     </ion-button>
@@ -181,16 +181,16 @@
                   >
                     <ion-label>
                       {{ product.name }}
-                      <p>{{ formatPrice(product.price) }}</p>
+                      <p>{{ formatPrice({ price: product.price }) }}</p>
                     </ion-label>
 
                     <ion-input
                       slot="end"
                       type="number"
                       placeholder="0"
-                      :value="getProductQuantity(product)"
+                      :value="getProductQuantity({ product })"
                       style="width: 80px; text-align: end"
-                      @ion-input="e => setProductQuantity(product, product.price, Number(e.detail.value))"
+                      @ion-input="e => setProductQuantity({ product, productPrice: product.price, quantity: Number(e.detail.value) })"
                     ></ion-input>
                   </ion-item>
                 </div>
@@ -241,8 +241,11 @@ import {
   swapHorizontalOutline,
 } from 'ionicons/icons';
 import { ref, computed, watch, toRefs } from 'vue';
+// End Imports
 
 // Components
+
+// End Components
 
 // Vars
 interface ProviderItem {
@@ -315,6 +318,7 @@ const selectedSegment = ref('inicio');
 const providerProducts = ref<ProviderProduct[]>([]);
 const productQuantities = ref<Record<string, number>>({});
 const items = ref<ProviderItem[]>([{ amount: 0, accountId: null }]);
+// End Vars
 
 // Functions
 const getDefaultAccountId = () => {
@@ -338,7 +342,8 @@ const availableAccountsForItem = (currentIndex: number) => {
   );
 };
 
-function selectProvider(p: Supplier) {
+function selectProvider(params: { p: Supplier }) {
+  const { p } = params;
   console.log('selectProvider - supplier:', JSON.stringify({
     id: p.id,
     sync_id: p.sync_id,
@@ -370,7 +375,8 @@ function changeProvider() {
   productQuantities.value = {};
 }
 
-function compareAccounts(o1: any, o2: any) {
+function compareAccounts(params: { o1: any; o2: any }) {
+  const { o1, o2 } = params;
   if (o1 === o2) return true;
   if (o1 && o2) {
     if (typeof o1 === 'object' && typeof o2 === 'object') {
@@ -381,7 +387,8 @@ function compareAccounts(o1: any, o2: any) {
   return false;
 }
 
-function formatPrice(price: number) {
+function formatPrice(params: { price: number }) {
+  const { price } = params;
   return new Intl.NumberFormat('es-MX', {
     style: 'currency',
     currency: 'MXN',
@@ -394,29 +401,30 @@ function addItem() {
   }
 }
 
-function removeItem(index: number) {
+function removeItem(params: { index: number }) {
+  const { index } = params;
   if (items.value.length > 1) {
     items.value.splice(index, 1);
   }
 }
 
-function getProductQuantity(product: any): number {
+function getProductQuantity(params: { product: any }): number {
+  const { product } = params;
   const productId = product?.id ?? product?.sync_id;
   const productName = product?.name;
   const productPrice = product?.price;
-  // Use productId (id or sync_id) if available, otherwise find by name+price
   const found = providerProducts.value.find(p => {
     if (productId) {
       return String(p.supplierProductId) === String(productId);
     }
-    // Fallback: match by name and price
     return p.productName === productName && p.productPrice === productPrice;
   });
 
   return found ? found.quantity : 0;
 }
 
-function setProductQuantity(product: any, productPrice: number, quantity: number) {
+function setProductQuantity(params: { product: any; productPrice: number; quantity: number }) {
+  const { product, productPrice, quantity } = params;
   const productId = product?.sync_id ?? product?.id ?? product?.supplierProductId;
   const productName = product?.name;
   console.log('setProductQuantity - product:', JSON.stringify({
@@ -426,7 +434,6 @@ function setProductQuantity(product: any, productPrice: number, quantity: number
     name: product?.name,
     price: product?.price
   }), 'productName:', productName, 'productId:', productId, 'quantity:', quantity);
-  // Use productId (id or sync_id) if available, otherwise match by name+price
   const existing = providerProducts.value.find(p => {
     if (productId) {
       return String(p.supplierProductId) === String(productId);
@@ -437,7 +444,6 @@ function setProductQuantity(product: any, productPrice: number, quantity: number
   if (existing) {
     existing.quantity = quantity;
   } else {
-    // Generate a consistent ID for products without id/sync_id
     const fallbackId = productId 
       ? productId 
       : `manual_${String(productName).toLowerCase().replace(/\s+/g, '_')}_${productPrice}`;
@@ -484,8 +490,11 @@ function handleDelete() {
     emit('deleted', provider.value.id);
   }
 }
+// End Functions
 
 // Life cycle
+
+// End Life cycle
 
 // Computed
 const isEntryMode = computed(() => mode.value === 'entry');
@@ -567,6 +576,7 @@ const isFormValid = computed(() => {
   }
   return selectedProvider.value != null && isItemsValid.value;
 });
+// End Computed
 
 // Watch
 watch(isOpen, async newVal => {
@@ -685,6 +695,7 @@ watch(
   },
   { deep: true }
 );
+// End Watch
 </script>
 
 <style scoped>

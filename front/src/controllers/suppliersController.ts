@@ -38,7 +38,8 @@ class SuppliersController {
     return new DixieController({ name: 'ABOgazDB', storeName: 'suppliers' });
   }
 
-  async addSupplier(s: Omit<Supplier, 'id' | 'createdAt' | 'updatedAt'>) {
+  async addSupplier(params: { s: Omit<Supplier, 'id' | 'createdAt' | 'updatedAt'> }) {
+    const { s } = params;
     console.log('%c[suppliersController] 🔵 addSupplier INICIADO', 'color: blue; font-size: 14px; font-weight: bold');
     console.log('%c[suppliersController] Datos recibidos:', 'color: blue', s);
     
@@ -132,7 +133,8 @@ class SuppliersController {
     }
   }
 
-  async updateSupplier(s: Supplier) {
+  async updateSupplier(params: { s: Supplier }) {
+    const { s } = params;
     if (s.sync_id == null) throw new Error('Supplier must have sync_id to be updated');
     const store = this.getStore();
     store.loading = true;
@@ -187,7 +189,8 @@ class SuppliersController {
     }
   }
 
-  async deleteSupplier(id: IDBValidKey) {
+  async deleteSupplier(params: { id: IDBValidKey }) {
+    const { id } = params;
     const store = this.getStore();
     store.loading = true;
     store.error = null;
@@ -195,7 +198,7 @@ class SuppliersController {
       const ctrl = this.getController();
       const allSuppliers = store.suppliers as any[];
       const supplier = allSuppliers.find(s => s.id === id);
-      await ctrl.deleteBackup(id);
+      await ctrl.deleteBackup({ id });
 
       store.suppliers = allSuppliers.filter(s => s.id !== id);
       store.notifyChange();
@@ -287,10 +290,10 @@ class SuppliersController {
     return null;
   }
 
-  subscribeToChanges(callback?: (suppliers: any[]) => void) {
+  subscribeToChanges(params?: { callback?: (suppliers: any[]) => void }) {
     const store = this.getStore();
-    if (callback) {
-      return store.subscribeToChanges(callback);
+    if (params?.callback) {
+      return store.subscribeToChanges(params.callback);
     }
     return () => {};
   }

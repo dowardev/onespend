@@ -1,3 +1,25 @@
+## [v0.37.0] - 2026-01-22
+
+### Refactored
+
+- Add consistent section comments to all Vue components for better code organization
+- Add `// Imports`, `// Components`, `// Vars`, `// Functions`, `// Life cycle`, `// Computed`, `// Watch` section markers
+- Convert function signatures from direct parameters to object parameter pattern for consistency
+- Standardize parameter passing across all controller functions, utilities, and components
+
+### Files Changed
+
+**Frontend:**
+- 52 Vue components updated with section comments structure
+- `front/src/utils/date.ts` - Updated formatLocalDate, parseLocalDate, normalizeName to use object parameters
+- `front/src/utils/chartColors.ts` - Updated applyNeonStyles to use object parameters
+- `front/src/controllers/*.ts` - All controllers updated with object parameter pattern
+- `front/src/stores/*.ts` - All stores updated with object parameter pattern
+- `front/src/composables/*.ts` - Composables updated with object parameter pattern
+- `front/src/migrations/*.ts` - Migration files updated with object parameter pattern
+
+---
+
 ## [v0.36.1] - 2026-01-21
 
 ### Refactored

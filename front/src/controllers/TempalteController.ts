@@ -155,7 +155,7 @@ class TemplateController {
       const numericId =
         typeof id === 'string' && !Number.isNaN(Number(id)) ? Number(id) : id;
 
-      await this.dixie.deleteBackup(numericId as IDBValidKey);
+      await this.dixie.deleteBackup({ id: numericId as IDBValidKey });
 
       store.removeTemplate(id);
 
