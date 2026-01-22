@@ -380,16 +380,16 @@ import PeriodSnapshots from '../components/PeriodSnapshots.vue';
 // end components
 
 // Controllers
-import dixieController from '@/controllers/dixie';
+import { DixieController } from '@/controllers/dixie';
+import { StatisticsController } from '@/controllers/statisticsController';
 
-// Composables
-import { usePeriodView } from '@/composables/usePeriodView';
-import { usePerformancePeriod } from '@/composables/usePerformancePeriod';
-import { usePdfReport } from '@/composables/usePdfReport';
-// end composables
+const statisticsController = new StatisticsController();
 
-// Vars / State
-const { snapshots, modalOpen, setSnapshots } = usePeriodView(false);
+// Get state from StatisticsController
+const snapshots = statisticsController.getSnapshots();
+const modalOpen = statisticsController.getModalOpen();
+const setSnapshots = (val: any) => statisticsController.setSnapshots(val);
+
 const {
   popovers,
   hovered,
@@ -398,10 +398,18 @@ const {
   formatPercent,
   providerValue,
   isoDate,
-} = usePerformancePeriod();
+} = {
+  popovers: statisticsController.getHovered(),
+  hovered: statisticsController.getHovered(),
+  setHover: (key: string, value: boolean) => statisticsController.setHover(key, value),
+  formatCurrency: (val: any) => statisticsController.formatCurrency(val),
+  formatPercent: (val: any) => statisticsController.formatPercent(val),
+  providerValue: (p: any) => statisticsController.providerValue(p),
+  isoDate: (d: Date) => statisticsController.isoDate(d),
+};
 
 const pdfReport = ref<HTMLElement | null>(null);
-const { downloadPdf: internalDownloadPdf, isGeneratingPdf } = usePdfReport();
+const isGeneratingPdf = computed(() => statisticsController.getIsGeneratingPdf());
 
 const yearOffset = ref<number>(0);
 const yearsToCompare = ref<number>(5);
@@ -692,8 +700,8 @@ function setModalFromLayout(val: boolean) {
 }
 
 // PDF helpers
-function downloadPdf() {
-  return internalDownloadPdf({
+async function downloadPdf() {
+  return await statisticsController.downloadPdf({
     containerRef: pdfReport,
     buttonSelector: '#dowButYear',
     filenameFactory: () => `report_${yearLabel.value}.pdf`,

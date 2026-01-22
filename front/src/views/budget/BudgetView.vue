@@ -290,7 +290,7 @@ import { es as esLocale } from 'date-fns/locale';
 import systemController from '@/controllers/systemConfigController';
 import budgetController from '@/controllers/budgetController';
 import accountsController from '@/controllers/accountsController';
-import { useAccountsStore, type Account } from '@/stores/accountsStore';
+import { AccountsController, type Account } from '@/controllers/accountsController';
 import InicioViewComponent from './InicioViewComponent.vue';
 import ProvidersComponent from './ProvidersComponent.vue';
 import FinishDayForm from './FinishDayForm.vue';
@@ -440,22 +440,22 @@ function performClearDay() {
 }
 
 async function insertTestData() {
+  const accountsCtrl = new AccountsController();
+  
   try {
-    await accountsController.loadAll();
+    await accountsCtrl.loadAll();
   } catch {
-    // Store may not exist yet, continue
+    // Controller may not have data yet, continue
   }
   
-  let accounts = accountsController.getAccounts();
+  let accounts = accountsCtrl.getAccounts();
   
   if (accounts.length === 0) {
-    const store = useAccountsStore();
     const now = Date.now();
     const acc1: Account = { id: Date.now() + 1, name: 'Caja Principal', initialBalance: 0, createdAt: now, updatedAt: now };
     const acc2: Account = { id: Date.now() + 2, name: 'Banco', initialBalance: 0, createdAt: now, updatedAt: now };
-    store.accounts.push(acc1, acc2);
-    await accountsController.addAccount({ name: 'Caja Principal', initialBalance: 0 });
-    await accountsController.addAccount({ name: 'Banco', initialBalance: 0 });
+    await accountsCtrl.addAccount({ name: 'Caja Principal', initialBalance: 0 });
+    await accountsCtrl.addAccount({ name: 'Banco', initialBalance: 0 });
     accounts = [acc1, acc2];
   }
   

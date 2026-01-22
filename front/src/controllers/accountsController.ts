@@ -4,6 +4,8 @@ import { useAccountsStore } from '@/stores/accountsStore';
 import { useSync } from '@/composables/useSync';
 import type { Account } from '@/stores/accountsStore';
 
+export type { Account };
+
 function generateSyncId(): string {
   return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 }

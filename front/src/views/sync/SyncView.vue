@@ -174,18 +174,15 @@ import {
   codeOutline,
   alertCircleOutline,
 } from 'ionicons/icons';
-import { useSync } from '@/composables/useSync';
-import { syncService } from '@/services/syncService';
+import { SyncController } from '@/controllers/syncController';
 
-const {
-  isOnline,
-  isSyncing,
-  pendingChanges,
-  lastSyncTime,
-  syncError,
-  syncNow,
-  pullFromServer,
-} = useSync();
+const syncController = new SyncController();
+
+const isOnline = computed(() => syncController.getIsOnline());
+const isSyncing = computed(() => syncController.getIsSyncing());
+const pendingChanges = computed(() => syncController.getPendingChanges());
+const lastSyncTime = computed(() => syncController.getLastSyncTime());
+const syncError = computed(() => syncController.getSyncError());
 
 const showDebugInfo = ref(false);
 const pendingQueue = ref<any[]>([]);
@@ -203,7 +200,7 @@ onMounted(async () => {
 });
 
 async function refreshStatus() {
-  pendingQueue.value = syncService.getQueue();
+  pendingQueue.value = syncController.getQueue();
 }
 
 function getStatusIcon() {
@@ -244,7 +241,7 @@ function formatLastSync() {
 }
 
 async function handleSyncNow() {
-  const success = await syncNow();
+  const success = await syncController.syncNow();
   if (success) {
     await refreshStatus();
     const toast = await toastController.create({
@@ -269,7 +266,7 @@ async function handleClearQueue() {
         text: 'Eliminar',
         role: 'confirm',
         handler: async () => {
-          syncService.clearQueue();
+          syncController.clearQueue();
           await refreshStatus();
           const toast = await toastController.create({
             message: 'Cola de sincronización limpiada',
@@ -298,7 +295,7 @@ async function handleForceSync() {
         role: 'confirm',
         handler: async () => {
           try {
-            await syncService.fullSyncAndSave();
+            await syncController.fullSyncAndSave();
             await refreshStatus();
             const toast = await toastController.create({
               message: 'Sincronización completa exitosa',
@@ -323,7 +320,7 @@ async function handleForceSync() {
 
 async function handleRefreshStatus() {
   await refreshStatus();
-  await pullFromServer();
+  await syncController.pullFromServer();
   const toast = await toastController.create({
     message: 'Estado actualizado',
     duration: 1000,

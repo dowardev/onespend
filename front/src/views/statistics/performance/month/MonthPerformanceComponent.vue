@@ -405,7 +405,6 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
-import { usePerformancePeriod } from '@/composables/usePerformancePeriod';
 
 ChartJS.register(
   CategoryScale,
@@ -418,30 +417,35 @@ ChartJS.register(
 
 // controllers
 import { DixieController } from '@/controllers/dixie';
-import dixieController from '@/controllers/dixie';
-// end controllers
+import { StatisticsController } from '@/controllers/statisticsController';
 
-// components
-import PeriodLayout from '../components/PeriodLayout.vue';
-import PeriodChartWrapper from '../components/PeriodChartWrapper.vue';
-import PeriodSnapshots from '../components/PeriodSnapshots.vue';
-// end components
+const statisticsController = new StatisticsController();
 
-// composables
-import { usePeriodView } from '@/composables/usePeriodView';
-import { usePdfReport } from '@/composables/usePdfReport';
-// end composables
+// Use shared state from StatisticsController
+const {
+  popovers: sharedPopovers,
+  hovered: sharedHovered,
+  setHover: sharedSetHover,
+  isoDate: sharedIsoDate,
+  providerValue: sharedProviderValue,
+  formatCurrency: sharedFormatCurrency,
+  formatPercent: sharedFormatPercent,
+} = {
+  popovers: statisticsController.getHovered(),
+  hovered: statisticsController.getHovered(),
+  setHover: (key: string, value: boolean) => statisticsController.setHover(key, value),
+  isoDate: (d: Date) => statisticsController.isoDate(d),
+  providerValue: (p: any) => statisticsController.providerValue(p),
+  formatCurrency: (val: any) => statisticsController.formatCurrency(val),
+  formatPercent: (val: any) => statisticsController.formatPercent(val),
+};
 
-// life
-onMounted(() => {
-  void loadMonthData();
-});
-// end life
-
-// vars
-const { snapshots, modalOpen, setSnapshots } = usePeriodView(false);
-// month navigation state: offset (number of months from current month)
-const monthOffset = ref<number>(0);
+// Shared snapshots & modal state
+const { snapshots, modalOpen, setSnapshots } = {
+  snapshots: statisticsController.getSnapshots(),
+  modalOpen: statisticsController.getModalOpen(),
+  setSnapshots: (val: any) => statisticsController.setSnapshots(val),
+};
 
 // selected date for the popover datetime (YYYY-MM)
 const selectedDate = ref<string>(format(new Date(), 'yyyy-MM'));
@@ -1088,20 +1092,19 @@ function resetToToday() {
 
 // PDF report ref + download handler
 const pdfReport = ref<HTMLElement | null>(null);
-const { downloadPdf: generatePdf, isGeneratingPdf } = usePdfReport();
+const isGeneratingPdf = computed(() => statisticsController.getIsGeneratingPdf());
 
 /**
- * Generate a PDF from the pdfReport element using html2canvas + jsPDF.
- * Delegates to the usePdfReport composable.
+ * Generate a PDF from the pdfReport element using StatisticsController.
  */
 async function downloadPdf() {
   if (!pdfReport.value) {
     console.warn('[MonthPerformance] pdfReport element not available');
     return;
   }
-  if (isGeneratingPdf.value) return; // avoid concurrent runs
+  if (isGeneratingPdf.value) return;
 
-  await generatePdf({
+  await statisticsController.downloadPdf({
     containerRef: pdfReport,
     buttonSelector: '#dowButMonth',
     filenameFactory: () =>

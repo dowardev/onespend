@@ -122,7 +122,6 @@ import { addOutline, trashOutline } from 'ionicons/icons';
 // controllers
 import systemController from '@/controllers/systemConfigController';
 import suppliersController from '@/controllers/suppliersController';
-import { useSuppliersStore } from '@/stores/suppliersStore';
 
 // components
 import AddSupliersComponent from '../suppliers/modals/AddSupliersComponent.vue';
@@ -252,8 +251,7 @@ async function onModalSaved(payload: any) {
   if (!payload) return;
   
   if (payload.id != null) {
-    const store = useSuppliersStore();
-    const existingSupplier = store.suppliers.find((s: any) => String(s.id) === String(payload.id));
+    const existingSupplier = suppliers.value.find((s: any) => String(s.id) === String(payload.id));
     if (existingSupplier && existingSupplier.sync_id) {
       payload.sync_id = existingSupplier.sync_id;
     }

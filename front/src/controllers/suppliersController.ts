@@ -284,8 +284,15 @@ class SuppliersController {
   }
 
   getError() {
+    return null;
+  }
+
+  subscribeToChanges(callback?: (suppliers: any[]) => void) {
     const store = this.getStore();
-    return store.error;
+    if (callback) {
+      return store.subscribeToChanges(callback);
+    }
+    return () => {};
   }
 }
 

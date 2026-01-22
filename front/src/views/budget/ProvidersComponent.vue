@@ -7,14 +7,14 @@
             <ion-label>Proveedores</ion-label>
 
             <ion-button
-              :disabled="budgetStore.isDayClosed"
+              :disabled="isDayClosed"
               @click="addEmptyProvider"
             >
               <ion-icon :icon="addOutline"></ion-icon>
             </ion-button>
 
             <ion-button
-              :disabled="budgetStore.isDayClosed"
+              :disabled="isDayClosed"
               @click="openTemplatesModal"
             >
               <ion-icon :icon="documentOutline"></ion-icon>
@@ -28,7 +28,7 @@
                 :key="p.id"
                 :provider="p"
                 :has-products="false"
-                :is-closed="budgetStore.isDayClosed"
+                :is-closed="isDayClosed"
                 :is-disabled="providerIdsWithEntries.has(p.id)"
                 @update-provider="handleUpdateProvider"
                 @confirm-remove-proveedor="confirmRemoveProveedor"
@@ -166,32 +166,38 @@ import EditProviderModal from './components/EditProviderModal.vue';
 import TemplatesModal from './components/TemplatesModal.vue';
 import NotesModal from './components/NotesModal.vue';
 import budgetController from '@/controllers/budgetController';
+import { BudgetController } from '@/controllers/budgetController';
 import TemplateController from '@/controllers/TempalteController';
 import { buildPayloadFromTemplate } from '@/controllers/templateService';
 import suppliersController from '@/controllers/suppliersController';
+import { SuppliersController } from '@/controllers/suppliersController';
 import accountsController from '@/controllers/accountsController';
-import { useBudgetStore } from '@/stores/budgetStore';
-import { useSuppliersStore } from '@/stores/suppliersStore';
-import { syncService } from '@/services/syncService';
+import { AccountsController } from '@/controllers/accountsController';
+import { SyncController } from '@/controllers/syncController';
 
-const budgetStore = useBudgetStore();
+const budgetCtrl = new BudgetController();
+const suppliersCtrl = new SuppliersController();
+const accountsCtrl = new AccountsController();
+const syncCtrl = new SyncController();
 
 const showAddProviderModal = ref(false);
-const allSuppliers = computed(() => suppliersController.getSuppliers());
+const allSuppliers = computed(() => suppliersCtrl.getSuppliers());
 const allAccounts = ref<any[]>([]);
 
 // Computed for reactive providers list
+const isDayClosed = computed(() => budgetCtrl.getIsDayClosed());
+const frozenSnapshot = computed(() => budgetCtrl.getFrozenSnapshot());
 const providers = computed(() => {
-  if (budgetStore.isDayClosed && budgetStore.frozenSnapshot) {
-    return budgetStore.frozenSnapshot.providers;
+  if (isDayClosed.value && frozenSnapshot.value) {
+    return frozenSnapshot.value.providers;
   }
-  return budgetStore.providers;
+  return budgetCtrl.getProviders();
 });
 const providerIdsWithEntries = computed(() => {
-  if (budgetStore.isDayClosed && budgetStore.frozenSnapshot) {
-    return new Set(budgetStore.frozenSnapshot.providers.map(p => p.id));
+  if (isDayClosed.value && frozenSnapshot.value) {
+    return new Set(frozenSnapshot.value.providers.map(p => p.id));
   }
-  return budgetStore.providerIdsWithEntries;
+  return budgetCtrl.getProviderIdsWithEntries();
 });
 const editingProvider = ref<any>(null);
 const showTemplatesModal = ref(false);
@@ -206,14 +212,13 @@ const pendingProviders = ref<any[]>([]);
 let unsubscribeFromSuppliers: (() => void) | null = null;
 
 async function loadSuppliers() {
-  const list = await suppliersController.listSuppliers();
-  const budgetStore = useBudgetStore();
-  budgetStore.syncProvidersWithSuppliers((list || []) as any);
+  const list = await suppliersCtrl.listSuppliers();
+  budgetCtrl.syncProvidersWithSuppliers((list || []) as any);
 }
 
 async function forceSyncSuppliers() {
   console.log('forceSyncSuppliers - Starting sync...');
-  const result = await syncService.processQueue();
+  const result = await syncCtrl.processQueue();
   if (result) {
     console.log('forceSyncSuppliers - Sync completed:', result);
   }
@@ -221,7 +226,7 @@ async function forceSyncSuppliers() {
 }
 
 async function loadAccounts() {
-  const list = accountsController.getAccounts();
+  const list = accountsCtrl.getAccounts();
   allAccounts.value = list || [];
 }
 
@@ -229,9 +234,8 @@ onMounted(async () => {
   await loadSuppliers();
   loadAccounts();
 
-  const suppliersStore = useSuppliersStore();
-  unsubscribeFromSuppliers = suppliersStore.subscribeToChanges(suppliers => {
-    if (budgetStore.isDayClosed) {
+  unsubscribeFromSuppliers = suppliersCtrl.subscribeToChanges((suppliers: any[]) => {
+    if (isDayClosed.value) {
       console.log('[Suppliers Change] Day is closed, ignoring supplier update');
       return;
     }
@@ -239,8 +243,7 @@ onMounted(async () => {
       '[Suppliers Change] Received update, suppliers count:',
       suppliers.length
     );
-    const budgetStore = useBudgetStore();
-    budgetStore.syncProvidersWithSuppliers(suppliers as any);
+    budgetCtrl.syncProvidersWithSuppliers(suppliers as any);
   });
 });
 
@@ -356,7 +359,7 @@ const deleteConfirm = reactive({
 });
 
 function addEmptyProvider() {
-  if (budgetStore.isDayClosed) return;
+  if (isDayClosed.value) return;
   openAddProviderModal();
 }
 
