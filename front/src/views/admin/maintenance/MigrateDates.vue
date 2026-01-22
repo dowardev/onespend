@@ -170,6 +170,7 @@
 </template>
 
 <script setup lang="ts">
+// Imports
 import { ref, computed, onMounted, reactive } from 'vue';
 import {
   IonPage,
@@ -189,6 +190,8 @@ import { useRoute } from 'vue-router';
 import dixieController from '@/controllers/dixie';
 import { arrowBackOutline } from 'ionicons/icons';
 
+// Components
+// Vars
 const steps = [
   {
     title: 'Exportar copia de seguridad',
@@ -216,25 +219,17 @@ const error = ref<string | null>(null);
 const dryRunResult = ref<any[] | null>(null);
 const applyResult = ref<any[] | null>(null);
 
-const changedCount = computed(() => {
-  if (!dryRunResult.value) return 0;
-  return dryRunResult.value.filter(r => r.changed).length;
-});
-const applyChangedCount = computed(() => {
-  if (!applyResult.value) return 0;
-  return applyResult.value.filter(r => r.changed).length;
-});
-const sampleResults = computed(() => {
-  if (!dryRunResult.value) return [];
-  return dryRunResult.value.filter(r => r.changed).slice(0, 10);
+const successToast = reactive({ open: false, message: '' });
+const backupConfirmed = ref(false);
+const confirmAlert = reactive({
+  open: false,
+  message:
+    '¿Seguro que quieres aplicar la migración? Asegúrate de haber exportado una copia de seguridad.',
 });
 
-const hasChanges = computed(() => {
-  return !!(
-    dryRunResult.value && dryRunResult.value.some((r: any) => r.changed)
-  );
-});
+const isDev = !!(import.meta as any).env?.DEV;
 
+// Functions
 function markerLabel(i: number) {
   if (stepStatus.value[i] === 'done') return '✓';
   return String(i + 1);
@@ -293,32 +288,6 @@ async function runDryRun() {
     progressText.value = '';
   }
 }
-
-onMounted(() => {
-  const route = useRoute();
-  try {
-    if (route && route.query && (route.query as any).autoDryRun) {
-      // auto trigger dry run if requested via query
-      void runDryRun();
-    }
-  } catch (e) {
-    // ignore
-  }
-});
-
-const successToast = reactive({ open: false, message: '' });
-const backupConfirmed = ref(false);
-const confirmAlert = reactive({
-  open: false,
-  message:
-    '¿Seguro que quieres aplicar la migración? Asegúrate de haber exportado una copia de seguridad.',
-});
-
-// dev-only test insert button
-// Use Vite's DEV flag to show the button during development
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
-const isDev = !!(import.meta as any).env?.DEV;
 
 async function insertTestEntries() {
   try {
@@ -414,14 +383,12 @@ const confirmButtons = [
 ];
 
 function onConfirmAlertDidDismiss(ev: any) {
-  // kept for backwards compatibility
   try {
     const role = ev && ev.detail && ev.detail.role ? ev.detail.role : null;
     if (role === 'confirm') {
       void doApplyMigration();
     }
   } catch (_e) {
-    // ignore
   } finally {
     confirmAlert.open = false;
   }
@@ -441,7 +408,6 @@ function onAlertDidDismiss(ev: any) {
       console.log('ion-alert did-dismiss, role=', role);
     }
     if (role === 'confirm') {
-      // If for some reason the button handler didn't run, ensure we still apply
       if (
         (import.meta as unknown as { env?: Record<string, string | undefined> })
           .env?.DEV
@@ -458,7 +424,6 @@ function onAlertDidDismiss(ev: any) {
 }
 
 async function applyMigration() {
-  // open our ion-alert controlled by confirmAlert state
   confirmAlert.open = true;
 }
 
@@ -475,7 +440,6 @@ async function doApplyMigration() {
     stepStatus.value[3] = 'done';
     stepIndex.value = 3;
 
-    // Show success toast
     try {
       successToast.message = `Migración completada: ${applyChangedCount.value} entradas actualizadas.`;
       successToast.open = true;
@@ -509,6 +473,59 @@ function resetAll() {
   error.value = null;
 }
 
+async function primaryAction() {
+  switch (stepIndex.value) {
+    case 0:
+      return exportBackups();
+    case 1:
+      return runDryRun();
+    case 2:
+      if (!hasChanges.value) {
+        alert(
+          'No se encontraron cambios para aplicar. No es necesario continuar.'
+        );
+        return;
+      }
+      stepIndex.value = 3;
+      break;
+    case 3:
+      return applyMigration();
+  }
+}
+
+// Life cycle
+onMounted(() => {
+  const route = useRoute();
+  try {
+    if (route && route.query && (route.query as any).autoDryRun) {
+      void runDryRun();
+    }
+  } catch (e) {
+  }
+});
+
+// Computed
+const changedCount = computed(() => {
+  if (!dryRunResult.value) return 0;
+  return dryRunResult.value.filter(r => r.changed).length;
+});
+
+const applyChangedCount = computed(() => {
+  if (!applyResult.value) return 0;
+  return applyResult.value.filter(r => r.changed).length;
+});
+
+const sampleResults = computed(() => {
+  if (!dryRunResult.value) return [];
+  return dryRunResult.value.filter(r => r.changed).slice(0, 10);
+});
+
+const hasChanges = computed(() => {
+  return !!(
+    dryRunResult.value && dryRunResult.value.some((r: any) => r.changed)
+  );
+});
+
 const primaryLabel = computed(() => {
   switch (stepIndex.value) {
     case 0:
@@ -524,26 +541,7 @@ const primaryLabel = computed(() => {
   }
 });
 
-async function primaryAction() {
-  switch (stepIndex.value) {
-    case 0:
-      return exportBackups();
-    case 1:
-      return runDryRun();
-    case 2:
-      // move to apply step only if user wants to proceed and there are changes
-      if (!hasChanges.value) {
-        alert(
-          'No se encontraron cambios para aplicar. No es necesario continuar.'
-        );
-        return;
-      }
-      stepIndex.value = 3;
-      break;
-    case 3:
-      return applyMigration();
-  }
-}
+// Watch
 </script>
 
 <style scoped>

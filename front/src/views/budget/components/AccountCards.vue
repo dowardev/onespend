@@ -70,6 +70,7 @@
 </template>
 
 <script setup lang="ts">
+// Imports
 import { ref } from 'vue';
 import {
   IonList,
@@ -81,12 +82,15 @@ import {
   IonIcon,
   IonModal,
 } from '@ionic/vue';
-import AccountBarChart from './AccountBarChart.vue';
 import { addOutline } from 'ionicons/icons';
 import accountsController from '@/controllers/accountsController';
 import budgetController from '@/controllers/budgetController';
+
+// Components
+import AccountBarChart from './AccountBarChart.vue';
 import AddAccountComponent from '@/views/suppliers/accounts/modals/AddAccountComponent.vue';
 
+// Vars
 interface AccountWithBalance {
   id: string | number;
   name: string;
@@ -108,6 +112,7 @@ const loadAll = accountsController.loadAll.bind(accountsController);
 const showModal = ref(false);
 const modalAccount = ref<any | null>(null);
 
+// Functions
 function formatCurrency(v: number) {
   return new Intl.NumberFormat('es-MX', {
     style: 'currency',
@@ -151,6 +156,12 @@ async function onDeleteAccount(id: string | number) {
   cancelModal();
   await loadAll();
 }
+
+// Life cycle
+
+// Computed
+
+// Watch
 </script>
 
 <style scoped>

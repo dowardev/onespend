@@ -210,6 +210,7 @@
 </template>
 
 <script setup lang="ts">
+// Imports
 import {
   IonModal,
   IonHeader,
@@ -241,6 +242,9 @@ import {
 } from 'ionicons/icons';
 import { ref, computed, watch, toRefs } from 'vue';
 
+// Components
+
+// Vars
 interface ProviderItem {
   amount: number;
   accountId: any;
@@ -268,19 +272,14 @@ interface ProviderProduct {
 
 interface Props {
   isOpen: boolean;
-  // For editing existing provider/entry
   provider?: any;
-  // For entry mode (editing an entry from the registry)
   entryData?: {
     name: string;
     entryId: string | number | null;
     items: ProviderItem[];
   };
-  // List of available suppliers (for search)
   suppliers?: Supplier[];
-  // List of available accounts
   accounts: Account[];
-  // Mode: 'entry' for editing entries, 'provider' for full provider management
   mode?: 'entry' | 'provider';
 }
 
@@ -310,7 +309,6 @@ const emit = defineEmits<{
 const { isOpen, provider, entryData, suppliers, accounts, mode } =
   toRefs(props);
 
-// State
 const searchQuery = ref('');
 const selectedProvider = ref<Supplier | null>(null);
 const selectedSegment = ref('inicio');
@@ -318,88 +316,7 @@ const providerProducts = ref<ProviderProduct[]>([]);
 const productQuantities = ref<Record<string, number>>({});
 const items = ref<ProviderItem[]>([{ amount: 0, accountId: null }]);
 
-// Computed
-const isEntryMode = computed(() => mode.value === 'entry');
-
-const modalTitle = computed(() => {
-  if (isEntryMode.value) {
-    return 'Editar Proveedor';
-  }
-  return provider.value ? 'Editar Proveedor' : 'Agregar Proveedor';
-});
-
-const canDelete = computed(() => {
-  if (isEntryMode.value) {
-    return entryData.value?.entryId != null;
-  }
-  return provider.value != null;
-});
-
-const providerName = computed(() => {
-  if (isEntryMode.value) {
-    return entryData.value?.name || '';
-  }
-  return selectedProvider.value?.name || '';
-});
-
-const hasProducts = computed(() => {
-  return (
-    selectedProvider.value?.products &&
-    selectedProvider.value.products.length > 0
-  );
-});
-
-const filteredProviders = computed(() => {
-  if (!searchQuery.value) return suppliers.value;
-  return suppliers.value.filter(p =>
-    p.name.toLowerCase().includes(searchQuery.value.toLowerCase())
-  );
-});
-
-const productsTotal = computed(() => {
-  if (!selectedProvider.value?.products) return 0;
-  return selectedProvider.value.products.reduce((sum: number, product: any) => {
-    const providerProduct = providerProducts.value.find(p => p.supplierProductId === product.id);
-    const qty = providerProduct?.quantity || 0;
-    return sum + qty * (product.price || 0);
-  }, 0);
-});
-
-const hasProductsWithQuantity = computed(() => {
-  if (!selectedProvider.value?.products) return false;
-  return providerProducts.value.some(p => (p.quantity || 0) > 0);
-});
-
-const productsCoverage = computed(() => {
-  const totalEntered = items.value.reduce(
-    (sum, item) => sum + (Number(item.amount) || 0),
-    0
-  );
-  return {
-    falta: productsTotal.value - totalEntered,
-    total: productsTotal.value,
-    entered: totalEntered,
-  };
-});
-
-const canAddMoreItems = computed(() => {
-  return items.value.length < accounts.value.length;
-});
-
-const isItemsValid = computed(() => {
-  return items.value.every(
-    item => Number(item.amount) > 0 && item.accountId != null
-  );
-});
-
-const isFormValid = computed(() => {
-  if (isEntryMode.value) {
-    return isItemsValid.value;
-  }
-  return selectedProvider.value != null && isItemsValid.value;
-});
-
-// Methods
+// Functions
 const getDefaultAccountId = () => {
   if (accounts.value.length === 0) return null;
   return isEntryMode.value ? accounts.value[0].id : accounts.value[0];
@@ -568,7 +485,90 @@ function handleDelete() {
   }
 }
 
-// Watchers - reset state when modal opens/closes or data changes
+// Life cycle
+
+// Computed
+const isEntryMode = computed(() => mode.value === 'entry');
+
+const modalTitle = computed(() => {
+  if (isEntryMode.value) {
+    return 'Editar Proveedor';
+  }
+  return provider.value ? 'Editar Proveedor' : 'Agregar Proveedor';
+});
+
+const canDelete = computed(() => {
+  if (isEntryMode.value) {
+    return entryData.value?.entryId != null;
+  }
+  return provider.value != null;
+});
+
+const providerName = computed(() => {
+  if (isEntryMode.value) {
+    return entryData.value?.name || '';
+  }
+  return selectedProvider.value?.name || '';
+});
+
+const hasProducts = computed(() => {
+  return (
+    selectedProvider.value?.products &&
+    selectedProvider.value.products.length > 0
+  );
+});
+
+const filteredProviders = computed(() => {
+  if (!searchQuery.value) return suppliers.value;
+  return suppliers.value.filter(p =>
+    p.name.toLowerCase().includes(searchQuery.value.toLowerCase())
+  );
+});
+
+const productsTotal = computed(() => {
+  if (!selectedProvider.value?.products) return 0;
+  return selectedProvider.value.products.reduce((sum: number, product: any) => {
+    const providerProduct = providerProducts.value.find(p => p.supplierProductId === product.id);
+    const qty = providerProduct?.quantity || 0;
+    return sum + qty * (product.price || 0);
+  }, 0);
+});
+
+const hasProductsWithQuantity = computed(() => {
+  if (!selectedProvider.value?.products) return false;
+  return providerProducts.value.some(p => (p.quantity || 0) > 0);
+});
+
+const productsCoverage = computed(() => {
+  const totalEntered = items.value.reduce(
+    (sum, item) => sum + (Number(item.amount) || 0),
+    0
+  );
+  return {
+    falta: productsTotal.value - totalEntered,
+    total: productsTotal.value,
+    entered: totalEntered,
+  };
+});
+
+const canAddMoreItems = computed(() => {
+  return items.value.length < accounts.value.length;
+});
+
+const isItemsValid = computed(() => {
+  return items.value.every(
+    item => Number(item.amount) > 0 && item.accountId != null
+  );
+});
+
+const isFormValid = computed(() => {
+  if (isEntryMode.value) {
+    return isItemsValid.value;
+  }
+  return selectedProvider.value != null && isItemsValid.value;
+});
+
+// Watch
 watch(isOpen, async newVal => {
   if (newVal) {
     // Modal opened - initialize state

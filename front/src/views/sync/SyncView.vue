@@ -138,6 +138,7 @@
 </template>
 
 <script setup lang="ts">
+// Imports
 import {
   IonPage,
   IonHeader,
@@ -176,29 +177,13 @@ import {
 } from 'ionicons/icons';
 import { SyncController } from '@/controllers/syncController';
 
+// Components
+// Vars
 const syncController = new SyncController();
-
-const isOnline = computed(() => syncController.getIsOnline());
-const isSyncing = computed(() => syncController.getIsSyncing());
-const pendingChanges = computed(() => syncController.getPendingChanges());
-const lastSyncTime = computed(() => syncController.getLastSyncTime());
-const syncError = computed(() => syncController.getSyncError());
-
 const showDebugInfo = ref(false);
 const pendingQueue = ref<any[]>([]);
 
-const pendingByType = computed(() => {
-  const counts: Record<string, number> = {};
-  for (const item of pendingQueue.value) {
-    counts[item.entityType] = (counts[item.entityType] || 0) + 1;
-  }
-  return counts;
-});
-
-onMounted(async () => {
-  await refreshStatus();
-});
-
+// Functions
 async function refreshStatus() {
   pendingQueue.value = syncController.getQueue();
 }
@@ -332,6 +317,28 @@ async function handleRefreshStatus() {
 function handleShowDebug() {
   showDebugInfo.value = !showDebugInfo.value;
 }
+
+// Life cycle
+onMounted(async () => {
+  await refreshStatus();
+});
+
+// Computed
+const isOnline = computed(() => syncController.getIsOnline());
+const isSyncing = computed(() => syncController.getIsSyncing());
+const pendingChanges = computed(() => syncController.getPendingChanges());
+const lastSyncTime = computed(() => syncController.getLastSyncTime());
+const syncError = computed(() => syncController.getSyncError());
+
+const pendingByType = computed(() => {
+  const counts: Record<string, number> = {};
+  for (const item of pendingQueue.value) {
+    counts[item.entityType] = (counts[item.entityType] || 0) + 1;
+  }
+  return counts;
+});
+
+// Watch
 </script>
 
 <style scoped>

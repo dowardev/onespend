@@ -74,6 +74,7 @@
 </template>
 
 <script setup lang="ts">
+// Imports
 import {
   IonGrid,
   IonRow,
@@ -90,18 +91,28 @@ import {
 import { ref, toRef } from 'vue';
 import { warningOutline } from 'ionicons/icons';
 
+// Components
+
+// Vars
 const props = defineProps<{ finishDay: any }>();
 const emit = defineEmits(['save']);
 
 const finishDay = toRef(props, 'finishDay');
 const showToast = ref(false);
 
+// Functions
 function handleSave() {
   console.log('[FinishDayForm] handleSave llamado - emitiendo save');
   emit('save');
   console.log('[FinishDayForm] Toast mostrándose');
   showToast.value = true;
 }
+
+// Life cycle
+
+// Computed
+
+// Watch
 </script>
 
 <style scoped>

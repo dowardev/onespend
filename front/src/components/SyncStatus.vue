@@ -14,13 +14,31 @@
 </template>
 
 <script setup lang="ts">
+// Imports
 import { computed } from 'vue';
 import { IonIcon } from '@ionic/vue';
 import { cloudOfflineOutline, syncOutline, checkmarkCircleOutline, timeOutline } from 'ionicons/icons';
 import { SyncController } from '@/controllers/syncController';
 
+// Components
+
+// Vars
 const syncController = new SyncController();
 
+// Functions
+function formatTime(timestamp: number): string {
+  const now = Date.now();
+  const diff = now - timestamp;
+
+  if (diff < 60000) return 'ahora';
+  if (diff < 3600000) return `hace ${Math.floor(diff / 60000)}m`;
+  if (diff < 86400000) return `hace ${Math.floor(diff / 3600000)}h`;
+  return `hace ${Math.floor(diff / 86400000)}d`;
+}
+
+// Life cycle
+
+// Computed
 const isOnline = computed(() => syncController.getIsOnline());
 const isSyncing = computed(() => syncController.getIsSyncing());
 const pendingChanges = computed(() => syncController.getPendingChanges());
@@ -33,15 +51,7 @@ const syncIcon = computed(() => {
   return checkmarkCircleOutline;
 });
 
-function formatTime(timestamp: number): string {
-  const now = Date.now();
-  const diff = now - timestamp;
-
-  if (diff < 60000) return 'ahora';
-  if (diff < 3600000) return `hace ${Math.floor(diff / 60000)}m`;
-  if (diff < 86400000) return `hace ${Math.floor(diff / 3600000)}h`;
-  return `hace ${Math.floor(diff / 86400000)}d`;
-}
+// Watch
 </script>
 
 <style scoped>

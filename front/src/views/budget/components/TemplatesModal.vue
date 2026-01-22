@@ -46,6 +46,7 @@
 </template>
 
 <script setup lang="ts">
+// Imports
 import {
   IonModal,
   IonHeader,
@@ -62,10 +63,21 @@ import {
 } from '@ionic/vue';
 import { closeOutline } from 'ionicons/icons';
 
+// Components
+
+// Vars
 defineProps<{
   isOpen: boolean;
   templatesList: Array<{ id: string | number; name: string; description: string }>;
 }>();
 
 defineEmits(['dismiss', 'select-template']);
+
+// Functions
+
+// Life cycle
+
+// Computed
+
+// Watch
 </script>

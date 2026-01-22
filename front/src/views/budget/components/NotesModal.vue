@@ -35,6 +35,7 @@
 </template>
 
 <script setup lang="ts">
+// Imports
 import {
   IonModal,
   IonHeader,
@@ -50,6 +51,9 @@ import {
 } from '@ionic/vue';
 import { closeOutline } from 'ionicons/icons';
 
+// Components
+
+// Vars
 const props = defineProps<{
   isOpen: boolean;
   providerName: string;
@@ -58,7 +62,14 @@ const props = defineProps<{
 
 const emit = defineEmits(['dismiss', 'save', 'update-notes']);
 
+// Functions
 function onNotesInput(e: CustomEvent) {
   emit('update-notes', e.detail.value);
 }
+
+// Life cycle
+
+// Computed
+
+// Watch
 </script>

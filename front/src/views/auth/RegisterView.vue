@@ -125,6 +125,7 @@
 </template>
 
 <script setup lang="ts">
+// Imports
 import {
   IonContent,
   IonHeader,
@@ -147,6 +148,9 @@ import useVuelidate from '@vuelidate/core';
 import { faker } from '@faker-js/faker';
 import authController from '@/controllers/authController';
 
+// Components
+
+// Vars
 const router = useRouter();
 
 const form = reactive({
@@ -160,6 +164,7 @@ const form = reactive({
 const error = ref<string | null>(null);
 const isLoading = ref(false);
 
+// Computed
 const formRules = computed(() => ({
   name: {
     required: helpers.withMessage('El nombre es obligatorio', required),
@@ -189,6 +194,7 @@ const isFormValid = computed(() => {
 
 const isDev = computed(() => import.meta.env.DEV);
 
+// Functions
 function generateRandomData() {
   const firstName = faker.person.firstName();
   const lastName = faker.person.lastName();

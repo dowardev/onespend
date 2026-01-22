@@ -180,6 +180,7 @@
 </template>
 
 <script setup lang="ts">
+// Imports
 import {
   IonGrid,
   IonRow,
@@ -224,15 +225,14 @@ import { BudgetController } from '@/controllers/budgetController';
 import accountsController from '@/controllers/accountsController';
 import suppliersController from '@/controllers/suppliersController';
 
-const budgetCtrl = new BudgetController();
+// Components
 
-const isDayClosed = computed(() => budgetCtrl.getIsDayClosed());
-const frozenSnapshot = computed(() => budgetCtrl.getFrozenSnapshot());
+// Vars
+const budgetCtrl = new BudgetController();
 
 const addEntrySegment = ref('entry');
 const showDeleteAlert = ref(false);
 
-// Quick account creation
 const showQuickAccountAlert = ref(false);
 const quickAccountTargetIndex = ref<number | null>(null);
 
@@ -270,32 +270,10 @@ const quickAccountButtons = [
   },
 ];
 
-function openQuickAccountAlert(itemIndex: number) {
-  quickAccountTargetIndex.value = itemIndex;
-  showQuickAccountAlert.value = true;
-}
-
-async function createQuickAccount(name: string, initialBalance: number) {
-  const newAccount = await accountsController.addAccount({
-    name,
-    initialBalance,
-  });
-
-  if (newAccount && quickAccountTargetIndex.value !== null) {
-    const idx = quickAccountTargetIndex.value;
-    if (entryItems.value[idx]) {
-      entryItems.value[idx].accountId = newAccount.id;
-    }
-  }
-
-  quickAccountTargetIndex.value = null;
-}
-
 const editProviderModalOpen = ref(false);
 const editProviderData = ref<any>(null);
 const allSuppliers = computed(() => suppliersController.getSuppliers());
 
-// Track the entry ID being edited (for provider entries)
 const editingProviderEntryId = ref<string | number | null>(null);
 
 const editEntryModalOpen = ref(false);
@@ -305,17 +283,6 @@ const editEntryModalData = ref({
   name: '',
 });
 
-const accountsList = computed(() => {
-  const list = accountsController.getAccounts();
-  if (!list || !Array.isArray(list)) return [] as any[];
-  return list.filter((acc: any) => acc != null && acc.id != null) as any[];
-});
-
-const getDefaultAccountId = () => {
-  const accounts = accountsList.value;
-  return accounts.length > 0 ? accounts[0].id : null;
-};
-
 const entryItems = ref<Array<{ amount: number; accountId: any }>>([
   { amount: 0, accountId: null },
 ]);
@@ -324,6 +291,18 @@ const entryFormState = reactive({
   name: '',
   entryType: 'ingreso',
   items: [{ amount: 0, accountId: null }],
+});
+
+const editingProviderId = ref<string | number | null>(null);
+
+// Computed
+const isDayClosed = computed(() => budgetCtrl.getIsDayClosed());
+const frozenSnapshot = computed(() => budgetCtrl.getFrozenSnapshot());
+
+const accountsList = computed(() => {
+  const list = accountsController.getAccounts();
+  if (!list || !Array.isArray(list)) return [] as any[];
+  return list.filter((acc: any) => acc != null && acc.id != null) as any[];
 });
 
 const isItemsValid = computed(() => {
@@ -340,31 +319,6 @@ const isFormValid = computed(() => {
     entryItems.value.every(item => Number(item.amount) > 0 && item.accountId != null)
   );
 });
-
-watch(
-  () => entryItems.value,
-  newItems => {
-    entryFormState.items = newItems.map(item => ({
-      amount: Number(item.amount) || 0,
-      accountId: item.accountId,
-    }));
-  },
-  { deep: true }
-);
-
-watch(
-  () => editEntryModalData.value.name,
-  newName => {
-    entryFormState.name = newName;
-  }
-);
-
-watch(
-  () => editEntryModalData.value.entryType,
-  newType => {
-    entryFormState.entryType = newType;
-  }
-);
 
 const availableAccountsForItem = (currentIndex: number) => {
   const usedAccountIds = entryItems.value
@@ -387,7 +341,7 @@ function calculateAccountBalance(acc: any, accountId: string | number) {
   const entries = isDayClosed.value && frozenSnapshot.value
     ? frozenSnapshot.value.entries
     : budgetController.getEntries();
-    
+
   const entriesForAccount = entries.filter((e: any) => {
     if (String(e.accountId) === String(accountId)) return true;
     if (e.groups && Array.isArray(e.groups)) {
@@ -432,7 +386,6 @@ const accountsWithBalance = computed(() => {
   return [...withTransactions, ...withoutTransactions];
 });
 
-// Totales para la card de resultado
 const totalIngresos = computed(() => {
   const entries = isDayClosed.value && frozenSnapshot.value
     ? frozenSnapshot.value.entries
@@ -493,6 +446,64 @@ const renderedEntries = computed(() => {
   return entries.map((item: any) => ({ type: 'item', item }));
 });
 
+// Watch
+watch(
+  () => entryItems.value,
+  newItems => {
+    entryFormState.items = newItems.map(item => ({
+      amount: Number(item.amount) || 0,
+      accountId: item.accountId,
+    }));
+  },
+  { deep: true }
+);
+
+watch(
+  () => editEntryModalData.value.name,
+  newName => {
+    entryFormState.name = newName;
+  }
+);
+
+watch(
+  () => editEntryModalData.value.entryType,
+  newType => {
+    entryFormState.entryType = newType;
+  }
+);
+
+// Life cycle
+onMounted(() => {
+  accountsController.loadAll();
+});
+
+// Functions
+function getDefaultAccountId() {
+  const accounts = accountsList.value;
+  return accounts.length > 0 ? accounts[0].id : null;
+}
+
+function openQuickAccountAlert(itemIndex: number) {
+  quickAccountTargetIndex.value = itemIndex;
+  showQuickAccountAlert.value = true;
+}
+
+async function createQuickAccount(name: string, initialBalance: number) {
+  const newAccount = await accountsController.addAccount({
+    name,
+    initialBalance,
+  });
+
+  if (newAccount && quickAccountTargetIndex.value !== null) {
+    const idx = quickAccountTargetIndex.value;
+    if (entryItems.value[idx]) {
+      entryItems.value[idx].accountId = newAccount.id;
+    }
+  }
+
+  quickAccountTargetIndex.value = null;
+}
+
 function formatCurrencyLocal(params: { v: number }) {
   const { v } = params || { v: 0 };
   return new Intl.NumberFormat('es-MX', {
@@ -531,7 +542,6 @@ function formatProviderAmount(provider: any) {
 
 function selectProvider(provider: any) {
   if (!provider.accountId) {
-    // El proveedor no tiene cuenta asignada, no se puede crear la entrada
     return;
   }
   budgetController.addProviderEgresos(provider);
@@ -587,7 +597,7 @@ function getAccountRemaining(
   const entries = isDayClosed.value && frozenSnapshot.value
     ? frozenSnapshot.value.entries
     : budgetController.getEntries();
-    
+
   const entriesForAccount = entries.filter((e: any) => {
     if (String(e.accountId) === String(accountId)) return true;
     if (e.groups && Array.isArray(e.groups)) {
@@ -638,15 +648,11 @@ function handleEntryClick(item: any) {
 }
 
 async function openEditProviderModal(item: any) {
-  // Store the entry ID for later use when saving
   editingProviderEntryId.value = item.id;
 
-  // Load suppliers to get full product data
   await suppliersController.listSuppliers();
 
-  // Find full supplier data
   const providerName = item._providerName || item.name || '';
-  // _supplierId ahora contiene el sync_id del supplier (ID de MySQL)
   const supplierSyncId = item._supplierId || item._fromProviderGroupId;
 
   let fullSupplier: any = null;
@@ -665,9 +671,8 @@ async function openEditProviderModal(item: any) {
     );
   }
 
-  // Build provider object compatible with the modal
   editProviderData.value = {
-    id: item.id, // This is the entry ID
+    id: item.id,
     name: providerName,
     estimated: Number(item.amount) || 0,
     accountId: item.accountId,
@@ -837,10 +842,6 @@ function confirmDelete() {
   entryFormState.name = '';
   entryFormState.entryType = 'ingreso';
 }
-
-onMounted(() => {
-  accountsController.loadAll();
-});
 </script>
 
 <style scoped>

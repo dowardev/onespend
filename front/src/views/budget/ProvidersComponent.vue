@@ -137,6 +137,7 @@
 </template>
 
 <script setup lang="ts">
+// Imports
 import {
   IonGrid,
   IonRow,
@@ -175,6 +176,9 @@ import accountsController from '@/controllers/accountsController';
 import { AccountsController } from '@/controllers/accountsController';
 import { SyncController } from '@/controllers/syncController';
 
+// Components
+
+// Vars
 const budgetCtrl = new BudgetController();
 const suppliersCtrl = new SuppliersController();
 const accountsCtrl = new AccountsController();
@@ -183,8 +187,25 @@ const syncCtrl = new SyncController();
 const showAddProviderModal = ref(false);
 const allSuppliers = computed(() => suppliersCtrl.getSuppliers());
 const allAccounts = ref<any[]>([]);
+const editingProvider = ref<any>(null);
+const showTemplatesModal = ref(false);
+const showConflictModal = ref(false);
+const showNotesModal = ref(false);
+const notesProvider = ref<any>(null);
+const notesContent = ref('');
+const conflictMessage = ref('');
+const templatesList = ref<any[]>([]);
+const pendingTemplate = ref<any>(null);
+const pendingProviders = ref<any[]>([]);
+let unsubscribeFromSuppliers: (() => void) | null = null;
 
-// Computed for reactive providers list
+const deleteConfirm = reactive({
+  open: false,
+  providerId: null as string | number | null,
+  providerName: '' as string,
+});
+
+// Computed
 const isDayClosed = computed(() => budgetCtrl.getIsDayClosed());
 const frozenSnapshot = computed(() => budgetCtrl.getFrozenSnapshot());
 const providers = computed(() => {
@@ -199,37 +220,8 @@ const providerIdsWithEntries = computed(() => {
   }
   return budgetCtrl.getProviderIdsWithEntries();
 });
-const editingProvider = ref<any>(null);
-const showTemplatesModal = ref(false);
-const showConflictModal = ref(false);
-const showNotesModal = ref(false);
-const notesProvider = ref<any>(null);
-const notesContent = ref('');
-const conflictMessage = ref('');
-const templatesList = ref<any[]>([]);
-const pendingTemplate = ref<any>(null);
-const pendingProviders = ref<any[]>([]);
-let unsubscribeFromSuppliers: (() => void) | null = null;
 
-async function loadSuppliers() {
-  const list = await suppliersCtrl.listSuppliers();
-  budgetCtrl.syncProvidersWithSuppliers((list || []) as any);
-}
-
-async function forceSyncSuppliers() {
-  console.log('forceSyncSuppliers - Starting sync...');
-  const result = await syncCtrl.processQueue();
-  if (result) {
-    console.log('forceSyncSuppliers - Sync completed:', result);
-  }
-  await loadSuppliers();
-}
-
-async function loadAccounts() {
-  const list = accountsCtrl.getAccounts();
-  allAccounts.value = list || [];
-}
-
+// Life cycle
 onMounted(async () => {
   await loadSuppliers();
   loadAccounts();
@@ -258,6 +250,26 @@ onIonViewWillEnter(async () => {
   await loadSuppliers();
 });
 
+// Functions
+async function loadSuppliers() {
+  const list = await suppliersCtrl.listSuppliers();
+  budgetCtrl.syncProvidersWithSuppliers((list || []) as any);
+}
+
+async function forceSyncSuppliers() {
+  console.log('forceSyncSuppliers - Starting sync...');
+  const result = await syncCtrl.processQueue();
+  if (result) {
+    console.log('forceSyncSuppliers - Sync completed:', result);
+  }
+  await loadSuppliers();
+}
+
+async function loadAccounts() {
+  const list = accountsCtrl.getAccounts();
+  allAccounts.value = list || [];
+}
+
 function openAddProviderModal() {
   editingProvider.value = null;
   void forceSyncSuppliers();
@@ -270,9 +282,7 @@ async function openEditProviderModal(payload: { provider: any }) {
 
   await forceSyncSuppliers();
 
-  // Find full supplier data
   let fullSupplier: any = null;
-  // _supplierId ahora contiene el sync_id del supplier (ID de MySQL)
   const supplierSyncId = provider._supplierId || provider._supplierKey;
 
   if (supplierSyncId) {
@@ -317,7 +327,6 @@ function handleProviderSaved(payload: {
   const firstAccountId = firstItem?.accountId;
 
   if (editingProvider.value?.id) {
-    // Updating existing provider
     budgetController.updateProvider(editingProvider.value.id, {
       estimated: payload.totalAmount,
       accountId: firstAccountId || 0,
@@ -326,7 +335,6 @@ function handleProviderSaved(payload: {
       products: payload.products,
     });
   } else {
-    // Adding new provider
     budgetController.addProvider({
       name: payload.providerName || '',
       estimated: payload.totalAmount,
@@ -343,20 +351,12 @@ function handleProviderSaved(payload: {
 }
 
 function handleProviderDeleted(id: string | number) {
-  // Eliminar los egresos vinculados a este proveedor (de budget.inicio)
   budgetController.removeEgresosGroup(id);
-  // Eliminar el proveedor de la lista de proveedores (de budget.providers)
   budgetController.removeProvider(id);
   budgetController.saveData();
   showAddProviderModal.value = false;
   editingProvider.value = null;
 }
-
-const deleteConfirm = reactive({
-  open: false,
-  providerId: null as string | number | null,
-  providerName: '' as string,
-});
 
 function addEmptyProvider() {
   if (isDayClosed.value) return;
@@ -393,9 +393,7 @@ function removeProveedorConfirmed() {
   const pid = deleteConfirm.providerId;
   deleteConfirm.open = false;
   if (pid != null) {
-    // Eliminar los egresos vinculados a este proveedor (de budget.inicio)
     budgetController.removeEgresosGroup(pid);
-    // Eliminar el proveedor de la lista de proveedores (de budget.providers)
     budgetController.removeProvider(pid);
     budgetController.saveData();
   }

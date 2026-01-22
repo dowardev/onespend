@@ -171,6 +171,7 @@
 </template>
 
 <script setup lang="ts">
+// Imports
 import { ref, computed, onMounted, reactive } from 'vue';
 import {
   IonPage,
@@ -192,6 +193,9 @@ import { useRoute } from 'vue-router';
 import dixieController from '@/controllers/dixie';
 import { arrowBackOutline } from 'ionicons/icons';
 
+// Components
+
+// Vars
 const steps = [
   {
     title: 'Exportar copia de seguridad',
@@ -218,15 +222,25 @@ const progressText = ref('');
 const error = ref<string | null>(null);
 const dryRunResult = ref<any[] | null>(null);
 const applyResult = ref<any[] | null>(null);
+const successToast = reactive({ open: false, message: '' });
+const backupConfirmed = ref(false);
+const confirmAlert = reactive({
+  open: false,
+  message:
+    '¿Seguro que quieres aplicar la migración? Asegúrate de haber exportado una copia de seguridad.',
+});
 
+// Computed
 const changedCount = computed(() => {
   if (!dryRunResult.value) return 0;
   return dryRunResult.value.filter(r => r.changed).length;
 });
+
 const applyChangedCount = computed(() => {
   if (!applyResult.value) return 0;
   return applyResult.value.filter(r => r.changed).length;
 });
+
 const sampleResults = computed(() => {
   if (!dryRunResult.value) return [];
   return dryRunResult.value.filter(r => r.changed).slice(0, 10);
@@ -238,6 +252,48 @@ const hasChanges = computed(() => {
   );
 });
 
+const primaryLabel = computed(() => {
+  switch (stepIndex.value) {
+    case 0:
+      return 'Exportar copia de seguridad';
+    case 1:
+      return 'Simular migración (dry-run)';
+    case 2:
+      return 'Siguiente (Revisar)';
+    case 3:
+      return 'Aplicar migración';
+    default:
+      return 'Acción';
+  }
+});
+
+// dev-only test insert button
+const isDev = !!(import.meta as any).env?.DEV;
+
+const confirmButtons = [
+  {
+    text: 'Cancelar',
+    role: 'cancel',
+    handler: () => {
+      confirmAlert.open = false;
+    },
+  },
+  {
+    text: 'Aplicar',
+    role: 'confirm',
+    handler: async () => {
+      try {
+        confirmAlert.open = false;
+        await doApplyMigration();
+      } catch (err) {
+        console.error('confirmButtons handler error', err);
+        error.value = (err && (err as any).message) || String(err);
+      }
+    },
+  },
+];
+
+// Functions
 function markerLabel(i: number) {
   if (stepStatus.value[i] === 'done') return '✓';
   return String(i + 1);
@@ -297,31 +353,6 @@ async function runDryRun() {
   }
 }
 
-onMounted(() => {
-  const route = useRoute();
-  try {
-    if (route && route.query && (route.query as any).autoDryRun) {
-      // auto trigger dry run if requested via query
-      void runDryRun();
-    }
-  } catch (e) {
-    // ignore
-  }
-});
-
-const successToast = reactive({ open: false, message: '' });
-const backupConfirmed = ref(false);
-const confirmAlert = reactive({
-  open: false,
-  message:
-    '¿Seguro que quieres aplicar la migración? Asegúrate de haber exportado una copia de seguridad.',
-});
-
-// dev-only test insert button
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
-const isDev = !!(import.meta as any).env?.DEV;
-
 async function insertTestEntries() {
   try {
     running.value = true;
@@ -376,56 +407,13 @@ async function insertTestEntries() {
   }
 }
 
-const confirmButtons = [
-  {
-    text: 'Cancelar',
-    role: 'cancel',
-    handler: () => {
-      confirmAlert.open = false;
-    },
-  },
-  {
-    text: 'Aplicar',
-    role: 'confirm',
-    handler: async () => {
-      try {
-        if (
-          (
-            import.meta as unknown as {
-              env?: Record<string, string | undefined>;
-            }
-          ).env?.DEV
-        ) {
-          console.log('confirmButtons: Aplicar clicked');
-        }
-        confirmAlert.open = false;
-        await doApplyMigration();
-        if (
-          (
-            import.meta as unknown as {
-              env?: Record<string, string | undefined>;
-            }
-          ).env?.DEV
-        ) {
-          console.log('confirmButtons: doApplyMigration completed');
-        }
-      } catch (err) {
-        console.error('confirmButtons handler error', err);
-        error.value = (err && (err as any).message) || String(err);
-      }
-    },
-  },
-];
-
 function onConfirmAlertDidDismiss(ev: any) {
-  // kept for backwards compatibility
   try {
     const role = ev && ev.detail && ev.detail.role ? ev.detail.role : null;
     if (role === 'confirm') {
       void doApplyMigration();
     }
   } catch (_e) {
-    // ignore
   } finally {
     confirmAlert.open = false;
   }
@@ -438,19 +426,7 @@ function confirmCancel() {
 function onAlertDidDismiss(ev: any) {
   try {
     const role = ev && ev.detail && ev.detail.role ? ev.detail.role : null;
-    if (
-      (import.meta as unknown as { env?: Record<string, string | undefined> })
-        .env?.DEV
-    ) {
-      console.log('ion-alert did-dismiss, role=', role);
-    }
     if (role === 'confirm') {
-      if (
-        (import.meta as unknown as { env?: Record<string, string | undefined> })
-          .env?.DEV
-      ) {
-        console.log('onAlertDidDismiss: triggering doApplyMigration');
-      }
       void doApplyMigration();
     }
   } catch (err) {
@@ -461,7 +437,6 @@ function onAlertDidDismiss(ev: any) {
 }
 
 async function applyMigration() {
-  // open our ion-alert controlled by confirmAlert state
   confirmAlert.open = true;
 }
 
@@ -478,7 +453,6 @@ async function doApplyMigration() {
     stepStatus.value[3] = 'done';
     stepIndex.value = 3;
 
-    // Show success toast
     try {
       successToast.message = `Migración completada: ${applyChangedCount.value} entradas actualizadas.`;
       successToast.open = true;
@@ -512,21 +486,6 @@ function resetAll() {
   error.value = null;
 }
 
-const primaryLabel = computed(() => {
-  switch (stepIndex.value) {
-    case 0:
-      return 'Exportar copia de seguridad';
-    case 1:
-      return 'Simular migración (dry-run)';
-    case 2:
-      return 'Siguiente (Revisar)';
-    case 3:
-      return 'Aplicar migración';
-    default:
-      return 'Acción';
-  }
-});
-
 async function primaryAction() {
   switch (stepIndex.value) {
     case 0:
@@ -534,7 +493,6 @@ async function primaryAction() {
     case 1:
       return runDryRun();
     case 2:
-      // move to apply step only if user wants to proceed and there are changes
       if (!hasChanges.value) {
         alert(
           'No se encontraron cambios para aplicar. No es necesario continuar.'
@@ -547,6 +505,17 @@ async function primaryAction() {
       return applyMigration();
   }
 }
+
+// Life cycle
+onMounted(() => {
+  const route = useRoute();
+  try {
+    if (route && route.query && (route.query as any).autoDryRun) {
+      void runDryRun();
+    }
+  } catch (e) {
+  }
+});
 </script>
 
 <style scoped>

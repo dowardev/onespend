@@ -87,6 +87,7 @@
 </template>
 
 <script setup lang="ts">
+// Imports
 import {
   IonList,
   IonListHeader,
@@ -102,12 +103,15 @@ import { informationCircleOutline } from 'ionicons/icons';
 import { computed } from 'vue';
 import { useBudgetStore } from '@/stores/budgetStore';
 import { useAccountsStore } from '@/stores/accountsStore';
+
+// Components
 import AccountBarChart from './AccountBarChart.vue';
 
+// Vars
 const budgetStore = useBudgetStore();
 const accountsStore = useAccountsStore();
 
-// Get account name by id from accounts store
+// Functions
 function getAccountNameById(
   accountId: string | number | null | undefined
 ): string {
@@ -118,7 +122,21 @@ function getAccountNameById(
   return account?.name || '';
 }
 
-// Group by account and sum totals (providers + egresos) and ingresos
+function formatCurrency(v: number | string) {
+  try {
+    const n = Number(v || 0) || 0;
+    return new Intl.NumberFormat('es-MX', {
+      style: 'currency',
+      currency: 'MXN',
+    }).format(n);
+  } catch (_e) {
+    return String(v || '0');
+  }
+}
+
+// Life cycle
+
+// Computed
 const accountsSummary = computed(() => {
   const accountMap = new Map<string, { total: number; ingreso: number }>();
 
@@ -206,17 +224,7 @@ const differenceColor = computed(() => {
   return d > 0 ? 'success' : 'danger';
 });
 
-function formatCurrency(v: number | string) {
-  try {
-    const n = Number(v || 0) || 0;
-    return new Intl.NumberFormat('es-MX', {
-      style: 'currency',
-      currency: 'MXN',
-    }).format(n);
-  } catch (_e) {
-    return String(v || '0');
-  }
-}
+// Watch
 </script>
 
 <style scoped>

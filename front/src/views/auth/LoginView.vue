@@ -61,6 +61,7 @@
 </template>
 
 <script setup lang="ts">
+// Imports
 import {
   IonContent,
   IonHeader,
@@ -80,14 +81,17 @@ import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import authController from '@/controllers/authController';
 
+// Components
+
+// Vars
 const router = useRouter();
 
 const login = ref('');
 const password = ref('');
 const error = ref<string | null>(null);
-
 const isLoading = ref(false);
 
+// Functions
 async function handleLogin() {
   error.value = null;
   isLoading.value = true;

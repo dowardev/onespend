@@ -1,3 +1,45 @@
+## [v0.36.1] - 2026-01-21
+
+### Refactored
+
+- Organize Vue component code structure with consistent section comments
+- Add // Imports, // Components, // Vars, // Functions, // Life cycle, // Computed, // Watch sections
+- Reorganize code in all Vue files to follow consistent order: Imports → Components → Vars → Functions → Life cycle → Computed → Watch
+- Remove inline comments and consolidate code organization into section headers
+
+### Files Changed
+
+**Frontend:**
+- `front/src/App.vue` - Reorganized script section with section comments
+- `front/src/components/MainMenu.vue` - Added section comments structure
+- `front/src/components/SyncStatus.vue` - Added section comments and reorganized
+- `front/src/views/admin/MaintenancePage.vue` - Added section comments
+- `front/src/views/admin/PersonalizationPage.vue` - Added section comments
+- `front/src/views/admin/maintenance/MigrateDates.vue` - Reorganized with section comments
+- `front/src/views/admin/maintenance/MigrateEntries.vue` - Reorganized with section comments
+- `front/src/views/auth/LoginView.vue` - Added section comments
+- `front/src/views/auth/RegisterView.vue` - Added section comments
+- `front/src/views/budget/BudgetView.vue` - Reorganized with section comments
+- `front/src/views/budget/FinishDayForm.vue` - Added section comments
+- `front/src/views/budget/InicioViewComponent.vue` - Reorganized with section comments
+- `front/src/views/budget/ProviderCardComponent.vue` - Reorganized with section comments
+- `front/src/views/budget/ProvidersComponent.vue` - Reorganized with section comments
+- `front/src/views/budget/components/AccountCards.vue` - Added section comments
+- `front/src/views/budget/components/EditEntryModal.vue` - Added section comments
+- `front/src/views/budget/components/EditProviderModal.vue` - Added section comments
+- `front/src/views/budget/components/NotesModal.vue` - Added section comments
+- `front/src/views/budget/components/ProvidersSummary.vue` - Added section comments
+- `front/src/views/budget/components/TemplatesModal.vue` - Added section comments
+- `front/src/views/statistics/StatisticsPage.vue` - Added section comments
+- `front/src/views/statistics/cashFlow/CashFlow.vue` - Added section comments
+- `front/src/views/statistics/performance/PerformancePage.vue` - Added section comments
+- `front/src/views/suppliers/SuppliersPage.vue` - Added section comments
+- `front/src/views/suppliers/accounts/AccountsPage.vue` - Added section comments
+- `front/src/views/sync/SyncView.vue` - Added section comments
+- `front/src/views/templates/TemplatesView.vue` - Added section comments
+
+---
+
 ## [v0.36.0] - 2026-01-22
 
 ### Added
