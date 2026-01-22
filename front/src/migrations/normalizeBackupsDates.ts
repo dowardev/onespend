@@ -6,8 +6,9 @@ interface MigrationOptions {
   verbose?: boolean;
 }
 
-export async function migrateNormalizeBackupDates(opts: MigrationOptions = {}) {
-  const { dryRun = true, verbose = true } = opts;
+export async function migrateNormalizeBackupDates(params: { opts?: MigrationOptions }) {
+  const { opts } = params;
+  const { dryRun = true, verbose = true } = opts || {};
   const all = (await dixieController.listBackups()) as any[];
   const results: Array<{
     id: any;

@@ -440,7 +440,7 @@ const {
   popovers: statisticsController.getHovered(),
   hovered: statisticsController.getHovered(),
   setHover: (key: string, value: boolean) => statisticsController.setHover(key, value),
-  isoDate: (d: Date) => statisticsController.isoDate(d),
+  isoDate: (d: Date) => statisticsController.isoDate({ d }),
   providerValue: (p: any) => statisticsController.providerValue(p),
   formatCurrency: (val: any) => statisticsController.formatCurrency(val),
   formatPercent: (val: any) => statisticsController.formatPercent(val),
@@ -571,9 +571,9 @@ const dayLabel = computed(() => {
 const prevDayIso = computed(() => {
   try {
     const d = addDays(new Date(), dayOffset.value - 1);
-    return isoDate(d);
+    return isoDate({ d });
   } catch (_e) {
-    return isoDate(addDays(new Date(), -1));
+    return isoDate({ d: addDays(new Date(), -1) });
   }
 });
 
@@ -601,7 +601,7 @@ function onPopoverDateChange(e: any) {
   try {
     const val = e?.detail?.value || selectedDate.value;
     // parse safely using parseISO and format to yyyy-MM-dd to avoid TZ issues
-    const parsed = parseLocalDate(String(val).slice(0, 10));
+    const parsed = parseLocalDate({ d: String(val).slice(0, 10) });
     selectedDate.value = format(parsed, 'yyyy-MM-dd');
     const today = new Date();
     dayOffset.value = differenceInCalendarDays(parsed, today);
@@ -635,7 +635,7 @@ async function loadDayData(dateParam?: string | Date) {
       try {
         let parsed: Date;
         if (typeof dateParam === 'string') {
-          parsed = parseLocalDate(String(dateParam).slice(0, 10));
+          parsed = parseLocalDate({ d: String(dateParam).slice(0, 10) });
         } else if (dateParam instanceof Date) {
           parsed = dateParam as Date;
         } else {
@@ -686,7 +686,7 @@ async function loadDayData(dateParam?: string | Date) {
     }
 
     const targetDay = addDays(new Date(), dayOffset.value);
-    const target = isoDate(targetDay);
+    const target = isoDate({ d: targetDay });
 
     // find latest backup for that day (BudgetView / Budget components)
     const matches = (Array.isArray(all) ? all : []).filter(
@@ -1012,7 +1012,7 @@ async function loadDayData(dateParam?: string | Date) {
     // previous day
     try {
       const prevDay = addDays(targetDay, -1);
-      const prevTarget = isoDate(prevDay);
+      const prevTarget = isoDate({ d: prevDay });
 
       const prevMatches = (Array.isArray(all) ? all : []).filter(
         b =>
@@ -1253,7 +1253,7 @@ async function downloadPdf() {
     containerRef: pdfReport,
     buttonSelector: '#downloadButton',
     filenameFactory: () =>
-      `reporte_dia_${selectedDate.value || isoDate(new Date())}.pdf`,
+      `reporte_dia_${selectedDate.value || isoDate({ d: new Date() })}.pdf`,
   });
 }
 

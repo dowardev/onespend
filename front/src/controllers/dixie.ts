@@ -71,7 +71,8 @@ class DixieController {
     });
   }
 
-  private getDBVersion(name: string): Promise<number | null> {
+  private getDBVersion(params: { name: string }): Promise<number | null> {
+    const { name } = params;
     return new Promise((resolve) => {
       try {
         const req = indexedDB.open(name);
@@ -87,7 +88,8 @@ class DixieController {
     });
   }
 
-  private async checkDBExists(name: string): Promise<boolean> {
+  private async checkDBExists(params: { name: string }): Promise<boolean> {
+    const { name } = params;
     return new Promise((resolve) => {
       const req = indexedDB.open(name);
       req.onsuccess = () => {
@@ -98,8 +100,9 @@ class DixieController {
     });
   }
 
-  private async upgradeDB(name: string, storeName: string): Promise<IDBDatabase> {
-    const currentVersion = await this.getDBVersion(name);
+  private async upgradeDB(params: { name: string; storeName: string }): Promise<IDBDatabase> {
+    const { name, storeName } = params;
+    const currentVersion = await this.getDBVersion({ name });
     const newVersion = (currentVersion || 1) + 1;
     
     return new Promise((resolve, reject) => {
@@ -442,7 +445,8 @@ class DixieController {
     });
   }
 
-  async getBackup(id: IDBValidKey) {
+  async getBackup(params: { id: IDBValidKey }) {
+    const { id } = params;
     const db = await this.openDB();
     return new Promise((resolve, reject) => {
       const tx = db.transaction(this.storeName, 'readonly');
@@ -454,7 +458,8 @@ class DixieController {
     });
   }
 
-  async deleteBackup(id: IDBValidKey) {
+  async deleteBackup(params: { id: IDBValidKey }) {
+    const { id } = params;
     try {
       console.log(
         'DixieController.deleteBackup: called with id',
@@ -511,7 +516,8 @@ class DixieController {
     });
   }
 
-  async getConfig(key: string): Promise<unknown> {
+  async getConfig(params: { key: string }): Promise<unknown> {
+    const { key } = params;
     const db = await this.openDB();
     return new Promise((resolve, reject) => {
       const tx = db.transaction(this.storeName, 'readonly');
@@ -526,7 +532,8 @@ class DixieController {
     });
   }
 
-  async getEntry(syncId: string): Promise<any | null> {
+  async getEntry(params: { syncId: string }): Promise<any | null> {
+    const { syncId } = params;
     const db = await this.openDB();
     return new Promise((resolve, reject) => {
       const tx = db.transaction(this.storeName, 'readonly');

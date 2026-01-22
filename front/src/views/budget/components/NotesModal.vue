@@ -50,8 +50,11 @@ import {
   IonTextarea,
 } from '@ionic/vue';
 import { closeOutline } from 'ionicons/icons';
+// End Imports
 
 // Components
+
+// End Components
 
 // Vars
 const props = defineProps<{
@@ -61,15 +64,21 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits(['dismiss', 'save', 'update-notes']);
+// End Vars
 
 // Functions
 function onNotesInput(e: CustomEvent) {
   emit('update-notes', e.detail.value);
 }
+// End Functions
 
 // Life cycle
 
+// End Life cycle
+
 // Computed
 
+// End Computed
+
 // Watch
-</script>
+// End Watch</script>

@@ -36,16 +36,20 @@ import {
 import { onMounted, ref, reactive } from 'vue';
 import { useRouter } from 'vue-router';
 import MainMenu from '@/components/MainMenu.vue';
-import systemController from '@/controllers/systemConfigController';
-import dixieController from '@/controllers/dixie';
-import authController from '@/controllers/authController';
 import {
   needsNormalizeCheck,
   migrateNormalizeBackupDates,
 } from '@/migrations/normalizeBackupsDates';
 import { needsEntriesKeyCheck } from '@/migrations/addEntriesKeyToBackups';
+// End Imports
 
-// Vars
+// Controllers
+import systemController from '@/controllers/systemConfigController';
+import dixieController from '@/controllers/dixie';
+import authController from '@/controllers/authController';
+// End Controllers
+
+// Components
 const menuRef = ref();
 
 const appName =
@@ -81,6 +85,7 @@ const migrationToast = reactive({
     },
   ],
 });
+// End Vars
 
 // Functions
 function setDesignMode() {
@@ -175,6 +180,7 @@ async function showMigrationToast() {
     console.error(e);
   }
 }
+// End Functions
 
 // Life cycle
 onMounted(async () => {
@@ -244,6 +250,7 @@ onMounted(async () => {
   } catch (_e) {
   }
 });
+// End Life cycle
 </script>
 
 <style>

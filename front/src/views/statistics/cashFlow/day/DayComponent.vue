@@ -169,7 +169,7 @@ function prevDay() {
 function onPopoverDateChange(e: any) {
   try {
     const val = e?.detail?.value || selectedDate.value;
-    const parsed = parseLocalDate(String(val).slice(0, 10));
+    const parsed = parseLocalDate({ d: String(val).slice(0, 10) });
     selectedDate.value = format(parsed, 'yyyy-MM-dd');
     const today = new Date();
     dayOffset.value = differenceInCalendarDays(parsed, today);

@@ -434,7 +434,7 @@ const {
   popovers: statisticsController.getHovered(),
   hovered: statisticsController.getHovered(),
   setHover: (key: string, value: boolean) => statisticsController.setHover(key, value),
-  isoDate: (d: Date) => statisticsController.isoDate(d),
+  isoDate: (d: Date) => statisticsController.isoDate({ d }),
   providerValue: (p: any) => statisticsController.providerValue(p),
   formatCurrency: (val: any) => statisticsController.formatCurrency(val),
   formatPercent: (val: any) => statisticsController.formatPercent(val),
@@ -616,7 +616,7 @@ function onPopoverDateChange(e: any) {
     // value format for month presentation might be "YYYY-MM"
     const monthStr = String(val).slice(0, 7);
     // parse as first day of month using parseISO
-    const parsed = parseLocalDate(monthStr + '-01');
+    const parsed = parseLocalDate({ d: monthStr + '-01' });
     selectedDate.value = format(parsed, 'yyyy-MM');
     const today = new Date();
     monthOffset.value = differenceInCalendarMonths(parsed, today);
@@ -668,8 +668,8 @@ async function loadMonthData() {
     const target = addMonths(new Date(), monthOffset.value);
     const start = startOfMonth(target);
     const end = endOfMonth(target);
-    const targetStart = isoDate(start);
-    const targetEnd = isoDate(end);
+    const targetStart = isoDate({ d: start });
+    const targetEnd = isoDate({ d: end });
 
     // find backups (BudgetView / Budget) whose selectedDate lies within the month interval
     const matches = (Array.isArray(all) ? all : []).filter(b => {
@@ -876,8 +876,8 @@ async function loadMonthData() {
     // previous month
     try {
       const prevMonthDate = addMonths(target, -1);
-      const prevStart = isoDate(startOfMonth(prevMonthDate));
-      const prevEnd = isoDate(endOfMonth(prevMonthDate));
+      const prevStart = isoDate({ d: startOfMonth(prevMonthDate) });
+      const prevEnd = isoDate({ d: endOfMonth(prevMonthDate) });
 
       const prevMatches = (Array.isArray(all) ? all : []).filter(b => {
         try {
@@ -965,7 +965,7 @@ async function loadMonthData() {
       try {
         const days: any[] = [];
         for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-          const iso = isoDate(d);
+          const iso = isoDate({ d });
           // find matches and finish entries for this iso date
           let dayIngresos = 0;
           let dayProveedores = 0;
@@ -1021,7 +1021,7 @@ async function loadMonthData() {
 
           days.push({
             date: iso,
-            label: format(parseLocalDate(iso), 'dd MMM yyyy'),
+            label: format(parseLocalDate({ d: iso }), 'dd MMM yyyy'),
             totalSales: dayIngresos,
             proveedores: dayProveedores,
             netProfit: dayNet,

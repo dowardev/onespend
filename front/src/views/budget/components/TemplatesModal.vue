@@ -62,8 +62,11 @@ import {
   IonLabel,
 } from '@ionic/vue';
 import { closeOutline } from 'ionicons/icons';
+// End Imports
 
 // Components
+
+// End Components
 
 // Vars
 defineProps<{
@@ -72,12 +75,19 @@ defineProps<{
 }>();
 
 defineEmits(['dismiss', 'select-template']);
+// End Vars
 
 // Functions
 
+// End Functions
+
 // Life cycle
+
+// End Life cycle
 
 // Computed
 
+// End Computed
+
 // Watch
-</script>
+// End Watch</script>

@@ -31,9 +31,13 @@ import DayComponent from '@/views/statistics/cashFlow/day/DayComponent.vue';
 import WeekComponent from '@/views/statistics/cashFlow/week/WeekComponent.vue';
 import MonthComponent from '@/views/statistics/cashFlow/month/MonthComponent.vue';
 import YearComponent from '@/views/statistics/cashFlow/year/YearComponent.vue';
+// End Components
+
+// Controllers
+
 // Vars
 // Functions
 // Life cycle
 // Computed
 // Watch
-</script>
+// End Watch

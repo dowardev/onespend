@@ -172,7 +172,7 @@
                   type="file"
                   accept="image/*"
                   style="display: none"
-                  @change="onFileChange"
+                  @change="onFileChange({ e: $event })"
                 />
                 Adjuntar imagen (opcional)
               </label>
@@ -272,7 +272,8 @@ function openFileDialog() {
   fileInput.value?.click();
 }
 
-async function onFileChange(e: Event) {
+async function onFileChange(params: { e: Event }) {
+  const { e } = params;
   const el = e.target as HTMLInputElement;
   if (!el || !el.files || !el.files.length) return;
   const f = el.files[0];
@@ -281,7 +282,6 @@ async function onFileChange(e: Event) {
   } catch (err) {
     console.error('Failed to read image', err);
   }
-  // clear native input so the same file can be re-selected if needed
   if (el) el.value = '';
 }
 

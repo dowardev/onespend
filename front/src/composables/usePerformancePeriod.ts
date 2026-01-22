@@ -32,8 +32,9 @@ export function usePerformancePeriod() {
     }
   }
 
-  function isoDate(d: Date) {
-    return formatLocalDate(d);
+  function isoDate(params: { d: Date }) {
+    const { d } = params;
+    return formatLocalDate({ d });
   }
 
   function providerValue(p: any) {

@@ -31,7 +31,7 @@
                   done: stepStatus[i] === 'done',
                 }"
               >
-                <div class="marker">{{ markerLabel(i) }}</div>
+                <div class="marker">{{ markerLabel({ i }) }}</div>
                 <div class="info">
                   <div class="title">{{ s.title }}</div>
                   <div class="desc">{{ s.desc }}</div>
@@ -142,7 +142,7 @@
                 <ul>
                   <li v-for="(r, idx) in sampleResults" :key="idx">
                     <strong>ID:</strong> <code>{{ r.id }}</code>
-                    <pre>{{ previewPair(r.before, r.after) }}</pre>
+                    <pre>{{ previewPair({ before: r.before, after: r.after }) }}</pre>
                   </li>
                 </ul>
               </div>
@@ -163,7 +163,7 @@
         header="Confirmar migración"
         :message="confirmAlert.message"
         :buttons="confirmButtons"
-        @did-dismiss="onAlertDidDismiss"
+        @did-dismiss="onAlertDidDismiss({ ev: $event })"
       />
     </ion-content>
   </ion-page>
@@ -187,10 +187,13 @@ import {
 } from '@ionic/vue';
 import migrateNormalizeBackupDates from '@/migrations/normalizeBackupsDates';
 import { useRoute } from 'vue-router';
-import dixieController from '@/controllers/dixie';
 import { arrowBackOutline } from 'ionicons/icons';
+// End Imports
 
-// Components
+// Controllers
+import dixieController from '@/controllers/dixie';
+// End Controllers
+
 // Vars
 const steps = [
   {
@@ -229,13 +232,17 @@ const confirmAlert = reactive({
 
 const isDev = !!(import.meta as any).env?.DEV;
 
+// End Vars
+
 // Functions
-function markerLabel(i: number) {
+function markerLabel(params: { i: number }) {
+  const { i } = params;
   if (stepStatus.value[i] === 'done') return '✓';
   return String(i + 1);
 }
 
-function previewPair(before: any, after: any) {
+function previewPair(params: { before: any; after: any }) {
+  const { before, after } = params;
   try {
     return JSON.stringify({ before, after }, null, 2);
   } catch (e) {
@@ -382,7 +389,8 @@ const confirmButtons = [
   },
 ];
 
-function onConfirmAlertDidDismiss(ev: any) {
+function onConfirmAlertDidDismiss(params: { ev: any }) {
+  const { ev } = params;
   try {
     const role = ev && ev.detail && ev.detail.role ? ev.detail.role : null;
     if (role === 'confirm') {
@@ -394,11 +402,8 @@ function onConfirmAlertDidDismiss(ev: any) {
   }
 }
 
-function confirmCancel() {
-  confirmAlert.open = false;
-}
-
-function onAlertDidDismiss(ev: any) {
+function onAlertDidDismiss(params: { ev: any }) {
+  const { ev } = params;
   try {
     const role = ev && ev.detail && ev.detail.role ? ev.detail.role : null;
     if (
@@ -421,6 +426,10 @@ function onAlertDidDismiss(ev: any) {
   } finally {
     confirmAlert.open = false;
   }
+}
+
+function confirmCancel() {
+  confirmAlert.open = false;
 }
 
 async function applyMigration() {
@@ -493,6 +502,8 @@ async function primaryAction() {
   }
 }
 
+// End Functions
+
 // Life cycle
 onMounted(() => {
   const route = useRoute();
@@ -503,6 +514,8 @@ onMounted(() => {
   } catch (e) {
   }
 });
+
+// End Life cycle
 
 // Computed
 const changedCount = computed(() => {
@@ -540,6 +553,8 @@ const primaryLabel = computed(() => {
       return 'Acción';
   }
 });
+
+// End Computed
 
 // Watch
 </script>

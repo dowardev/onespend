@@ -81,6 +81,8 @@ import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import authController from '@/controllers/authController';
 
+// End Imports
+
 // Components
 
 // Vars
@@ -90,6 +92,8 @@ const login = ref('');
 const password = ref('');
 const error = ref<string | null>(null);
 const isLoading = ref(false);
+
+// End Vars
 
 // Functions
 async function handleLogin() {
@@ -119,6 +123,7 @@ async function handleLogin() {
     isLoading.value = false;
   }
 }
+// End Functions
 </script>
 
 <style scoped>

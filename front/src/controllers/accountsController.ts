@@ -94,7 +94,8 @@ class AccountsController {
     }
   }
 
-  async addAccount(a: Omit<Account, 'id' | 'sync_id' | 'createdAt' | 'updatedAt'>) {
+  async addAccount(params: { a: Omit<Account, 'id' | 'sync_id' | 'createdAt' | 'updatedAt'> }) {
+    const { a } = params;
     const ctrl = this.getController();
     const now = Date.now();
 
@@ -127,7 +128,8 @@ class AccountsController {
     return newAccount;
   }
 
-  async updateAccount(a: Account) {
+  async updateAccount(params: { a: Account }) {
+    const { a } = params;
     if (a.id == null) throw new Error('Account must have id to be updated');
     const ctrl = this.getController();
 
@@ -161,12 +163,13 @@ class AccountsController {
     return entry;
   }
 
-  async deleteAccount(id: IDBValidKey) {
+  async deleteAccount(params: { id: IDBValidKey }) {
+    const { id } = params;
     const ctrl = this.getController();
     const store = this.getAccountsStore() as any;
     const account = store.accounts.find((acc: any) => acc.id === id);
     
-    await ctrl.deleteBackup(id);
+    await ctrl.deleteBackup({ id });
 
     const idx = store.accounts.findIndex((acc: any) => acc.id === id);
     if (idx >= 0) {

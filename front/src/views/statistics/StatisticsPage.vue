@@ -39,10 +39,14 @@ import {
   IonToolbar,
 } from '@ionic/vue';
 import { computed } from 'vue';
-import systemController from '@/controllers/systemConfigController';
 import CashFlowComponent from '@/views/statistics/cashFlow/CashFlow.vue';
 import PerformancePage from '@/views/statistics/performance/PerformancePage.vue';
 import { settingsOutline } from 'ionicons/icons';
+// End Imports
+
+// Controllers
+import systemController from '@/controllers/systemConfigController';
+// End Controllers
 
 // Components
 
@@ -50,6 +54,8 @@ import { settingsOutline } from 'ionicons/icons';
 
 // Computed
 const designMode = computed(() => systemController.getDesignMode());
+
+// End Computed
 </script>
 
 <style scoped></style>

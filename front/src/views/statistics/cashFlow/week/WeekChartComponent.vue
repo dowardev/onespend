@@ -153,7 +153,7 @@ function translateDayLabel(label: unknown): string {
   }
 
   // Try parsing as a date (ISO strings, timestamps, Date objects)
-  const d = parseLocalDate(cleaned);
+  const d = parseLocalDate({ d: cleaned });
   if (!isNaN(d.getTime())) {
     // Force Spanish abbreviations using index (avoid Intl locale differences)
     const spanishWeek = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];

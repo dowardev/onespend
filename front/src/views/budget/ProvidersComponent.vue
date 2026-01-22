@@ -160,12 +160,9 @@ import {
   documentOutline,
   trashOutline,
 } from 'ionicons/icons';
+// End Imports
 
-import ProviderCardComponent from './ProviderCardComponent.vue';
-import ProvidersSummary from './components/ProvidersSummary.vue';
-import EditProviderModal from './components/EditProviderModal.vue';
-import TemplatesModal from './components/TemplatesModal.vue';
-import NotesModal from './components/NotesModal.vue';
+// Controllers
 import budgetController from '@/controllers/budgetController';
 import { BudgetController } from '@/controllers/budgetController';
 import TemplateController from '@/controllers/TempalteController';
@@ -175,8 +172,15 @@ import { SuppliersController } from '@/controllers/suppliersController';
 import accountsController from '@/controllers/accountsController';
 import { AccountsController } from '@/controllers/accountsController';
 import { SyncController } from '@/controllers/syncController';
+// End Controllers
 
 // Components
+import ProviderCardComponent from './ProviderCardComponent.vue';
+import ProvidersSummary from './components/ProvidersSummary.vue';
+import EditProviderModal from './components/EditProviderModal.vue';
+import TemplatesModal from './components/TemplatesModal.vue';
+import NotesModal from './components/NotesModal.vue';
+// End Components
 
 // Vars
 const budgetCtrl = new BudgetController();
@@ -205,6 +209,8 @@ const deleteConfirm = reactive({
   providerName: '' as string,
 });
 
+// End Vars
+
 // Computed
 const isDayClosed = computed(() => budgetCtrl.getIsDayClosed());
 const frozenSnapshot = computed(() => budgetCtrl.getFrozenSnapshot());
@@ -221,12 +227,14 @@ const providerIdsWithEntries = computed(() => {
   return budgetCtrl.getProviderIdsWithEntries();
 });
 
+// End Computed
+
 // Life cycle
 onMounted(async () => {
   await loadSuppliers();
   loadAccounts();
 
-  unsubscribeFromSuppliers = suppliersCtrl.subscribeToChanges((suppliers: any[]) => {
+  unsubscribeFromSuppliers = suppliersCtrl.subscribeToChanges({ callback: (suppliers: any[]) => {
     if (isDayClosed.value) {
       console.log('[Suppliers Change] Day is closed, ignoring supplier update');
       return;
@@ -235,8 +243,8 @@ onMounted(async () => {
       '[Suppliers Change] Received update, suppliers count:',
       suppliers.length
     );
-    budgetCtrl.syncProvidersWithSuppliers(suppliers as any);
-  });
+    budgetCtrl.syncProvidersWithSuppliers({ suppliers: suppliers as any });
+  } });
 });
 
 onUnmounted(() => {
@@ -250,10 +258,12 @@ onIonViewWillEnter(async () => {
   await loadSuppliers();
 });
 
+// End Life cycle
+
 // Functions
 async function loadSuppliers() {
   const list = await suppliersCtrl.listSuppliers();
-  budgetCtrl.syncProvidersWithSuppliers((list || []) as any);
+  budgetCtrl.syncProvidersWithSuppliers({ suppliers: (list || []) as any });
 }
 
 async function forceSyncSuppliers() {
@@ -276,14 +286,15 @@ function openAddProviderModal() {
   showAddProviderModal.value = true;
 }
 
-async function openEditProviderModal(payload: { provider: any }) {
-  console.log('openEditProviderModal - payload:', payload);
-  const provider = payload.provider;
+async function openEditProviderModal(params: { provider: any }) {
+  const { provider } = params;
+  console.log('openEditProviderModal - payload:', provider);
+  const providerData = provider;
 
   await forceSyncSuppliers();
 
   let fullSupplier: any = null;
-  const supplierSyncId = provider._supplierId || provider._supplierKey;
+  const supplierSyncId = providerData._supplierId || providerData._supplierKey;
 
   if (supplierSyncId) {
     fullSupplier =
@@ -297,18 +308,18 @@ async function openEditProviderModal(payload: { provider: any }) {
     fullSupplier = allSuppliers.value.find(
       (s: any) =>
         s.name &&
-        provider.name &&
-        s.name.toLowerCase() === provider.name.toLowerCase()
+        providerData.name &&
+        s.name.toLowerCase() === providerData.name.toLowerCase()
     );
   }
 
   editingProvider.value = {
-    id: provider.id,
-    name: provider.name,
-    estimated: provider.estimated || 0,
-    accountId: provider.accountId,
+    id: providerData.id,
+    name: providerData.name,
+    estimated: providerData.estimated || 0,
+    accountId: providerData.accountId,
     _supplierId: fullSupplier?.sync_id || supplierSyncId || fullSupplier?.id,
-    _supplierName: provider._supplierName || provider.name,
+    _supplierName: providerData._supplierName || providerData.name,
     products: fullSupplier?.products || [],
   };
 
@@ -327,12 +338,15 @@ function handleProviderSaved(payload: {
   const firstAccountId = firstItem?.accountId;
 
   if (editingProvider.value?.id) {
-    budgetController.updateProvider(editingProvider.value.id, {
-      estimated: payload.totalAmount,
-      accountId: firstAccountId || 0,
-      _supplierId: payload.providerId,
-      _supplierName: payload.providerName,
-      products: payload.products,
+    budgetController.updateProvider({
+      id: editingProvider.value.id,
+      changes: {
+        estimated: payload.totalAmount,
+        accountId: firstAccountId || 0,
+        _supplierId: payload.providerId,
+        _supplierName: payload.providerName,
+        products: payload.products,
+      },
     });
   } else {
     budgetController.addProvider({
@@ -350,9 +364,10 @@ function handleProviderSaved(payload: {
   editingProvider.value = null;
 }
 
-function handleProviderDeleted(id: string | number) {
-  budgetController.removeEgresosGroup(id);
-  budgetController.removeProvider(id);
+function handleProviderDeleted(params: { id: string | number }) {
+  const { id } = params;
+  budgetController.removeEgresosGroup({ groupId: id });
+  budgetController.removeProvider({ id });
   budgetController.saveData();
   showAddProviderModal.value = false;
   editingProvider.value = null;
@@ -369,7 +384,7 @@ function handleUpdateProvider(payload: {
   value: any;
 }) {
   const { id, field, value } = payload;
-  budgetController.updateProvider(id, { [field]: value });
+  budgetController.updateProvider({ id, changes: { [field]: value } });
   budgetController.saveData();
 }
 
@@ -393,8 +408,8 @@ function removeProveedorConfirmed() {
   const pid = deleteConfirm.providerId;
   deleteConfirm.open = false;
   if (pid != null) {
-    budgetController.removeEgresosGroup(pid);
-    budgetController.removeProvider(pid);
+    budgetController.removeEgresosGroup({ groupId: pid });
+    budgetController.removeProvider({ id: pid });
     budgetController.saveData();
   }
   deleteConfirm.providerId = null;
@@ -410,9 +425,7 @@ function handleOpenNotesModal(payload: { provider: any }) {
 
 function saveNotes() {
   if (notesProvider.value) {
-    budgetController.updateProvider(notesProvider.value.id, {
-      notes: notesContent.value,
-    });
+    budgetController.updateProvider({ id: notesProvider.value.id, changes: { notes: notesContent.value } });
     budgetController.saveData();
   }
   showNotesModal.value = false;
@@ -429,7 +442,8 @@ async function openTemplatesModal() {
   showTemplatesModal.value = true;
 }
 
-async function checkTemplateConflict(tmpl: any) {
+async function checkTemplateConflict(params: { tmpl: any }) {
+  const { tmpl } = params;
   try {
     const dateISO = budgetController.getSelectedDate();
     const payload = buildPayloadFromTemplate(tmpl, dateISO, () => null);
@@ -442,7 +456,7 @@ async function checkTemplateConflict(tmpl: any) {
       pendingProviders.value = templateProviders;
       showConflictModal.value = true;
     } else {
-      applyProviders(templateProviders);
+      applyProviders({ providers: templateProviders });
       showTemplatesModal.value = false;
     }
   } catch (e) {
@@ -451,7 +465,8 @@ async function checkTemplateConflict(tmpl: any) {
   }
 }
 
-function applyProviders(providers: any[]) {
+function applyProviders(params: { providers: any[] }) {
+  const { providers } = params;
   providers.forEach((p: any) => {
     budgetController.addProvider({
       name: p.name,
@@ -464,7 +479,7 @@ function applyProviders(providers: any[]) {
 
 function handleCombine() {
   if (pendingProviders.value.length > 0) {
-    applyProviders(pendingProviders.value);
+    applyProviders({ providers: pendingProviders.value });
   }
   showConflictModal.value = false;
   pendingTemplate.value = null;
@@ -475,13 +490,14 @@ function handleCombine() {
 function handleOverwrite() {
   budgetController.clearAllProviders();
   if (pendingProviders.value.length > 0) {
-    applyProviders(pendingProviders.value);
+    applyProviders({ providers: pendingProviders.value });
   }
   showConflictModal.value = false;
   pendingTemplate.value = null;
   pendingProviders.value = [];
   showTemplatesModal.value = false;
 }
+// End Functions
 </script>
 
 <style scoped>

@@ -119,13 +119,16 @@ import {
   IonSearchbar,
 } from '@ionic/vue';
 import { addOutline, trashOutline } from 'ionicons/icons';
+// End Imports
 
 // Components
 import AddSupliersComponent from '../suppliers/modals/AddSupliersComponent.vue';
+// End Components
 
 // Controllers
 import systemController from '@/controllers/systemConfigController';
 import suppliersController from '@/controllers/suppliersController';
+// End Controllers
 
 // Vars
 const showModal = ref(false);
@@ -136,6 +139,8 @@ const deleteConfirmSupplier = reactive({
   supplierId: null as string | number | null,
   supplierName: '' as string,
 });
+
+// End Vars
 
 // Functions
 function openModal() {
@@ -206,9 +211,9 @@ async function onModalSaved(payload: any) {
     if (existingSupplier && existingSupplier.sync_id) {
       payload.sync_id = existingSupplier.sync_id;
     }
-    await suppliersController.updateSupplier(payload as any);
+    await suppliersController.updateSupplier({ s: payload });
   } else {
-    await suppliersController.addSupplier(payload as any);
+    await suppliersController.addSupplier({ s: payload });
   }
 
   cancelModal();
@@ -217,14 +222,18 @@ async function onModalSaved(payload: any) {
 
 async function remove(id: IDBValidKey | undefined) {
   if (id == null) return;
-  await suppliersController.deleteSupplier(id);
+  await suppliersController.deleteSupplier({ id });
   await suppliersController.listSuppliers();
 }
+
+// End Functions
 
 // Life cycle
 onMounted(() => {
   suppliersController.listSuppliers();
 });
+
+// End Life cycle
 
 // Computed
 const designMode = computed(() => systemController.getDesignMode());
@@ -264,6 +273,8 @@ const groupedSuppliers = computed(() => {
     .sort()
     .map(letter => ({ letter, items: map.get(letter) || [] }));
 });
+
+// End Computed
 
 // Watch
 </script>

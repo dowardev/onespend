@@ -32,7 +32,7 @@
                   done: stepStatus[i] === 'done',
                 }"
               >
-                <div class="marker">{{ markerLabel(i) }}</div>
+                <div class="marker">{{ markerLabel({ i }) }}</div>
                 <div class="info">
                   <div class="title">{{ s.title }}</div>
                   <div class="desc">{{ s.desc }}</div>
@@ -143,7 +143,7 @@
                 <ul>
                   <li v-for="(r, idx) in sampleResults" :key="idx">
                     <strong>ID:</strong> <code>{{ r.id }}</code>
-                    <pre>{{ previewPair(r.before, r.after) }}</pre>
+                    <pre>{{ previewPair({ before: r.before, after: r.after }) }}</pre>
                   </li>
                 </ul>
               </div>
@@ -164,7 +164,7 @@
         header="Confirmar migración"
         :message="confirmAlert.message"
         :buttons="confirmButtons"
-        @did-dismiss="onAlertDidDismiss"
+        @did-dismiss="onAlertDidDismiss({ ev: $event })"
       />
     </ion-content>
   </ion-page>
@@ -190,8 +190,12 @@ import migrateAddEntriesToBackups, {
   needsEntriesKeyCheck,
 } from '@/migrations/addEntriesKeyToBackups';
 import { useRoute } from 'vue-router';
-import dixieController from '@/controllers/dixie';
 import { arrowBackOutline } from 'ionicons/icons';
+// End Imports
+
+// Controllers
+import dixieController from '@/controllers/dixie';
+// End Controllers
 
 // Components
 
@@ -293,13 +297,17 @@ const confirmButtons = [
   },
 ];
 
-// Functions
-function markerLabel(i: number) {
+// End Vars
+
+// Computed
+function markerLabel(params: { i: number }) {
+  const { i } = params;
   if (stepStatus.value[i] === 'done') return '✓';
   return String(i + 1);
 }
 
-function previewPair(before: any, after: any) {
+function previewPair(params: { before: any; after: any }) {
+  const { before, after } = params;
   try {
     return JSON.stringify({ before, after }, null, 2);
   } catch (e) {
@@ -407,7 +415,8 @@ async function insertTestEntries() {
   }
 }
 
-function onConfirmAlertDidDismiss(ev: any) {
+function onConfirmAlertDidDismiss(params: { ev: any }) {
+  const { ev } = params;
   try {
     const role = ev && ev.detail && ev.detail.role ? ev.detail.role : null;
     if (role === 'confirm') {
@@ -423,7 +432,8 @@ function confirmCancel() {
   confirmAlert.open = false;
 }
 
-function onAlertDidDismiss(ev: any) {
+function onAlertDidDismiss(params: { ev: any }) {
+  const { ev } = params;
   try {
     const role = ev && ev.detail && ev.detail.role ? ev.detail.role : null;
     if (role === 'confirm') {
@@ -506,6 +516,8 @@ async function primaryAction() {
   }
 }
 
+// End Functions
+
 // Life cycle
 onMounted(() => {
   const route = useRoute();
@@ -516,6 +528,8 @@ onMounted(() => {
   } catch (e) {
   }
 });
+
+// End Life cycle
 </script>
 
 <style scoped>

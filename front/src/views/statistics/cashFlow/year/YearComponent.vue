@@ -203,7 +203,7 @@ function onPopoverDateChange(e: any) {
   try {
     const val = e?.detail?.value || selectedDate.value;
     const yearStr = String(val).slice(0, 4);
-    const parsed = parseLocalDate(`${yearStr}-01-01`);
+    const parsed = parseLocalDate({ d: `${yearStr}-01-01` });
     selectedDate.value = format(parsed, 'yyyy');
     const currentYearStart = startOfYear(new Date());
     yearOffset.value = differenceInCalendarYears(parsed, currentYearStart);

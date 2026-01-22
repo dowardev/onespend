@@ -1,7 +1,7 @@
 import { formatLocalDate } from '@/utils/date';
 
-export function parseProvidersFromDescription(desc?: string): string[] {
-  if (!desc) return [];
+export function parseProvidersFromDescription(params: { desc?: string }): string[] {
+  const { desc } = params;
   const prefix = 'Proveedores:';
   const i = desc.indexOf(prefix);
   if (i === -1) return [];
@@ -13,11 +13,12 @@ export function parseProvidersFromDescription(desc?: string): string[] {
     .filter((s: string) => s);
 }
 
-export function buildPayloadFromTemplate(
-  tmpl: any,
-  dateISO: string,
-  resolveSupplierNameById?: (id: any) => string | null
-) {
+export function buildPayloadFromTemplate(params: {
+  tmpl: any;
+  dateISO: string;
+  resolveSupplierNameById?: (id: any) => string | null;
+}) {
+  const { tmpl, dateISO, resolveSupplierNameById } = params;
   let providerNames: string[] = [];
   if (
     tmpl &&
@@ -58,7 +59,7 @@ export function buildPayloadFromTemplate(
   const proveedores = (providerNames || []).map(name => ({
     id: Date.now() + Math.random(),
     name,
-    date: formatLocalDate(dateISO),
+    date: formatLocalDate({ d: dateISO }),
     estimated: 0,
     accountId: 0,
     notes: '',
@@ -69,9 +70,9 @@ export function buildPayloadFromTemplate(
     ingresos: [],
     entries: [],
     proveedores,
-    newIngreso: { name: '', amount: 0, date: formatLocalDate(dateISO) },
+    newIngreso: { name: '', amount: 0, date: formatLocalDate({ d: dateISO }) },
     newProveedor: { name: '', estimated: 0, accountId: 0, notes: '' },
-    selectedDate: formatLocalDate(dateISO),
+    selectedDate: formatLocalDate({ d: dateISO }),
     totals: {
       totalIngresos: 0,
       totalProviders: proveedores.reduce(
@@ -85,7 +86,8 @@ export function buildPayloadFromTemplate(
   return payload;
 }
 
-export function hasBackupMeaningfulContent(data: any): boolean {
+export function hasBackupMeaningfulContent(params: { data: any }): boolean {
+  const { data } = params;
   try {
     if (!data) return false;
     if (Array.isArray(data.proveedores) && data.proveedores.length > 0)
@@ -104,15 +106,16 @@ export function hasBackupMeaningfulContent(data: any): boolean {
 import backupController from '@/controllers/backupController';
 import { mergeBackupData } from '@/controllers/migrationService';
 
-export async function buildAndSaveTemplateApplication(
-  tmpl: any,
-  dateISO: string,
-  resolveSupplierNameById?: (id: any) => string | null,
+export async function buildAndSaveTemplateApplication(params: {
+  tmpl: any;
+  dateISO: string;
+  resolveSupplierNameById?: (id: any) => string | null;
   options?: {
     conflictStrategy?: 'ask' | 'combine' | 'overwrite';
     prebuiltPayload?: any;
-  }
-) {
+  };
+}) {
+  const { tmpl, dateISO, resolveSupplierNameById, options } = params;
   const strategy = options?.conflictStrategy || 'ask';
 
   // Determine payloadToSave: allow passing a prebuilt payload (useful when UI already constructed it)
@@ -123,11 +126,11 @@ export async function buildAndSaveTemplateApplication(
     // caller passed a payload-like object
     payloadToSave = tmpl;
   } else {
-    const payload = buildPayloadFromTemplate(
+    const payload = buildPayloadFromTemplate({
       tmpl,
       dateISO,
-      resolveSupplierNameById
-    );
+      resolveSupplierNameById,
+    });
     payloadToSave = {
       component: 'BudgetView',
       data: payload,

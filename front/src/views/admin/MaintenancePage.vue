@@ -42,10 +42,18 @@ import {
   IonLabel,
 } from '@ionic/vue';
 import { useRouter } from 'vue-router';
+// End Imports
+
+// Controllers
 
 // Components
+
+// End Components
+
 // Vars
 const router = useRouter();
+
+// End Vars
 
 // Functions
 function goToMigrateDates() {
@@ -68,8 +76,16 @@ function goToMigrateEntries() {
   router.push({ name: 'MigrateEntries' });
 }
 
+// End Functions
+
 // Life cycle
+
+// End Life cycle
+
 // Computed
+
+// End Computed
+
 // Watch
 </script>
 

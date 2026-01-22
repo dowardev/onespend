@@ -217,9 +217,13 @@ import {
   personCircleOutline,
   logOutOutline,
 } from 'ionicons/icons';
+import SyncStatus from './SyncStatus.vue';
+// End Imports
+
+// Controllers
 import authController from '@/controllers/authController';
 import { SyncController } from '@/controllers/syncController';
-import SyncStatus from './SyncStatus.vue';
+// End Controllers
 
 // Components
 
@@ -238,6 +242,8 @@ const pendingChanges = computed(() => syncController.getPendingChanges());
 const appName =
   (import.meta as unknown as { env?: Record<string, string | undefined> }).env
     ?.VITE_APP_NAME || 'Menú';
+
+// End Vars
 
 // Computed
 const isBudget = computed(() => route.path === '/budget');
@@ -264,10 +270,14 @@ const isRegister = computed(() => route.path === '/register');
 const isAuthenticated = computed(() => authController.getIsAuthenticated());
 const userName = computed(() => authController.getUserName());
 
+// End Computed
+
 // Life cycle
 onMounted(async () => {
   await authController.checkAuth();
 });
+
+// End Life cycle
 
 // Functions
 async function handleLogout() {
@@ -311,6 +321,7 @@ async function navigate(params: { path?: string; name?: string }) {
   }
   emit('navigate', params);
 }
+// End Functions
 </script>
 
 <style>

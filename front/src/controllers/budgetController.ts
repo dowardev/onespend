@@ -97,12 +97,13 @@ class BudgetController {
     return this.store.isLoading;
   }
 
-  async loadDataForDate(date: string) {
+  async loadDataForDate(params: { date: string }) {
+    const { date } = params;
     this.store.setIsLoading(true);
     try {
       const dateKey = `budget:${date}`;
       console.log('[BudgetController.loadDataForDate] Loading data for:', dateKey);
-      const data = (await dixieController.getBackup(dateKey)) as any;
+      const data = (await dixieController.getBackup({ id: dateKey })) as any;
       console.log('[BudgetController.loadDataForDate] Raw data from DB:', data);
 
       if (data && data.data) {
@@ -136,19 +137,21 @@ class BudgetController {
   }
 
   async loadDataForCurrentDate() {
-    await this.loadDataForDate(this.store.selectedDate);
+    await this.loadDataForDate({ date: this.store.selectedDate });
   }
 
-  setDate(date: string) {
+  setDate(params: { date: string }) {
+    const { date } = params;
     if (date === this.store.selectedDate) return;
     this.store.setSelectedDate(date);
-    this.loadDataForDate(date);
+    this.loadDataForDate({ date });
   }
 
-  changeDate(days: number) {
+  changeDate(params: { days: number }) {
+    const { days } = params;
     const d = new Date(this.store.selectedDate);
     d.setDate(d.getDate() + days);
-    this.setDate(formatLocalDate(d));
+    this.setDate({ date: formatLocalDate({ d }) });
   }
 
   addIngreso(params: {
@@ -219,7 +222,8 @@ class BudgetController {
     syncEntry(newEgreso, 'create');
   }
 
-  addProviderEgresos(provider: Provider) {
+  addProviderEgresos(params: { provider: Provider }) {
+    const { provider } = params;
     const now = Date.now();
     const amount = Number(provider.estimated || 0);
 
@@ -245,7 +249,8 @@ class BudgetController {
     syncEntry(newEntry, 'create');
   }
 
-  updateIngreso(id: string | number, changes: Partial<Income>) {
+  updateIngreso(params: { id: string | number; changes: Partial<Income> }) {
+    const { id, changes } = params;
     this.store.updateEntry(id, changes);
     
     const entry = this.store.entries.find(e => e.id === id);
@@ -255,7 +260,8 @@ class BudgetController {
     }
   }
 
-  removeIngreso(id: string | number) {
+  removeIngreso(params: { id: string | number }) {
+    const { id } = params;
     const entry = this.store.entries.find(e => e.id === id);
     this.store.removeEntry(id);
     
@@ -265,7 +271,8 @@ class BudgetController {
     }
   }
 
-  removeEgresosGroup(groupId: string | number) {
+  removeEgresosGroup(params: { groupId: string | number }) {
+    const { groupId } = params;
     this.store.removeEgresosGroup(groupId);
   }
 
@@ -319,15 +326,16 @@ class BudgetController {
     console.log('budgetController.addProvider - sincronizando provider con productos');
     syncBudgetProvider(newProvider, 'create', products, supplierSyncId);
 
-    setTimeout(() => {
-      const provider = this.store.providers.find(p => p.id === newProvider.id);
-      if (provider) {
-        this.store.updateProvider(provider.id, { _justAdded: false });
-      }
-    }, 400);
+      setTimeout(() => {
+        const provider = this.store.providers.find(p => p.id === newProvider.id);
+        if (provider) {
+          this.updateProvider({ id: provider.id, changes: { _justAdded: false } });
+        }
+      }, 400);
   }
 
-  updateProvider(id: string | number, changes: Partial<Provider>) {
+  updateProvider(params: { id: string | number; changes: Partial<Provider> }) {
+    const { id, changes } = params;
     console.log('budgetController.updateProvider - id:', id, 'changes:', JSON.stringify(changes, null, 2));
     
     const provider = this.store.providers.find(p => p.id === id);
@@ -343,7 +351,8 @@ class BudgetController {
     }
   }
 
-  removeProvider(id: string | number) {
+  removeProvider(params: { id: string | number }) {
+    const { id } = params;
     const provider = this.store.providers.find(p => p.id === id);
     this.store.removeProvider(id);
     
@@ -361,7 +370,8 @@ class BudgetController {
     this.store.clearDay();
   }
 
-  toggleDayClosed(value: boolean) {
+  toggleDayClosed(params: { value: boolean }) {
+    const { value } = params;
     this.store.setIsDayClosed(value);
   }
 
@@ -426,7 +436,8 @@ class BudgetController {
     return this.store.frozenSnapshot;
   }
 
-  syncProvidersWithSuppliers(suppliers: any[]) {
+  syncProvidersWithSuppliers(params: { suppliers: any[] }) {
+    const { suppliers } = params;
     return this.store.syncProvidersWithSuppliers(suppliers);
   }
 

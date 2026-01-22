@@ -82,7 +82,7 @@
             v-for="s in filteredSuppliers"
             :key="String(s.id)"
             button
-            @click="toggleSupplierSelection(s)"
+            @click="toggleSupplierSelection({ s })"
           >
             <ion-label>{{ s.name }}</ion-label>
             <ion-checkbox
@@ -230,8 +230,8 @@ function onSearchCancel() {
   searchVisible.value = false;
 }
 
-function toggleSupplierSelection(s: any) {
-  // Prevent changes when the day is closed
+function toggleSupplierSelection(params: { s: any }) {
+  const { s } = params;
   if (props.dayClosed) return;
 
   const id = s.id as IDBValidKey;
@@ -240,7 +240,8 @@ function toggleSupplierSelection(s: any) {
   else form.supplierIds.splice(idx, 1);
 }
 
-function getSupplierNameById(id: IDBValidKey): string | null {
+function getSupplierNameById(params: { id: IDBValidKey }): string | null {
+  const { id } = params;
   const s = suppliers.value.find(x => x.id === id);
   return s ? s.name : null;
 }
@@ -277,7 +278,7 @@ async function submitTemplate() {
   }
 
   const selectedNames = form.supplierIds
-    .map((id: IDBValidKey) => getSupplierNameById(id))
+    .map((id: IDBValidKey) => getSupplierNameById({ id }))
     .filter((n: unknown): n is string => !!(typeof n === 'string' && n.trim()));
 
   const description = selectedNames.length

@@ -113,7 +113,7 @@ function translateDayLabel(label: unknown): string {
   // If label is YYYY-MM (month key) -> format as "Ene 2025"
   if (/^\d{4}-\d{2}$/.test(labelStr)) {
     try {
-      const d = parseLocalDate(labelStr + '-01');
+      const d = parseLocalDate({ d: labelStr + '-01' });
       return new Intl.DateTimeFormat('es-MX', {
         month: 'short',
         year: 'numeric',
@@ -129,7 +129,7 @@ function translateDayLabel(label: unknown): string {
   // If label is a full ISO date YYYY-MM-DD, treat it as a month label as well
   if (/^\d{4}-\d{2}-\d{2}$/.test(labelStr)) {
     try {
-      const d = parseLocalDate(labelStr);
+      const d = parseLocalDate({ d: labelStr });
       return new Intl.DateTimeFormat('es-MX', {
         month: 'short',
         year: 'numeric',

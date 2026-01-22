@@ -8,7 +8,8 @@ import { parseISO } from 'date-fns';
  * Date or date-like string. If no argument is provided, returns today's date
  * in local timezone formatted as YYYY-MM-DD.
  */
-export function formatLocalDate(d?: Date | string | null): string {
+export function formatLocalDate(params: { d?: Date | string | null }): string {
+  const { d } = params;
   try {
     let dateObj: Date;
     if (d == null) {
@@ -17,8 +18,6 @@ export function formatLocalDate(d?: Date | string | null): string {
       dateObj = d;
     } else {
       const s = String(d).trim();
-      // If the value is a plain YYYY-MM-DD date (no time or timezone),
-      // construct a local Date to avoid UTC parsing that shifts the day.
       const plainDateMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
       if (plainDateMatch) {
         const year = Number(plainDateMatch[1]);
@@ -26,12 +25,10 @@ export function formatLocalDate(d?: Date | string | null): string {
         const day = Number(plainDateMatch[3]);
         dateObj = new Date(year, month, day);
       } else {
-        // Otherwise try parseISO (handles full ISO with timezones)
         try {
           dateObj = parseISO(s);
           if (isNaN(dateObj.getTime())) throw new Error('invalid');
         } catch (_e) {
-          // fallback to safe manual parsing of any embedded YYYY-MM-DD
           const m = s.match(/(\d{4})-(\d{2})-(\d{2})/);
           if (m) {
             const year = Number(m[1]);
@@ -39,7 +36,6 @@ export function formatLocalDate(d?: Date | string | null): string {
             const day = Number(m[3]);
             dateObj = new Date(year, month, day);
           } else {
-            // as a last resort, use now
             dateObj = new Date();
           }
         }
@@ -69,7 +65,8 @@ export function formatLocalDate(d?: Date | string | null): string {
  * calendar day. If input is a YYYY-MM-DD string, constructs a local Date
  * (avoiding UTC shift). If input is a full ISO with time, parseISO is used.
  */
-export function parseLocalDate(d?: Date | string | null): Date {
+export function parseLocalDate(params: { d?: Date | string | null }): Date {
+  const { d } = params;
   if (d == null) return new Date();
   if (d instanceof Date) return d;
   const s = String(d).trim();
@@ -101,8 +98,8 @@ export function parseLocalDate(d?: Date | string | null): Date {
  * Normalize a supplier/provider name to a compact, lowercase, diacritics-free
  * key suitable for matching and map lookups.
  */
-export function normalizeName(name: string | undefined | null): string {
-  if (!name) return '';
+export function normalizeName(params: { name: string | undefined | null }): string {
+  const { name } = params;
   try {
     return String(name)
       .trim()

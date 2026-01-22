@@ -7,7 +7,7 @@
       {{ pendingChanges }} pendiente{{ pendingChanges !== 1 ? 's' : '' }}
     </span>
     <span v-else-if="lastSyncTime > 0" class="status-text synced">
-      Sincronizado {{ formatTime(lastSyncTime) }}
+      Sincronizado {{ formatTime({ timestamp: lastSyncTime }) }}
     </span>
     <span v-else class="status-text">Sin sincronizar</span>
   </div>
@@ -19,14 +19,19 @@ import { computed } from 'vue';
 import { IonIcon } from '@ionic/vue';
 import { cloudOfflineOutline, syncOutline, checkmarkCircleOutline, timeOutline } from 'ionicons/icons';
 import { SyncController } from '@/controllers/syncController';
+// End Imports
 
 // Components
 
+// End Components
+
 // Vars
 const syncController = new SyncController();
+// End Vars
 
 // Functions
-function formatTime(timestamp: number): string {
+function formatTime(params: { timestamp: number }): string {
+  const { timestamp } = params;
   const now = Date.now();
   const diff = now - timestamp;
 
@@ -35,8 +40,11 @@ function formatTime(timestamp: number): string {
   if (diff < 86400000) return `hace ${Math.floor(diff / 3600000)}h`;
   return `hace ${Math.floor(diff / 86400000)}d`;
 }
+// End Functions
 
 // Life cycle
+
+// End Life cycle
 
 // Computed
 const isOnline = computed(() => syncController.getIsOnline());
@@ -50,9 +58,10 @@ const syncIcon = computed(() => {
   if (pendingChanges.value > 0) return timeOutline;
   return checkmarkCircleOutline;
 });
+// End Computed
 
 // Watch
-</script>
+// End Watch</script>
 
 <style scoped>
 .sync-status {

@@ -49,8 +49,9 @@ class StatisticsController {
     return this.hovered;
   }
 
-  isoDate(d: Date) {
-    return formatLocalDate(d);
+  isoDate(params: { d: Date }) {
+    const { d } = params;
+    return formatLocalDate({ d });
   }
 
   providerValue(p: any) {

@@ -115,13 +115,16 @@ import {
   IonSearchbar,
 } from '@ionic/vue';
 import { addOutline, trashOutline } from 'ionicons/icons';
+// End Imports
 
 // Controllers
 import systemController from '@/controllers/systemConfigController';
 import accountsController from '@/controllers/accountsController';
+// End Controllers
 
 // Components
 import AddAccountComponent from './modals/AddAccountComponent.vue';
+// End Components
 
 // Vars
 const showModal = ref(false);
@@ -132,6 +135,8 @@ const deleteConfirmAccount = reactive({
   accountId: null as string | number | null,
   accountName: '' as string,
 });
+
+// End Vars
 
 // Functions
 function openModal() {
@@ -193,28 +198,34 @@ function onDeleteAlertDidDismissAccount() {
   deleteConfirmAccount.accountName = '';
 }
 
-async function onModalSaved(payload: any) {
+async function onModalSaved(params: { payload: any }) {
+  const { payload } = params;
   if (!payload) return;
   if (payload.id != null) {
-    await accountsController.updateAccount(payload as any);
+    await accountsController.updateAccount({ a: payload as any });
   } else {
-    await accountsController.addAccount(payload as any);
+    await accountsController.addAccount({ a: payload as any });
   }
 
   cancelModal();
   await accountsController.loadAll();
 }
 
-async function remove(id: IDBValidKey | undefined) {
+async function remove(params: { id: IDBValidKey | undefined }) {
+  const { id } = params;
   if (id == null) return;
-  await accountsController.deleteAccount(id);
+  await accountsController.deleteAccount({ id });
   await accountsController.loadAll();
 }
+
+// End Functions
 
 // Life cycle
 onMounted(() => {
   accountsController.loadAll();
 });
+
+// End Life cycle
 
 // Computed
 const designMode = computed(() => systemController.getDesignMode());
@@ -251,6 +262,8 @@ const groupedAccounts = computed(() => {
     .sort()
     .map(letter => ({ letter, items: map.get(letter) || [] }));
 });
+
+// End Computed
 
 // Watch
 </script>

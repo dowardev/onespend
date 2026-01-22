@@ -141,8 +141,11 @@ import {
 } from 'ionicons/icons';
 import { reactive, computed } from 'vue';
 import { useAccountsStore } from '@/stores/accountsStore';
+// End Imports
 
 // Components
+
+// End Components
 
 // Vars
 interface Provider {
@@ -206,6 +209,7 @@ const deleteConfirm = reactive({
   providerName: '' as string,
   event: null as Event | null,
 });
+// End Vars
 
 // Functions
 function openPopover(event: Event) {
@@ -360,8 +364,11 @@ function formatCurrency(params: { v: number }) {
     return String(Number(v) || 0);
   }
 }
+// End Functions
 
 // Life cycle
+
+// End Life cycle
 
 // Computed
 const accountDisplay = computed(() => {
@@ -375,8 +382,10 @@ const accountDisplay = computed(() => {
   if (!account) return '';
   return account.name;
 });
+// End Computed
 
 // Watch
+// End Watch
 </script>
 
 <style scoped>

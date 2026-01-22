@@ -437,7 +437,7 @@ const {
   popovers: statisticsController.getHovered(),
   hovered: statisticsController.getHovered(),
   setHover: (key: string, value: boolean) => statisticsController.setHover(key, value),
-  isoDate: (d: Date) => statisticsController.isoDate(d),
+  isoDate: (d: Date) => statisticsController.isoDate({ d }),
   providerValue: (p: any) => statisticsController.providerValue(p),
   formatCurrency: (val: any) => statisticsController.formatCurrency(val),
   formatPercent: (val: any) => statisticsController.formatPercent(val),
@@ -606,7 +606,7 @@ function onPopoverDateChange(e: any) {
   try {
     const val = e?.detail?.value || selectedDate.value;
     // parse safely using parseISO
-    const parsed = parseLocalDate(String(val).slice(0, 10));
+    const parsed = parseLocalDate({ d: String(val).slice(0, 10) });
     selectedDate.value = format(parsed, 'yyyy-MM-dd');
     const today = new Date();
     weekOffset.value = differenceInCalendarWeeks(parsed, today, {
@@ -628,7 +628,7 @@ async function loadWeekData(dateParam?: string | Date) {
       try {
         let parsed: Date;
         if (typeof dateParam === 'string') {
-          parsed = parseLocalDate(String(dateParam).slice(0, 10));
+          parsed = parseLocalDate({ d: String(dateParam).slice(0, 10) });
         } else if (dateParam instanceof Date) {
           parsed = dateParam as Date;
         } else {
@@ -678,8 +678,8 @@ async function loadWeekData(dateParam?: string | Date) {
     const targetWeek = addWeeks(new Date(), weekOffset.value);
     const start = startOfWeek(targetWeek, { weekStartsOn: 1 });
     const end = endOfWeek(targetWeek, { weekStartsOn: 1 });
-    const targetStart = isoDate(start);
-    const targetEnd = isoDate(end);
+    const targetStart = isoDate({ d: start });
+    const targetEnd = isoDate({ d: end });
 
     // find backups (BudgetView / Budget) whose selectedDate lies within the week interval
     const matches = (Array.isArray(all) ? all : []).filter(b => {
@@ -792,7 +792,7 @@ async function loadWeekData(dateParam?: string | Date) {
       const days: any[] = [];
       for (let i = 0; i < 7; i++) {
         const d = addDays(start, i);
-        const iso = isoDate(d);
+        const iso = isoDate({ d });
         // totals for this specific day
         let dayIngresos = 0;
         let dayProveedores = 0;
@@ -965,8 +965,8 @@ async function loadWeekData(dateParam?: string | Date) {
     // previous week
     try {
       const prevWeekDate = addWeeks(targetWeek, -1);
-      const prevStart = isoDate(startOfWeek(prevWeekDate, { weekStartsOn: 1 }));
-      const prevEnd = isoDate(endOfWeek(prevWeekDate, { weekStartsOn: 1 }));
+      const prevStart = isoDate({ d: startOfWeek(prevWeekDate, { weekStartsOn: 1 }) });
+      const prevEnd = isoDate({ d: endOfWeek(prevWeekDate, { weekStartsOn: 1 }) });
 
       const prevMatches = (Array.isArray(all) ? all : []).filter(b => {
         try {
@@ -1145,7 +1145,7 @@ async function downloadPdf() {
     containerRef: pdfReport,
     buttonSelector: '#dowButWeek',
     filenameFactory: () =>
-      `reporte_semana_${String(weekLabel.value || isoDate(new Date())).replace(/\s+/g, '_')}.pdf`,
+      `reporte_semana_${String(weekLabel.value || isoDate({ d: new Date() })).replace(/\s+/g, '_')}.pdf`,
   });
 }
 

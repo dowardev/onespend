@@ -3,16 +3,16 @@
     <ion-item class="panel border-rounded" lines="none">
       <ion-label>
         <h3>{{ currentLabel }}</h3>
-        <p>Total ventas: {{ formatCurrency(snapshots.current.totalSales) }}</p>
-        <p>Utilidad neta: {{ formatCurrency(snapshots.current.netProfit) }}</p>
+        <p>Total ventas: {{ formatCurrency({ val: snapshots.current.totalSales }) }}</p>
+        <p>Utilidad neta: {{ formatCurrency({ val: snapshots.current.netProfit }) }}</p>
       </ion-label>
     </ion-item>
 
     <ion-item class="panel border-rounded" lines="none">
       <ion-label>
         <h3>{{ previousLabel }}</h3>
-        <p>Total ventas: {{ formatCurrency(snapshots.previous.totalSales) }}</p>
-        <p>Utilidad neta: {{ formatCurrency(snapshots.previous.netProfit) }}</p>
+        <p>Total ventas: {{ formatCurrency({ val: snapshots.previous.totalSales }) }}</p>
+        <p>Utilidad neta: {{ formatCurrency({ val: snapshots.previous.netProfit }) }}</p>
       </ion-label>
     </ion-item>
   </div>
@@ -39,7 +39,8 @@ const previousLabel = computed(() => props.previousLabel ?? 'Anterior');
 // end computed
 
 // functions
-function formatCurrency(val: any) {
+function formatCurrency(params: { val: any }) {
+  const { val } = params;
   return new Intl.NumberFormat('es-MX', {
     style: 'currency',
     currency: 'MXN',

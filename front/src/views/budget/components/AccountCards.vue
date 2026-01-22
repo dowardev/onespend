@@ -85,10 +85,12 @@ import {
 import { addOutline } from 'ionicons/icons';
 import accountsController from '@/controllers/accountsController';
 import budgetController from '@/controllers/budgetController';
+// End Imports
 
 // Components
 import AccountBarChart from './AccountBarChart.vue';
 import AddAccountComponent from '@/views/suppliers/accounts/modals/AddAccountComponent.vue';
+// End Components
 
 // Vars
 interface AccountWithBalance {
@@ -111,6 +113,7 @@ const loadAll = accountsController.loadAll.bind(accountsController);
 
 const showModal = ref(false);
 const modalAccount = ref<any | null>(null);
+// End Vars
 
 // Functions
 function formatCurrency(v: number) {
@@ -138,9 +141,9 @@ function cancelModal() {
 async function onModalSaved(payload: any) {
   if (!payload) return;
   if (payload.id != null) {
-    await updateAccount(payload as any);
+    await updateAccount({ a: payload });
   } else {
-    await createAccount(payload as any);
+    await createAccount({ a: payload });
   }
   cancelModal();
   await loadAll();
@@ -149,20 +152,25 @@ async function onModalSaved(payload: any) {
 async function onDeleteAccount(id: string | number) {
   for (const entry of budgetController.getEntries()) {
     if (String(entry.accountId) === String(id)) {
-      budgetController.updateIngreso(entry.id, { accountId: null });
+      budgetController.updateIngreso({ id: entry.id, changes: { accountId: null } });
     }
   }
-  await deleteAccount(id);
+  await deleteAccount({ id });
   cancelModal();
   await loadAll();
 }
+// End Functions
 
 // Life cycle
 
+// End Life cycle
+
 // Computed
 
+// End Computed
+
 // Watch
-</script>
+// End Watch</script>
 
 <style scoped>
 .account-card {

@@ -405,7 +405,7 @@ const {
   formatCurrency: (val: any) => statisticsController.formatCurrency(val),
   formatPercent: (val: any) => statisticsController.formatPercent(val),
   providerValue: (p: any) => statisticsController.providerValue(p),
-  isoDate: (d: Date) => statisticsController.isoDate(d),
+  isoDate: (d: Date) => statisticsController.isoDate({ d }),
 };
 
 const pdfReport = ref<HTMLElement | null>(null);
@@ -665,7 +665,7 @@ function onPopoverDateChange(e: any) {
     const val = e?.detail?.value || selectedDate.value;
     // ion-datetime with presentation="year" may return 'YYYY' or a full date
     const yearStr = String(val).slice(0, 4);
-    const parsed = parseLocalDate(`${yearStr}-01-01`);
+    const parsed = parseLocalDate({ d: `${yearStr}-01-01` });
     selectedDate.value = format(parsed, 'yyyy');
     const currentYearStart = startOfYear(new Date());
     yearOffset.value = differenceInCalendarYears(parsed, currentYearStart);
