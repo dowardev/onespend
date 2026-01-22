@@ -324,6 +324,7 @@ async function openEditProviderModal(params: { provider: ProviderData }) {
     _supplierId: fullSupplier?.sync_id || supplierSyncId || fullSupplier?.id,
     _supplierName: providerData._supplierName || providerData.name,
     products: fullSupplier?.products || [],
+    _supplier: fullSupplier ? JSON.parse(JSON.stringify(fullSupplier)) : undefined,
   };
 
   showAddProviderModal.value = true;
@@ -349,6 +350,7 @@ function handleProviderSaved(payload: {
         _supplierId: payload.providerId,
         _supplierName: payload.providerName,
         products: payload.products,
+        _supplier: editingProvider.value._supplier ? JSON.parse(JSON.stringify(editingProvider.value._supplier)) : undefined,
       },
     });
   } else {
@@ -360,6 +362,7 @@ function handleProviderSaved(payload: {
       _supplierId: payload.providerId,
       _supplierName: payload.providerName,
       products: payload.products,
+      _supplier: editingProvider.value?._supplier ? JSON.parse(JSON.stringify(editingProvider.value._supplier)) : undefined,
     });
   }
   budgetController.saveData();
