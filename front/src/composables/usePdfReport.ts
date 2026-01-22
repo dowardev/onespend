@@ -38,9 +38,8 @@ export function usePdfReport() {
       const html2canvas =
         html2canvasModule && (html2canvasModule.default ?? html2canvasModule);
       const jsPDFModule = await import('jspdf');
-      const jsPDF =
-        jsPDFModule &&
-        (jsPDFModule.jsPDF ?? jsPDFModule.default ?? jsPDFModule);
+      const jsPDF = (jsPDFModule as any).jsPDF || (jsPDFModule as any).default || jsPDFModule;
+      const doc = new jsPDF();
 
       const el = elRef.value as HTMLElement;
 
@@ -57,7 +56,7 @@ export function usePdfReport() {
         useCORS: true,
         backgroundColor: '#ffffff',
         ...(opts.html2canvasOptions || {}),
-      });
+      } as any);
 
       if (downloadBtn && prevDisplay !== null)
         downloadBtn.style.display = prevDisplay;

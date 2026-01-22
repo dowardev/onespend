@@ -512,17 +512,14 @@ const descriptions = reactive({
     'Es un porcentaje que te dice qué tan rentable es tu negocio. Por cada $100 que vendes, este porcentaje te dice cuántos pesos se convierten en ganancia final (Utilidad Neta).',
 });
 const {
-  popovers: sharedPopovers,
-  hovered: sharedHovered,
-  setHover: sharedSetHover,
-  isoDate: sharedIsoDate,
-  providerValue: sharedProviderValue,
-  formatCurrency: sharedFormatCurrency,
-  formatPercent: sharedFormatPercent,
+  popovers,
+  hovered,
+  setHover,
+  isoDate,
+  providerValue,
+  formatCurrency,
+  formatPercent,
 } = usePerformancePeriod();
-const popovers = sharedPopovers;
-const hovered = sharedHovered;
-const setHover = sharedSetHover;
 // end vars
 
 // computed
@@ -584,12 +581,6 @@ const grossProfitPercentComputed = computed(() => {
 // end computed
 
 // functions
-// Use shared helpers
-const formatCurrency = sharedFormatCurrency;
-const formatPercent = sharedFormatPercent;
-const providerValue = sharedProviderValue;
-const isoDate = sharedIsoDate;
-
 // navigation
 function onMainDateClick(e: Event | null) {
   // Open the main date popover from the PerformanceCard

@@ -87,6 +87,39 @@ interface EntityIdEntry {
 type EntityResults = Record<string, EntityIdEntry[]>;
 type SyncResults = Record<string, EntityResults>;
 
+export interface SyncConflictResolution {
+  entity_type: string;
+  entity_id: string;
+  resolution: 'client' | 'server' | 'merge';
+  client_data?: SyncItemData;
+  server_data?: SyncItemData;
+}
+
+export interface SupplierEntry {
+  name?: string;
+  products?: SupplierProduct[];
+  sync_id?: string;
+  serverId?: number;
+  synced_at?: number;
+  [key: string]: unknown;
+}
+
+export interface SupplierProduct {
+  sync_id?: string;
+  name?: string;
+  serverId?: number;
+  synced_at?: number;
+  [key: string]: unknown;
+}
+
+export interface SupplierProductInfo {
+  id?: number | string;
+  sync_id?: number | string;
+  name?: string;
+  price?: number | string;
+  [key: string]: unknown;
+}
+
 class SyncService {
   private isOnline: boolean = true;
   private syncInProgress: boolean = false;
@@ -334,14 +367,6 @@ class SyncService {
     };
   }
 
-  interface SyncConflictResolution {
-    entity_type: string;
-    entity_id: string;
-    resolution: 'client' | 'server' | 'merge';
-    client_data?: SyncItemData;
-    server_data?: SyncItemData;
-  }
-
   private async updateLocalRecordsWithMysqlIds(results: Record<string, Record<string, Array<{ sync_id: string; id?: number | null }>>>): Promise<void> {
     console.log('[SyncService] 🔵 updateLocalRecordsWithMysqlIds - Starting');
     console.log('[SyncService] Results structure:', JSON.stringify(results, null, 2));
@@ -440,160 +465,6 @@ class SyncService {
     }
 
     console.log(`[SyncService] 🔵 updateLocalRecordsWithMysqlIds - Complete. Updated ${updatedCount} records.`);
-  }
-
-  interface SupplierEntry {
-    name?: string;
-    products?: SupplierProduct[];
-    sync_id?: string;
-    serverId?: number;
-    synced_at?: number;
-    [key: string]: unknown;
-  }
-
-  interface SupplierProduct {
-    sync_id?: string;
-    name?: string;
-    serverId?: number;
-    synced_at?: number;
-    [key: string]: unknown;
-  }
-
-  async pullChanges(): Promise<Record<string, SyncItemData[]>> {
-    if (!this.isOnline) {
-      throw new Error('Cannot pull changes while offline');
-    }
-
-    const lastSync = localStorage.getItem(LAST_SYNC_KEY) || '0';
-
-    const headers = await this.getAuthHeaders();
-    const response = await fetch(
-      `${API_URL}/api/sync/changes?last_sync=${lastSync}`,
-      { headers }
-    );
-
-    if (!response.ok) {
-      throw new Error(`Failed to pull changes: ${response.statusText}`);
-    }
-
-    const result = await response.json();
-
-    if (result.success && result.changes) {
-      localStorage.setItem(LAST_SYNC_KEY, String(result.server_time));
-    }
-
-    return result.changes || {};
-  }
-
-  async fullSync(): Promise<Record<string, SyncItemData[]>> {
-    if (!this.isOnline) {
-      throw new Error('Cannot full sync while offline');
-    }
-
-    const headers = await this.getAuthHeaders(undefined);
-    const response = await fetch(`${API_URL}/api/sync/full`, { headers });
-
-    if (!response.ok) {
-      throw new Error(`Failed to full sync: ${response.statusText}`);
-    }
-
-    const result = await response.json();
-
-    if (result.success && result.data) {
-      localStorage.setItem(LAST_SYNC_KEY, String(result.server_time));
-    }
-
-    return result.data || {};
-  }
-
-  async fullSyncAndSave(): Promise<void> {
-    console.log('syncService.fullSyncAndSave - Starting...');
-    
-    const data = await this.fullSync();
-    console.log('syncService.fullSyncAndSave - Data received:', JSON.stringify({
-      accounts: data.accounts?.length,
-      suppliers: data.suppliers?.length,
-      supplier_products: data.supplier_products?.length,
-      templates: data.templates?.length,
-      budgets: data.budgets?.length,
-      entries: data.entries?.length,
-      budget_providers: data.budget_providers?.length,
-      budget_provider_products: data.budget_provider_products?.length,
-    }));
-
-    // Save each entity type to its corresponding store
-    if (data.accounts && data.accounts.length > 0) {
-      console.log('syncService - Saving accounts:', data.accounts.length);
-      await this.saveEntitiesToStore('accounts', data.accounts);
-    }
-    if (data.suppliers && data.suppliers.length > 0) {
-      console.log('syncService - Saving suppliers:', data.suppliers.length);
-      console.log('syncService - First supplier products (before save):', JSON.stringify(data.suppliers[0].products?.map((p: SupplierProductInfo) => ({ id: p.id, sync_id: p.sync_id, name: p.name, price: p.price }))));
-      await this.saveEntitiesToStore('suppliers', data.suppliers);
-    }
-    if (data.supplier_products && data.supplier_products.length > 0) {
-      console.log('syncService - Saving supplier_products:', data.supplier_products.length);
-      await this.saveEntitiesToStore('supplier_products', data.supplier_products);
-    }
-    if (data.templates && data.templates.length > 0) {
-      await this.saveEntitiesToStore('templates', data.templates);
-    }
-    if (data.budgets && data.budgets.length > 0) {
-      await this.saveEntitiesToStore('budgets', data.budgets);
-    }
-    if (data.entries && data.entries.length > 0) {
-      await this.saveEntitiesToStore('entries', data.entries);
-    }
-    if (data.budget_providers && data.budget_providers.length > 0) {
-      await this.saveEntitiesToStore('budget_providers', data.budget_providers);
-    }
-    if (data.budget_provider_products && data.budget_provider_products.length > 0) {
-      await this.saveEntitiesToStore('budget_provider_products', data.budget_provider_products);
-    }
-
-    console.log('syncService.fullSyncAndSave - Data saved successfully');
-  }
-
-  private async saveEntitiesToStore(storeName: string, entities: SyncItemData[]): Promise<void> {
-    const { DixieController } = await import('@/controllers/dixie');
-    const ctrl = new DixieController({ name: 'ABOgazDB', storeName });
-    
-    for (const entity of entities) {
-      const entry = { ...entity };
-      if (entry.id != null) {
-        entry.sync_id = entry.id;
-        delete entry.id;
-      }
-      if (entry.serverId != null) {
-        entry.serverId = entry.serverId;
-      }
-      // Process products array for suppliers - move id to sync_id
-      if (storeName === 'suppliers' && entry.products && Array.isArray(entry.products)) {
-        console.log('saveEntitiesToStore - Processing products for supplier:', entry.name);
-        entry.products = entry.products.map((product: SupplierProductInfo) => {
-          const syncId = product.sync_id ?? product.id;
-          if (syncId === undefined) {
-            console.warn('saveEntitiesToStore - Product without ID:', { name: product.name, price: product.price });
-          }
-          const result = {
-            ...product,
-            sync_id: syncId,
-            id: undefined,
-          };
-          console.log('saveEntitiesToStore - Product processed:', { id: product.id, sync_id: result.sync_id, name: result.name });
-          return result;
-        });
-      }
-      await ctrl.putEntry({ entry });
-    }
-  }
-
-  interface SupplierProductInfo {
-    id?: number | string;
-    sync_id?: number | string;
-    name?: string;
-    price?: number | string;
-    [key: string]: unknown;
   }
 
   getQueueCount(): number {

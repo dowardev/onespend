@@ -511,4 +511,5 @@ const formattedSelectedDate = computed(() => {
 });
 
 // End Computed
+}
 </script>

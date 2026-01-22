@@ -194,15 +194,6 @@ function openDatePopover(params: { ev: Event }) {
   datePopoverOpen.value = true;
 }
 
-function onDateChange(params: { ev: CustomEvent }) {
-  const { ev } = params;
-  const val =
-    (ev.detail && ev.detail.value) || (ev.target as HTMLInputElement)?.value || '';
-  if (!val) return;
-  selectedDate.value = val;
-  emit('update:applySelectedDate', val);
-}
-
 function closeDatePopover() {
   datePopoverOpen.value = false;
   datePopoverEvent.value = null;

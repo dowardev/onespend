@@ -41,3 +41,4 @@ import YearComponent from '@/views/statistics/cashFlow/year/YearComponent.vue';
 // Computed
 // Watch
 // End Watch
+</script>

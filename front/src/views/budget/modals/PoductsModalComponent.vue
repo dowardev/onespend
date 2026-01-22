@@ -480,62 +480,6 @@ async function focusNext(params: { currentIndex: number; ev?: Event }) {
     }
   }
 }
-  } catch (_e) {
-    /* noop */
-  }
-
-  // If a filter is active, navigate among visible products; otherwise, use linear next.
-  const visible = filteredOriginalIndices.value;
-  const currentPos = visible.indexOf(currentIndex);
-
-  if (currentPos >= 0 && currentPos < visible.length - 1) {
-    const nextOriginalIndex = visible[currentPos + 1];
-    const nextElement = document.getElementById(
-      `prod-input-${nextOriginalIndex}`
-    ) as HTMLIonInputElement | null;
-    if (nextElement) {
-      if (typeof nextElement.getInputElement === 'function') {
-        const nativeInput = await nextElement.getInputElement();
-        nativeInput.focus();
-      } else {
-        nextElement.setFocus?.();
-      }
-      await ensureVisible({ index: nextOriginalIndex });
-    }
-    return;
-  }
-
-  const nextIndex = currentIndex + 1;
-  const totalProducts = props.products?.length || 0;
-
-  if (nextIndex < totalProducts) {
-    const nextElement = document.getElementById(
-      `prod-input-${nextIndex}`
-    ) as HTMLIonInputElement | null;
-    if (nextElement) {
-      if (typeof nextElement.getInputElement === 'function') {
-        const nativeInput = await nextElement.getInputElement();
-        nativeInput.focus();
-      } else {
-        nextElement.setFocus?.();
-      }
-      await ensureVisible({ index: nextIndex });
-    }
-  } else {
-    const currentElement = document.getElementById(
-      `prod-input-${currentIndex}`
-    ) as HTMLIonInputElement | null;
-    if (currentElement) {
-      if (typeof currentElement.getInputElement === 'function') {
-        const nativeInput = await currentElement.getInputElement();
-        nativeInput.focus();
-      } else {
-        currentElement.setFocus?.();
-      }
-      await ensureVisible({ index: currentIndex });
-    }
-  }
-}
 
 async function focusPrev(params: { currentIndex: number; ev?: Event }) {
   const { currentIndex, ev } = params;

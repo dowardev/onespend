@@ -150,9 +150,6 @@ class DixieController {
             } catch (_e) {
             }
           }
-        } catch (_e) {
-          return String(value);
-        }
         return out;
       }
       return String(value);
