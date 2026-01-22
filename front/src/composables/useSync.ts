@@ -117,15 +117,15 @@ export function useSync() {
       entityType: 'entry',
       operation,
       data: {
-        name: entry.name,
+        name: entry.name as string,
         amount: entry.amount,
-        date: entry.date,
-        payment_type: entry.paymentType,
-        entry_type: entry.entryType,
-        account_id: entry.accountId,
-        groups: entry.groups,
-        _from_provider_group_id: entry._fromProviderGroupId,
-        _provider_name: entry._providerName,
+        date: entry.date as number,
+        payment_type: entry.paymentType as string,
+        entry_type: entry.entryType as string,
+        account_id: entry.accountId as string,
+        groups: entry.groups as string[],
+        _from_provider_group_id: entry._fromProviderGroupId as string,
+        _provider_name: entry._providerName as string,
         updated_at: Date.now(),
       },
     };
@@ -137,7 +137,7 @@ export function useSync() {
   function syncProvider(params: { provider: SyncProviderParams; operation?: 'create' | 'update' | 'delete' }) {
     const { provider, operation = 'create' } = params;
     console.log('%c[useSync] 🔵 syncProvider LLAMADO', 'color: blue; font-weight: bold', {
-      name: provider.name,
+      name: provider.name as string,
       operation,
       sync_id: provider.sync_id,
       id: provider.id
@@ -155,17 +155,17 @@ export function useSync() {
       entityType: 'supplier',
       operation,
       data: {
-        name: provider.name,
-        date: provider.date,
-        estimated: provider.estimated,
-        account_id: provider.accountId,
-        efectivo: provider.efectivo,
-        tarjeta: provider.tarjeta,
-        credito: provider.credito,
-        notes: provider.notes,
-        visited: provider.visited,
-        _supplier_id: provider._supplierId,
-        _supplier_name: provider._supplierName,
+        name: provider.name as string,
+        date: provider.date as number,
+        estimated: provider.estimated as number,
+        account_id: provider.accountId as string,
+        efectivo: provider.efectivo as number,
+        tarjeta: provider.tarjeta as number,
+        credito: provider.credito as number,
+        notes: provider.notes as string,
+        visited: provider.visited as boolean,
+        _supplier_id: provider._supplierId as string,
+        _supplier_name: provider._supplierName as string,
         updated_at: Date.now(),
       },
     };
@@ -302,17 +302,17 @@ export function useSync() {
       entityType: 'budget_provider',
       operation,
       data: {
-        date: provider.date,
-        name: provider.name,
-        estimated: provider.estimated,
-        account_id: provider.accountId,
-        efectivo: provider.efectivo,
-        tarjeta: provider.tarjeta,
-        credito: provider.credito,
-        notes: provider.notes,
-        visited: provider.visited,
+        date: provider.date as number,
+        name: provider.name as string,
+        estimated: provider.estimated as number,
+        account_id: provider.accountId as string,
+        efectivo: provider.efectivo as number,
+        tarjeta: provider.tarjeta as number,
+        credito: provider.credito as number,
+        notes: provider.notes as string,
+        visited: provider.visited as boolean,
         _supplier_id: provider._supplierId || supplierSyncId,
-        _supplier_name: provider._supplierName,
+        _supplier_name: provider._supplierName as string,
         products: products ? products.map((p: SyncBudgetProviderProductParams) => ({
           sync_id: p.sync_id,
           supplier_product_id: p.supplierProductId || p.supplier_product_id,
@@ -330,7 +330,7 @@ export function useSync() {
       entityType: syncItem.entityType,
       operation: syncItem.operation,
       data: syncItem.data,
-      productsDetails: syncItem.data.products?.map((p: SyncBudgetProviderProductParams) => ({
+      productsDetails: (syncItem.data as any).products?.map((p: SyncBudgetProviderProductParams) => ({
         supplier_product_id: p.supplier_product_id,
         product_name: p.product_name,
         quantity: p.quantity
@@ -382,7 +382,7 @@ export function useSync() {
       console.log('syncNow - result from server:', JSON.stringify(result, null, 2));
       
       if (result) {
-        await applyServerChanges({ changes: result.results || {}, serverTime: result.serverTime });
+        await applyServerChanges({ changes: (result as any).results || {}, serverTime: result.serverTime });
       }
 
       lastSyncTime.value = syncService.getLastSyncTime();
@@ -407,7 +407,7 @@ export function useSync() {
     syncError.value = null;
 
     try {
-      const changes = await syncService.pullChanges();
+      const changes = await (syncService as any).pullChanges();
       await applyServerChanges({ changes, serverTime: Date.now() });
       lastSyncTime.value = syncService.getLastSyncTime();
     } catch (error) {
@@ -437,24 +437,24 @@ export function useSync() {
           const existing = budgetStore.entries.find(e => String(e.id) === String(entry.id));
           if (existing) {
             budgetStore.updateEntry(entry.id, {
-              name: entry.name,
+              name: entry.name as string,
               amount: entry.amount,
-              date: entry.date,
+              date: entry.date as number,
               paymentType: entry.payment_type,
               entryType: entry.entry_type,
               accountId: entry.account_id,
-              groups: entry.groups,
+              groups: entry.groups as string[],
             });
           } else {
             budgetStore.addEntry({
               id: entry.id,
-              name: entry.name,
+              name: entry.name as string,
               amount: entry.amount,
-              date: entry.date,
+              date: entry.date as number,
               paymentType: entry.payment_type,
               entryType: entry.entry_type,
               accountId: entry.account_id,
-              groups: entry.groups,
+              groups: entry.groups as string[],
               createdAt: Date.now(),
             });
           }
@@ -470,30 +470,31 @@ export function useSync() {
           budgetStore.removeProvider(localId);
         } else {
           const existing = budgetStore.providers.find(p => String(p.id) === String(supplier.id));
+          const s = supplier as any;
           if (existing) {
             budgetStore.updateProvider(supplier.id, {
-              name: supplier.name,
-              date: supplier.date,
-              estimated: supplier.estimated,
-              accountId: supplier.account_id,
-              efectivo: supplier.efectivo,
-              tarjeta: supplier.tarjeta,
-              credito: supplier.credito,
-              notes: supplier.notes,
-              visited: supplier.visited,
+              name: s.name as string,
+              date: s.date as number,
+              estimated: s.estimated as number,
+              accountId: s.account_id as string,
+              efectivo: s.efectivo as number,
+              tarjeta: s.tarjeta as number,
+              credito: s.credito as number,
+              notes: s.notes as string,
+              visited: s.visited as boolean,
             });
           } else {
             budgetStore.addProvider({
               id: supplier.id,
-              name: supplier.name,
-              date: supplier.date,
-              estimated: supplier.estimated,
-              accountId: supplier.account_id,
-              efectivo: supplier.efectivo,
-              tarjeta: supplier.tarjeta,
-              credito: supplier.credito,
-              notes: supplier.notes,
-              visited: supplier.visited,
+              name: s.name as string,
+              date: s.date as number,
+              estimated: s.estimated as number,
+              accountId: s.account_id as string,
+              efectivo: s.efectivo as number,
+              tarjeta: s.tarjeta as number,
+              credito: s.credito as number,
+              notes: s.notes as string,
+              visited: s.visited as boolean,
             });
           }
         }
@@ -558,28 +559,28 @@ export function useSync() {
           const existing = budgetStore.providers.find(p => String(p.id) === String(provider.id));
           if (existing) {
             budgetStore.updateProvider(provider.id, {
-              name: provider.name,
-              date: provider.date,
-              estimated: provider.estimated,
+              name: provider.name as string,
+              date: provider.date as number,
+              estimated: provider.estimated as number,
               accountId: provider.account_id,
-              efectivo: provider.efectivo,
-              tarjeta: provider.tarjeta,
-              credito: provider.credito,
-              notes: provider.notes,
-              visited: provider.visited,
+              efectivo: provider.efectivo as number,
+              tarjeta: provider.tarjeta as number,
+              credito: provider.credito as number,
+              notes: provider.notes as string,
+              visited: provider.visited as boolean,
             });
           } else {
             budgetStore.addProvider({
               id: provider.id,
-              name: provider.name,
-              date: provider.date,
-              estimated: provider.estimated,
+              name: provider.name as string,
+              date: provider.date as number,
+              estimated: provider.estimated as number,
               accountId: provider.account_id,
-              efectivo: provider.efectivo,
-              tarjeta: provider.tarjeta,
-              credito: provider.credito,
-              notes: provider.notes,
-              visited: provider.visited,
+              efectivo: provider.efectivo as number,
+              tarjeta: provider.tarjeta as number,
+              credito: provider.credito as number,
+              notes: provider.notes as string,
+              visited: provider.visited as boolean,
             });
           }
         }

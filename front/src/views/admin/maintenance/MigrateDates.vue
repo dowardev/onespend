@@ -422,27 +422,6 @@ function onAlertDidDismiss(params: { event: CustomEvent }) {
     confirmAlert.open = false;
   }
 }
-    if (role === 'confirm') {
-      void doApplyMigration();
-    }
-  } catch (err) {
-    console.error('onAlertDidDismiss error', err);
-  } finally {
-    confirmAlert.open = false;
-  }
-}
-
-function confirmCancel() {
-  confirmAlert.open = false;
-}
-      void doApplyMigration();
-    }
-  } catch (err) {
-    console.error('onAlertDidDismiss error', err);
-  } finally {
-    confirmAlert.open = false;
-  }
-}
 
 function confirmCancel() {
   confirmAlert.open = false;

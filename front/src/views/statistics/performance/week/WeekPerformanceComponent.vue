@@ -513,9 +513,6 @@ const descriptions = reactive({
   netMarginDay:
     'Es un porcentaje que te dice qué tan rentable es tu negocio. Por cada $100 que vendes, este porcentaje te dice cuántos pesos se convierten en ganancia final (Utilidad Neta).',
 });
-// Shared snapshots & modal state (extracted to composable)
-const { snapshots, modalOpen } = usePeriodView(false);
-
 // end vars
 
 // computed
@@ -1151,7 +1148,6 @@ async function downloadPdf() {
 
 // alias to shared setHover implementation
 const setHover = sharedSetHover;
-const isoDate = sharedIsoDate;
 
 function setModalFromLayout(val: boolean) {
   try {

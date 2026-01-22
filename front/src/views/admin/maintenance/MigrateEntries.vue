@@ -470,41 +470,6 @@ function onAlertDidDismiss(params: { event: CustomEvent }) {
     confirmAlert.open = false;
   }
 }
-  } catch (_e) {
-  } finally {
-    confirmAlert.open = false;
-  }
-}
-
-function confirmCancel() {
-  confirmAlert.open = false;
-}
-
-function onAlertDidDismiss(params: { event: CustomEvent }) {
-  const { event } = params;
-  try {
-    const role = event?.detail?.role ?? null;
-    if (
-      (import.meta as unknown as { env?: Record<string, string | undefined> })
-        .env?.DEV
-    ) {
-      console.log('ion-alert did-dismiss, role=', role);
-    }
-    if (role === 'confirm') {
-      void doApplyMigration();
-    }
-  } catch (err) {
-    console.error('onAlertDidDismiss error', err);
-  } finally {
-    confirmAlert.open = false;
-  }
-}
-  } catch (err) {
-    console.error('onAlertDidDismiss error', err);
-  } finally {
-    confirmAlert.open = false;
-  }
-}
 
 async function applyMigration() {
   confirmAlert.open = true;

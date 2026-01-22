@@ -619,11 +619,7 @@ function nextDay() {
 }
 
 // chart helper that returns a sensible numeric value for provider entries
-// Use shared providerValue from composable
-const providerValue = sharedProviderValue;
-
 // Use shared isoDate
-const isoDate = sharedIsoDate;
 
 // Load data for the single day defined by dayOffset (0 = today)
 // If a specific date is provided (string YYYY-MM-DD or Date), the function will
@@ -1259,11 +1255,9 @@ async function downloadPdf() {
 
 // Helper to format currency consistently across the component
 // Use shared formatCurrency
-const formatCurrency = sharedFormatCurrency;
 
 // helper to format percentages without decimals
 // Use shared formatPercent
-const formatPercent = sharedFormatPercent;
 
 function setModalFromLayout(val: boolean) {
   try {
@@ -1273,7 +1267,6 @@ function setModalFromLayout(val: boolean) {
   }
 }
 // alias local API to shared implementation
-const setHover = sharedSetHover;
 </script>
 
 <style scoped>

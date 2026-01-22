@@ -233,21 +233,8 @@ async function remove(id: IDBValidKey | undefined) {
   await suppliersController.listSuppliers();
 }
 
-const filteredSuppliers = computed(() => {
-  const term = (searchTerm.value || '').toString().toLowerCase().trim();
-  const list = unref(suppliers) || [];
-  if (!term) return list;
-  return list.filter((s: Supplier) => {
-    const name = (s.name || '').toString().toLowerCase();
-    const products = (s.products || [])
-      .map((p: Product) => (p.name || '').toString().toLowerCase())
-      .join(' ');
-    return name.includes(term) || products.includes(term);
-  });
-});
-
 const groupedSuppliers = computed(() => {
-  const list = (unref(filteredSuppliers) || []).slice();
+  const list = (unref(suppliers) || []).slice();
   list.sort((a: Supplier, b: Supplier) => {
     const na = (a.name || '').toString().toLowerCase();
     const nb = (b.name || '').toString().toLowerCase();
@@ -287,28 +274,9 @@ const filteredSuppliers = computed(() => {
   });
 });
 
-const groupedSuppliers = computed(() => {
-  const list = (unref(filteredSuppliers) || []).slice();
-  list.sort((a: Supplier, b: Supplier) => {
-    const na = (a.name || '').toString().toLowerCase();
-    const nb = (b.name || '').toString().toLowerCase();
-    return na.localeCompare(nb);
-  });
-
-  const map = new Map<string, any[]>();
-  list.forEach((s: Supplier) => {
-    const name = (s.name || '').toString().trim();
-    const letter = name ? name[0].toUpperCase() : '#';
-    if (!map.has(letter)) map.set(letter, []);
-    map.get(letter)!.push(s);
-  });
-
-  return Array.from(map.keys())
-    .sort()
-    .map(letter => ({ letter, items: map.get(letter) || [] }));
-});
-
 // End Computed
+
+// Methods
 
 // Watch
 </script>

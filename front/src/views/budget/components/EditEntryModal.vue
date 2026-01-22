@@ -383,10 +383,6 @@ function addEntryItem() {
   }
 }
 
-function selectProvider(provider: ProviderSummary) {
-  emit('select-provider', provider);
-}
-
 function handleSave() {
   if (!isFormValid.value) return;
 

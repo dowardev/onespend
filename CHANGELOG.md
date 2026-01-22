@@ -1,3 +1,47 @@
+## [v0.37.3] - 2026-01-22
+
+### Fixed
+
+- Add TypeScript type assertions throughout useSync for entry and provider sync operations (string, number, boolean, string[] casts)
+- Fix jsPDF initialization in usePdfReport with proper type handling
+- Add html2canvas options typing in usePdfReport for better TypeScript support
+- Move interfaces to module level in syncService for improved TypeScript organization
+
+### Refactored
+
+- Remove duplicate code blocks from MigrateDates.vue and MigrateEntries.vue
+- Remove unused selectProvider function from EditEntryModal.vue
+- Remove unused focusNext function from PoductsModalComponent.vue
+- Remove unused onDateChange function from ApplyTemplateComponent.vue
+- Remove duplicate try-catch block from dixie.ts
+- Fix missing closing brace in BudgetView.vue
+- Fix missing closing tag in CashFlow.vue
+- Remove duplicate variable assignments in DayPerformanceComponent.vue (use shared values directly)
+- Simplify composable destructuring in MonthPerformanceComponent.vue
+- Remove duplicate assignments in WeekPerformanceComponent.vue
+- Consolidate groupedSuppliers computed property in SuppliersPage.vue (remove duplicate filteredSuppliers logic)
+
+### Files Changed
+
+**Frontend:**
+- `front/src/composables/usePdfReport.ts` - Fix jsPDF initialization, add type assertions
+- `front/src/composables/useSync.ts` - Add type assertions throughout sync operations
+- `front/src/controllers/dixie.ts` - Remove duplicate try-catch block
+- `front/src/services/syncService.ts` - Move interfaces to module level
+- `front/src/views/admin/maintenance/MigrateDates.vue` - Remove duplicate code blocks
+- `front/src/views/admin/maintenance/MigrateEntries.vue` - Remove duplicate code blocks
+- `front/src/views/budget/BudgetView.vue` - Fix missing closing brace
+- `front/src/views/budget/components/EditEntryModal.vue` - Remove unused selectProvider function
+- `front/src/views/budget/modals/PoductsModalComponent.vue` - Remove unused focusNext function
+- `front/src/views/statistics/cashFlow/CashFlow.vue` - Fix missing closing tag
+- `front/src/views/statistics/performance/day/DayPerformanceComponent.vue` - Remove duplicate variable assignments
+- `front/src/views/statistics/performance/month/MonthPerformanceComponent.vue` - Simplify composable destructuring
+- `front/src/views/statistics/performance/week/WeekPerformanceComponent.vue` - Remove duplicate assignments
+- `front/src/views/suppliers/SuppliersPage.vue` - Consolidate groupedSuppliers logic
+- `front/src/views/templates/modals/ApplyTemplateComponent.vue` - Remove unused onDateChange function
+
+---
+
 ## [v0.37.2] - 2026-01-22
 
 ### Added
