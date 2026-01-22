@@ -409,7 +409,8 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
-import { usePerformancePeriod } from '@/composables/usePerformancePeriod';
+
+// end chart.js registration
 
 ChartJS.register(
   CategoryScale,
@@ -422,29 +423,39 @@ ChartJS.register(
 
 // controllers
 import { DixieController } from '@/controllers/dixie';
-import dixieController from '@/controllers/dixie';
-// end controllers
+import { StatisticsController } from '@/controllers/statisticsController';
 
-// components
-import PeriodLayout from '../components/PeriodLayout.vue';
-import PeriodChartWrapper from '../components/PeriodChartWrapper.vue';
-import PeriodSnapshots from '../components/PeriodSnapshots.vue';
-// end components
+const statisticsController = new StatisticsController();
 
-// composables
-import { usePeriodView } from '@/composables/usePeriodView';
-import { usePdfReport } from '@/composables/usePdfReport';
-// end composables
+// Shared state from StatisticsController
+const {
+  popovers: sharedPopovers,
+  hovered: sharedHovered,
+  setHover: sharedSetHover,
+  isoDate: sharedIsoDate,
+  providerValue: sharedProviderValue,
+  formatCurrency: sharedFormatCurrency,
+  formatPercent: sharedFormatPercent,
+} = {
+  popovers: statisticsController.getHovered(),
+  hovered: statisticsController.getHovered(),
+  setHover: (key: string, value: boolean) => statisticsController.setHover(key, value),
+  isoDate: (d: Date) => statisticsController.isoDate(d),
+  providerValue: (p: any) => statisticsController.providerValue(p),
+  formatCurrency: (val: any) => statisticsController.formatCurrency(val),
+  formatPercent: (val: any) => statisticsController.formatPercent(val),
+};
 
-// life
-onMounted(() => {
-  void loadDayData();
-});
-// end life
-
-// vars
-const { snapshots, modalOpen, setSnapshots } = usePeriodView(false);
-// day navigation state: offset (number of days from today)
+// Shared snapshots & modal state (extracted to StatisticsController)
+const {
+  snapshots,
+  modalOpen,
+  setSnapshots,
+} = {
+  snapshots: statisticsController.getSnapshots(),
+  modalOpen: statisticsController.getModalOpen(),
+  setSnapshots: (val: any) => statisticsController.setSnapshots(val),
+};
 const dayOffset = ref<number>(0);
 const dailyProfit = ref<number>(0);
 const previousDailyProfit = ref<number>(0);
@@ -510,17 +521,14 @@ const chartOptions = reactive<ChartOptions<'bar'>>({
     title: { display: true, text: 'Ingresos y Egresos (día)' },
   },
 });
-const {
-  popovers: sharedPopovers,
-  hovered: sharedHovered,
-  setHover: sharedSetHover,
-  isoDate: sharedIsoDate,
-  providerValue: sharedProviderValue,
-  formatCurrency: sharedFormatCurrency,
-  formatPercent: sharedFormatPercent,
-} = usePerformancePeriod();
+
 const popovers = sharedPopovers;
 const hovered = sharedHovered;
+const setHover = sharedSetHover;
+const isoDate = sharedIsoDate;
+const providerValue = sharedProviderValue;
+const formatCurrency = sharedFormatCurrency;
+const formatPercent = sharedFormatPercent;
 // end vars
 
 // computed
@@ -1229,22 +1237,19 @@ function resetToToday() {
 
 // PDF report ref + download handler
 const pdfReport = ref<HTMLElement | null>(null);
-const { downloadPdf: generatePdf, isGeneratingPdf } = usePdfReport();
+const isGeneratingPdf = computed(() => statisticsController.getIsGeneratingPdf());
 
 /**
- * Generate a PDF from the pdfReport element using html2canvas + jsPDF.
- * Dynamically imports the libraries to keep the bundle small.
+ * Generate a PDF from the pdfReport element using StatisticsController.
  */
 async function downloadPdf() {
-  // Delegate PDF generation to the centralized composable
   if (!pdfReport.value) {
     console.warn('[DayPerformance] pdfReport element not available');
     return;
   }
-  if (isGeneratingPdf.value) return; // avoid concurrent runs
+  if (isGeneratingPdf.value) return;
 
-  // Call the composable helper with the container ref, button selector and filename factory
-  await generatePdf({
+  await statisticsController.downloadPdf({
     containerRef: pdfReport,
     buttonSelector: '#downloadButton',
     filenameFactory: () =>

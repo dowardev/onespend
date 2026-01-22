@@ -28,7 +28,7 @@ export interface SyncResult {
 class SyncService {
   private isOnline: boolean = true;
   private syncInProgress: boolean = false;
-  private syncTimeout: number | null = null;
+  private syncTimeout: ReturnType<typeof setTimeout> | null = null;
   private onlineListeners: Set<(online: boolean) => void> = new Set();
 
   constructor() {
@@ -81,7 +81,6 @@ class SyncService {
   }
 
   private getQueue(): SyncItem[] {
-    if (typeof window === 'undefined') return [];
     const queue = localStorage.getItem(SYNC_QUEUE_KEY);
     return queue ? JSON.parse(queue) : [];
   }

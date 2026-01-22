@@ -426,6 +426,10 @@ class BudgetController {
     return this.store.frozenSnapshot;
   }
 
+  syncProvidersWithSuppliers(suppliers: any[]) {
+    return this.store.syncProvidersWithSuppliers(suppliers);
+  }
+
   private toPlainObject(obj: any): any {
     try {
       return JSON.parse(JSON.stringify(obj));

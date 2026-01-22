@@ -217,7 +217,7 @@ import {
   logOutOutline,
 } from 'ionicons/icons';
 import authController from '@/controllers/authController';
-import { useSync } from '@/composables/useSync';
+import { SyncController } from '@/controllers/syncController';
 import SyncStatus from './SyncStatus.vue';
 
 const emit = defineEmits<{
@@ -228,7 +228,8 @@ const emit = defineEmits<{
 const menuRef = ref();
 const route = useRoute();
 
-const { pendingChanges } = useSync();
+const syncController = new SyncController();
+const pendingChanges = computed(() => syncController.getPendingChanges());
 
 const appName =
   (import.meta as unknown as { env?: Record<string, string | undefined> }).env

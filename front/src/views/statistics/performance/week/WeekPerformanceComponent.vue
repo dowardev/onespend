@@ -420,17 +420,11 @@ ChartJS.register(
 
 // controllers
 import { DixieController } from '@/controllers/dixie';
-import dixieController from '@/controllers/dixie';
-// end controllers
+import { StatisticsController } from '@/controllers/statisticsController';
 
-// components
-import PeriodLayout from '../components/PeriodLayout.vue';
-import PeriodChartWrapper from '../components/PeriodChartWrapper.vue';
-import PeriodSnapshots from '../components/PeriodSnapshots.vue';
-// end components
+const statisticsController = new StatisticsController();
 
-// shared performance helpers
-import { usePerformancePeriod } from '@/composables/usePerformancePeriod';
+// Shared performance helpers
 const {
   popovers: sharedPopovers,
   hovered: sharedHovered,
@@ -439,27 +433,24 @@ const {
   providerValue: sharedProviderValue,
   formatCurrency: sharedFormatCurrency,
   formatPercent: sharedFormatPercent,
-} = usePerformancePeriod();
-// end shared helpers
+} = {
+  popovers: statisticsController.getHovered(),
+  hovered: statisticsController.getHovered(),
+  setHover: (key: string, value: boolean) => statisticsController.setHover(key, value),
+  isoDate: (d: Date) => statisticsController.isoDate(d),
+  providerValue: (p: any) => statisticsController.providerValue(p),
+  formatCurrency: (val: any) => statisticsController.formatCurrency(val),
+  formatPercent: (val: any) => statisticsController.formatPercent(val),
+};
 
-// composables
-import { usePeriodView } from '@/composables/usePeriodView';
-import { usePdfReport } from '@/composables/usePdfReport';
-// end composables
-
-// life
-onMounted(() => {
-  void loadWeekData();
-});
-// end life
-
-// vars
-// week navigation state: offset (number of weeks from current week)
-const weekOffset = ref<number>(0);
-const weekDays = ref<any[]>([]);
-// Use shared popovers & hovered state from composable
-const popovers = sharedPopovers;
-const hovered = sharedHovered;
+// Shared snapshots & modal state (extracted to StatisticsController)
+const {
+  snapshots,
+  modalOpen,
+} = {
+  snapshots: statisticsController.getSnapshots(),
+  modalOpen: statisticsController.getModalOpen(),
+};
 
 // selected date for the popover datetime (YYYY-MM-DD)
 const selectedDate = ref<string>(format(new Date(), 'yyyy-MM-dd'));
@@ -1138,21 +1129,19 @@ function resetToToday() {
 }
 // PDF report ref + download handler
 const pdfReport = ref<HTMLElement | null>(null);
-const { downloadPdf: generatePdf, isGeneratingPdf } = usePdfReport();
+const isGeneratingPdf = computed(() => statisticsController.getIsGeneratingPdf());
 
 /**
- * Generate a PDF from the pdfReport element using html2canvas + jsPDF.
- * Dynamically imports the libraries to keep the bundle small.
+ * Generate a PDF from the pdfReport element using StatisticsController.
  */
 async function downloadPdf() {
-  // Delegate PDF generation to the centralized composable
   if (!pdfReport.value) {
     console.warn('[WeekPerformance] pdfReport element not available');
     return;
   }
-  if (isGeneratingPdf.value) return; // avoid concurrent runs
+  if (isGeneratingPdf.value) return;
 
-  await generatePdf({
+  await statisticsController.downloadPdf({
     containerRef: pdfReport,
     buttonSelector: '#dowButWeek',
     filenameFactory: () =>
@@ -1162,6 +1151,7 @@ async function downloadPdf() {
 
 // alias to shared setHover implementation
 const setHover = sharedSetHover;
+const isoDate = sharedIsoDate;
 
 function setModalFromLayout(val: boolean) {
   try {

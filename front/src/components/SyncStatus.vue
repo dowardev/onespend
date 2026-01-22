@@ -17,15 +17,14 @@
 import { computed } from 'vue';
 import { IonIcon } from '@ionic/vue';
 import { cloudOfflineOutline, syncOutline, checkmarkCircleOutline, timeOutline } from 'ionicons/icons';
-import { useSync } from '@/composables/useSync';
+import { SyncController } from '@/controllers/syncController';
 
-const {
-  isOnline,
-  isSyncing,
-  pendingChanges,
-  lastSyncTime,
-  syncNow,
-} = useSync();
+const syncController = new SyncController();
+
+const isOnline = computed(() => syncController.getIsOnline());
+const isSyncing = computed(() => syncController.getIsSyncing());
+const pendingChanges = computed(() => syncController.getPendingChanges());
+const lastSyncTime = computed(() => syncController.getLastSyncTime());
 
 const syncIcon = computed(() => {
   if (!isOnline.value) return cloudOfflineOutline;

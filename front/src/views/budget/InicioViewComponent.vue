@@ -7,7 +7,7 @@
             <ion-label>Registro</ion-label>
 
             <ion-button
-              :disabled="budgetStore.isDayClosed"
+              :disabled="isDayClosed"
               @click="openAddEntryModal"
             >
               <ion-icon :icon="addOutline"></ion-icon>
@@ -45,7 +45,7 @@
                     "
                     class="transparent"
                     button
-                    :disabled="budgetStore.isDayClosed"
+                    :disabled="isDayClosed"
                     @click="handleEntryClick(block.item)"
                   >
                     <ion-label>
@@ -144,7 +144,7 @@
     :is-open="editEntryModalOpen"
     :entry-data="editEntryModalData"
     :accounts-list="accountsList"
-    :is-day-closed="budgetStore.isDayClosed"
+    :is-day-closed="isDayClosed"
     :providers-today-with-data="providersTodayWithData"
     @dismiss="editEntryModalOpen = false"
     @save="saveEntryChanges"
@@ -220,11 +220,14 @@ import EditProviderModal from './components/EditProviderModal.vue';
 import EditEntryModal from './components/EditEntryModal.vue';
 import { computed, ref, onMounted, reactive, watch } from 'vue';
 import budgetController from '@/controllers/budgetController';
+import { BudgetController } from '@/controllers/budgetController';
 import accountsController from '@/controllers/accountsController';
 import suppliersController from '@/controllers/suppliersController';
-import { useBudgetStore } from '@/stores/budgetStore';
 
-const budgetStore = useBudgetStore();
+const budgetCtrl = new BudgetController();
+
+const isDayClosed = computed(() => budgetCtrl.getIsDayClosed());
+const frozenSnapshot = computed(() => budgetCtrl.getFrozenSnapshot());
 
 const addEntrySegment = ref('entry');
 const showDeleteAlert = ref(false);
@@ -381,8 +384,8 @@ const canAddMoreItems = computed(() => {
 function calculateAccountBalance(acc: any, accountId: string | number) {
   const initialBalance = Number(acc.initialBalance) || 0;
 
-  const entries = budgetStore.isDayClosed && budgetStore.frozenSnapshot
-    ? budgetStore.frozenSnapshot.entries
+  const entries = isDayClosed.value && frozenSnapshot.value
+    ? frozenSnapshot.value.entries
     : budgetController.getEntries();
     
   const entriesForAccount = entries.filter((e: any) => {
@@ -431,8 +434,8 @@ const accountsWithBalance = computed(() => {
 
 // Totales para la card de resultado
 const totalIngresos = computed(() => {
-  const entries = budgetStore.isDayClosed && budgetStore.frozenSnapshot
-    ? budgetStore.frozenSnapshot.entries
+  const entries = isDayClosed.value && frozenSnapshot.value
+    ? frozenSnapshot.value.entries
     : budgetController.getEntries();
   return entries
     .filter((e: any) => e.entryType === 'ingreso')
@@ -440,8 +443,8 @@ const totalIngresos = computed(() => {
 });
 
 const totalEgresos = computed(() => {
-  const entries = budgetStore.isDayClosed && budgetStore.frozenSnapshot
-    ? budgetStore.frozenSnapshot.entries
+  const entries = isDayClosed.value && frozenSnapshot.value
+    ? frozenSnapshot.value.entries
     : budgetController.getEntries();
   return entries
     .filter((e: any) => e.entryType === 'egreso')
@@ -484,8 +487,8 @@ const providersTodayWithData = computed(() => {
 });
 
 const renderedEntries = computed(() => {
-  const entries = budgetStore.isDayClosed && budgetStore.frozenSnapshot
-    ? budgetStore.frozenSnapshot.entries
+  const entries = isDayClosed.value && frozenSnapshot.value
+    ? frozenSnapshot.value.entries
     : budgetController.getEntries();
   return entries.map((item: any) => ({ type: 'item', item }));
 });
@@ -581,8 +584,8 @@ function getAccountRemaining(
 
   const initialBalance = Number(account.initialBalance) || 0;
 
-  const entries = budgetStore.isDayClosed && budgetStore.frozenSnapshot
-    ? budgetStore.frozenSnapshot.entries
+  const entries = isDayClosed.value && frozenSnapshot.value
+    ? frozenSnapshot.value.entries
     : budgetController.getEntries();
     
   const entriesForAccount = entries.filter((e: any) => {

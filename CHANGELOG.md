@@ -1,3 +1,43 @@
+## [v0.36.0] - 2026-01-22
+
+### Added
+
+- Add StatisticsController class with centralized state management for statistics views
+- Add SyncController class for managing sync state (online status, syncing, pending changes)
+- Add PDF report generation capabilities with html2canvas and jspdf in StatisticsController
+- Add hover state management for performance metrics display
+- Add modal state management for snapshot comparisons
+
+### Refactored
+
+- Refactor MainMenu.vue to use SyncController instead of useSync composable
+- Refactor SyncStatus.vue to use SyncController for reactive sync state
+- Refactor DayPerformanceComponent.vue to use StatisticsController for shared state
+- Refactor MonthPerformanceComponent.vue to use StatisticsController for shared state
+- Refactor WeekPerformanceComponent.vue to use StatisticsController for shared state
+- Refactor YearPerformanceComponent.vue to use StatisticsController for shared state
+- Refactor BudgetView.vue to use AccountsController instead of direct store access
+- Refactor InicioViewComponent.vue to use BudgetController for day closed state
+- Refactor ProvidersComponent.vue to use controller classes (BudgetController, SuppliersController, AccountsController, SyncController)
+- Refactor SuppliersPage.vue to use suppliersController instead of useSuppliersStore
+- Refactor SyncView.vue to use SyncController for sync operations
+
+### Fixed
+
+- Fix setTimeout type in syncService.ts for proper TypeScript typing
+- Add Account type export in accountsController.ts for type safety
+- Add syncProvidersWithSuppliers method in budgetController.ts for provider/supplier sync
+- Add subscribeToChanges method in suppliersController.ts for reactive supplier updates
+
+### Architecture
+
+- Implement View → Controller → Store pattern consistently across all views
+- Extract shared state management from composables into controller classes
+- Centralize PDF generation, hover states, and modal management in StatisticsController
+- Centralize sync state management in SyncController class
+
+---
+
 ## [v0.35.0] - 2026-01-21
 
 ### Added
