@@ -244,6 +244,7 @@
 </template>
 
 <script setup lang="ts">
+// Imports
 import {
   IonSegment,
   IonSegmentButton,
@@ -291,10 +292,13 @@ import systemController from '@/controllers/systemConfigController';
 import budgetController from '@/controllers/budgetController';
 import accountsController from '@/controllers/accountsController';
 import { AccountsController, type Account } from '@/controllers/accountsController';
+
+// Components
 import InicioViewComponent from './InicioViewComponent.vue';
 import ProvidersComponent from './ProvidersComponent.vue';
 import FinishDayForm from './FinishDayForm.vue';
 
+// Vars
 const activeView = ref<'inicio' | 'proveedores' | 'form' | 'resumen'>('inicio');
 const showDatePicker = ref(false);
 const showMoreOptions = ref(false);
@@ -303,54 +307,8 @@ const datePickerEvent = ref<Event | null>(null);
 const moreOptionsEvent = ref<Event | null>(null);
 const designMode = computed(() => systemController.getDesignMode());
 const isDev = computed(() => import.meta.env.DEV);
-const isDayOfficiallyClosed = computed(() => {
-  const finishDayData = budgetController.getFinishDayData();
-  return (
-    budgetController.getIsDayClosed() &&
-    (finishDayData.totalSalesEfectivo > 0 ||
-      finishDayData.totalSalesTarjeta > 0 ||
-      finishDayData.totalSalesCredito > 0 ||
-      finishDayData.margin > 0)
-  );
-});
 
-const finishDay = computed(() => budgetController.getFinishDayData());
-
-const daySummary = computed(() => {
-  const entries = budgetController.getEntries();
-  const providers = budgetController.getProviders();
-
-  const ingresos = entries.filter((e: any) => e.entryType === 'ingreso');
-  const egresos = entries.filter((e: any) => e.entryType === 'egreso');
-
-  const totalIncome = ingresos.reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
-  const totalExpense = egresos.reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
-  const totalEstimated = providers.reduce((sum: number, p: any) => sum + Number(p.estimated || 0), 0);
-
-  const allTimestamps = entries
-    .map((e: any) => Number(e.createdAt))
-    .filter((t: number) => t > 0)
-    .sort((a: number, b: number) => a - b);
-
-  const startTime = allTimestamps.length > 0 ? formatTime(allTimestamps[0]) : '--:--';
-  const endTime = allTimestamps.length > 0 ? formatTime(allTimestamps[allTimestamps.length - 1]) : '--:--';
-
-  return {
-    providersCount: providers.length,
-    providers,
-    incomeCount: ingresos.length,
-    incomes: ingresos,
-    expenseCount: egresos.length,
-    expenses: egresos,
-    totalIncome,
-    totalExpense,
-    totalEstimated,
-    balance: totalIncome - totalExpense,
-    startTime,
-    endTime,
-  };
-});
-
+// Functions
 function onFinishDaySaved() {
   budgetController.saveData();
   showMoreOptions.value = false;
@@ -372,16 +330,6 @@ function formatTime(timestamp: number) {
     minute: '2-digit',
   });
 }
-
-const formattedSelectedDate = computed(() => {
-  try {
-    const d = parseLocalDate(budgetController.getSelectedDate());
-    if (isNaN(d.getTime())) return budgetController.getSelectedDate();
-    return format(d, "d 'de' MMMM 'de' yyyy", { locale: esLocale });
-  } catch {
-    return budgetController.getSelectedDate();
-  }
-});
 
 function openDatePicker(event: Event) {
   datePickerEvent.value = event;
@@ -441,15 +389,14 @@ function performClearDay() {
 
 async function insertTestData() {
   const accountsCtrl = new AccountsController();
-  
+
   try {
     await accountsCtrl.loadAll();
   } catch {
-    // Controller may not have data yet, continue
   }
-  
+
   let accounts = accountsCtrl.getAccounts();
-  
+
   if (accounts.length === 0) {
     const now = Date.now();
     const acc1: Account = { id: Date.now() + 1, name: 'Caja Principal', initialBalance: 0, createdAt: now, updatedAt: now };
@@ -458,20 +405,20 @@ async function insertTestData() {
     await accountsCtrl.addAccount({ name: 'Banco', initialBalance: 0 });
     accounts = [acc1, acc2];
   }
-  
+
   const accountId1 = accounts[0].id;
   const accountId2 = accounts.length > 1 ? accounts[1].id : accountId1;
-  
+
   budgetController.addIngreso({ name: 'Venta mostrador 1', amount: 1500, paymentType: 'cash', accountId: accountId1 });
   budgetController.addIngreso({ name: 'Venta mostrador 2', amount: 2300, paymentType: 'digital', accountId: accountId2 });
   budgetController.addIngreso({ name: 'Venta online', amount: 4500, paymentType: 'cash', accountId: accountId1 });
   budgetController.addIngreso({ name: 'Pedido mayorista', amount: 12000, paymentType: 'digital', accountId: accountId2 });
   budgetController.addIngreso({ name: 'Venta telefónica', amount: 3500, paymentType: 'cash', accountId: accountId1 });
-  
+
   budgetController.addEgreso({ name: 'Compra inventario', amount: 8000, paymentType: 'cash', accountId: accountId1 });
   budgetController.addEgreso({ name: 'Pago servicios', amount: 2500, paymentType: 'digital', accountId: accountId2 });
   budgetController.addEgreso({ name: 'Transporte', amount: 800, paymentType: 'cash', accountId: accountId1 });
-  
+
   budgetController.addProvider({ name: 'Proveedor A', estimated: 500, accountId: accountId1 });
   budgetController.addProvider({ name: 'Proveedor B', estimated: 800, accountId: accountId2 });
   budgetController.addProvider({ name: 'Proveedor C', estimated: 1200, accountId: accountId1 });
@@ -479,12 +426,72 @@ async function insertTestData() {
   budgetController.addProvider({ name: 'Proveedor E', estimated: 950, accountId: accountId1 });
   budgetController.addProvider({ name: 'Proveedor F', estimated: 1500, accountId: accountId2 });
   budgetController.addProvider({ name: 'Proveedor G', estimated: 450, accountId: accountId1 });
-  
+
   budgetController.saveData();
   showMoreOptions.value = false;
 }
 
+// Life cycle
 onMounted(async () => {
   await budgetController.loadDataForCurrentDate();
+});
+
+// Computed
+const isDayOfficiallyClosed = computed(() => {
+  const finishDayData = budgetController.getFinishDayData();
+  return (
+    budgetController.getIsDayClosed() &&
+    (finishDayData.totalSalesEfectivo > 0 ||
+      finishDayData.totalSalesTarjeta > 0 ||
+      finishDayData.totalSalesCredito > 0 ||
+      finishDayData.margin > 0)
+  );
+});
+
+const finishDay = computed(() => budgetController.getFinishDayData());
+
+const daySummary = computed(() => {
+  const entries = budgetController.getEntries();
+  const providers = budgetController.getProviders();
+
+  const ingresos = entries.filter((e: any) => e.entryType === 'ingreso');
+  const egresos = entries.filter((e: any) => e.entryType === 'egreso');
+
+  const totalIncome = ingresos.reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
+  const totalExpense = egresos.reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
+  const totalEstimated = providers.reduce((sum: number, p: any) => sum + Number(p.estimated || 0), 0);
+
+  const allTimestamps = entries
+    .map((e: any) => Number(e.createdAt))
+    .filter((t: number) => t > 0)
+    .sort((a: number, b: number) => a - b);
+
+  const startTime = allTimestamps.length > 0 ? formatTime(allTimestamps[0]) : '--:--';
+  const endTime = allTimestamps.length > 0 ? formatTime(allTimestamps[allTimestamps.length - 1]) : '--:--';
+
+  return {
+    providersCount: providers.length,
+    providers,
+    incomeCount: ingresos.length,
+    incomes: ingresos,
+    expenseCount: egresos.length,
+    expenses: egresos,
+    totalIncome,
+    totalExpense,
+    totalEstimated,
+    balance: totalIncome - totalExpense,
+    startTime,
+    endTime,
+  };
+});
+
+const formattedSelectedDate = computed(() => {
+  try {
+    const d = parseLocalDate(budgetController.getSelectedDate());
+    if (isNaN(d.getTime())) return budgetController.getSelectedDate();
+    return format(d, "d 'de' MMMM 'de' yyyy", { locale: esLocale });
+  } catch {
+    return budgetController.getSelectedDate();
+  }
 });
 </script>

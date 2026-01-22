@@ -289,6 +289,7 @@
 </template>
 
 <script setup lang="ts">
+// Imports
 import {
   IonModal,
   IonHeader,
@@ -321,6 +322,9 @@ import {
 } from 'ionicons/icons';
 import { computed, ref, watch } from 'vue';
 
+// Components
+
+// Vars
 const props = defineProps<{
   isOpen: boolean;
   entryData: {
@@ -353,52 +357,7 @@ const entryItems = ref<Array<{ amount: number; accountId: any }>>([
   { amount: 0, accountId: null },
 ]);
 
-const isFormValid = computed(() => {
-  return (
-    entryData.value.name.trim().length > 0 &&
-    entryData.value.entryType &&
-    entryItems.value.length > 0 &&
-    entryItems.value.every(
-      item => Number(item.amount) > 0 && item.accountId != null
-    )
-  );
-});
-
-const entryData = computed(() => props.entryData);
-
-watch(
-  () => props.entryData.id,
-  (newId, oldId) => {
-    if (newId !== oldId) {
-      if (newId) {
-        const newData = props.entryData;
-        if (
-          newData.groups &&
-          Array.isArray(newData.groups) &&
-          newData.groups.length > 0
-        ) {
-          entryItems.value = newData.groups.map((g: any) => ({
-            amount: Number(g.amount) || 0,
-            accountId: g.accountId ?? getDefaultAccountId(),
-          }));
-        } else {
-          entryItems.value = [
-            {
-              amount: Number(newData.amount) || 0,
-              accountId: newData.accountId || getDefaultAccountId(),
-            },
-          ];
-        }
-      } else if (entryItems.value.length === 0 || 
-                 (entryItems.value.length === 1 && entryItems.value[0].amount === 0)) {
-        entryItems.value = [{ amount: 0, accountId: getDefaultAccountId() }];
-        addEntrySegment.value = 'entry';
-      }
-    }
-  },
-  { immediate: true }
-);
-
+// Functions
 function getDefaultAccountId() {
   return props.accountsList.length > 0 ? props.accountsList[0].id : null;
 }
@@ -412,10 +371,6 @@ const availableAccountsForItem = (currentIndex: number) => {
     (acc: any) => !usedAccountIds.includes(String(acc.id))
   );
 };
-
-const canAddMoreItems = computed(() => {
-  return entryItems.value.length < props.accountsList.length + 2;
-});
 
 function formatProviderAmount(provider: any) {
   return new Intl.NumberFormat('es-MX', {
@@ -450,4 +405,58 @@ function handleSave() {
     groups: entryItems.value,
   });
 }
+
+// Life cycle
+
+// Computed
+const isFormValid = computed(() => {
+  return (
+    entryData.value.name.trim().length > 0 &&
+    entryData.value.entryType &&
+    entryItems.value.length > 0 &&
+    entryItems.value.every(
+      item => Number(item.amount) > 0 && item.accountId != null
+    )
+  );
+});
+
+const entryData = computed(() => props.entryData);
+
+const canAddMoreItems = computed(() => {
+  return entryItems.value.length < props.accountsList.length + 2;
+});
+
+// Watch
+watch(
+  () => props.entryData.id,
+  (newId, oldId) => {
+    if (newId !== oldId) {
+      if (newId) {
+        const newData = props.entryData;
+        if (
+          newData.groups &&
+          Array.isArray(newData.groups) &&
+          newData.groups.length > 0
+        ) {
+          entryItems.value = newData.groups.map((g: any) => ({
+            amount: Number(g.amount) || 0,
+            accountId: g.accountId ?? getDefaultAccountId(),
+          }));
+        } else {
+          entryItems.value = [
+            {
+              amount: Number(newData.amount) || 0,
+              accountId: newData.accountId || getDefaultAccountId(),
+            },
+          ];
+        }
+      } else if (entryItems.value.length === 0 || 
+                 (entryItems.value.length === 1 && entryItems.value[0].amount === 0)) {
+        entryItems.value = [{ amount: 0, accountId: getDefaultAccountId() }];
+        addEntrySegment.value = 'entry';
+      }
+    }
+  },
+  { immediate: true }
+);
 </script>

@@ -119,6 +119,7 @@
 </template>
 
 <script setup lang="ts">
+// Imports
 import {
   IonCard,
   IonItem,
@@ -141,9 +142,9 @@ import {
 import { reactive, computed } from 'vue';
 import { useAccountsStore } from '@/stores/accountsStore';
 
-const accountsStore = useAccountsStore();
+// Components
 
-// interface
+// Vars
 interface Provider {
   id: string | number;
   name?: string;
@@ -154,23 +155,17 @@ interface Provider {
   efectivo?: number;
   tarjeta?: number;
   credito?: number;
-  // Account ID for the provider
   accountId?: number;
   estimated?: number;
-  // New fields from modal
   _supplierId?: string | number;
   _supplierName?: string;
 }
 
-// Generic Ion event shape used in template handlers
 type IonEvent = {
   detail?: { value?: string | number | string[] | null };
   target?: { value?: string | number | null };
 };
 
-// end inteface
-
-// main
 const props = defineProps<{
   provider: Provider;
   hasProducts?: boolean;
@@ -190,32 +185,29 @@ const emit = defineEmits([
   'move-provider',
   'open-edit-modal',
 ]);
-// end main
 
-// vars
+const accountsStore = useAccountsStore();
+
 const popovers = reactive({
   open: false,
   event: null as Event | null,
   provider: null as Provider | null,
 });
 
-// options popover state
 const optionsPopover = reactive({
   open: false,
   event: null as Event | null,
   provider: null as Provider | null,
 });
 
-// delete confirm state local to this component
 const deleteConfirm = reactive({
   open: false,
   providerId: null as string | number | null,
   providerName: '' as string,
   event: null as Event | null,
 });
-// end vars
 
-// functions
+// Functions
 function openPopover(event: Event) {
   popovers.event = event;
   popovers.open = true;
@@ -261,7 +253,6 @@ function onNotesFromOptions(e: Event) {
 
 function onDeleteFromOptions(e: Event) {
   try {
-    // Close options then open delete confirm passing the event
     closeOptionsPopover();
     openDeleteConfirm(e);
   } catch (err) {
@@ -269,7 +260,6 @@ function onDeleteFromOptions(e: Event) {
   }
 }
 
-// Open products view after closing the options popover
 function onProductsFromOptions(e: Event) {
   try {
     closeOptionsPopover();
@@ -282,11 +272,9 @@ function onProductsFromOptions(e: Event) {
   }
 }
 
-// Open move (date) popover after closing the options popover
 function onMoveFromOptions(e: Event) {
   try {
     closeOptionsPopover();
-    // reuse the existing popover used for moving
     openPopover(e);
   } catch (err) {
     console.error('onMoveFromOptions error', err);
@@ -335,11 +323,9 @@ function onDateChange(
 ) {
   let { value } = params;
 
-  // allow null/undefined to be passed; if null/undefined, exit early
   if (value == null) {
     return;
   }
-  // If value is an array (ion-datetime can return an array), take the first element
   if (Array.isArray(value)) {
     value = value[0] as string | number;
   }
@@ -363,19 +349,6 @@ function isPaymentPrimary(params: { provider?: Provider } | any) {
   }
 }
 
-const accountDisplay = computed(() => {
-  const accountId = props.provider.accountId;
-  if (!accountId) return '';
-
-  const account = accountsStore.accounts.find(
-    a => String(a.id) === String(accountId)
-  );
-
-  if (!account) return '';
-  return account.name;
-});
-
-// local formatter: format numbers as MXN currency
 function formatCurrency(params: { v: number }) {
   const { v } = params;
   try {
@@ -388,7 +361,22 @@ function formatCurrency(params: { v: number }) {
   }
 }
 
-// computed formattedValue local to this component
+// Life cycle
+
+// Computed
+const accountDisplay = computed(() => {
+  const accountId = props.provider.accountId;
+  if (!accountId) return '';
+
+  const account = accountsStore.accounts.find(
+    a => String(a.id) === String(accountId)
+  );
+
+  if (!account) return '';
+  return account.name;
+});
+
+// Watch
 </script>
 
 <style scoped>

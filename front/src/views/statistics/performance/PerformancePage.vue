@@ -38,17 +38,21 @@
 </template>
 
 <script lang="ts" setup>
+// Imports
 import { IonSegment, IonSegmentButton } from '@ionic/vue';
 import { ref } from 'vue';
 
-// components
+// Components
 import DayPerformanceComponent from '@/views/statistics/performance/day/DayPerformanceComponent.vue';
 import WeekComponent from '@/views/statistics/performance/week/WeekPerformanceComponent.vue';
 import MonthComponent from '@/views/statistics/performance/month/MonthPerformanceComponent.vue';
 import YearComponent from '@/views/statistics/performance/year/YearPerformanceComponent.vue';
-// end components
 
-// vars
+// Vars
 const mainSegment = ref('day' as 'day' | 'week' | 'month' | 'year');
-// end vars
+
+// Functions
+// Life cycle
+// Computed
+// Watch
 </script>

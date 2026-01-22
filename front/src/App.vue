@@ -24,6 +24,7 @@
 </template>
 
 <script setup lang="ts">
+// Imports
 import {
   IonApp,
   IonSplitPane,
@@ -44,6 +45,7 @@ import {
 } from '@/migrations/normalizeBackupsDates';
 import { needsEntriesKeyCheck } from '@/migrations/addEntriesKeyToBackups';
 
+// Vars
 const menuRef = ref();
 
 const appName =
@@ -80,96 +82,7 @@ const migrationToast = reactive({
   ],
 });
 
-onMounted(async () => {
-  setDesignMode();
-  setupThemeListener();
-  await applyTheme();
-
-  await authController.checkAuth();
-
-  // Check whether the user already dismissed the migration notice
-  migrationDismissed.value = !!systemController.getMigrationNoticeDismissed();
-
-  // Quick check to see if normalization or entries migration is needed; open toast only if required
-  try {
-    const [normalizeNeeded, entriesNeeded] = await Promise.all([
-      needsNormalizeCheck(),
-      needsEntriesKeyCheck(),
-    ]);
-    needsNormalize.value = !!normalizeNeeded;
-    needsEntries.value = !!entriesNeeded;
-    if (
-      (import.meta as unknown as { env?: Record<string, string | undefined> })
-        .env?.DEV
-    ) {
-      // console.log('App.onMounted: needsNormalizeCheck ->', normalizeNeeded);
-      // console.log('App.onMounted: needsEntriesKeyCheck ->', entriesNeeded);
-      try {
-        const backups = await dixieController.listBackups();
-        // console.log(
-        //   'App.onMounted: backups count ->',
-        //   Array.isArray(backups) ? backups.length : backups
-        // );
-      } catch (e) {
-        console.error('App.onMounted: failed to listBackups', e);
-      }
-    }
-
-    // DEBUG: auto-insert removed. Use admin tools to add test data when needed.
-  } catch (e) {
-    console.error('migration checks failed', e);
-    needsNormalize.value = false;
-    needsEntries.value = false;
-  }
-
-  if (
-    (needsEntries.value || needsNormalize.value) &&
-    !migrationDismissed.value
-  ) {
-    if (
-      (import.meta as unknown as { env?: Record<string, string | undefined> })
-        .env?.DEV
-    ) {
-      console.log('App.onMounted: opening migration toast', {
-        needsNormalize: needsNormalize.value,
-        needsEntries: needsEntries.value,
-      });
-    }
-    migrationToast.open = true;
-  } else {
-    if (
-      (import.meta as unknown as { env?: Record<string, string | undefined> })
-        .env?.DEV
-    ) {
-      // console.log('App.onMounted: not opening toast', {
-      //   needsNormalize: needsNormalize.value,
-      //   needsEntries: needsEntries.value,
-      //   migrationDismissed: migrationDismissed.value,
-      // });
-    }
-  }
-
-  // Debug: try to open the menu programmatically on large screens
-  try {
-    if (window && window.innerWidth >= 992) {
-      // use ref to open the menu if available
-      // try the menuController api first
-      try {
-        await menuController.open('main-menu');
-      } catch (_e) {
-        // fallback to reference DOM open if menuController fails
-        if (menuRef.value && menuRef.value.$el && menuRef.value.$el.open) {
-          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-          // @ts-ignore
-          menuRef.value.$el.open();
-        }
-      }
-    }
-  } catch (_e) {
-    // ignore
-  }
-});
-
+// Functions
 function setDesignMode() {
   const platform = isPlatform('ios') ? 'ios' : 'md';
   systemController.setDesignMode({ mode: platform });
@@ -210,18 +123,15 @@ function setupThemeListener() {
     });
 }
 
-// CAMBIO: Usar ref directa del menú
 async function handleNavigate(params: { path?: string; name?: string }) {
   try {
     if (params.name) {
-      // prefer named route but fallback if it's not registered
       try {
         if ((router as any).hasRoute && (router as any).hasRoute(params.name)) {
           await router.push({ name: params.name });
         } else if (params.path) {
           await router.push(params.path);
         } else {
-          // Known fallbacks for admin routes
           if (params.name === 'MaintenancePage') {
             await router.push('/admin/maintenance');
           } else if (params.name === 'MigrateDates') {
@@ -256,7 +166,6 @@ async function showMigrationToast() {
       'Simulación iniciada: revisa la pantalla de migración para ver los detalles.';
     toast.open = true;
     handleNavigate({ name: 'MigrateDates' });
-    // pass query via direct router push to preserve ?autoDryRun behavior
     try {
       await router.push({ name: 'MigrateDates', query: { autoDryRun: '1' } });
     } catch (e) {
@@ -266,6 +175,75 @@ async function showMigrationToast() {
     console.error(e);
   }
 }
+
+// Life cycle
+onMounted(async () => {
+  setDesignMode();
+  setupThemeListener();
+  await applyTheme();
+
+  await authController.checkAuth();
+
+  migrationDismissed.value = !!systemController.getMigrationNoticeDismissed();
+
+  try {
+    const [normalizeNeeded, entriesNeeded] = await Promise.all([
+      needsNormalizeCheck(),
+      needsEntriesKeyCheck(),
+    ]);
+    needsNormalize.value = !!normalizeNeeded;
+    needsEntries.value = !!entriesNeeded;
+    if (
+      (import.meta as unknown as { env?: Record<string, string | undefined> })
+        .env?.DEV
+    ) {
+      try {
+        const backups = await dixieController.listBackups();
+      } catch (e) {
+        console.error('App.onMounted: failed to listBackups', e);
+      }
+    }
+  } catch (e) {
+    console.error('migration checks failed', e);
+    needsNormalize.value = false;
+    needsEntries.value = false;
+  }
+
+  if (
+    (needsEntries.value || needsNormalize.value) &&
+    !migrationDismissed.value
+  ) {
+    if (
+      (import.meta as unknown as { env?: Record<string, string | undefined> })
+        .env?.DEV
+    ) {
+      console.log('App.onMounted: opening migration toast', {
+        needsNormalize: needsNormalize.value,
+        needsEntries: needsEntries.value,
+      });
+    }
+    migrationToast.open = true;
+  } else {
+    if (
+      (import.meta as unknown as { env?: Record<string, string | undefined> })
+        .env?.DEV
+    ) {
+    }
+  }
+
+  try {
+    if (window && window.innerWidth >= 992) {
+      try {
+        await menuController.open('main-menu');
+      } catch (_e) {
+        if (menuRef.value && menuRef.value.$el && menuRef.value.$el.open) {
+          menuRef.value.$el.open();
+        }
+      }
+    }
+  } catch (_e) {
+  }
+});
 </script>
 
 <style>

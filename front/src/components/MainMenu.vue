@@ -183,6 +183,7 @@
 </template>
 
 <script setup lang="ts">
+// Imports
 import {
   IonMenu,
   IonHeader,
@@ -220,6 +221,9 @@ import authController from '@/controllers/authController';
 import { SyncController } from '@/controllers/syncController';
 import SyncStatus from './SyncStatus.vue';
 
+// Components
+
+// Vars
 const emit = defineEmits<{
   (e: 'navigate', params: { path?: string; name?: string }): void;
   (e: 'dismissMigration'): void;
@@ -235,6 +239,7 @@ const appName =
   (import.meta as unknown as { env?: Record<string, string | undefined> }).env
     ?.VITE_APP_NAME || 'Menú';
 
+// Computed
 const isBudget = computed(() => route.path === '/budget');
 const isTemplates = computed(() => route.path === '/templates');
 const isSuppliers = computed(() => route.path === '/suppliers');
@@ -259,10 +264,12 @@ const isRegister = computed(() => route.path === '/register');
 const isAuthenticated = computed(() => authController.getIsAuthenticated());
 const userName = computed(() => authController.getUserName());
 
+// Life cycle
 onMounted(async () => {
   await authController.checkAuth();
 });
 
+// Functions
 async function handleLogout() {
   const alert = await alertController.create({
     header: 'Cerrar Sesión',

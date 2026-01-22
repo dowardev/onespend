@@ -95,6 +95,7 @@
 </template>
 
 <script setup lang="ts">
+// Imports
 import { onMounted, ref, computed, unref, reactive } from 'vue';
 import {
   IonContent,
@@ -119,68 +120,24 @@ import {
 } from '@ionic/vue';
 import { addOutline, trashOutline } from 'ionicons/icons';
 
-// controllers
+// Components
+import AddSupliersComponent from '../suppliers/modals/AddSupliersComponent.vue';
+
+// Controllers
 import systemController from '@/controllers/systemConfigController';
 import suppliersController from '@/controllers/suppliersController';
 
-// components
-import AddSupliersComponent from '../suppliers/modals/AddSupliersComponent.vue';
-
-const suppliers = computed(() => suppliersController.getSuppliers());
-
-// modal control
+// Vars
 const showModal = ref(false);
-const modalSupplier = ref<any | null>(null); // supplier passed to modal (null -> create)
-
-// search
+const modalSupplier = ref<any | null>(null);
 const searchTerm = ref('');
-
-// State used to ask for confirmation before removing a supplier
 const deleteConfirmSupplier = reactive({
   open: false,
   supplierId: null as string | number | null,
   supplierName: '' as string,
 });
 
-// computed
-const designMode = computed(() => systemController.getDesignMode());
-
-const filteredSuppliers = computed(() => {
-  const term = (searchTerm.value || '').toString().toLowerCase().trim();
-  const list = unref(suppliers) || [];
-  if (!term) return list;
-  return list.filter((s: any) => {
-    const name = (s.name || '').toString().toLowerCase();
-    const products = (s.products || [])
-      .map((p: any) => (p.name || '').toString().toLowerCase())
-      .join(' ');
-    return name.includes(term) || products.includes(term);
-  });
-});
-
-// Group suppliers by the first letter of their name and sort groups and items alphabetically
-const groupedSuppliers = computed(() => {
-  const list = (unref(filteredSuppliers) || []).slice();
-  list.sort((a: any, b: any) => {
-    const na = (a.name || '').toString().toLowerCase();
-    const nb = (b.name || '').toString().toLowerCase();
-    return na.localeCompare(nb);
-  });
-
-  const map = new Map<string, any[]>();
-  list.forEach((s: any) => {
-    const name = (s.name || '').toString().trim();
-    const letter = name ? name[0].toUpperCase() : '#';
-    if (!map.has(letter)) map.set(letter, []);
-    map.get(letter)!.push(s);
-  });
-
-  return Array.from(map.keys())
-    .sort()
-    .map(letter => ({ letter, items: map.get(letter) || [] }));
-});
-
-// functions
+// Functions
 function openModal() {
   modalSupplier.value = null;
   showModal.value = true;
@@ -198,7 +155,6 @@ function cancelModal() {
   modalSupplier.value = null;
 }
 
-// Confirmation flow for deleting a supplier
 function confirmRemoveSupplier(params: {
   id: string | number | null | undefined;
   name?: string;
@@ -242,11 +198,6 @@ function onDeleteAlertDidDismissSupplier() {
   deleteConfirmSupplier.supplierName = '';
 }
 
-onMounted(() => {
-  suppliersController.listSuppliers();
-});
-
-// Handler called when modal emits 'saved' with payload
 async function onModalSaved(payload: any) {
   if (!payload) return;
   
@@ -260,7 +211,6 @@ async function onModalSaved(payload: any) {
     await suppliersController.addSupplier(payload as any);
   }
 
-  // close modal and refresh list
   cancelModal();
   await suppliersController.listSuppliers();
 }
@@ -270,6 +220,52 @@ async function remove(id: IDBValidKey | undefined) {
   await suppliersController.deleteSupplier(id);
   await suppliersController.listSuppliers();
 }
+
+// Life cycle
+onMounted(() => {
+  suppliersController.listSuppliers();
+});
+
+// Computed
+const designMode = computed(() => systemController.getDesignMode());
+
+const suppliers = computed(() => suppliersController.getSuppliers());
+
+const filteredSuppliers = computed(() => {
+  const term = (searchTerm.value || '').toString().toLowerCase().trim();
+  const list = unref(suppliers) || [];
+  if (!term) return list;
+  return list.filter((s: any) => {
+    const name = (s.name || '').toString().toLowerCase();
+    const products = (s.products || [])
+      .map((p: any) => (p.name || '').toString().toLowerCase())
+      .join(' ');
+    return name.includes(term) || products.includes(term);
+  });
+});
+
+const groupedSuppliers = computed(() => {
+  const list = (unref(filteredSuppliers) || []).slice();
+  list.sort((a: any, b: any) => {
+    const na = (a.name || '').toString().toLowerCase();
+    const nb = (b.name || '').toString().toLowerCase();
+    return na.localeCompare(nb);
+  });
+
+  const map = new Map<string, any[]>();
+  list.forEach((s: any) => {
+    const name = (s.name || '').toString().trim();
+    const letter = name ? name[0].toUpperCase() : '#';
+    if (!map.has(letter)) map.set(letter, []);
+    map.get(letter)!.push(s);
+  });
+
+  return Array.from(map.keys())
+    .sort()
+    .map(letter => ({ letter, items: map.get(letter) || [] }));
+});
+
+// Watch
 </script>
 
 <style scoped>

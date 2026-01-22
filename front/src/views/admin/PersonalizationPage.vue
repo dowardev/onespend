@@ -80,6 +80,7 @@
 </template>
 
 <script setup lang="ts">
+// Imports
 import {
   IonPage,
   IonHeader,
@@ -100,11 +101,14 @@ import systemController from '@/controllers/systemConfigController';
 import type { ThemeMode } from '@/stores/useSystemConfig';
 import { colorPaletteOutline, sunnyOutline, moonOutline } from 'ionicons/icons';
 
+// Components
+// Vars
 const router = useRouter();
 const theme = ref<ThemeMode>('auto');
 const autoLightTheme = ref<ThemeMode>('light');
 const autoDarkTheme = ref<ThemeMode>('dark');
 
+// Functions
 async function loadTheme() {
   theme.value = await systemController.getTheme();
   autoLightTheme.value = await systemController.getAutoLightTheme();
@@ -175,6 +179,7 @@ function goBack() {
   router.back();
 }
 
+// Life cycle
 onMounted(() => {
   loadTheme();
 
@@ -185,6 +190,9 @@ onMounted(() => {
     }
   });
 });
+
+// Computed
+// Watch
 </script>
 
 <style scoped>

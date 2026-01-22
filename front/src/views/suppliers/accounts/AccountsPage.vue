@@ -91,6 +91,7 @@
 </template>
 
 <script setup lang="ts">
+// Imports
 import { onMounted, ref, computed, unref, reactive } from 'vue';
 import {
   IonContent,
@@ -115,57 +116,24 @@ import {
 } from '@ionic/vue';
 import { addOutline, trashOutline } from 'ionicons/icons';
 
+// Controllers
 import systemController from '@/controllers/systemConfigController';
 import accountsController from '@/controllers/accountsController';
 
+// Components
 import AddAccountComponent from './modals/AddAccountComponent.vue';
 
+// Vars
 const showModal = ref(false);
 const modalAccount = ref<any | null>(null);
-
 const searchTerm = ref('');
-
 const deleteConfirmAccount = reactive({
   open: false,
   accountId: null as string | number | null,
   accountName: '' as string,
 });
 
-const designMode = computed(() => systemController.getDesignMode());
-
-const accounts = computed(() => accountsController.getAccounts());
-
-const filteredAccounts = computed(() => {
-  const term = (searchTerm.value || '').toString().toLowerCase().trim();
-  const list = accounts.value || [];
-  if (!term) return list;
-  return list.filter((a: any) => {
-    const name = (a.name || '').toString().toLowerCase();
-    return name.includes(term);
-  });
-});
-
-const groupedAccounts = computed(() => {
-  const list = (filteredAccounts.value || []).slice();
-  list.sort((a: any, b: any) => {
-    const na = (a.name || '').toString().toLowerCase();
-    const nb = (b.name || '').toString().toLowerCase();
-    return na.localeCompare(nb);
-  });
-
-  const map = new Map<string, any[]>();
-  list.forEach((a: any) => {
-    const name = (a.name || '').toString().trim();
-    const letter = name ? name[0].toUpperCase() : '#';
-    if (!map.has(letter)) map.set(letter, []);
-    map.get(letter)!.push(a);
-  });
-
-  return Array.from(map.keys())
-    .sort()
-    .map(letter => ({ letter, items: map.get(letter) || [] }));
-});
-
+// Functions
 function openModal() {
   modalAccount.value = null;
   showModal.value = true;
@@ -225,10 +193,6 @@ function onDeleteAlertDidDismissAccount() {
   deleteConfirmAccount.accountName = '';
 }
 
-onMounted(() => {
-  accountsController.loadAll();
-});
-
 async function onModalSaved(payload: any) {
   if (!payload) return;
   if (payload.id != null) {
@@ -246,6 +210,49 @@ async function remove(id: IDBValidKey | undefined) {
   await accountsController.deleteAccount(id);
   await accountsController.loadAll();
 }
+
+// Life cycle
+onMounted(() => {
+  accountsController.loadAll();
+});
+
+// Computed
+const designMode = computed(() => systemController.getDesignMode());
+
+const accounts = computed(() => accountsController.getAccounts());
+
+const filteredAccounts = computed(() => {
+  const term = (searchTerm.value || '').toString().toLowerCase().trim();
+  const list = accounts.value || [];
+  if (!term) return list;
+  return list.filter((a: any) => {
+    const name = (a.name || '').toString().toLowerCase();
+    return name.includes(term);
+  });
+});
+
+const groupedAccounts = computed(() => {
+  const list = (filteredAccounts.value || []).slice();
+  list.sort((a: any, b: any) => {
+    const na = (a.name || '').toString().toLowerCase();
+    const nb = (b.name || '').toString().toLowerCase();
+    return na.localeCompare(nb);
+  });
+
+  const map = new Map<string, any[]>();
+  list.forEach((a: any) => {
+    const name = (a.name || '').toString().trim();
+    const letter = name ? name[0].toUpperCase() : '#';
+    if (!map.has(letter)) map.set(letter, []);
+    map.get(letter)!.push(a);
+  });
+
+  return Array.from(map.keys())
+    .sort()
+    .map(letter => ({ letter, items: map.get(letter) || [] }));
+});
+
+// Watch
 </script>
 
 <style scoped>

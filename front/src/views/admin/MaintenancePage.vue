@@ -30,6 +30,7 @@
 </template>
 
 <script setup lang="ts">
+// Imports
 import {
   IonPage,
   IonHeader,
@@ -42,13 +43,16 @@ import {
 } from '@ionic/vue';
 import { useRouter } from 'vue-router';
 
+// Components
+// Vars
 const router = useRouter();
+
+// Functions
 function goToMigrateDates() {
   if (
     (import.meta as unknown as { env?: Record<string, string | undefined> }).env
       ?.DEV
   ) {
-    // dev-only debug
     console.log('MaintenancePage: navigating to migrate-dates');
   }
   router.push({ name: 'MigrateDates' });
@@ -63,6 +67,10 @@ function goToMigrateEntries() {
   }
   router.push({ name: 'MigrateEntries' });
 }
+
+// Life cycle
+// Computed
+// Watch
 </script>
 
 <style scoped>

@@ -27,6 +27,7 @@
 </template>
 
 <script setup lang="ts">
+// Imports
 import {
   IonButtons,
   IonMenuButton,
@@ -38,23 +39,17 @@ import {
   IonToolbar,
 } from '@ionic/vue';
 import { computed } from 'vue';
-
-// constrollers
 import systemController from '@/controllers/systemConfigController';
-// end constrollers
-
-// components
 import CashFlowComponent from '@/views/statistics/cashFlow/CashFlow.vue';
 import PerformancePage from '@/views/statistics/performance/PerformancePage.vue';
 import { settingsOutline } from 'ionicons/icons';
-// end components
 
-// vars
-// end vars
+// Components
 
-// computed
+// Vars
+
+// Computed
 const designMode = computed(() => systemController.getDesignMode());
-// end computed
 </script>
 
 <style scoped></style>
