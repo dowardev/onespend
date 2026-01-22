@@ -54,6 +54,7 @@ export interface Provider {
   _supplierId?: string | number;
   _supplierName?: string;
   _supplierProducts?: BudgetProviderProduct[];
+  _supplier?: Supplier;
 }
 
 interface FinishDayData {

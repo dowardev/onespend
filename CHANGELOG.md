@@ -1,3 +1,28 @@
+## [v0.37.2] - 2026-01-22
+
+### Added
+
+- Add complete supplier object storage in providers with immutable deep copy
+- Store `_supplier` field in Provider interface to maintain full supplier data snapshot
+- Use JSON.parse(JSON.stringify()) for immutable deep copies preventing mutable references
+
+### Changed
+
+- Update Provider interface to include optional `_supplier?: Supplier` field
+- Update ProviderData interface in EditProviderModal to include `_supplier?: Supplier`
+- Update budgetController.addProvider to accept and store `_supplier` parameter
+- Update ProvidersComponent to pass supplier object when creating/updating providers
+
+### Files Changed
+
+**Frontend:**
+- `front/src/stores/budgetStore.ts` - Added `_supplier?: Supplier` to Provider interface
+- `front/src/views/budget/components/EditProviderModal.vue` - Added `_supplier?: Supplier` to ProviderData interface
+- `front/src/views/budget/ProvidersComponent.vue` - Store supplier object with deep copy in openEditProviderModal and handleProviderSaved
+- `front/src/controllers/budgetController.ts` - Added `_supplier` parameter support in addProvider function
+
+---
+
 ## [v0.37.1] - 2026-01-22
 
 ### Refactored

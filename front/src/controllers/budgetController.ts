@@ -297,6 +297,7 @@ class BudgetController {
     allowEmpty?: boolean;
     _supplierId?: string | number;
     _supplierName?: string;
+    _supplier?: Supplier;
     products?: Array<{ supplierProductId: string | number; productName: string; productPrice: number; quantity: number }>;
   }) {
     const {
@@ -306,6 +307,7 @@ class BudgetController {
       allowEmpty = false,
       _supplierId,
       _supplierName,
+      _supplier,
       products,
     } = params;
     if (!name && !allowEmpty) return;
@@ -332,6 +334,7 @@ class BudgetController {
       _supplierName,
       _pendingProducts: products,
       products,
+      _supplier: _supplier ? JSON.parse(JSON.stringify(_supplier)) : undefined,
     };
 
     this.store.addProvider(newProvider);

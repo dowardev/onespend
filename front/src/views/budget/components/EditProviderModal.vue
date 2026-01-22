@@ -298,6 +298,7 @@ interface ProviderData {
   id?: string | number;
   _supplierId?: string | number;
   _supplierName?: string;
+  _supplier?: Supplier;
   name: string;
   estimated?: number;
   accountId?: string | number;
