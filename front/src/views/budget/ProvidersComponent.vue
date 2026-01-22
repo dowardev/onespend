@@ -166,12 +166,15 @@ import {
 import budgetController from '@/controllers/budgetController';
 import { BudgetController } from '@/controllers/budgetController';
 import TemplateController from '@/controllers/TempalteController';
+import { TemplateRecord } from '@/controllers/TempalteController';
 import { buildPayloadFromTemplate } from '@/controllers/templateService';
 import suppliersController from '@/controllers/suppliersController';
 import { SuppliersController } from '@/controllers/suppliersController';
 import accountsController from '@/controllers/accountsController';
 import { AccountsController } from '@/controllers/accountsController';
 import { SyncController } from '@/controllers/syncController';
+import type { Supplier } from '@/controllers/suppliersController';
+import type { ProviderData, ProviderProduct } from './components/EditProviderModal.vue';
 // End Controllers
 
 // Components
@@ -190,17 +193,17 @@ const syncCtrl = new SyncController();
 
 const showAddProviderModal = ref(false);
 const allSuppliers = computed(() => suppliersCtrl.getSuppliers());
-const allAccounts = ref<any[]>([]);
-const editingProvider = ref<any>(null);
+const allAccounts = ref<Array<{ id: string | number; name: string }>>([]);
+const editingProvider = ref<ProviderData | null>(null);
 const showTemplatesModal = ref(false);
 const showConflictModal = ref(false);
 const showNotesModal = ref(false);
-const notesProvider = ref<any>(null);
+const notesProvider = ref<ProviderData | null>(null);
 const notesContent = ref('');
 const conflictMessage = ref('');
-const templatesList = ref<any[]>([]);
-const pendingTemplate = ref<any>(null);
-const pendingProviders = ref<any[]>([]);
+const templatesList = ref<Array<TemplateRecord>>([]);
+const pendingTemplate = ref<TemplateRecord | null>(null);
+const pendingProviders = ref<Array<{ name: string; estimated: number }>>([]);
 let unsubscribeFromSuppliers: (() => void) | null = null;
 
 const deleteConfirm = reactive({
@@ -234,7 +237,7 @@ onMounted(async () => {
   await loadSuppliers();
   loadAccounts();
 
-  unsubscribeFromSuppliers = suppliersCtrl.subscribeToChanges({ callback: (suppliers: any[]) => {
+  unsubscribeFromSuppliers = suppliersCtrl.subscribeToChanges({ callback: (suppliers: Array<Supplier>) => {
     if (isDayClosed.value) {
       console.log('[Suppliers Change] Day is closed, ignoring supplier update');
       return;
@@ -243,7 +246,7 @@ onMounted(async () => {
       '[Suppliers Change] Received update, suppliers count:',
       suppliers.length
     );
-    budgetCtrl.syncProvidersWithSuppliers({ suppliers: suppliers as any });
+    budgetCtrl.syncProvidersWithSuppliers({ suppliers });
   } });
 });
 
@@ -263,7 +266,7 @@ onIonViewWillEnter(async () => {
 // Functions
 async function loadSuppliers() {
   const list = await suppliersCtrl.listSuppliers();
-  budgetCtrl.syncProvidersWithSuppliers({ suppliers: (list || []) as any });
+  budgetCtrl.syncProvidersWithSuppliers({ suppliers: list || [] });
 }
 
 async function forceSyncSuppliers() {
@@ -286,27 +289,27 @@ function openAddProviderModal() {
   showAddProviderModal.value = true;
 }
 
-async function openEditProviderModal(params: { provider: any }) {
+async function openEditProviderModal(params: { provider: ProviderData }) {
   const { provider } = params;
   console.log('openEditProviderModal - payload:', provider);
   const providerData = provider;
 
   await forceSyncSuppliers();
 
-  let fullSupplier: any = null;
+  let fullSupplier: Supplier | null = null;
   const supplierSyncId = providerData._supplierId || providerData._supplierKey;
 
   if (supplierSyncId) {
     fullSupplier =
       allSuppliers.value.find(
-        (s: any) => String(s.sync_id) === String(supplierSyncId)
+        (s: Supplier) => String(s.sync_id) === String(supplierSyncId)
       ) ||
       allSuppliers.value.find(
-        (s: any) => String(s.id) === String(supplierSyncId)
+        (s: Supplier) => String(s.id) === String(supplierSyncId)
       );
   } else {
     fullSupplier = allSuppliers.value.find(
-      (s: any) =>
+      (s: Supplier) =>
         s.name &&
         providerData.name &&
         s.name.toLowerCase() === providerData.name.toLowerCase()
@@ -329,9 +332,9 @@ async function openEditProviderModal(params: { provider: any }) {
 function handleProviderSaved(payload: {
   providerId?: string | number;
   providerName?: string;
-  items: Array<{ amount: number; accountId: any }>;
+  items: Array<{ amount: number; accountId: string | number | null }>;
   totalAmount: number;
-  products?: Array<any>;
+  products?: Array<ProviderProduct>;
 }) {
   console.log('ProvidersComponent.handleProviderSaved - payload:', payload);
   const firstItem = payload.items[0];
@@ -381,7 +384,7 @@ function addEmptyProvider() {
 function handleUpdateProvider(payload: {
   id: string | number;
   field: string;
-  value: any;
+  value: unknown;
 }) {
   const { id, field, value } = payload;
   budgetController.updateProvider({ id, changes: { [field]: value } });
@@ -389,17 +392,11 @@ function handleUpdateProvider(payload: {
 }
 
 function confirmRemoveProveedor(
-  payload: { id?: string | number; name?: string } | any
+  payload: { id?: string | number; name?: string } | string | number
 ) {
-  const id =
-    payload && (payload as any).id !== undefined
-      ? (payload as any).id
-      : (payload as any);
-  const name =
-    payload && (payload as any).name !== undefined
-      ? (payload as any).name
-      : (payload as any)?.name || '';
-  deleteConfirm.providerId = id;
+  const id = typeof payload === 'object' && payload !== null ? payload.id : payload;
+  const name = typeof payload === 'object' && payload !== null ? payload.name : '';
+  deleteConfirm.providerId = id ?? null;
   deleteConfirm.providerName = name || '';
   deleteConfirm.open = true;
 }
@@ -416,7 +413,7 @@ function removeProveedorConfirmed() {
   deleteConfirm.providerName = '';
 }
 
-function handleOpenNotesModal(payload: { provider: any }) {
+function handleOpenNotesModal(payload: { provider: ProviderData }) {
   const { provider } = payload;
   notesProvider.value = provider;
   notesContent.value = provider?.notes || '';
@@ -442,7 +439,7 @@ async function openTemplatesModal() {
   showTemplatesModal.value = true;
 }
 
-async function checkTemplateConflict(params: { tmpl: any }) {
+async function checkTemplateConflict(params: { tmpl: TemplateRecord }) {
   const { tmpl } = params;
   try {
     const dateISO = budgetController.getSelectedDate();
@@ -465,9 +462,9 @@ async function checkTemplateConflict(params: { tmpl: any }) {
   }
 }
 
-function applyProviders(params: { providers: any[] }) {
+function applyProviders(params: { providers: Array<{ name: string; estimated: number; accountId?: string | number }> }) {
   const { providers } = params;
-  providers.forEach((p: any) => {
+  providers.forEach((p) => {
     budgetController.addProvider({
       name: p.name,
       estimated: p.estimated,

@@ -1,9 +1,90 @@
 import { ref, onMounted, onUnmounted } from 'vue';
-import { syncService, type SyncItem } from '@/services/syncService';
+import { syncService, type SyncItem, type SyncItemData } from '@/services/syncService';
 import { useBudgetStore } from '@/stores/budgetStore';
 import { useAccountsStore } from '@/stores/accountsStore';
 import { useSuppliersStore } from '@/stores/suppliersStore';
 import { useTemplatesStore } from '@/stores/templatesStore';
+
+export interface SyncEntryParams {
+  name?: string | number | null;
+  amount?: number | string | null;
+  date?: string | number | null;
+  paymentType?: string | null;
+  entryType?: string | null;
+  accountId?: number | string | null;
+  groups?: string[];
+  _fromProviderGroupId?: number | string | null;
+  _providerName?: string | null;
+  [key: string]: unknown;
+}
+
+export interface SyncProviderParams {
+  name?: string | null;
+  date?: string | number | null;
+  estimated?: number | string | null;
+  accountId?: number | string | null;
+  efectivo?: number | string | null;
+  tarjeta?: number | string | null;
+  credito?: number | string | null;
+  notes?: string | null;
+  visited?: boolean | null;
+  _supplierId?: number | string | null;
+  _supplierName?: string | null;
+  [key: string]: unknown;
+}
+
+export interface SyncAccountParams {
+  name?: string | null;
+  initialBalance?: number | string | null;
+  [key: string]: unknown;
+}
+
+export interface SyncTemplateParams {
+  name?: string | null;
+  description?: string | null;
+  suppliers?: string[];
+  suppliersSnapshot?: string[];
+  [key: string]: unknown;
+}
+
+export interface SyncSupplierProductParams {
+  supplierId?: number | string | null;
+  name?: string | null;
+  price?: number | string | null;
+  imageBase64?: string | null;
+  [key: string]: unknown;
+}
+
+export interface SyncBudgetParams {
+  date?: string | number | null;
+  isDayClosed?: boolean | null;
+  finishDayData?: unknown;
+  [key: string]: unknown;
+}
+
+export interface SyncBudgetProviderParams {
+  date?: string | number | null;
+  name?: string | null;
+  estimated?: number | string | null;
+  accountId?: number | string | null;
+  efectivo?: number | string | null;
+  tarjeta?: number | string | null;
+  credito?: number | string | null;
+  notes?: string | null;
+  visited?: boolean | null;
+  _supplierId?: number | string | null;
+  _supplierName?: string | null;
+  [key: string]: unknown;
+}
+
+export interface SyncBudgetProviderProductParams {
+  budgetProviderId?: number | string | null;
+  supplierProductId?: number | string | null;
+  productName?: string | null;
+  productPrice?: number | string | null;
+  quantity?: number | null;
+  [key: string]: unknown;
+}
 
 export function useSync() {
   const isOnline = ref(syncService.getOnlineStatus());
@@ -23,7 +104,8 @@ export function useSync() {
     return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   }
 
-  function syncEntry(entry: any, operation: 'create' | 'update' | 'delete' = 'create') {
+  function syncEntry(params: { entry: SyncEntryParams; operation?: 'create' | 'update' | 'delete' }) {
+    const { entry, operation = 'create' } = params;
     let syncId = entry.sync_id;
     
     if (!syncId) {
@@ -52,7 +134,8 @@ export function useSync() {
     pendingChanges.value = syncService.getQueueCount();
   }
 
-  function syncProvider(provider: any, operation: 'create' | 'update' | 'delete' = 'create') {
+  function syncProvider(params: { provider: SyncProviderParams; operation?: 'create' | 'update' | 'delete' }) {
+    const { provider, operation = 'create' } = params;
     console.log('%c[useSync] 🔵 syncProvider LLAMADO', 'color: blue; font-weight: bold', {
       name: provider.name,
       operation,
@@ -96,7 +179,8 @@ export function useSync() {
     console.log('[useSync] ✅ queueOperation completado, pendingChanges:', pendingChanges.value);
   }
 
-  function syncAccount(account: any, operation: 'create' | 'update' | 'delete' = 'create') {
+  function syncAccount(params: { account: SyncAccountParams; operation?: 'create' | 'update' | 'delete' }) {
+    const { account, operation = 'create' } = params;
     let syncId = account.sync_id;
     
     if (!syncId) {
@@ -118,7 +202,8 @@ export function useSync() {
     pendingChanges.value = syncService.getQueueCount();
   }
 
-  function syncTemplate(template: any, operation: 'create' | 'update' | 'delete' = 'create') {
+  function syncTemplate(params: { template: SyncTemplateParams; operation?: 'create' | 'update' | 'delete' }) {
+    const { template, operation = 'create' } = params;
     let syncId = template.sync_id;
     
     if (!syncId) {
@@ -142,7 +227,8 @@ export function useSync() {
     pendingChanges.value = syncService.getQueueCount();
   }
 
-  function syncSupplierProduct(product: any, operation: 'create' | 'update' | 'delete' = 'create') {
+  function syncSupplierProduct(params: { product: SyncSupplierProductParams; operation?: 'create' | 'update' | 'delete' }) {
+    const { product, operation = 'create' } = params;
     console.log('%c[useSync] 🔵 syncSupplierProduct LLAMADO', 'color: purple; font-weight: bold', {
       name: product.name,
       operation,
@@ -179,7 +265,8 @@ export function useSync() {
     pendingChanges.value = syncService.getQueueCount();
   }
 
-  function syncBudget(budgetData: any, operation: 'create' | 'update' | 'delete' = 'create') {
+  function syncBudget(params: { budgetData: SyncBudgetParams; operation?: 'create' | 'update' | 'delete' }) {
+    const { budgetData, operation = 'create' } = params;
     let syncId = budgetData.sync_id;
     
     if (!syncId) {
@@ -202,7 +289,8 @@ export function useSync() {
     pendingChanges.value = syncService.getQueueCount();
   }
 
-  function syncBudgetProvider(provider: any, operation: 'create' | 'update' | 'delete' = 'create', products?: any[], supplierSyncId?: string) {
+  function syncBudgetProvider(params: { provider: SyncBudgetProviderParams; operation?: 'create' | 'update' | 'delete'; products?: SyncBudgetProviderProductParams[]; supplierSyncId?: string }) {
+    const { provider, operation = 'create', products, supplierSyncId } = params;
     let syncId = provider.sync_id;
     
     if (!syncId) {
@@ -225,7 +313,7 @@ export function useSync() {
         visited: provider.visited,
         _supplier_id: provider._supplierId || supplierSyncId,
         _supplier_name: provider._supplierName,
-        products: products ? products.map((p: any) => ({
+        products: products ? products.map((p: SyncBudgetProviderProductParams) => ({
           sync_id: p.sync_id,
           supplier_product_id: p.supplierProductId || p.supplier_product_id,
           product_name: p.productName || p.product_name,
@@ -242,7 +330,7 @@ export function useSync() {
       entityType: syncItem.entityType,
       operation: syncItem.operation,
       data: syncItem.data,
-      productsDetails: syncItem.data.products?.map((p: any) => ({
+      productsDetails: syncItem.data.products?.map((p: SyncBudgetProviderProductParams) => ({
         supplier_product_id: p.supplier_product_id,
         product_name: p.product_name,
         quantity: p.quantity
@@ -253,7 +341,8 @@ export function useSync() {
     pendingChanges.value = syncService.getQueueCount();
   }
 
-  function syncBudgetProviderProduct(product: any, operation: 'create' | 'update' | 'delete' = 'create') {
+  function syncBudgetProviderProduct(params: { product: SyncBudgetProviderProductParams; operation?: 'create' | 'update' | 'delete' }) {
+    const { product, operation = 'create' } = params;
     let syncId = product.sync_id;
     
     if (!syncId) {
@@ -293,7 +382,7 @@ export function useSync() {
       console.log('syncNow - result from server:', JSON.stringify(result, null, 2));
       
       if (result) {
-        await applyServerChanges(result);
+        await applyServerChanges({ changes: result.results || {}, serverTime: result.serverTime });
       }
 
       lastSyncTime.value = syncService.getLastSyncTime();
@@ -319,7 +408,7 @@ export function useSync() {
 
     try {
       const changes = await syncService.pullChanges();
-      await applyServerChanges({ changes, serverTime: Date.now() } as any);
+      await applyServerChanges({ changes, serverTime: Date.now() });
       lastSyncTime.value = syncService.getLastSyncTime();
     } catch (error) {
       syncError.value = error instanceof Error ? error.message : 'Pull failed';
@@ -328,7 +417,12 @@ export function useSync() {
     }
   }
 
-  async function applyServerChanges(result: { changes?: Record<string, any[]>; serverTime?: number }) {
+  interface ServerChangesResult {
+    changes?: Record<string, SyncItemData[]>;
+    serverTime?: number;
+  }
+
+  async function applyServerChanges(result: ServerChangesResult) {
     const { changes } = result;
 
     if (!changes) return;
@@ -494,7 +588,7 @@ export function useSync() {
 
     if (changes.budget_provider_product) {
       const products = Array.isArray(changes.budget_provider_product) ? changes.budget_provider_product : [];
-      const productsByProvider: Record<string, any[]> = {};
+      const productsByProvider: Record<string, BudgetProviderProduct[]> = {};
       
       for (const product of products) {
         if (!product._deleted) {
@@ -520,6 +614,15 @@ export function useSync() {
         }
       }
     }
+  }
+
+  interface BudgetProviderProduct {
+    id: number | string;
+    sync_id: number | string;
+    supplierProductId?: number | string;
+    productName?: string;
+    productPrice?: number | string;
+    quantity?: number;
   }
 
   function startAutoSync(intervalMs: number = 30000) {

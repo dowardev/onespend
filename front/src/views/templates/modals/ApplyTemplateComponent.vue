@@ -137,9 +137,17 @@ import { parseLocalDate } from '@/utils/date';
 import { parseProvidersFromDescription } from '@/controllers/templateService';
 
 // main
+interface ApplyTargetTemplate {
+  id?: string | number | null;
+  name?: string;
+  description?: string;
+  suppliers?: IDBValidKey[];
+  suppliersSnapshot?: Array<{ id: IDBValidKey; name?: string }>;
+}
+
 const props = defineProps<{
-  applyTargetTemplate: any | null;
-  suppliers: any[];
+  applyTargetTemplate: ApplyTargetTemplate | null;
+  suppliers: Supplier[];
   applySelectedDate: string;
 }>();
 const emit = defineEmits<{
@@ -189,7 +197,7 @@ function openDatePopover(params: { ev: Event }) {
 function onDateChange(params: { ev: CustomEvent }) {
   const { ev } = params;
   const val =
-    (ev.detail && (ev.detail as any).value) || (ev.target as any)?.value || '';
+    (ev.detail && ev.detail.value) || (ev.target as HTMLInputElement)?.value || '';
   if (!val) return;
   selectedDate.value = val;
   emit('update:applySelectedDate', val);
@@ -202,7 +210,7 @@ function closeDatePopover() {
 
 function onDateChange(ev: CustomEvent) {
   const val =
-    (ev.detail && (ev.detail as any).value) || (ev.target as any)?.value || '';
+    (ev.detail && ev.detail.value) || (ev.target as HTMLInputElement)?.value || '';
   if (!val) return;
   selectedDate.value = val;
   // Emit update for v-model style binding
@@ -211,13 +219,13 @@ function onDateChange(ev: CustomEvent) {
 
 function supplierExists(params: { id: IDBValidKey }): boolean {
   const { id } = params;
-  return !!(props.suppliers || []).some((s: any) => s && s.id === id);
+  return !!(props.suppliers || []).some((s: Supplier) => s && s.id === id);
 }
 
 function supplierDisplayName(params: { id: IDBValidKey }): string {
   const { id } = params;
   // Prefer current supplier name if it exists
-  const s = (props.suppliers || []).find((x: any) => x.id === id);
+  const s = (props.suppliers || []).find((x: Supplier) => x.id === id);
   if (s && s.name) return s.name;
 
   const snapshotList = props.applyTargetTemplate?.suppliersSnapshot || [];

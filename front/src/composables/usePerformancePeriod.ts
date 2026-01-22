@@ -6,6 +6,13 @@ import { formatLocalDate } from '@/utils/date';
  * (day/week/month/year). Centraliza popovers, hovered state, helpers de formato,
  * providerValue y utilidades para PDFs.
  */
+export interface ProviderValue {
+  efectivo?: number | string | null;
+  tarjeta?: number | string | null;
+  credito?: number | string | null;
+  estimated?: number | string | null;
+}
+
 export function usePerformancePeriod() {
   const popovers = reactive({
     mainDate: { open: false as boolean, event: null as Event | null },
@@ -37,7 +44,8 @@ export function usePerformancePeriod() {
     return formatLocalDate({ d });
   }
 
-  function providerValue(p: any) {
+  function providerValue(params: { p: ProviderValue }) {
+    const p = params.p;
     try {
       const efectivo = Number(p?.efectivo || 0);
       const tarjeta = Number(p?.tarjeta || 0);
@@ -51,7 +59,8 @@ export function usePerformancePeriod() {
     }
   }
 
-  function formatCurrency(val: any) {
+  function formatCurrency(params: { val: number | null | undefined }) {
+    const val = params.val;
     const n = Number(val ?? 0);
     const nf = new Intl.NumberFormat('es-MX', {
       style: 'currency',
@@ -67,7 +76,8 @@ export function usePerformancePeriod() {
     return nf.format(n);
   }
 
-  function formatPercent(val: any) {
+  function formatPercent(params: { val: number | null | undefined }) {
+    const val = params.val;
     const n = Number(val ?? 0);
     if (!Number.isFinite(n)) return '0';
     return String(Math.round(n));

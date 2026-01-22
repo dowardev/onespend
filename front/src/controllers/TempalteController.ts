@@ -82,7 +82,7 @@ class TemplateController {
     }
   }
 
-  async saveTemplate(params: { template: any }) {
+  async saveTemplate(params: { template: TemplateRecord }) {
     const { template } = params;
 
     if (!template.sync_id) {
@@ -148,7 +148,7 @@ class TemplateController {
     const { id } = params;
     
     const store = useTemplatesStore();
-    const templates = JSON.parse(JSON.stringify(store.templates)) as any[];
+    const templates = JSON.parse(JSON.stringify(store.templates)) as Array<TemplateRecord>;
     const template = templates.find(t => String(t.id) === String(id));
 
     try {
@@ -161,7 +161,7 @@ class TemplateController {
 
       if (template) {
         const { syncTemplate } = useSync();
-        syncTemplate(template as any, 'delete');
+        syncTemplate(template, 'delete');
       }
 
       return true;

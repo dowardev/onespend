@@ -144,9 +144,9 @@ function openModal() {
   showModal.value = true;
 }
 
-function edit(params: { c: any }) {
-  const { c } = params;
-  modalAccount.value = c;
+function edit(params: { account: Account | null }) {
+  const { account } = params;
+  modalAccount.value = account;
   showModal.value = true;
 }
 
@@ -189,7 +189,7 @@ async function removeAccountConfirmed() {
   deleteConfirmAccount.accountName = '';
 
   if (id == null) return;
-  await remove(id as any);
+  await remove(id as string | number);
 }
 
 function onDeleteAlertDidDismissAccount() {
@@ -198,13 +198,13 @@ function onDeleteAlertDidDismissAccount() {
   deleteConfirmAccount.accountName = '';
 }
 
-async function onModalSaved(params: { payload: any }) {
+async function onModalSaved(params: { payload: AccountFormData }) {
   const { payload } = params;
   if (!payload) return;
   if (payload.id != null) {
-    await accountsController.updateAccount({ a: payload as any });
+    await accountsController.updateAccount({ params: { account: payload as AccountFormData } });
   } else {
-    await accountsController.addAccount({ a: payload as any });
+    await accountsController.addAccount({ params: { account: payload as AccountFormData } });
   }
 
   cancelModal();
@@ -236,7 +236,7 @@ const filteredAccounts = computed(() => {
   const term = (searchTerm.value || '').toString().toLowerCase().trim();
   const list = accounts.value || [];
   if (!term) return list;
-  return list.filter((a: any) => {
+  return list.filter((a: Account) => {
     const name = (a.name || '').toString().toLowerCase();
     return name.includes(term);
   });
@@ -244,14 +244,14 @@ const filteredAccounts = computed(() => {
 
 const groupedAccounts = computed(() => {
   const list = (filteredAccounts.value || []).slice();
-  list.sort((a: any, b: any) => {
+  list.sort((a: Account, b: Account) => {
     const na = (a.name || '').toString().toLowerCase();
     const nb = (b.name || '').toString().toLowerCase();
     return na.localeCompare(nb);
   });
 
   const map = new Map<string, any[]>();
-  list.forEach((a: any) => {
+  list.forEach((a: Account) => {
     const name = (a.name || '').toString().trim();
     const letter = name ? name[0].toUpperCase() : '#';
     if (!map.has(letter)) map.set(letter, []);

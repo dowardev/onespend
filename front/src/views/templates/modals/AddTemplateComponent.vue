@@ -126,13 +126,19 @@ import { parseProvidersFromDescription } from '@/controllers/templateService';
 // end controllers
 
 // intefaces
+type SupplierOption = {
+  id: IDBValidKey;
+  name: string;
+  products?: Array<{ name: string; price: number }>;
+};
+
 type TemplateSummary = {
   id: string | number | null;
   sync_id?: string;
   name: string;
   description?: string;
-  suppliers?: any[];
-  suppliersSnapshot?: any[];
+  suppliers?: IDBValidKey[];
+  suppliersSnapshot?: Array<{ id: IDBValidKey; name: string }>;
 };
 // end inteface
 
@@ -147,12 +153,12 @@ const emit = defineEmits(['saved', 'close']);
 // vars
 const form = reactive({
   name: '',
-  supplierIds: [] as any[],
+  supplierIds: [] as IDBValidKey[],
 });
-const suppliers = ref<any[]>([]);
+const suppliers = ref<SupplierOption[]>([]);
 const supplierQuery = ref('');
 const searchVisible = ref(false);
-const supplierSearchbar = ref<any | null>(null);
+const supplierSearchbar = ref<HTMLIonSearchbarElement | null>(null);
 const isEditMode = computed(() => !!props.editingTmpl);
 // end vars
 
@@ -182,7 +188,7 @@ watch(
       const names = parseProvidersFromDescription(tmpl.description);
       const matchedIds = (names || [])
         .map((n: string) => suppliers.value.find(s => s.name === n))
-        .filter((x): x is any => !!x)
+        .filter((x): x is SupplierOption => !!x)
         .map(s => s.id);
       if (matchedIds.length)
         form.supplierIds.splice(0, form.supplierIds.length, ...matchedIds);
@@ -205,8 +211,8 @@ const filteredSuppliers = computed(() => {
 // functions
 async function loadSuppliers() {
   try {
-    const list = (await suppliersController.listSuppliers()) as any[];
-    suppliers.value = list || [];
+    const list = await suppliersController.listSuppliers();
+    suppliers.value = (list as SupplierOption[]) || [];
   } catch (_e) {
     console.error('AddTemplateComponent.loadSuppliers error', _e);
   }
@@ -217,7 +223,7 @@ function openSearch() {
   // try focusing the searchbar
   setTimeout(() => {
     try {
-      const el: any = supplierSearchbar.value;
+      const el = supplierSearchbar.value;
       if (el && typeof el.setFocus === 'function') el.setFocus();
     } catch (_e) {
       // ignore
@@ -230,11 +236,11 @@ function onSearchCancel() {
   searchVisible.value = false;
 }
 
-function toggleSupplierSelection(params: { s: any }) {
-  const { s } = params;
+function toggleSupplierSelection(params: { supplier: SupplierOption }) {
+  const { supplier } = params;
   if (props.dayClosed) return;
 
-  const id = s.id as IDBValidKey;
+  const id = supplier.id as IDBValidKey;
   const idx = form.supplierIds.indexOf(id);
   if (idx === -1) form.supplierIds.push(id);
   else form.supplierIds.splice(idx, 1);
@@ -257,7 +263,7 @@ async function submitTemplate() {
 
   try {
     const list = await TemplateController.listTemplates();
-    const exists = (list || []).some((t: any) => {
+    const exists = (list || []).some((t: TemplateSummary) => {
       const tName = t && t.name ? String(t.name).trim().toLowerCase() : '';
       const editingId =
         props.editingTmpl && props.editingTmpl.id
@@ -285,8 +291,17 @@ async function submitTemplate() {
     ? `Proveedores: ${selectedNames.join(', ')}`
     : undefined;
 
-  try {
-    const payloadTemplate: any = {
+  interface PayloadTemplate {
+  name: string;
+  description?: string;
+  suppliers: IDBValidKey[];
+  suppliersSnapshot: Array<{ id: IDBValidKey; name: string }>;
+  id?: string | number | null;
+  sync_id?: string;
+}
+
+try {
+    const payloadTemplate: PayloadTemplate = {
       name: newName,
       description,
       suppliers: form.supplierIds.slice(),

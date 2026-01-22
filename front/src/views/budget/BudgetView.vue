@@ -294,6 +294,8 @@ import systemController from '@/controllers/systemConfigController';
 import budgetController from '@/controllers/budgetController';
 import accountsController from '@/controllers/accountsController';
 import { AccountsController, type Account } from '@/controllers/accountsController';
+import type { Income, Provider } from '@/stores/budgetStore';
+import type { PaymentType } from '@/stores/budgetStore';
 // End Controllers
 
 // Components
@@ -351,8 +353,8 @@ function openMoreOptions(params: { event: Event }) {
   showMoreOptions.value = true;
 }
 
-function onDateSelected(e: any) {
-  const value = e?.detail?.value;
+function onDateSelected(e: CustomEvent) {
+  const value = e.detail?.value;
   if (value) {
     const d = new Date(value);
     const y = d.getFullYear();
@@ -407,34 +409,34 @@ async function insertTestData() {
   let accounts = accountsCtrl.getAccounts();
 
   if (accounts.length === 0) {
-    const now = Date.now();
-    const acc1: Account = { id: Date.now() + 1, name: 'Caja Principal', initialBalance: 0, createdAt: now, updatedAt: now };
-    const acc2: Account = { id: Date.now() + 2, name: 'Banco', initialBalance: 0, createdAt: now, updatedAt: now };
-    await accountsCtrl.addAccount({ params: { name: 'Caja Principal', initialBalance: 0 } });
-    await accountsCtrl.addAccount({ params: { name: 'Banco', initialBalance: 0 } });
+  const now = Date.now();
+  const acc1: Account = { id: Date.now() + 1, name: 'Caja Principal', initialBalance: 0, createdAt: now, updatedAt: now };
+  const acc2: Account = { id: Date.now() + 2, name: 'Banco', initialBalance: 0, createdAt: now, updatedAt: now };
+  await accountsCtrl.addAccount({ account: { name: 'Caja Principal', initialBalance: 0 } });
+  await accountsCtrl.addAccount({ account: { name: 'Banco', initialBalance: 0 } });
     accounts = [acc1, acc2];
   }
 
   const accountId1 = accounts[0].id;
   const accountId2 = accounts.length > 1 ? accounts[1].id : accountId1;
 
-  budgetController.addIngreso({ params: { name: 'Venta mostrador 1', amount: 1500, paymentType: 'cash', accountId: accountId1 } });
-  budgetController.addIngreso({ params: { name: 'Venta mostrador 2', amount: 2300, paymentType: 'digital', accountId: accountId2 } });
-  budgetController.addIngreso({ params: { name: 'Venta online', amount: 4500, paymentType: 'cash', accountId: accountId1 } });
-  budgetController.addIngreso({ params: { name: 'Pedido mayorista', amount: 12000, paymentType: 'digital', accountId: accountId2 } });
-  budgetController.addIngreso({ params: { name: 'Venta telefónica', amount: 3500, paymentType: 'cash', accountId: accountId1 } });
+  budgetController.addIngreso({ name: 'Venta mostrador 1', amount: 1500, paymentType: 'cash', accountId: accountId1 });
+  budgetController.addIngreso({ name: 'Venta mostrador 2', amount: 2300, paymentType: 'digital', accountId: accountId2 });
+  budgetController.addIngreso({ name: 'Venta online', amount: 4500, paymentType: 'cash', accountId: accountId1 });
+  budgetController.addIngreso({ name: 'Pedido mayorista', amount: 12000, paymentType: 'digital', accountId: accountId2 });
+  budgetController.addIngreso({ name: 'Venta telefónica', amount: 3500, paymentType: 'cash', accountId: accountId1 });
 
-  budgetController.addEgreso({ params: { name: 'Compra inventario', amount: 8000, paymentType: 'cash', accountId: accountId1 } });
-  budgetController.addEgreso({ params: { name: 'Pago servicios', amount: 2500, paymentType: 'digital', accountId: accountId2 } });
-  budgetController.addEgreso({ params: { name: 'Transporte', amount: 800, paymentType: 'cash', accountId: accountId1 } });
+  budgetController.addEgreso({ name: 'Compra inventario', amount: 8000, paymentType: 'cash', accountId: accountId1 });
+  budgetController.addEgreso({ name: 'Pago servicios', amount: 2500, paymentType: 'digital', accountId: accountId2 });
+  budgetController.addEgreso({ name: 'Transporte', amount: 800, paymentType: 'cash', accountId: accountId1 });
 
-  budgetController.addProvider({ params: { name: 'Proveedor A', estimated: 500, accountId: accountId1 } });
-  budgetController.addProvider({ params: { name: 'Proveedor B', estimated: 800, accountId: accountId2 } });
-  budgetController.addProvider({ params: { name: 'Proveedor C', estimated: 1200, accountId: accountId1 } });
-  budgetController.addProvider({ params: { name: 'Proveedor D', estimated: 600, accountId: accountId2 } });
-  budgetController.addProvider({ params: { name: 'Proveedor E', estimated: 950, accountId: accountId1 } });
-  budgetController.addProvider({ params: { name: 'Proveedor F', estimated: 1500, accountId: accountId2 } });
-  budgetController.addProvider({ params: { name: 'Proveedor G', estimated: 450, accountId: accountId1 } });
+  budgetController.addProvider({ name: 'Proveedor A', estimated: 500, accountId: accountId1 });
+  budgetController.addProvider({ name: 'Proveedor B', estimated: 800, accountId: accountId2 });
+  budgetController.addProvider({ name: 'Proveedor C', estimated: 1200, accountId: accountId1 });
+  budgetController.addProvider({ name: 'Proveedor D', estimated: 600, accountId: accountId2 });
+  budgetController.addProvider({ name: 'Proveedor E', estimated: 950, accountId: accountId1 });
+  budgetController.addProvider({ name: 'Proveedor F', estimated: 1500, accountId: accountId2 });
+  budgetController.addProvider({ name: 'Proveedor G', estimated: 450, accountId: accountId1 });
 
   budgetController.saveData();
   showMoreOptions.value = false;
@@ -467,15 +469,15 @@ const daySummary = computed(() => {
   const entries = budgetController.getEntries();
   const providers = budgetController.getProviders();
 
-  const ingresos = entries.filter((e: any) => e.entryType === 'ingreso');
-  const egresos = entries.filter((e: any) => e.entryType === 'egreso');
+  const ingresos = entries.filter((e: Income) => e.entryType === 'ingreso');
+  const egresos = entries.filter((e: Income) => e.entryType === 'egreso');
 
-  const totalIncome = ingresos.reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
-  const totalExpense = egresos.reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
-  const totalEstimated = providers.reduce((sum: number, p: any) => sum + Number(p.estimated || 0), 0);
+  const totalIncome = ingresos.reduce((sum: number, e: Income) => sum + Number(e.amount || 0), 0);
+  const totalExpense = egresos.reduce((sum: number, e: Income) => sum + Number(e.amount || 0), 0);
+  const totalEstimated = providers.reduce((sum: number, p: Provider) => sum + Number(p.estimated || 0), 0);
 
   const allTimestamps = entries
-    .map((e: any) => Number(e.createdAt))
+    .map((e: Income) => Number(e.createdAt))
     .filter((t: number) => t > 0)
     .sort((a: number, b: number) => a - b);
 

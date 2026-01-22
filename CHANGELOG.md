@@ -1,3 +1,49 @@
+## [v0.37.1] - 2026-01-22
+
+### Refactored
+
+- Add comprehensive TypeScript type definitions across all sync and data interfaces
+- Convert function parameters from positional to object destructuring pattern for better type safety
+- Replace `any` types with properly typed interfaces throughout codebase
+- Add typed interfaces: SyncEntryParams, SyncProviderParams, SyncAccountParams, SyncTemplateParams, SyncSupplierProductParams, SyncBudgetParams, SyncBudgetProviderParams, SyncBudgetProviderProductParams
+- Add ProviderValue, SnapshotData, Html2CanvasOptions, JsPdfOptions type exports for composables
+- Update DixieController with proper type safety for IndexedDB operations
+- Improve error handling with typed error objects instead of `any`
+
+### Improved
+
+- Enhance applyServerChanges function with proper async/await patterns
+- Add proper BudgetProviderProduct interface for typed product handling
+- Improve syncService with better error typing and fallback handling
+- Add type exports for usePdfReport, usePerformancePeriod, usePeriodView, useSync composables
+- Update router type checking in App.vue for Vue Router 4.x compatibility
+
+### Fixed
+
+- Router type check using 'hasRoute' in router check pattern for Vue Router 4.x
+
+### Files Changed
+
+**Frontend:**
+- `front/src/composables/usePdfReport.ts` - Added typed exports for Html2CanvasOptions, JsPdfOptions
+- `front/src/composables/usePerformancePeriod.ts` - Added ProviderValue interface, converted functions to object params
+- `front/src/composables/usePeriodView.ts` - Added SnapshotData interface, typed snapshots state
+- `front/src/composables/useSync.ts` - Added all Sync*Params interfaces, BudgetProviderProduct interface, improved async handling
+- `front/src/controllers/TempalteController.ts` - Added TemplateRecord type, converted to object params
+- `front/src/controllers/accountsController.ts` - Added Supplier type import, typed controller methods
+- `front/src/controllers/backupController.ts` - Added BackupEntryData, BackupRecord interfaces
+- `front/src/controllers/budgetController.ts` - Added BudgetData, Supplier type imports
+- `front/src/controllers/dixie.ts` - Improved type safety for IndexedDB operations, proper error typing
+- `front/src/controllers/migrationService.ts` - Added proper type definitions for migration functions
+- `front/src/controllers/statisticsController.ts` - Added all type exports from composables
+- `front/src/controllers/suppliersController.ts` - Added Product, Supplier type exports, typed methods
+- `front/src/controllers/templateService.ts` - Added TemplateRecord type, proper typing
+- `front/src/services/syncService.ts` - Improved error handling with typed responses
+- `front/src/stores/accountsStore.ts` - Added serverId field to Account type
+- `front/src/stores/budgetStore.ts` - Added proper typing for budget state
+
+---
+
 ## [v0.37.0] - 2026-01-22
 
 ### Refactored

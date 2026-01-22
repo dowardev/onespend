@@ -3,13 +3,33 @@ import { format } from 'date-fns';
 import { formatLocalDate } from '@/utils/date';
 import { DixieController } from './dixie';
 
+export type Html2CanvasOptions = Record<string, unknown>;
+export type JsPdfOptions = { orientation?: string; unit?: string; format?: string };
+
 export type UsePdfReportOptions = {
   containerRef: Ref<HTMLElement | null>;
   buttonSelector?: string;
   filenameFactory?: () => string;
-  html2canvasOptions?: Record<string, any>;
-  jspdfOptions?: { orientation?: any; unit?: any; format?: any };
+  html2canvasOptions?: Html2CanvasOptions;
+  jspdfOptions?: JsPdfOptions;
 };
+
+interface ProviderValue {
+  efectivo?: number | null | undefined;
+  tarjeta?: number | null | undefined;
+  credito?: number | null | undefined;
+  estimated?: number | null | undefined;
+}
+
+interface SnapshotData {
+  totalSales: number;
+  netProfit: number;
+}
+
+interface SetSnapshotsPayload {
+  current?: SnapshotData;
+  previous?: SnapshotData;
+}
 
 class StatisticsController {
   private popovers = reactive({
@@ -31,7 +51,7 @@ class StatisticsController {
 
   private modalOpen = ref(false);
 
-  private snapshots = reactive<{ current: any; previous: any }>({
+  private snapshots = reactive<{ current: SnapshotData; previous: SnapshotData }>({
     current: { totalSales: 0, netProfit: 0 },
     previous: { totalSales: 0, netProfit: 0 },
   });
@@ -54,7 +74,7 @@ class StatisticsController {
     return formatLocalDate({ d });
   }
 
-  providerValue(p: any) {
+  providerValue(p: ProviderValue) {
     try {
       const efectivo = Number(p?.efectivo || 0);
       const tarjeta = Number(p?.tarjeta || 0);
@@ -68,7 +88,7 @@ class StatisticsController {
     }
   }
 
-  formatCurrency(val: any) {
+  formatCurrency(val: number | string | null | undefined) {
     const n = Number(val ?? 0);
     const nf = new Intl.NumberFormat('es-MX', {
       style: 'currency',
@@ -84,7 +104,7 @@ class StatisticsController {
     return nf.format(n);
   }
 
-  formatPercent(val: any) {
+  formatPercent(val: number | string | null | undefined) {
     const n = Number(val ?? 0);
     if (!Number.isFinite(n)) return '0';
     return String(Math.round(n));
@@ -114,7 +134,7 @@ class StatisticsController {
     return this.snapshots;
   }
 
-  setSnapshots(payload: { current?: any; previous?: any }) {
+  setSnapshots(payload: SetSnapshotsPayload) {
     if (typeof payload.current !== 'undefined') {
       this.snapshots.current = payload.current;
     }
@@ -145,10 +165,10 @@ class StatisticsController {
     this.isGeneratingPdf.value = true;
 
     try {
-      const html2canvasModule: any = await import('html2canvas');
+      const html2canvasModule = await import('html2canvas');
       const html2canvas =
         html2canvasModule && (html2canvasModule.default ?? html2canvasModule);
-      const jsPDFModule: any = await import('jspdf');
+      const jsPDFModule = await import('jspdf');
       const jsPDF =
         jsPDFModule &&
         (jsPDFModule.jsPDF ?? jsPDFModule.default ?? jsPDFModule);

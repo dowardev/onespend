@@ -6,15 +6,30 @@ interface MigrationOptions {
   verbose?: boolean;
 }
 
+interface BackupEntry {
+  id?: string | number | null;
+  data?: BackupData;
+  meta?: Record<string, unknown>;
+}
+
+interface BackupData {
+  selectedDate?: string;
+  proveedores?: Array<{ date?: string }>;
+  ingresos?: Array<{ date?: string }>;
+  newIngreso?: { date?: string };
+  newProveedor?: { date?: string };
+  [key: string]: unknown;
+}
+
 export async function migrateNormalizeBackupDates(params: { opts?: MigrationOptions }) {
   const { opts } = params;
   const { dryRun = true, verbose = true } = opts || {};
-  const all = (await dixieController.listBackups()) as any[];
+  const all = (await dixieController.listBackups()) as Array<BackupEntry>;
   const results: Array<{
-    id: any;
+    id: string | number | null;
     changed: boolean;
-    before?: any;
-    after?: any;
+    before?: BackupData;
+    after?: BackupData;
   }> = [];
 
   for (const entry of all) {
@@ -58,7 +73,7 @@ export async function migrateNormalizeBackupDates(params: { opts?: MigrationOpti
 }
 
 export async function needsNormalizeCheck() {
-  const all = (await dixieController.listBackups()) as any[];
+  const all = (await dixieController.listBackups()) as Array<BackupEntry>;
   try {
     // console.log(
     //   'needsNormalizeCheck: found backups ->',

@@ -3,6 +3,7 @@ import { ref, computed } from 'vue';
 import { useAccountsStore } from '@/stores/accountsStore';
 import { useSync } from '@/composables/useSync';
 import type { Account } from '@/stores/accountsStore';
+import type { Supplier } from './suppliersController';
 
 export type { Account };
 
@@ -40,7 +41,7 @@ class AccountsController {
         name: 'ABOgazDB',
         storeName: 'suppliers',
       });
-      const suppliers = (await suppliersCtrl.listBackups()) as any[];
+      const suppliers = (await suppliersCtrl.listBackups()) as Array<Supplier>;
       const store = this.getAccountsStore();
 
       if (suppliers && suppliers.length > 0) {
@@ -94,16 +95,16 @@ class AccountsController {
     }
   }
 
-  async addAccount(params: { a: Omit<Account, 'id' | 'sync_id' | 'createdAt' | 'updatedAt'> }) {
-    const { a } = params;
+  async addAccount(params: { account: Omit<Account, 'id' | 'sync_id' | 'createdAt' | 'updatedAt'> }) {
+    const { account } = params;
     const ctrl = this.getController();
     const now = Date.now();
 
     const sync_id = generateSyncId();
     
     const entry: Account = {
-      name: String(a.name),
-      initialBalance: Number(a.initialBalance) || 0,
+      name: String(account.name),
+      initialBalance: Number(account.initialBalance) || 0,
       sync_id,
       createdAt: now,
       updatedAt: now,
@@ -122,23 +123,23 @@ class AccountsController {
       updatedAt: entry.updatedAt,
     };
 
-    const store = this.getAccountsStore() as any;
+    const store = this.getAccountsStore() as ReturnType<typeof useAccountsStore>;
     store.accounts = [...store.accounts, newAccount];
 
     return newAccount;
   }
 
-  async updateAccount(params: { a: Account }) {
-    const { a } = params;
-    if (a.id == null) throw new Error('Account must have id to be updated');
+  async updateAccount(params: { account: Account }) {
+    const { account } = params;
+    if (account.id == null) throw new Error('Account must have id to be updated');
     const ctrl = this.getController();
 
     const entry: Account = {
-      name: String(a.name),
-      initialBalance: Number(a.initialBalance) || 0,
-      id: a.id,
-      sync_id: a.sync_id,
-      createdAt: a.createdAt,
+      name: String(account.name),
+      initialBalance: Number(account.initialBalance) || 0,
+      id: account.id,
+      sync_id: account.sync_id,
+      createdAt: account.createdAt,
       updatedAt: Date.now(),
     };
 
@@ -147,8 +148,8 @@ class AccountsController {
 
     await ctrl.putEntry({ entry });
 
-    const store = this.getAccountsStore() as any;
-    const idx = store.accounts.findIndex((acc: any) => acc.id === a.id);
+    const store = this.getAccountsStore();
+    const idx = store.accounts.findIndex((acc: Account) => acc.id === account.id);
     if (idx >= 0) {
       store.accounts[idx] = {
         id: entry.id,
@@ -166,12 +167,12 @@ class AccountsController {
   async deleteAccount(params: { id: IDBValidKey }) {
     const { id } = params;
     const ctrl = this.getController();
-    const store = this.getAccountsStore() as any;
-    const account = store.accounts.find((acc: any) => acc.id === id);
+    const store = this.getAccountsStore();
+    const account = store.accounts.find((acc: Account) => acc.id === id);
     
     await ctrl.deleteBackup({ id });
 
-    const idx = store.accounts.findIndex((acc: any) => acc.id === id);
+    const idx = store.accounts.findIndex((acc: Account) => acc.id === id);
     if (idx >= 0) {
       store.accounts.splice(idx, 1);
     }

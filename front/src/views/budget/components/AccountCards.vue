@@ -112,7 +112,7 @@ const deleteAccount = accountsController.deleteAccount.bind(accountsController);
 const loadAll = accountsController.loadAll.bind(accountsController);
 
 const showModal = ref(false);
-const modalAccount = ref<any | null>(null);
+const modalAccount = ref<AccountWithBalance | null>(null);
 // End Vars
 
 // Functions
@@ -138,7 +138,7 @@ function cancelModal() {
   modalAccount.value = null;
 }
 
-async function onModalSaved(payload: any) {
+async function onModalSaved(payload: AccountWithBalance) {
   if (!payload) return;
   if (payload.id != null) {
     await updateAccount({ a: payload });

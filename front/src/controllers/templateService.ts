@@ -1,8 +1,28 @@
 import { formatLocalDate } from '@/utils/date';
+import { TemplateRecord } from './TempalteController';
 
-export function parseProvidersFromDescription(params: { desc?: string }): string[] {
+interface TemplateApplicationData {
+  entries: Array<Record<string, unknown>>;
+  ingresos: Array<Record<string, unknown>>;
+  proveedores: Array<{ name: string; estimated: number }>;
+  totals: {
+    totalIngresos: number;
+    totalProviders: number;
+    totalVisitedProviders: number;
+  };
+  [key: string]: unknown;
+}
+
+interface TemplateApplicationPayload {
+  component: string;
+  data: TemplateApplicationData;
+  createdAt: number;
+}
+
+export function parseProvidersFromDescription(params: { desc?: string | null }): string[] {
   const { desc } = params;
   const prefix = 'Proveedores:';
+  if (!desc) return [];
   const i = desc.indexOf(prefix);
   if (i === -1) return [];
   const rest = desc.slice(i + prefix.length).trim();
@@ -14,9 +34,9 @@ export function parseProvidersFromDescription(params: { desc?: string }): string
 }
 
 export function buildPayloadFromTemplate(params: {
-  tmpl: any;
+  tmpl: TemplateRecord;
   dateISO: string;
-  resolveSupplierNameById?: (id: any) => string | null;
+  resolveSupplierNameById?: (id: string | number) => string | null;
 }) {
   const { tmpl, dateISO, resolveSupplierNameById } = params;
   let providerNames: string[] = [];
@@ -27,7 +47,7 @@ export function buildPayloadFromTemplate(params: {
     tmpl.suppliers.length
   ) {
     const resolved: string[] = [];
-    for (const id of tmpl.suppliers as any[]) {
+    for (const id of tmpl.suppliers as Array<string | number>) {
       const n = resolveSupplierNameById ? resolveSupplierNameById(id) : null;
       if (n) resolved.push(n);
     }
@@ -48,11 +68,11 @@ export function buildPayloadFromTemplate(params: {
       Array.isArray(tmpl?.suppliersSnapshot) &&
       tmpl?.suppliersSnapshot.length
     ) {
-      providerNames = tmpl.suppliersSnapshot
-        .map((s: any) => s.name || '')
-        .filter(Boolean);
+        providerNames = tmpl.suppliersSnapshot
+          .map((s: { id: IDBValidKey; name?: string }) => s.name || '')
+          .filter(Boolean);
     } else {
-      providerNames = parseProvidersFromDescription(tmpl?.description);
+      providerNames = parseProvidersFromDescription({ desc: tmpl?.description });
     }
   }
 
@@ -86,14 +106,14 @@ export function buildPayloadFromTemplate(params: {
   return payload;
 }
 
-export function hasBackupMeaningfulContent(params: { data: any }): boolean {
+export function hasBackupMeaningfulContent(params: { data: Record<string, unknown> | null }): boolean {
   const { data } = params;
   try {
     if (!data) return false;
     if (Array.isArray(data.proveedores) && data.proveedores.length > 0)
       return true;
     if (data.totals) {
-      const t: any = data.totals || {};
+      const t = data.totals as Record<string, number> || {};
       if ((Number(t.totalProviders) || 0) > 0) return true;
       if ((Number(t.totalVisitedProviders) || 0) > 0) return true;
     }
@@ -107,24 +127,22 @@ import backupController from '@/controllers/backupController';
 import { mergeBackupData } from '@/controllers/migrationService';
 
 export async function buildAndSaveTemplateApplication(params: {
-  tmpl: any;
+  tmpl: TemplateRecord;
   dateISO: string;
-  resolveSupplierNameById?: (id: any) => string | null;
+  resolveSupplierNameById?: (id: string | number) => string | null;
   options?: {
     conflictStrategy?: 'ask' | 'combine' | 'overwrite';
-    prebuiltPayload?: any;
+    prebuiltPayload?: TemplateApplicationPayload;
   };
 }) {
   const { tmpl, dateISO, resolveSupplierNameById, options } = params;
   const strategy = options?.conflictStrategy || 'ask';
 
-  // Determine payloadToSave: allow passing a prebuilt payload (useful when UI already constructed it)
-  let payloadToSave: any;
+  let payloadToSave: TemplateApplicationPayload;
   if (options && options.prebuiltPayload) {
     payloadToSave = options.prebuiltPayload;
   } else if (tmpl && tmpl.component && tmpl.data) {
-    // caller passed a payload-like object
-    payloadToSave = tmpl;
+    payloadToSave = tmpl as unknown as TemplateApplicationPayload;
   } else {
     const payload = buildPayloadFromTemplate({
       tmpl,
@@ -135,14 +153,14 @@ export async function buildAndSaveTemplateApplication(params: {
       component: 'BudgetView',
       data: payload,
       createdAt: Date.now(),
-    } as any;
+    } as TemplateApplicationPayload;
   }
 
   // Check existing
   const existing = await backupController.getLatestBackupForDate(
     String(dateISO)
   );
-  if (existing && existing.data && hasBackupMeaningfulContent(existing.data)) {
+  if (existing && existing.data && hasBackupMeaningfulContent({ data: existing.data as Record<string, unknown> })) {
     if (strategy === 'ask') {
       return { conflict: true, payloadToSave, existing };
     }
@@ -165,14 +183,16 @@ export async function buildAndSaveTemplateApplication(params: {
     }
 
     if (strategy === 'overwrite') {
-      const existingIngresos = Array.isArray((existing.data as any).ingresos)
-        ? (existing.data as any).ingresos
+      const existingData = existing.data as TemplateApplicationData | null;
+      const payloadData = payloadToSave.data as TemplateApplicationData;
+      const existingIngresos = Array.isArray(existingData?.ingresos)
+        ? existingData.ingresos
         : [];
-      const finalData: any = Object.assign({}, payloadToSave.data, {
+      const finalData: TemplateApplicationData = Object.assign({}, payloadData, {
         ingresos: existingIngresos,
         entries: existingIngresos,
       });
-      const existingTotals = (existing.data as any).totals || {};
+      const existingTotals = existingData?.totals || {};
       finalData.totals = Object.assign({}, finalData.totals || {}, {
         totalIngresos: Number(existingTotals.totalIngresos || 0) || 0,
       });

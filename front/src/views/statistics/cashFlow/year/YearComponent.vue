@@ -164,7 +164,7 @@ function colorForIndex(i: number, total: number) {
 }
 
 // chart helpers
-function providerValue(p: any) {
+function providerValue(p: ProviderValue) {
   try {
     const efectivo = Number(p?.efectivo || 0);
     const tarjeta = Number(p?.tarjeta || 0);
@@ -199,7 +199,7 @@ function nextYear() {
  * from the current year and updates yearOffset accordingly,
  * then reloads the yearly data.
  */
-function onPopoverDateChange(e: any) {
+function onPopoverDateChange(e: CustomEvent) {
   try {
     const val = e?.detail?.value || selectedDate.value;
     const yearStr = String(val).slice(0, 4);
@@ -216,7 +216,7 @@ function onPopoverDateChange(e: any) {
 
 async function loadYearData() {
   try {
-    const all = ((await dixieController.listBackups()) as any[]) || [];
+    const all = ((await dixieController.listBackups()) as Backup[]) || [];
 
     // build years labels (last N years ending at selected year)
     const yearStart = startOfYear(new Date());
@@ -265,13 +265,13 @@ async function loadYearData() {
 
           if (Array.isArray(d.ingresos || d.entries)) {
             ingresosSum = (d.ingresos || d.entries).reduce(
-              (s: number, i: any) => s + (Number(i.amount || 0) || 0),
+              (s: number, i: Income) => s + (Number(i.amount || 0) || 0),
               0
             );
           }
           if (Array.isArray(d.proveedores)) {
             proveedoresSum = d.proveedores.reduce(
-              (s: number, p: any) => s + (Number(providerValue(p) || 0) || 0),
+              (s: number, p: Provider) => s + (Number(providerValue(p) || 0) || 0),
               0
             );
           }
@@ -285,13 +285,13 @@ async function loadYearData() {
 
     // assign to reactive chartData
     // Use a single dataset whose data array aligns with labels (one value per year)
-    chartData.labels = labels as any;
+    chartData.labels = labels as string[];
     chartData.datasets = [
       {
         label: `Ganancia`,
         data: yearTotals,
       },
-    ] as any;
+    ] as ChartDataset<'bar'>[];
 
     // calculate year profit (selected year total)
     try {

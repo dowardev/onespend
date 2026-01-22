@@ -441,9 +441,9 @@ const {
   hovered: statisticsController.getHovered(),
   setHover: (key: string, value: boolean) => statisticsController.setHover(key, value),
   isoDate: (d: Date) => statisticsController.isoDate({ d }),
-  providerValue: (p: any) => statisticsController.providerValue(p),
-  formatCurrency: (val: any) => statisticsController.formatCurrency(val),
-  formatPercent: (val: any) => statisticsController.formatPercent(val),
+  providerValue: (p: ProviderValue) => statisticsController.providerValue({ params: { p } }),
+  formatCurrency: (val: number | null | undefined) => statisticsController.formatCurrency({ params: { val } }),
+  formatPercent: (val: number | null | undefined) => statisticsController.formatPercent({ params: { val } }),
 };
 
 // Shared snapshots & modal state (extracted to StatisticsController)
@@ -454,7 +454,7 @@ const {
 } = {
   snapshots: statisticsController.getSnapshots(),
   modalOpen: statisticsController.getModalOpen(),
-  setSnapshots: (val: any) => statisticsController.setSnapshots(val),
+  setSnapshots: (val: Snapshots) => statisticsController.setSnapshots({ params: { val } }),
 };
 const dayOffset = ref<number>(0);
 const dailyProfit = ref<number>(0);
@@ -597,7 +597,7 @@ function prevDay() {
  * Handle date selection from the popover datetime.
  * Compute difference in calendar days relative to today and load that day's data.
  */
-function onPopoverDateChange(e: any) {
+function onPopoverDateChange(e: CustomEvent) {
   try {
     const val = e?.detail?.value || selectedDate.value;
     // parse safely using parseISO and format to yyyy-MM-dd to avoid TZ issues
@@ -639,7 +639,7 @@ async function loadDayData(dateParam?: string | Date) {
         } else if (dateParam instanceof Date) {
           parsed = dateParam as Date;
         } else {
-          parsed = new Date(dateParam as any);
+          parsed = new Date(dateParam as string);
         }
         const today = new Date();
         dayOffset.value = differenceInCalendarDays(parsed, today);
@@ -650,18 +650,18 @@ async function loadDayData(dateParam?: string | Date) {
       }
     }
 
-    const all = ((await dixieController.listBackups()) as any[]) || [];
+    const all = ((await dixieController.listBackups()) as Backup[]) || [];
 
     // Load statistics config fields (statisticsFields store) and sum their amounts
     try {
       const statsDixie = new DixieController({ storeName: 'statisticsFields' });
-      const statsList = ((await statsDixie.listBackups()) as any[]) || [];
+      const statsList = ((await statsDixie.listBackups()) as StatsField[]) || [];
       let fixedSum = 0;
       if (Array.isArray(statsList)) {
-        fixedSum = statsList.reduce(
-          (s: number, it: any) => s + (Number(it.amount ?? 0) || 0),
-          0
-        );
+      fixedSum = statsList.reduce(
+        (s: number, it: StatsField) => s + (Number(it.amount ?? 0) || 0),
+        0
+      );
       }
       // Assign the computed fixed daily prices sum to the reactive expenses object
       expenses.fixedPricesDay = fixedSum;
@@ -759,16 +759,16 @@ async function loadDayData(dateParam?: string | Date) {
     if (latest && latest.data) {
       const d = latest.data;
       if (Array.isArray(d.ingresos || d.entries)) {
-        ingresosSum = (d.ingresos || d.entries).reduce(
-          (s: number, i: any) => s + (Number(i.amount || 0) || 0),
-          0
-        );
+      ingresosSum = (d.ingresos || d.entries).reduce(
+        (s: number, i: Income) => s + (Number(i.amount || 0) || 0),
+        0
+      );
       }
       if (Array.isArray(d.proveedores)) {
-        proveedoresSum = d.proveedores.reduce(
-          (s: number, p: any) => s + (Number(providerValue(p) || 0) || 0),
-          0
-        );
+      proveedoresSum = d.proveedores.reduce(
+        (s: number, p: Provider) => s + (Number(providerValue(p) || 0) || 0),
+        0
+      );
       }
 
       // If a finishDay payload exists either embedded in the BudgetView backup or as a
@@ -776,7 +776,7 @@ async function loadDayData(dateParam?: string | Date) {
       // income reactive so the UI shows the values entered in the modal.
       try {
         // First, try to find a dedicated BudgetFinishDay entry for the target date
-        let finishEntry: any = null;
+        let finishEntry: Income | Expense | null = null;
         try {
           const finishMatches = (Array.isArray(all) ? all : []).filter(
             b =>
@@ -786,9 +786,9 @@ async function loadDayData(dateParam?: string | Date) {
               String(b.data.selectedDate || '').slice(0, 10) === target
           );
           if (finishMatches && finishMatches.length) {
-            finishEntry = finishMatches.sort(
-              (a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0)
-            )[0];
+          finishEntry = finishMatches.sort(
+            (a: Backup, b: Backup) => (b.createdAt || 0) - (a.createdAt || 0)
+          )[0];
           }
         } catch (_e) {
           finishEntry = null;
@@ -1031,21 +1031,21 @@ async function loadDayData(dateParam?: string | Date) {
       let prevProveedoresSum = 0;
       let prevNetProfit = 0;
       // declare prevFinish in outer scope so it can be used later to compute gross profit
-      let prevFinish: any = null;
+       let prevFinish: Income | Expense | null = null;
 
       if (prevLatest && prevLatest.data) {
         const d = prevLatest.data;
         if (Array.isArray(d.ingresos || d.entries)) {
-          prevIngresosSum = d.ingresos.reduce(
-            (s: number, i: any) => s + (Number(i.amount || 0) || 0),
-            0
-          );
+        prevIngresosSum = d.ingresos.reduce(
+          (s: number, i: Income) => s + (Number(i.amount || 0) || 0),
+          0
+        );
         }
         if (Array.isArray(d.proveedores)) {
-          prevProveedoresSum = d.proveedores.reduce(
-            (s: number, p: any) => s + (Number(providerValue(p) || 0) || 0),
-            0
-          );
+        prevProveedoresSum = d.proveedores.reduce(
+          (s: number, p: Provider) => s + (Number(providerValue(p) || 0) || 0),
+          0
+        );
         }
 
         // Try to get previous net profit if available in a finish entry
@@ -1057,12 +1057,12 @@ async function loadDayData(dateParam?: string | Date) {
               b.data &&
               String(b.data.selectedDate || '').slice(0, 10) === prevTarget
           );
-          prevFinish =
-            finishMatches && finishMatches.length
-              ? finishMatches.sort(
-                  (a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0)
-                )[0]
-              : null;
+            prevFinish =
+              finishMatches && finishMatches.length
+                ? finishMatches.sort(
+                    (a: Backup, b: Backup) => (b.createdAt || 0) - (a.createdAt || 0)
+                  )[0]
+                : null;
 
           if (
             prevFinish &&

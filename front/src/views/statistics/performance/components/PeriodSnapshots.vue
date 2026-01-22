@@ -39,12 +39,12 @@ const previousLabel = computed(() => props.previousLabel ?? 'Anterior');
 // end computed
 
 // functions
-function formatCurrency(params: { val: any }) {
-  const { val } = params;
+function formatCurrency(params: { value: number | null | undefined }) {
+  const { value } = params;
   return new Intl.NumberFormat('es-MX', {
     style: 'currency',
     currency: 'MXN',
-  }).format(Number(val ?? 0));
+  }).format(Number(value ?? 0));
 }
 </script>
 

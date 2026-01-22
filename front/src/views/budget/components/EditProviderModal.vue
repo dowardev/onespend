@@ -250,7 +250,7 @@ import { ref, computed, watch, toRefs } from 'vue';
 // Vars
 interface ProviderItem {
   amount: number;
-  accountId: any;
+  accountId: string | number | null;
 }
 
 interface Account {
@@ -263,7 +263,14 @@ interface Supplier {
   id?: string | number;
   sync_id?: string;
   name: string;
-  products?: Array<{ id: string | number; name: string; price: number }>;
+  products?: Array<Product>;
+}
+
+interface Product {
+  id?: string | number;
+  sync_id?: string;
+  name: string;
+  price: number;
 }
 
 interface ProviderProduct {
@@ -273,9 +280,33 @@ interface ProviderProduct {
   quantity: number;
 }
 
+interface PendingProduct {
+  supplierProductId?: string | number;
+  supplier_product_id?: string | number;
+  sync_id?: string | number;
+  id?: string | number;
+  productName?: string;
+  product_name?: string;
+  name?: string;
+  productPrice?: number;
+  product_price?: number;
+  price?: number;
+  quantity?: number;
+}
+
+interface ProviderData {
+  id?: string | number;
+  _supplierId?: string | number;
+  _supplierName?: string;
+  name: string;
+  estimated?: number;
+  accountId?: string | number;
+  products?: Array<PendingProduct>;
+}
+
 interface Props {
   isOpen: boolean;
-  provider?: any;
+  provider?: ProviderData;
   entryData?: {
     name: string;
     entryId: string | number | null;
@@ -328,12 +359,12 @@ const getDefaultAccountId = () => {
 
 const availableAccountsForItem = (currentIndex: number) => {
   const usedAccountIds = items.value
-    .filter((_: any, idx: number) => idx !== currentIndex)
-    .map((item: any) => {
+    .filter((_: unknown, idx: number) => idx !== currentIndex)
+    .map((item: ProviderItem) => {
       if (isEntryMode.value) {
         return String(item.accountId);
       }
-      return String(item.accountId?.id ?? item.accountId);
+      return String((item.accountId as Account)?.id ?? item.accountId);
     })
     .filter((id: string) => id !== 'null' && id !== 'undefined' && id !== '');
 
@@ -348,7 +379,7 @@ function selectProvider(params: { p: Supplier }) {
     id: p.id,
     sync_id: p.sync_id,
     name: p.name,
-    products: p.products?.map((prod: any) => ({
+    products: p.products?.map((prod: Product) => ({
       id: prod.id,
       sync_id: prod.sync_id,
       name: prod.name,
@@ -358,8 +389,7 @@ function selectProvider(params: { p: Supplier }) {
   
   selectedProvider.value = p;
   
-  // Reset products when selecting a new supplier
-  providerProducts.value = p.products?.map((prod: any) => ({
+  providerProducts.value = p.products?.map((prod: Product) => ({
     supplierProductId: prod.sync_id ?? prod.id,
     productName: prod.name,
     productPrice: prod.price,
@@ -375,7 +405,7 @@ function changeProvider() {
   productQuantities.value = {};
 }
 
-function compareAccounts(params: { o1: any; o2: any }) {
+function compareAccounts(params: { o1: Account | string | number; o2: Account | string | number }) {
   const { o1, o2 } = params;
   if (o1 === o2) return true;
   if (o1 && o2) {
@@ -408,7 +438,7 @@ function removeItem(params: { index: number }) {
   }
 }
 
-function getProductQuantity(params: { product: any }): number {
+function getProductQuantity(params: { product: Product }): number {
   const { product } = params;
   const productId = product?.id ?? product?.sync_id;
   const productName = product?.name;
@@ -423,7 +453,7 @@ function getProductQuantity(params: { product: any }): number {
   return found ? found.quantity : 0;
 }
 
-function setProductQuantity(params: { product: any; productPrice: number; quantity: number }) {
+function setProductQuantity(params: { product: Product; productPrice: number; quantity: number }) {
   const { product, productPrice, quantity } = params;
   const productId = product?.sync_id ?? product?.id ?? product?.supplierProductId;
   const productName = product?.name;
@@ -536,7 +566,7 @@ const filteredProviders = computed(() => {
 
 const productsTotal = computed(() => {
   if (!selectedProvider.value?.products) return 0;
-  return selectedProvider.value.products.reduce((sum: number, product: any) => {
+  return selectedProvider.value.products.reduce((sum: number, product: Product) => {
     const providerProduct = providerProducts.value.find(p => p.supplierProductId === product.id);
     const qty = providerProduct?.quantity || 0;
     return sum + qty * (product.price || 0);
@@ -621,14 +651,14 @@ watch(isOpen, async newVal => {
       ];
       // Load existing products
       if (fullSupplier?.products && Array.isArray(fullSupplier.products)) {
-        providerProducts.value = fullSupplier.products.map((p: any) => ({
+        providerProducts.value = fullSupplier.products.map((p: Product) => ({
           supplierProductId: p.sync_id ?? p.id,
           productName: p.name,
           productPrice: p.price,
           quantity: 0,
         }));
       } else if (provider.value.products && Array.isArray(provider.value.products)) {
-        providerProducts.value = provider.value.products.map((p: any) => ({
+        providerProducts.value = provider.value.products.map((p: PendingProduct) => ({
           supplierProductId: p.supplierProductId || p.supplier_product_id || p.sync_id || p.id || `manual_${String(p.productName || p.name).toLowerCase().replace(/\s+/g, '_')}_${p.productPrice || p.price}`,
           productName: p.productName || p.product_name || p.name || '',
           productPrice: p.productPrice || p.product_price || p.price || 0,
@@ -682,7 +712,7 @@ watch(
         },
       ];
       if (newProvider.products && Array.isArray(newProvider.products)) {
-        providerProducts.value = newProvider.products.map((p: any) => ({
+        providerProducts.value = newProvider.products.map((p: PendingProduct) => ({
           supplierProductId: p.supplierProductId || p.sync_id || p.id || `${p.name}-${p.price}`,
           productName: p.productName || p.name || '',
           productPrice: p.productPrice || p.price || 0,

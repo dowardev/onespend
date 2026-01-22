@@ -74,10 +74,17 @@ import { closeOutline, saveOutline, trashOutline } from 'ionicons/icons';
 import { required, minValue, helpers } from '@vuelidate/validators';
 import useVuelidate from '@vuelidate/core';
 
-const props = defineProps<{ account: any | null }>();
+interface AccountPayload {
+  name: string;
+  initialBalance: number;
+  id?: IDBValidKey;
+  sync_id?: string;
+}
+
+const props = defineProps<{ account: Account | null }>();
 const emit = defineEmits<{
   (e: 'dismiss'): void;
-  (e: 'saved', payload: any): void;
+  (e: 'saved', payload: AccountPayload): void;
   (e: 'delete', id: string | number): void;
 }>();
 
@@ -134,7 +141,7 @@ async function onSubmit() {
   const isValid = await v$.value.$validate();
   if (!isValid) return;
 
-  const payload: any = {
+  const payload: AccountPayload = {
     name: form.name,
     initialBalance: form.initialBalance,
   };

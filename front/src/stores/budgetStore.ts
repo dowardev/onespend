@@ -53,6 +53,7 @@ export interface Provider {
   _supplierKey?: string;
   _supplierId?: string | number;
   _supplierName?: string;
+  _supplierProducts?: BudgetProviderProduct[];
 }
 
 interface FinishDayData {
@@ -61,6 +62,18 @@ interface FinishDayData {
   totalSalesCredito: number;
   type: '%' | 'fixed';
   margin: number;
+}
+
+interface SyncSupplier {
+  id: string | number;
+  sync_id?: string | number;
+  name: string;
+  products?: Array<{
+    id?: string | number;
+    sync_id?: string | number;
+    name: string;
+    price: number;
+  }>;
 }
 
 export const useBudgetStore = defineStore('budget', () => {
@@ -268,7 +281,7 @@ export const useBudgetStore = defineStore('budget', () => {
     ];
     for (const field of numericFields) {
       if (changes[field as keyof Provider] !== undefined) {
-        (updatedProvider as any)[field] =
+        (updatedProvider as Provider)[field] =
           Number(changes[field as keyof Provider]) || 0;
       }
     }
@@ -280,7 +293,6 @@ export const useBudgetStore = defineStore('budget', () => {
     if (changes._supplierId !== undefined) updatedProvider._supplierId = changes._supplierId;
     if (changes._supplierName !== undefined) updatedProvider._supplierName = changes._supplierName;
 
-    // Replace the object in the array to trigger reactivity
     providers.splice(idx, 1, updatedProvider);
   }
 
@@ -306,7 +318,7 @@ export const useBudgetStore = defineStore('budget', () => {
     finishDayData.margin = 0;
   }
 
-  function syncProvidersWithSuppliers(suppliers: Array<{ id: any; sync_id?: any; name: string; products?: Array<{ id?: any; sync_id?: string; name: string; price: number }> }>) {
+  function syncProvidersWithSuppliers(suppliers: SyncSupplier[]) {
     for (let i = 0; i < providers.length; i++) {
       const provider = providers[i];
       if (provider._supplierId) {
@@ -326,11 +338,11 @@ export const useBudgetStore = defineStore('budget', () => {
 
           if (matchingSupplier.products && matchingSupplier.products.length > 0) {
             const serverProducts = matchingSupplier.products;
-            const localProducts = (provider as any)._supplierProducts || [];
+            const localProducts = provider._supplierProducts || [];
 
-            const syncedProducts = serverProducts.map((serverProduct: any) => {
+            const syncedProducts = serverProducts.map((serverProduct) => {
               const localMatch = localProducts.find(
-                (lp: any) => lp.name === serverProduct.name && lp.price === serverProduct.price
+                (lp) => lp.name === serverProduct.name && lp.price === serverProduct.price
               );
               return {
                 ...serverProduct,
@@ -338,7 +350,7 @@ export const useBudgetStore = defineStore('budget', () => {
               };
             });
 
-            (provider as any)._supplierProducts = syncedProducts;
+            provider._supplierProducts = syncedProducts;
           }
 
           if (needsUpdate) {

@@ -14,7 +14,7 @@ import type { ChartData, ChartOptions } from 'chart.js';
 
 const props = withDefaults(
   defineProps<{
-    chartData: ChartData<'bar'> | any;
+    chartData: ChartData<'bar'>;
     chartOptions?: ChartOptions<'bar'> | null;
     colorIndex?: number;
   }>(),
@@ -46,7 +46,7 @@ function applyNeonStyles(data: ChartData<'bar'>): ChartData<'bar'> {
   const cloned = JSON.parse(JSON.stringify(data));
 
   cloned.datasets = (cloned.datasets || []).map(
-    (dataset: any, datasetIndex: number) => {
+    (dataset: ChartDataset<'bar'>, datasetIndex: number) => {
       const dataArray = Array.isArray(dataset.data) ? dataset.data : [];
 
       if (dataArray.length > 1) {

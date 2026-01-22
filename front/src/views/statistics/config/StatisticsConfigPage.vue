@@ -124,12 +124,12 @@ const categories = reactive([
 
 async function loadItems() {
   try {
-    const list: any = await dixie.listBackups();
+    const list: StatsField[] = await dixie.listBackups();
     if (Array.isArray(list)) {
       for (const entry of list) {
         if (entry && entry.categoryKey) {
-          const cat = (categories as any).find(
-            (c: any) => c.key === entry.categoryKey
+          const cat = categories.find(
+            (c: Category) => c.key === entry.categoryKey
           );
           if (cat) {
             cat.items.push({
@@ -150,7 +150,7 @@ async function loadItems() {
   }
 }
 
-function hasUnfilled(category: any) {
+function hasUnfilled(category: Category) {
   // returns true if any existing item has empty name or amount is not a valid number > 0
   if (!category || !Array.isArray(category.items)) return false;
   return category.items.some((it: StatItem) => {
@@ -165,16 +165,14 @@ function hasUnfilled(category: any) {
 }
 
 async function addItem(categoryKey: string) {
-  const cat = (categories as any).find((c: any) => c.key === categoryKey);
+  const cat = categories.find((c: Category) => c.key === categoryKey);
   if (!cat) return;
-  // Prevent adding if there's an unfilled existing item
   if (hasUnfilled(cat)) return;
 
   const newItem: StatItem = { categoryKey, name: '', amount: null };
   try {
     const id = await dixie.addEntry({ entry: newItem });
-    // addEntry returns the generated key
-    (newItem as any).id = id as number;
+    newItem.id = id;
     cat.items.push(newItem);
   } catch (e) {
     console.error('Failed to add item', e);
@@ -190,12 +188,12 @@ async function updateItem(item: StatItem) {
 }
 
 async function removeItem(categoryKey: string, idx: number) {
-  const cat = (categories as any).find((c: any) => c.key === categoryKey);
+  const cat = categories.find((c: Category) => c.key === categoryKey);
   if (!cat) return;
   const item = cat.items[idx];
   if (!item) return;
   try {
-    if ((item as any).id) await dixie.deleteBackup((item as any).id);
+    if (item.id) await dixie.deleteBackup(item.id);
   } catch (e) {
     console.error('Failed to delete item from dixie', e);
   } finally {

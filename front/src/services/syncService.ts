@@ -6,11 +6,48 @@ const SYNC_QUEUE_KEY = 'sync_queue';
 const LAST_SYNC_KEY = 'last_sync';
 const PENDING_OPERATIONS_KEY = 'pending_operations';
 
+export interface SyncItemData {
+  name?: string;
+  date?: string;
+  estimated?: number;
+  account_id?: number | string;
+  efectividad?: number;
+  tarjeta?: number;
+  credito?: number;
+  notes?: string;
+  visited?: boolean;
+  supplier_id?: number | string;
+  price?: number | string;
+  image_base64?: string;
+  initial_balance?: number;
+  description?: string;
+  suppliers?: string[];
+  suppliers_snapshot?: string[];
+  is_day_closed?: boolean;
+  finish_day_data?: unknown;
+  amount?: number | string;
+  payment_type?: string;
+  entry_type?: string;
+  accountId?: number | string;
+  groups?: string[];
+  _from_provider_group_id?: number | string;
+  _provider_name?: string;
+  _supplier_id?: number | string;
+  _supplier_name?: string;
+  budget_provider_id?: number | string;
+  supplier_product_id?: number | string;
+  product_name?: string;
+  product_price?: number | string;
+  quantity?: number;
+  updated_at?: number;
+  [key: string]: unknown;
+}
+
 export interface SyncItem {
   id: string;
   entityType: 'account' | 'budget' | 'budget_provider' | 'budget_provider_product' | 'entry' | 'supplier' | 'supplier_product' | 'template';
   operation: 'create' | 'update' | 'delete';
-  data: any;
+  data: SyncItemData;
   timestamp: number;
   retryCount: number;
   lastError?: string;
@@ -21,9 +58,34 @@ export interface SyncResult {
   created: Record<string, Array<{ sync_id: string; id: number }>>;
   updated: Record<string, Array<{ sync_id: string; id?: number }>>;
   deleted: Record<string, string[]>;
-  conflicts: Record<string, any[]>;
+  conflicts: Record<string, SyncConflictItem[]>;
   serverTime: number;
 }
+
+export interface SyncConflictItem {
+  sync_id: string;
+  client_data: SyncItemData;
+  server_data?: SyncItemData;
+  [key: string]: unknown;
+}
+
+export interface ServerSyncResponse {
+  success: boolean;
+  results?: Record<string, Record<string, Array<{ sync_id: string; id?: number | null }>>>;
+  changes?: Record<string, SyncItemData[]>;
+  data?: Record<string, SyncItemData[]>;
+  conflicts?: Record<string, SyncConflictItem[]>;
+  serverTime?: number;
+  server_time?: number;
+}
+
+interface EntityIdEntry {
+  sync_id: string;
+  id?: number | null;
+}
+
+type EntityResults = Record<string, EntityIdEntry[]>;
+type SyncResults = Record<string, EntityResults>;
 
 class SyncService {
   private isOnline: boolean = true;
@@ -154,7 +216,7 @@ class SyncService {
 
     try {
       const headers = await this.getAuthHeaders();
-      const data: Record<string, any[]> = {
+      const data: Record<string, SyncItemData[]> = {
         account: [],
         budget: [],
         budget_provider: [],
@@ -240,8 +302,8 @@ class SyncService {
     }
   }
 
-  private async handleConflicts(conflicts: Record<string, any[]>): Promise<void> {
-    const pendingConflicts: Record<string, any[]> = {};
+  private async handleConflicts(conflicts: Record<string, SyncConflictItem[]>): Promise<void> {
+    const pendingConflicts: Record<string, SyncConflictItem[]> = {};
 
     for (const [entityType, items] of Object.entries(conflicts)) {
       for (const item of items) {
@@ -263,13 +325,21 @@ class SyncService {
     }
   }
 
-  private async resolveConflictDialog(entityType: string, item: any): Promise<any> {
+  private async resolveConflictDialog(entityType: string, item: SyncConflictItem): Promise<SyncConflictResolution> {
     return {
       entity_type: entityType,
       entity_id: item.sync_id,
       resolution: 'client',
       client_data: item.client_data,
     };
+  }
+
+  interface SyncConflictResolution {
+    entity_type: string;
+    entity_id: string;
+    resolution: 'client' | 'server' | 'merge';
+    client_data?: SyncItemData;
+    server_data?: SyncItemData;
   }
 
   private async updateLocalRecordsWithMysqlIds(results: Record<string, Record<string, Array<{ sync_id: string; id?: number | null }>>>): Promise<void> {
@@ -331,7 +401,7 @@ class SyncService {
             if (existing) {
               console.log(`[SyncService] Found supplier ${existing.name}`);
 
-              const updatedEntry: any = {
+              const updatedEntry: SupplierEntry = {
                 ...existing,
                 serverId: mysqlId,
                 synced_at: Date.now(),
@@ -341,7 +411,7 @@ class SyncService {
               if (existing.products && Array.isArray(existing.products)) {
                 console.log(`[SyncService] Processing ${existing.products.length} embedded products`);
                 
-                updatedEntry.products = existing.products.map((product: any) => {
+                updatedEntry.products = existing.products.map((product: SupplierProduct) => {
                   const productServerId = allProductIds.get(product.sync_id);
                   if (productServerId) {
                     console.log(`[SyncService] ✅ Product ${product.name} sync_id ${product.sync_id} got serverId ${productServerId}`);
@@ -372,7 +442,24 @@ class SyncService {
     console.log(`[SyncService] 🔵 updateLocalRecordsWithMysqlIds - Complete. Updated ${updatedCount} records.`);
   }
 
-  async pullChanges(): Promise<Record<string, any[]>> {
+  interface SupplierEntry {
+    name?: string;
+    products?: SupplierProduct[];
+    sync_id?: string;
+    serverId?: number;
+    synced_at?: number;
+    [key: string]: unknown;
+  }
+
+  interface SupplierProduct {
+    sync_id?: string;
+    name?: string;
+    serverId?: number;
+    synced_at?: number;
+    [key: string]: unknown;
+  }
+
+  async pullChanges(): Promise<Record<string, SyncItemData[]>> {
     if (!this.isOnline) {
       throw new Error('Cannot pull changes while offline');
     }
@@ -398,7 +485,7 @@ class SyncService {
     return result.changes || {};
   }
 
-  async fullSync(): Promise<Record<string, any[]>> {
+  async fullSync(): Promise<Record<string, SyncItemData[]>> {
     if (!this.isOnline) {
       throw new Error('Cannot full sync while offline');
     }
@@ -441,7 +528,7 @@ class SyncService {
     }
     if (data.suppliers && data.suppliers.length > 0) {
       console.log('syncService - Saving suppliers:', data.suppliers.length);
-      console.log('syncService - First supplier products (before save):', JSON.stringify(data.suppliers[0].products?.map((p: any) => ({ id: p.id, sync_id: p.sync_id, name: p.name, price: p.price }))));
+      console.log('syncService - First supplier products (before save):', JSON.stringify(data.suppliers[0].products?.map((p: SupplierProductInfo) => ({ id: p.id, sync_id: p.sync_id, name: p.name, price: p.price }))));
       await this.saveEntitiesToStore('suppliers', data.suppliers);
     }
     if (data.supplier_products && data.supplier_products.length > 0) {
@@ -467,7 +554,7 @@ class SyncService {
     console.log('syncService.fullSyncAndSave - Data saved successfully');
   }
 
-  private async saveEntitiesToStore(storeName: string, entities: any[]): Promise<void> {
+  private async saveEntitiesToStore(storeName: string, entities: SyncItemData[]): Promise<void> {
     const { DixieController } = await import('@/controllers/dixie');
     const ctrl = new DixieController({ name: 'ABOgazDB', storeName });
     
@@ -483,7 +570,7 @@ class SyncService {
       // Process products array for suppliers - move id to sync_id
       if (storeName === 'suppliers' && entry.products && Array.isArray(entry.products)) {
         console.log('saveEntitiesToStore - Processing products for supplier:', entry.name);
-        entry.products = entry.products.map((product: any) => {
+        entry.products = entry.products.map((product: SupplierProductInfo) => {
           const syncId = product.sync_id ?? product.id;
           if (syncId === undefined) {
             console.warn('saveEntitiesToStore - Product without ID:', { name: product.name, price: product.price });
@@ -501,6 +588,14 @@ class SyncService {
     }
   }
 
+  interface SupplierProductInfo {
+    id?: number | string;
+    sync_id?: number | string;
+    name?: string;
+    price?: number | string;
+    [key: string]: unknown;
+  }
+
   getQueueCount(): number {
     return this.getQueue().length;
   }
@@ -515,18 +610,18 @@ class SyncService {
     this.saveQueue([]);
   }
 
-  async getConflicts(): Promise<Record<string, any[]>> {
+  async getConflicts(): Promise<Record<string, SyncConflictItem[]>> {
     const lastSync = localStorage.getItem(LAST_SYNC_KEY) || '0';
     const changes = await this.pullChanges();
     
-    const conflicts: Record<string, any[]> = {};
+    const conflicts: Record<string, SyncConflictItem[]> = {};
     for (const [entityType, items] of Object.entries(changes)) {
       if (Array.isArray(items)) {
         for (const item of items) {
           if (item._deleted) continue;
           if (item._conflict) {
             conflicts[entityType] = conflicts[entityType] || [];
-            conflicts[entityType].push(item);
+            conflicts[entityType].push(item as SyncConflictItem);
           }
         }
       }
@@ -540,5 +635,5 @@ export const syncService = new SyncService();
 
 // Exponer para debugging en consola
 if (typeof window !== 'undefined') {
-  (window as any).syncService = syncService;
+  (window as Window & { syncService: SyncService }).syncService = syncService;
 }

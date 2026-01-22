@@ -172,7 +172,7 @@ function prevWeek() {
  * from the current week start and updates weekOffset accordingly,
  * then reloads the weekly data.
  */
-function onPopoverDateChange(e: any) {
+function onPopoverDateChange(e: CustomEvent) {
   try {
     const val = e?.detail?.value || selectedDate.value;
     const parsed = parseLocalDate({ d: String(val).slice(0, 10) });
@@ -192,7 +192,7 @@ function nextWeek() {
 }
 
 // chart data exposed to child via props
-function providerValue(p: any) {
+function providerValue(p: ProviderValue) {
   try {
     const efectivo = Number(p?.efectivo || 0);
     const tarjeta = Number(p?.tarjeta || 0);
@@ -212,7 +212,7 @@ function isoDate(d: Date) {
 
 async function loadWeeklyData() {
   try {
-    const all = ((await dixieController.listBackups()) as any[]) || [];
+    const all = ((await dixieController.listBackups()) as Backup[]) || [];
 
     const labels: string[] = [];
     const ingresosArr: number[] = [];
@@ -247,13 +247,13 @@ async function loadWeeklyData() {
         const d = latest.data;
         if (Array.isArray(d.ingresos || d.entries)) {
           ingresosSum = (d.ingresos || d.entries).reduce(
-            (s: number, i: any) => s + (Number(i.amount || 0) || 0),
+            (s: number, i: Income) => s + (Number(i.amount || 0) || 0),
             0
           );
         }
         if (Array.isArray(d.proveedores)) {
           proveedoresSum = d.proveedores.reduce(
-            (s: number, p: any) => s + (Number(providerValue(p) || 0) || 0),
+            (s: number, p: Provider) => s + (Number(providerValue(p) || 0) || 0),
             0
           );
         }
@@ -264,9 +264,9 @@ async function loadWeeklyData() {
     }
 
     // assign to reactive chartData
-    chartData.labels = labels as any;
-    chartData.datasets[0].data = ingresosArr as any;
-    chartData.datasets[1].data = egresosArr as any;
+    chartData.labels = labels as string[];
+    chartData.datasets[0].data = ingresosArr as number[];
+    chartData.datasets[1].data = egresosArr as number[];
 
     // calculate weekly profit (total ingresos - total egresos)
     try {
@@ -307,13 +307,13 @@ async function loadWeeklyData() {
           const d = prevLatest.data;
           if (Array.isArray(d.ingresos || d.entries)) {
             prevIngresosSum = (d.ingresos || d.entries).reduce(
-              (s: number, i: any) => s + (Number(i.amount || 0) || 0),
+              (s: number, i: Income) => s + (Number(i.amount || 0) || 0),
               0
             );
           }
           if (Array.isArray(d.proveedores)) {
             prevProveedoresSum = d.proveedores.reduce(
-              (s: number, p: any) => s + (Number(providerValue(p) || 0) || 0),
+              (s: number, p: Provider) => s + (Number(providerValue(p) || 0) || 0),
               0
             );
           }

@@ -166,7 +166,7 @@ function prevDay() {
  * Handle date selection from the popover datetime.
  * Compute difference in calendar days relative to today and load that day's data.
  */
-function onPopoverDateChange(e: any) {
+function onPopoverDateChange(e: CustomEvent) {
   try {
     const val = e?.detail?.value || selectedDate.value;
     const parsed = parseLocalDate({ d: String(val).slice(0, 10) });
@@ -186,7 +186,7 @@ function nextDay() {
 }
 
 // chart helper that returns a sensible numeric value for provider entries
-function providerValue(p: any) {
+function providerValue(p: ProviderValue) {
   try {
     const efectivo = Number(p?.efectivo || 0);
     const tarjeta = Number(p?.tarjeta || 0);
@@ -207,7 +207,7 @@ function isoDate(d: Date) {
 // Load data for the single day defined by dayOffset (0 = today)
 async function loadDayData() {
   try {
-    const all = ((await dixieController.listBackups()) as any[]) || [];
+    const all = ((await dixieController.listBackups()) as Backup[]) || [];
 
     const targetDay = addDays(new Date(), dayOffset.value);
     const target = isoDate(targetDay);
@@ -233,13 +233,13 @@ async function loadDayData() {
       const d = latest.data;
       if (Array.isArray(d.ingresos || d.entries)) {
         ingresosSum = (d.ingresos || d.entries).reduce(
-          (s: number, i: any) => s + (Number(i.amount || 0) || 0),
+          (s: number, i: Income) => s + (Number(i.amount || 0) || 0),
           0
         );
       }
       if (Array.isArray(d.proveedores)) {
         proveedoresSum = d.proveedores.reduce(
-          (s: number, p: any) => s + (Number(providerValue(p) || 0) || 0),
+          (s: number, p: Provider) => s + (Number(providerValue(p) || 0) || 0),
           0
         );
       }
@@ -284,13 +284,13 @@ async function loadDayData() {
         const d = prevLatest.data;
         if (Array.isArray(d.ingresos || d.entries)) {
           prevIngresosSum = (d.ingresos || d.entries).reduce(
-            (s: number, i: any) => s + (Number(i.amount || 0) || 0),
+            (s: number, i: Income) => s + (Number(i.amount || 0) || 0),
             0
           );
         }
         if (Array.isArray(d.proveedores)) {
           prevProveedoresSum = d.proveedores.reduce(
-            (s: number, p: any) => s + (Number(providerValue(p) || 0) || 0),
+            (s: number, p: Provider) => s + (Number(providerValue(p) || 0) || 0),
             0
           );
         }
