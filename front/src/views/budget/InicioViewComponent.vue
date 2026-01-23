@@ -235,7 +235,6 @@ import type { AccountWithBalance, EntryGroup, PendingProduct, ProviderEditData, 
 // Components
 
 // Vars
-const budgetCtrl = new BudgetController();
 
 const addEntrySegment = ref('entry');
 const showDeleteAlert = ref(false);
@@ -305,8 +304,9 @@ const editingProviderId = ref<string | number | null>(null);
 // End Vars
 
 // Computed
-const isDayClosed = computed(() => budgetCtrl.getIsDayClosed());
-const frozenSnapshot = computed(() => budgetCtrl.getFrozenSnapshot());
+// Day-close concept removed; always treat as open
+const isDayClosed = computed(() => false);
+const frozenSnapshot = computed(() => budgetController.getFrozenSnapshot());
 
 const accountsList = computed(() => {
   const list = accountsController.getAccounts();
@@ -487,7 +487,15 @@ watch(
 
 // Life cycle
 onMounted(() => {
-  accountsController.loadAll();
+  (async () => {
+    try {
+      await accountsController.loadAll();
+    } catch (e) {}
+    try {
+      // Ensure budget data for the current selected date is loaded when this view mounts
+      await budgetController.loadDataForCurrentDate();
+    } catch (e) {}
+  })();
 });
 
 // End Life cycle
@@ -798,6 +806,10 @@ function saveEntryChanges(data: {
   accountId: string | number | null;
   groups: Array<EntryGroup>;
 }) {
+  try {
+    // eslint-disable-next-line no-console
+    console.log('InicioViewComponent.saveEntryChanges called with:', data);
+  } catch (e) {}
   const { entryType, name, amount, accountId, groups } = data;
 
   if (editEntryModalData.value.id) {

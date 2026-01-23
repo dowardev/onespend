@@ -35,6 +35,13 @@ import '@ionic/vue/css/display.css';
 import './theme/variables.css';
 
 import { createPinia } from 'pinia';
+import budgetController from './controllers/budgetController';
+
+// Expose controller globally in development for MCP/debugging
+try {
+  // @ts-ignore
+  (window as any).budgetController = budgetController;
+} catch (e) {}
 
 function getIonicBreakpoint(): string {
   const width = window.innerWidth;
@@ -52,8 +59,30 @@ function logBreakpoint() {
 const pinia = createPinia();
 const app = createApp(App).use(IonicVue).use(router).use(pinia);
 
-router.isReady().then(() => {
+router.isReady().then(async () => {
+  try {
+    // Load budget data for the current selected date before mounting to ensure UI
+    // renders persisted entries immediately after load.
+    // eslint-disable-next-line no-console
+    console.log('[main] Loading budget data before mount');
+    // budgetController may perform IndexedDB operations; await completion.
+    // If it fails, continue mounting so app is usable.
+    try {
+      // @ts-ignore
+      await budgetController.loadDataForCurrentDate();
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.warn('[main] budgetController.loadDataForCurrentDate failed', e);
+    }
+  } catch (e) {}
+
   app.mount('#app');
   logBreakpoint();
   window.addEventListener('resize', logBreakpoint);
+  // Expose controller for debugging in development (MCP/DevTools).
+  try {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    window.budgetController = budgetController;
+  } catch (e) {}
 });

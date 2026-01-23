@@ -14,7 +14,6 @@ interface BudgetData {
     type: 'fixed' | '%' | string;
     margin: number;
   };
-  isDayClosed: boolean;
 }
 
 class BudgetController {
@@ -26,6 +25,13 @@ class BudgetController {
     }
     return this._store;
   }
+
+  // Developer-only manual entries. Edit this map to add hardcoded entries that
+  // should appear on reload during development. Keys are dates in YYYY-MM-DD.
+  // WARNING: only used in dev builds.
+  private DEV_MANUAL_ENTRIES: Record<string, Partial<BudgetData>> = {
+    // Example: '2026-01-23': { entries: [ { id: 1, name: 'Entrada manual', amount: 200, date: '2026-01-23', paymentType: 'cash', entryType: 'ingreso', accountId: null, createdAt: Date.now() } ], proveedores: [] }
+  };
 
   getSelectedDate() {
     return this.store.selectedDate;
@@ -39,9 +45,7 @@ class BudgetController {
     return this.store.providers;
   }
 
-  getIsDayClosed() {
-    return this.store.isDayClosed;
-  }
+  // removed day-closed getters
 
   getFinishDayData() {
     return this.store.finishDayData;
@@ -138,6 +142,10 @@ class BudgetController {
           margin: 0,
         });
         this.store.setIsDayClosed(!!d.isDayClosed);
+        try {
+          // eslint-disable-next-line no-console
+          console.log('[BudgetController.loadDataForDate] Store entries count after setEntries:', this.store.entries.length);
+        } catch (e) {}
       } else {
         console.log('[BudgetController.loadDataForDate] No data found, clearing store');
         this.store.clearAll();
@@ -387,10 +395,7 @@ class BudgetController {
     this.store.clearDay();
   }
 
-  toggleDayClosed(params: { value: boolean }) {
-    const { value } = params;
-    this.store.setIsDayClosed(value);
-  }
+  // removed toggleDayClosed
 
   async saveData() {
     try {

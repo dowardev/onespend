@@ -76,6 +76,7 @@
               <ion-input
                 v-model="entryData.name"
                 placeholder="Nombre"
+                autofocus
               ></ion-input>
             </ion-item>
           </div>
@@ -203,6 +204,7 @@
               <ion-input
                 v-model="entryData.name"
                 placeholder="Nombre"
+                autofocus
               ></ion-input>
             </ion-item>
           </div>
@@ -291,12 +293,37 @@
 <script setup lang="ts">
 // Imports
 import {
+  IonModal,
+  IonHeader,
+  IonToolbar,
+  IonButtons,
+  IonButton,
+  IonIcon,
+  IonTitle,
+  IonContent,
+  IonGrid,
+  IonRow,
+  IonCol,
+  IonSegment,
+  IonSegmentButton,
+  IonLabel,
+  IonList,
+  IonItem,
+  IonSelect,
+  IonSelectOption,
+  IonInput,
+  IonCard,
+  IonNote,
+  IonListHeader,
+} from '@ionic/vue';
+
+import {
   addOutline,
   closeOutline,
   saveOutline,
   trashOutline,
 } from 'ionicons/icons';
-import { computed, ref, watch } from 'vue';
+import { computed, ref, watch, onMounted } from 'vue';
 
 interface EntryGroup {
   amount: number;
@@ -391,17 +418,41 @@ function handleSave() {
     0
   );
 
-  emit('save', {
+  const payload = {
     entryType: entryData.value.entryType,
     name: entryData.value.name,
     amount: totalAmount,
     accountId: entryItems.value[0]?.accountId ?? null,
     groups: entryItems.value,
-  });
+  };
+
+  // Debug log to help trace save events from the modal
+  try {
+    // eslint-disable-next-line no-console
+    console.log('EditEntryModal.handleSave - emitting save with payload:', payload);
+  } catch (e) {}
+
+  emit('save', payload);
 }
 // End Functions
 
 // Life cycle
+onMounted(() => {
+  // Ensure entryItems have a default accountId if accounts are available
+  try {
+    if (
+      entryItems.value.length > 0 &&
+      (entryItems.value[0].accountId === null || entryItems.value[0].accountId === undefined) &&
+      props.accountsList &&
+      props.accountsList.length > 0
+    ) {
+      entryItems.value = entryItems.value.map(item => ({
+        amount: Number(item.amount) || 0,
+        accountId: item.accountId ?? props.accountsList[0].id,
+      }));
+    }
+  } catch (e) {}
+});
 
 // End Life cycle
 
