@@ -199,7 +199,7 @@ class BudgetController {
     this.store.addEntry(newIngreso);
     
     const { syncEntry } = useSync();
-    syncEntry(newIngreso, 'create');
+    syncEntry({ entry: newIngreso, operation: 'create' });
   }
 
   addEgreso(params: {
@@ -233,7 +233,7 @@ class BudgetController {
     this.store.addEntry(newEgreso);
     
     const { syncEntry } = useSync();
-    syncEntry(newEgreso, 'create');
+    syncEntry({ entry: newEgreso, operation: 'create' });
   }
 
   addProviderEgresos(params: { provider: Provider }) {
@@ -260,7 +260,7 @@ class BudgetController {
     this.store.addEntry(newEntry);
     
     const { syncEntry } = useSync();
-    syncEntry(newEntry, 'create');
+    syncEntry({ entry: newEntry, operation: 'create' });
   }
 
   updateIngreso(params: { id: string | number; changes: Partial<Income> }) {
@@ -270,7 +270,7 @@ class BudgetController {
     const entry = this.store.entries.find(e => e.id === id);
     if (entry) {
       const { syncEntry } = useSync();
-      syncEntry(entry, 'update');
+      syncEntry({ entry, operation: 'update' });
     }
   }
 
@@ -281,7 +281,7 @@ class BudgetController {
     
     if (entry) {
       const { syncEntry } = useSync();
-      syncEntry(entry, 'delete');
+      syncEntry({ entry, operation: 'delete' });
     }
   }
 
@@ -341,7 +341,7 @@ class BudgetController {
     
     const { syncBudgetProvider } = useSync();
     console.log('budgetController.addProvider - sincronizando provider con productos');
-    syncBudgetProvider(newProvider, 'create', products, supplierSyncId);
+    syncBudgetProvider({ provider: newProvider, operation: 'create', products, supplierSyncId });
 
       setTimeout(() => {
         const provider = this.store.providers.find(p => p.id === newProvider.id);
@@ -364,7 +364,7 @@ class BudgetController {
     if (provider) {
       const { syncBudgetProvider } = useSync();
       
-      syncBudgetProvider({ ...provider, ...changes }, 'update', productsToSync, supplierSyncId);
+      syncBudgetProvider({ provider: { ...provider, ...changes }, operation: 'update', products: productsToSync, supplierSyncId });
     }
   }
 
@@ -375,7 +375,7 @@ class BudgetController {
     
     if (provider) {
       const { syncBudgetProvider } = useSync();
-      syncBudgetProvider(provider, 'delete');
+      syncBudgetProvider({ provider, operation: 'delete' });
     }
   }
 
@@ -420,12 +420,12 @@ class BudgetController {
       console.log('[BudgetController.saveData] Datos guardados correctamente');
       
       const { syncBudget } = useSync();
-      syncBudget({
+      syncBudget({ budgetData: {
         id: dateKey,
         date: this.store.selectedDate,
         isDayClosed: this.store.isDayClosed,
         finishDayData: finishDayDataPlain,
-      }, this.store.isDayClosed ? 'update' : 'update');
+      }, operation: 'update' });
       
       if (this.store.isDayClosed) {
         console.log('[BudgetController.saveData] Creando instantánea congelada...');
