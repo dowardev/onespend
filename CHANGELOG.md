@@ -1,3 +1,23 @@
+## [v0.39.0] - 2026-01-23
+
+### Added
+
+- Add Android native project under `front/android/` to enable Android builds via Capacitor: Gradle top-level and module build files, Gradle wrapper, app module, resources (icons, splash), `MainActivity`, `AndroidManifest.xml`, ProGuard rules and example tests.
+- Add Capacitor configuration files: `front/capacitor.config.json` and `front/capacitor.config.ts` and enable `capacitor` integration in `front/ionic.config.json`.
+
+### Changed
+
+- Bump frontend package version to `0.39.0` (`front/package.json`) and update lockfiles (`front/package-lock.json`, `front/pnpm-lock.yaml`).
+- Small build/config updates: `front/tsconfig.json`, `front/vite.config.ts` and related frontend tooling metadata to align with Capacitor/Android additions.
+
+### Files Changed
+
+- Android native project (new): `front/android/**` (build.gradle, app module, gradle wrapper, settings, variables, resources, icons, splash images, MainActivity, manifests, tests, proguard rules)
+- Capacitor config: `front/capacitor.config.json`, `front/capacitor.config.ts`
+- Frontend config and lockfiles: `front/ionic.config.json`, `front/package.json` (version bump), `front/package-lock.json`, `front/pnpm-lock.yaml`, `front/tsconfig.json`, `front/vite.config.ts`
+
+---
+
 ## [v0.38.0] - 2026-01-23
 
 ### Refactored

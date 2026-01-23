@@ -1,6 +1,5 @@
 /// <reference types="vitest" />
 
-import legacy from '@vitejs/plugin-legacy';
 import vue from '@vitejs/plugin-vue';
 import path from 'path';
 import { defineConfig } from 'vite';
@@ -8,13 +7,20 @@ import { defineConfig } from 'vite';
 // https://vitejs.dev/config/
 export default defineConfig(({ command }) => ({
   base: command === 'build' ? './' : '/',
-  plugins: [vue(), legacy()],
+  plugins: [vue()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
   },
+  optimizeDeps: {
+    esbuildOptions: {
+      target: 'esnext'
+    }
+  },
   build: {
+    // Keep modern JS features (BigInt etc.) available to avoid transpile errors
+    target: 'esnext',
     chunkSizeWarningLimit: 1200,
     rollupOptions: {
       output: {

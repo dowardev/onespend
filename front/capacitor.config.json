@@ -1,0 +1,10 @@
+{
+  "appId": "com.dowardev.abogaz",
+  "appName": "OneSpend",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "server": {
+    "url": "http://10.58.84.29:8100",
+    "cleartext": true
+  }
+}
