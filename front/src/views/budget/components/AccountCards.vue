@@ -3,10 +3,7 @@
     <ion-list-header>
       <ion-label>Cuentas</ion-label>
 
-      <ion-button
-        :disabled="budgetController.getIsDayClosed()"
-        @click="openModal()"
-      >
+      <ion-button @click="openModal()">
         <ion-icon :icon="addOutline"></ion-icon>
       </ion-button>
     </ion-list-header>

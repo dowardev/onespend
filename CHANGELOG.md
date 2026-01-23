@@ -1,3 +1,41 @@
+## [v0.38.0] - 2026-01-23
+
+### Refactored
+
+- Replace the previous "finish day" (day-close) workflow with an on-demand Day Summary modal and simplify day editing UX: views no longer rely on an "isDayClosed" state and editing is available directly.
+
+### Added
+
+- `front/src/views/budget/components/DaySummaryModal.vue` — New modal showing totals, top providers/accounts, raw entries and useful debug data for the selected date.
+- Developer helpers: `DEV_MANUAL_ENTRIES` map in `budgetController` for optional hardcoded test entries and exposing `budgetController` on `window` in development for debugging.
+
+### Removed
+
+- `front/src/views/budget/FinishDayForm.vue` — finish-day form and associated day-closed UI flow removed.
+
+### Changed
+
+- Preload budget data before app mount in `front/src/main.ts` to ensure persisted entries render immediately.
+- Simplify BudgetView, InicioViewComponent, ProvidersComponent, and AccountCards to remove day-closed conditionals and adapt navigation to the new summary/modal flow.
+- Add defensive console debug logs and small UI improvements (autofocus on EditEntryModal input, default account assignment on modal mount).
+- Bump frontend package version to `0.38.0`.
+
+### Files Changed
+
+**Frontend:**
+- `front/src/controllers/budgetController.ts` — remove day-close APIs, add DEV_MANUAL_ENTRIES and debug logging
+- `front/src/main.ts` — preload budget data and expose controller in dev
+- `front/src/views/budget/BudgetView.vue` — UI changes: remove finish-day toggles and integrate DaySummary modal
+- `front/src/views/budget/FinishDayForm.vue` — (removed)
+- `front/src/views/budget/InicioViewComponent.vue` — remove day-closed logic and ensure budget data load
+- `front/src/views/budget/ProvidersComponent.vue` — remove day-closed guards and simplify providers computed logic
+- `front/src/views/budget/components/AccountCards.vue` — enable account actions regardless of day-closed state
+- `front/src/views/budget/components/DaySummaryModal.vue` — (new)
+- `front/src/views/budget/components/EditEntryModal.vue` — autofocus and default-account-assignment improvements
+- `front/package.json` — bump version to `0.38.0`
+
+---
+
 ## [v0.37.4] - 2026-01-23
 
 ### Fixed

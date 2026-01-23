@@ -186,7 +186,7 @@ import NotesModal from './components/NotesModal.vue';
 // End Components
 
 // Vars
-const budgetCtrl = new BudgetController();
+  const budgetCtrl = new BudgetController();
 const suppliersCtrl = new SuppliersController();
 const accountsCtrl = new AccountsController();
 const syncCtrl = new SyncController();
@@ -215,20 +215,8 @@ const deleteConfirm = reactive({
 // End Vars
 
 // Computed
-const isDayClosed = computed(() => budgetCtrl.getIsDayClosed());
-const frozenSnapshot = computed(() => budgetCtrl.getFrozenSnapshot());
-const providers = computed(() => {
-  if (isDayClosed.value && frozenSnapshot.value) {
-    return frozenSnapshot.value.providers;
-  }
-  return budgetCtrl.getProviders();
-});
-const providerIdsWithEntries = computed(() => {
-  if (isDayClosed.value && frozenSnapshot.value) {
-    return new Set(frozenSnapshot.value.providers.map(p => p.id));
-  }
-  return budgetCtrl.getProviderIdsWithEntries();
-});
+const providers = computed(() => budgetCtrl.getProviders());
+const providerIdsWithEntries = computed(() => budgetCtrl.getProviderIdsWithEntries());
 
 // End Computed
 
@@ -238,10 +226,6 @@ onMounted(async () => {
   loadAccounts();
 
   unsubscribeFromSuppliers = suppliersCtrl.subscribeToChanges({ callback: (suppliers: Array<Supplier>) => {
-    if (isDayClosed.value) {
-      console.log('[Suppliers Change] Day is closed, ignoring supplier update');
-      return;
-    }
     console.log(
       '[Suppliers Change] Received update, suppliers count:',
       suppliers.length
@@ -380,7 +364,6 @@ function handleProviderDeleted(params: { id: string | number }) {
 }
 
 function addEmptyProvider() {
-  if (isDayClosed.value) return;
   openAddProviderModal();
 }
 
