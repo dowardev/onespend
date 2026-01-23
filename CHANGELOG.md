@@ -1,3 +1,19 @@
+## [v0.37.4] - 2026-01-23
+
+### Fixed
+
+- Prevent crash when reading system config from IndexedDB: normalize `getConfig` params and avoid calling `IDBObjectStore.get` with `undefined`.
+- Update callers in `useSystemConfig` to pass `{ key: '...' }` objects to `configController.getConfig`.
+
+### Files Changed
+
+**Frontend:**
+- `front/src/controllers/dixie.ts` - normalize `getConfig` parameter (accept string or `{key}`) and guard against missing key to avoid IDB DataError
+- `front/src/stores/useSystemConfig.ts` - pass `{ key: 'theme'|'autoLightTheme'|'autoDarkTheme' }` to `configController.getConfig`
+- `front/package.json` - bump version to `0.37.4`
+
+---
+
 ## [v0.37.3] - 2026-01-22
 
 ### Fixed
