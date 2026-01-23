@@ -411,13 +411,14 @@ class DixieController {
     });
   }
 
-  async getConfig(params: { key: string }): Promise<unknown> {
-    const { key } = params;
+  async getConfig(params: { key: string } | string): Promise<unknown> {
+    const key = typeof params === 'string' ? params : params?.key;
+    if (!key) return undefined;
     const db = await this.openDB();
     return new Promise((resolve, reject) => {
       const tx = db.transaction(this.storeName, 'readonly');
       const store = tx.objectStore(this.storeName);
-      const req = store.get(key);
+      const req = store.get(key as IDBValidKey);
       req.onsuccess = () => {
         const result = req.result as { id: string; value: unknown } | undefined;
         resolve(result?.value);

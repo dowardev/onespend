@@ -40,7 +40,7 @@ export const useSystemConfig = defineStore('systemConfig', () => {
 
   async function getTheme(): Promise<ThemeMode> {
     if (theme.value !== 'auto') return theme.value;
-    const saved = await configController.getConfig('theme');
+    const saved = await configController.getConfig({ key: 'theme' });
     if (
       [
         'light',
@@ -61,7 +61,7 @@ export const useSystemConfig = defineStore('systemConfig', () => {
   }
 
   async function getAutoLightTheme(): Promise<ThemeMode> {
-    const saved = await configController.getConfig('autoLightTheme');
+    const saved = await configController.getConfig({ key: 'autoLightTheme' });
     if (
       [
         'light',
@@ -81,7 +81,7 @@ export const useSystemConfig = defineStore('systemConfig', () => {
   }
 
   async function getAutoDarkTheme(): Promise<ThemeMode> {
-    const saved = await configController.getConfig('autoDarkTheme');
+    const saved = await configController.getConfig({ key: 'autoDarkTheme' });
     if (
       [
         'light',
