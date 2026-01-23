@@ -14,6 +14,21 @@
 
 ---
 
+## [v0.37.5] - 2026-01-23
+
+### Fixed
+
+- Prevent Uncaught TypeError when syncing entries: update `budgetController` to call `useSync` functions with object-shaped parameters (e.g. `syncEntry({ entry, operation })`) so `entry` is not undefined and accessing `sync_id` is safe.
+- Align `syncBudgetProvider` and `syncBudget` calls in `budgetController` to the `useSync()` composable API.
+
+### Files Changed
+
+**Frontend:**
+- `front/src/controllers/budgetController.ts` — correct `useSync` call signatures and payload shapes
+- `front/package.json` — bump version to `0.37.5`
+
+---
+
 ## [v0.37.3] - 2026-01-22
 
 ### Fixed
