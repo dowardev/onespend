@@ -1,21 +1,40 @@
-## [v0.39.3] - 2026-01-24
+## [v0.39.4] - 2026-01-24
 
 ### Fixed
 
-- Prevent Uncaught TypeError when calling sync functions by passing object-shaped parameters (`{ template, operation }`) to `useSync.syncTemplate`; this ensures the `template` value is defined inside the composable.
-- Add defensive guards and normalize input shapes in template-related UI and migration helpers to avoid runtime errors when callers pass `null`, positional args, or unexpected shapes.
-- Validate supplier lists and supplier snapshot generation to skip invalid supplier entries.
+- Harden `useSync` and related controllers/composables to accept both object-shaped and positional argument forms and to guard against undefined/null inputs; this prevents runtime TypeErrors when callers pass unexpected shapes.
+- Make account sync handling robust: safely read reactive proxies, ensure `sync_id` generation falls back to a stable generated id, and avoid writing to non-writable proxies.
+- Defensive fixes across UI components to avoid runtime errors when optional params are missing.
+
+### Added
+
+- `front/src/utils/date.ts`: `safeIntlFormat(date, locale, options)` — a safe wrapper around `Intl.DateTimeFormat` that returns an empty string for invalid inputs or on failure.
+
+### Changed
+
+- Chart utilities and chart components: accept multiple call shapes for `applyNeonStyles` (either ChartData or { data, colorIndex }) and tolerate missing datasets.
+- Date utilities: `formatLocalDate` and `parseLocalDate` accept either `{ d }` or a direct date-like argument for flexibility.
+- Views: small template/prop hardening and presentation fixes to avoid rendering/runtime issues when values are null or undefined.
 
 ### Files Changed
 
-- `front/src/controllers/TempalteController.ts` — use object-shaped params when calling `syncTemplate` for create/update/delete.
-- `front/src/controllers/migrationService.ts` — make `normalizeEntryData` accept `null`, direct data object, or `{ data }` and guard non-object inputs.
-- `front/src/stores/templatesStore.ts` — call `syncTemplate({ template, operation })` after template create/update/delete.
-- `front/src/views/templates/modals/AddTemplateComponent.vue` — accept flexible supplier params, add defensive guards, filter invalid suppliers and fix snapshot mapping.
+- `front/src/composables/useSync.ts` — support flexible `syncAccount(...)` call shapes; defensively resolve reactive inputs and ensure reliable `sync_id` handling.
+- `front/src/controllers/accountsController.ts` — accept flexible `addAccount` parameter shapes and guard missing account data.
+- `front/src/utils/chartColors.ts` — allow multiple input shapes for `applyNeonStyles` and return empty ChartData when input is invalid.
+- `front/src/utils/date.ts` — accept alternate parameter shapes for `formatLocalDate`/`parseLocalDate` and add `safeIntlFormat`.
+- `front/src/views/statistics/cashFlow/day/DayChartComponent.vue` — use `safeIntlFormat` and accept flexible `applyNeonStyles` inputs.
+- `front/src/views/statistics/cashFlow/month/MonthChartComponent.vue` — use `safeIntlFormat` and more robust label parsing.
+- `front/src/views/statistics/cashFlow/month/MonthComponent.vue` — ensure `ion-datetime` value binding tolerates null.
+- `front/src/views/statistics/cashFlow/year/YearChartComponent.vue` — use `safeIntlFormat` for month/year formatting.
+- `front/src/views/statistics/cashFlow/year/YearComponent.vue` — presentation change for `ion-datetime` to `year`.
+- `front/src/views/statistics/performance/year/YearPerformanceComponent.vue` — use `safeIntlFormat` when building month labels.
+- `front/src/views/suppliers/accounts/AccountsPage.vue` — accept modal saved payload in a simpler shape when creating/updating accounts.
+- `front/package.json` — bump frontend package version to `0.39.4`.
 
 ### Notes
 
-- No breaking changes.
+- No breaking changes expected; the edits increase tolerance for multiple call shapes and add safe fallbacks for formatting/undefined values.
+- Frontend package version updated to `0.39.4`.
 
 ---
 

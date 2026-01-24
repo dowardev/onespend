@@ -12,9 +12,23 @@ export const pastelNeonColors = [
   { bg: 'rgba(255, 182, 182, 0.4)', border: 'rgba(255, 99, 71, 1)' }, // Coral
 ];
 
-export function applyNeonStyles(params: { data: ChartData<'bar'>; colorIndex?: number }): ChartData<'bar'> {
-  const { data, colorIndex = 0 } = params;
-  if (!data.datasets) return data;
+export function applyNeonStyles(
+  params: { data: ChartData<'bar'>; colorIndex?: number } | ChartData<'bar'> | undefined
+): ChartData<'bar'> {
+  // Support two call styles:
+  //  - applyNeonStyles(chartData)
+  //  - applyNeonStyles({ data: chartData, colorIndex })
+  let data: ChartData<'bar'> | undefined;
+  let colorIndex = 0;
+
+  if (params && typeof params === 'object' && 'data' in (params as any)) {
+    data = (params as any).data as ChartData<'bar'>;
+    colorIndex = (params as any).colorIndex ?? 0;
+  } else {
+    data = params as ChartData<'bar'> | undefined;
+  }
+
+  if (!data || !data.datasets) return data || ({ labels: [], datasets: [] } as ChartData<'bar'>);
 
   data.datasets = data.datasets.map((dataset, datasetIndex) => {
     const dataArray = Array.isArray(dataset.data) ? dataset.data : [];

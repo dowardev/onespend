@@ -208,21 +208,66 @@ export function useSync() {
     console.log('[useSync] ✅ queueOperation completado, pendingChanges:', pendingChanges.value);
   }
 
-  function syncAccount(params: { account: SyncAccountParams; operation?: 'create' | 'update' | 'delete' }) {
-    const { account, operation = 'create' } = params;
-    let syncId = account.sync_id;
-    
-    if (!syncId) {
-      syncId = account.sync_id = String(account.id || generateSyncId());
+  function syncAccount(
+    paramsOrAccount: { account?: SyncAccountParams; operation?: 'create' | 'update' | 'delete' } | SyncAccountParams,
+    maybeOperation?: 'create' | 'update' | 'delete'
+  ) {
+    // Support two calling styles for robustness:
+    // 1) syncAccount({ account: {...}, operation: 'create' })
+    // 2) syncAccount(accountObject, 'create')
+    let account: SyncAccountParams | undefined;
+    let operation: 'create' | 'update' | 'delete' = 'create';
+
+    if (!paramsOrAccount) {
+      console.error('[useSync] syncAccount called with no arguments');
+      return;
     }
-    
+
+    if ((paramsOrAccount as any).account !== undefined) {
+      account = (paramsOrAccount as any).account as SyncAccountParams;
+      operation = (paramsOrAccount as any).operation || maybeOperation || 'create';
+    } else {
+      account = paramsOrAccount as SyncAccountParams;
+      operation = maybeOperation || (account as any).operation || 'create';
+    }
+
+    if (!account) {
+      console.error('[useSync] syncAccount: account is undefined or null', { paramsOrAccount, maybeOperation });
+      return;
+    }
+
+    // If account is a reactive proxy, get the raw object to avoid trapped getters.
+    // toRaw may return undefined for non-object inputs, so fall back to the original
+    // value. Be defensive: ensure we always have an object before accessing properties
+    // like `sync_id` to avoid runtime TypeErrors when callers pass `undefined`.
+    const accRaw = toRaw(account) as SyncAccountParams | undefined;
+    const acc = (accRaw ?? (account as SyncAccountParams)) as SyncAccountParams | undefined;
+
+    if (!acc) {
+      console.error('[useSync] syncAccount: resolved account is not an object', { paramsOrAccount, maybeOperation });
+      return;
+    }
+
+    let syncId = (acc.sync_id as string | undefined) ?? undefined;
+
+    if (!syncId) {
+      // Ensure we can write a stable sync_id back onto the object when missing.
+      // Only do this for actual objects.
+      try {
+        syncId = acc.sync_id = String((acc as any).id || generateSyncId());
+      } catch (e) {
+        // In the unlikely event acc is non-writable, fall back to a generated id
+        syncId = String((acc as any)?.id || generateSyncId());
+      }
+    }
+
     const syncItem: Omit<SyncItem, 'timestamp' | 'retryCount'> = {
       id: syncId,
       entityType: 'account',
       operation,
       data: {
-        name: account.name,
-        initial_balance: account.initialBalance,
+        name: acc.name || null,
+        initial_balance: acc.initialBalance ?? null,
         updated_at: Date.now(),
       },
     };

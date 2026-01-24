@@ -56,7 +56,7 @@
       <ion-datetime
         :value="selectedDate"
         style="background: transparent"
-        presentation="date"
+        presentation="year"
         @ion-change="onPopoverDateChange"
       ></ion-datetime>
 

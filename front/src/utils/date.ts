@@ -8,8 +8,9 @@ import { parseISO } from 'date-fns';
  * Date or date-like string. If no argument is provided, returns today's date
  * in local timezone formatted as YYYY-MM-DD.
  */
-export function formatLocalDate(params: { d?: Date | string | null }): string {
-  const { d } = params;
+export function formatLocalDate(params: { d?: Date | string | null } | Date | string | null): string {
+  // Support both shapes: formatLocalDate({ d }) and formatLocalDate(d)
+  const d = (params && typeof params === 'object' && 'd' in (params as any)) ? (params as any).d : params;
   try {
     let dateObj: Date;
     if (d == null) {
@@ -65,8 +66,9 @@ export function formatLocalDate(params: { d?: Date | string | null }): string {
  * calendar day. If input is a YYYY-MM-DD string, constructs a local Date
  * (avoiding UTC shift). If input is a full ISO with time, parseISO is used.
  */
-export function parseLocalDate(params: { d?: Date | string | null }): Date {
-  const { d } = params;
+export function parseLocalDate(params: { d?: Date | string | null } | Date | string | null): Date {
+  // Support both shapes: parseLocalDate({ d }) and parseLocalDate(d)
+  const d = (params && typeof params === 'object' && 'd' in (params as any)) ? (params as any).d : params;
   if (d == null) return new Date();
   if (d instanceof Date) return d;
   const s = String(d).trim();
@@ -109,5 +111,25 @@ export function normalizeName(params: { name: string | undefined | null }): stri
       .replace(/\s+/g, ' ');
   } catch (_e) {
     return String(name).trim().toLowerCase();
+  }
+}
+
+/**
+ * safeIntlFormat
+ * Safely format a Date-like value using Intl.DateTimeFormat. Returns an empty
+ * string when the input is invalid or formatting fails.
+ */
+export function safeIntlFormat(
+  date: Date | number | string | undefined | null,
+  locale: string,
+  options?: Intl.DateTimeFormatOptions
+): string {
+  try {
+    if (date == null) return '';
+    const d = date instanceof Date ? date : new Date(String(date));
+    if (isNaN(d.getTime())) return '';
+    return new Intl.DateTimeFormat(locale, options as any).format(d);
+  } catch (_e) {
+    return '';
   }
 }
