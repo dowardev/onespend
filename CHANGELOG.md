@@ -1,3 +1,19 @@
+## [v0.39.6] - 2026-01-24
+
+### Fixed
+
+- `front/src/views/budget/BudgetView.vue` — fix missing closing brace in the script section and ensure `onDateSelected` performs a defensive `value` check before parsing the date and updating the controller. This prevents a runtime parse/templating error and restores proper component script parsing.
+
+### Files Changed
+
+- `front/src/views/budget/BudgetView.vue` — close `onDateSelected` function and restore script block integrity.
+
+### Notes
+
+- Patch release containing a small frontend fix; no breaking changes expected.
+
+---
+
 ## [v0.39.5] - 2026-01-24
 
 ### Fixed
