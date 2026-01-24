@@ -1,3 +1,20 @@
+## [v0.39.8] - 2026-01-24
+
+### Changed
+
+- Improve chart coloring by moving color resolution to a shared utility and using Ionic theme CSS variables; maps positive values to `--ion-color-success` and negative/egreso values to `--ion-color-danger` for consistent theming across the app.
+
+### Files Changed
+
+- `front/src/utils/chartColors.ts` — refactor `applyNeonStyles` to resolve theme colors from CSS variables (supports rgb and hex forms), add sign-aware/dataset-label-aware color selection, and add runtime debug logs.
+- `front/src/views/statistics/cashFlow/day/DayChartComponent.vue` — use shared `applyNeonStyles` instead of an inline pastel palette; remove duplicated color logic and add debug logging of final chart data.
+
+### Notes
+
+- Non-breaking visual/UX enhancement to chart coloring; no API changes expected. Bump frontend package to `0.39.8`.
+
+---
+
 ## [v0.39.7] - 2026-01-24
 
 ### Fixed
