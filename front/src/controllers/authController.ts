@@ -85,6 +85,19 @@ class AuthController {
       });
 
       await saveToken(response.token);
+
+      // Iniciar sincronización automática en segundo plano tras iniciar sesión
+      try {
+        if (syncService.getQueueCount() > 0) {
+          // No await para no bloquear el flujo de login/registro
+          syncService.processQueue().catch((err) => {
+            console.warn('[AuthController] Sync after login failed:', err);
+          });
+        }
+      } catch (err) {
+        console.warn('[AuthController] Failed to trigger sync after login:', err);
+      }
+
       this.store.setUser(response.user);
       
       return { user: response.user };
@@ -111,6 +124,19 @@ class AuthController {
       });
 
       await saveToken(response.token);
+
+      // Iniciar sincronización automática en segundo plano tras registro
+      try {
+        if (syncService.getQueueCount() > 0) {
+          // No await para no bloquear el flujo de registro
+          syncService.processQueue().catch((err) => {
+            console.warn('[AuthController] Sync after register failed:', err);
+          });
+        }
+      } catch (err) {
+        console.warn('[AuthController] Failed to trigger sync after register:', err);
+      }
+
       this.store.setUser(response.user);
       
       return { user: response.user };

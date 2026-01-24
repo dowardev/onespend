@@ -1,3 +1,19 @@
+## [v0.39.2] - 2026-01-24
+
+### Added
+
+- Trigger background sync after successful login and registration when there are pending sync operations; this runs in background and does not block the auth flow. Errors are caught and logged for diagnostics.
+
+### Fixed
+
+- Avoid blocking auth flow when triggering sync; wrap sync invocation in try/catch and log failures.
+
+### Files Changed
+
+- `front/src/controllers/authController.ts` — start non-blocking `syncService.processQueue()` after `saveToken` in login/register flows; add defensive checks and logging.
+
+---
+
 ## [v0.39.0] - 2026-01-23
 
 ### Added
