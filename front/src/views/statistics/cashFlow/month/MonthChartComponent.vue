@@ -28,7 +28,7 @@ import {
 } from 'chart.js';
 import type { ChartOptions, ChartData } from 'chart.js';
 import { applyNeonStyles } from '@/utils/chartColors';
-import { parseLocalDate } from '@/utils/date';
+import { parseLocalDate, safeIntlFormat } from '@/utils/date';
 
 // Register Chart.js components
 ChartJS.register(
@@ -112,31 +112,21 @@ function translateDayLabel(label: unknown): string {
 
   // If label is YYYY-MM (month key) -> format as "Ene 2025"
   if (/^\d{4}-\d{2}$/.test(labelStr)) {
-    try {
-      const d = parseLocalDate({ d: labelStr + '-01' });
-      return new Intl.DateTimeFormat('es-MX', {
-        month: 'short',
-        year: 'numeric',
-      })
-        .format(d)
-        .replace(/\./g, '')
-        .replace(/^(.)/, s => s.toUpperCase());
-    } catch (_e) {
-      // fall through
-    }
+      try {
+        const d = parseLocalDate({ d: labelStr + '-01' });
+        const formatted = safeIntlFormat(d, 'es-MX', { month: 'short', year: 'numeric' });
+        if (formatted) return formatted.replace(/\./g, '').replace(/^(.)/, s => s.toUpperCase());
+      } catch (_e) {
+        // fall through
+      }
   }
 
   // If label is a full ISO date YYYY-MM-DD, treat it as a month label as well
   if (/^\d{4}-\d{2}-\d{2}$/.test(labelStr)) {
     try {
       const d = parseLocalDate({ d: labelStr });
-      return new Intl.DateTimeFormat('es-MX', {
-        month: 'short',
-        year: 'numeric',
-      })
-        .format(d)
-        .replace(/\./g, '')
-        .replace(/^(.)/, s => s.toUpperCase());
+      const formatted = safeIntlFormat(d, 'es-MX', { month: 'short', year: 'numeric' });
+      if (formatted) return formatted.replace(/\./g, '').replace(/^(.)/, s => s.toUpperCase());
     } catch (_e) {
       // fall through
     }
@@ -152,12 +142,8 @@ function translateDayLabel(label: unknown): string {
   // Try parsing full date (ISO fallback) and return short weekday + day
   const d = parseLocalDate(labelStr);
   if (!isNaN(d.getTime())) {
-    const weekday = new Intl.DateTimeFormat('es-MX', {
-      weekday: 'short',
-    }).format(d);
-    const dayNum = new Intl.DateTimeFormat('es-MX', { day: 'numeric' }).format(
-      d
-    );
+    const weekday = safeIntlFormat(d, 'es-MX', { weekday: 'short' });
+    const dayNum = safeIntlFormat(d, 'es-MX', { day: 'numeric' });
     const weekdayNorm = weekday.replace(/\.$/, '');
     const capitalized =
       weekdayNorm.charAt(0).toUpperCase() + weekdayNorm.slice(1);

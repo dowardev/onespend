@@ -198,13 +198,12 @@ function onDeleteAlertDidDismissAccount() {
   deleteConfirmAccount.accountName = '';
 }
 
-async function onModalSaved(params: { payload: AccountFormData }) {
-  const { payload } = params;
+async function onModalSaved(payload: AccountFormData) {
   if (!payload) return;
   if (payload.id != null) {
-    await accountsController.updateAccount({ params: { account: payload as AccountFormData } });
+    await accountsController.updateAccount({ account: payload as AccountFormData });
   } else {
-    await accountsController.addAccount({ params: { account: payload as AccountFormData } });
+    await accountsController.addAccount({ account: payload as AccountFormData });
   }
 
   cancelModal();

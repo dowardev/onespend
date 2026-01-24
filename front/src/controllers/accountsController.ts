@@ -95,15 +95,18 @@ class AccountsController {
     }
   }
 
-  async addAccount(params: { account: Omit<Account, 'id' | 'sync_id' | 'createdAt' | 'updatedAt'> }) {
-    const { account } = params;
+  async addAccount(params: { account: Omit<Account, 'id' | 'sync_id' | 'createdAt' | 'updatedAt'> } | any) {
+    // Support multiple call shapes to be resilient: callers may pass
+    // { account: {...} } or { a: {...} } or the account object directly.
+    const account = params?.account ?? params?.a ?? params;
+    if (!account) throw new Error('accountsController.addAccount: account is required');
     const ctrl = this.getController();
     const now = Date.now();
 
     const sync_id = generateSyncId();
     
     const entry: Account = {
-      name: String(account.name),
+      name: String(account.name || ''),
       initialBalance: Number(account.initialBalance) || 0,
       sync_id,
       createdAt: now,

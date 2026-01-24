@@ -54,7 +54,7 @@
   >
     <ion-content>
       <ion-datetime
-        :value="selectedDate"
+        :value="selectedDate || null"
         style="background: transparent"
         presentation="year"
         @ion-change="onPopoverDateChange"

@@ -27,7 +27,7 @@ import {
   LinearScale,
 } from 'chart.js';
 import type { ChartOptions, ChartData } from 'chart.js';
-import { parseLocalDate } from '@/utils/date';
+import { parseLocalDate, safeIntlFormat } from '@/utils/date';
 
 // Register Chart.js components
 ChartJS.register(
@@ -88,9 +88,11 @@ const pastelNeonColors = [
   { bg: 'rgba(255, 182, 182, 0.4)', border: 'rgba(255, 99, 71, 1)' }, // Coral
 ];
 
-function applyNeonStyles(params: { data: ChartData<'bar'> }): ChartData<'bar'> {
-  const { data } = params;
-  if (!data.datasets) return data;
+// Accept either a ChartData object or an object with a `data` property
+function applyNeonStyles(arg: unknown): ChartData<'bar'> {
+  // Support both shapes: applyNeonStyles(data) and applyNeonStyles({ data, colorIndex })
+  const data = (arg && typeof arg === 'object' && 'data' in (arg as any)) ? (arg as any).data : arg;
+  if (!data || !(data as ChartData<'bar'>).datasets) return (data as ChartData<'bar'>) || ({ labels: [], datasets: [] } as ChartData<'bar'>);
 
   data.datasets = data.datasets.map((dataset, datasetIndex) => {
     const dataArray = Array.isArray(dataset.data) ? dataset.data : [];
@@ -148,12 +150,8 @@ function translateDayLabel(params: { label: unknown }): string {
   // Try parsing as date
   const d = parseLocalDate({ d: labelStr });
   if (!isNaN(d.getTime())) {
-    const weekday = new Intl.DateTimeFormat('es-MX', {
-      weekday: 'short',
-    }).format(d);
-    const dayNum = new Intl.DateTimeFormat('es-MX', { day: 'numeric' }).format(
-      d
-    );
+    const weekday = safeIntlFormat(d, 'es-MX', { weekday: 'short' }) || '';
+    const dayNum = safeIntlFormat(d, 'es-MX', { day: 'numeric' }) || '';
     const weekdayNorm = weekday.replace(/\.$/, '');
     const capitalized =
       weekdayNorm.charAt(0).toUpperCase() + weekdayNorm.slice(1);

@@ -126,14 +126,13 @@ function translateDayLabel(label: unknown): string {
       if (!isNaN(monthNum) && monthNum >= 1 && monthNum <= 12) {
         const d = new Date(Number(year), monthNum - 1, 1);
         // Format like "May 2023" in es-MX locale and capitalize month
-        const monthYear = new Intl.DateTimeFormat('es-MX', {
-          month: 'short',
-          year: 'numeric',
-        }).format(d);
-        const parts = monthYear.split(' ');
-        parts[0] = parts[0].replace(/\.$/, '');
-        parts[0] = parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
-        return parts.join(' ');
+        const monthYear = safeIntlFormat(d, 'es-MX', { month: 'short', year: 'numeric' });
+        if (monthYear) {
+          const parts = monthYear.split(' ');
+          parts[0] = parts[0].replace(/\.$/, '');
+          parts[0] = parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
+          return parts.join(' ');
+        }
       }
     }
   }
@@ -141,12 +140,8 @@ function translateDayLabel(label: unknown): string {
   // Try parsing as full date (day-level) and keep previous behavior
   const d = new Date(labelStr);
   if (!isNaN(d.getTime())) {
-    const weekday = new Intl.DateTimeFormat('es-MX', {
-      weekday: 'short',
-    }).format(d);
-    const dayNum = new Intl.DateTimeFormat('es-MX', { day: 'numeric' }).format(
-      d
-    );
+    const weekday = safeIntlFormat(d, 'es-MX', { weekday: 'short' }) || '';
+    const dayNum = safeIntlFormat(d, 'es-MX', { day: 'numeric' }) || '';
     const weekdayNorm = weekday.replace(/\.$/, '');
     const capitalized =
       weekdayNorm.charAt(0).toUpperCase() + weekdayNorm.slice(1);

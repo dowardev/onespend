@@ -361,7 +361,7 @@ import {
   differenceInCalendarYears,
   format,
 } from 'date-fns';
-import { parseLocalDate } from '@/utils/date';
+import { parseLocalDate, safeIntlFormat } from '@/utils/date';
 import { downloadOutline, informationCircleOutline } from 'ionicons/icons';
 
 ChartJS.register(
@@ -504,9 +504,7 @@ const yearMonths = computed(() => {
     const months: Array<MonthData> = [];
     for (let m = 0; m < 12; m++) {
       const d = addMonths(baseYearStart, m);
-      const label = new Intl.DateTimeFormat('es-ES', { month: 'long' }).format(
-        d
-      );
+      const label = safeIntlFormat(d, 'es-ES', { month: 'long' }) || '';
       months.push({
         label: `${label}`,
         date: format(d, 'yyyy-MM'),
