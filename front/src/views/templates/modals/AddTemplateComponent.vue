@@ -82,7 +82,7 @@
             v-for="s in filteredSuppliers"
             :key="String(s.id)"
             button
-            @click="toggleSupplierSelection({ s })"
+            @click="toggleSupplierSelection({ supplier: s })"
           >
             <ion-label>{{ s.name }}</ion-label>
             <ion-checkbox
@@ -212,7 +212,8 @@ const filteredSuppliers = computed(() => {
 async function loadSuppliers() {
   try {
     const list = await suppliersController.listSuppliers();
-    suppliers.value = (list as SupplierOption[]) || [];
+    // Ensure we only keep valid supplier objects
+    suppliers.value = ((list as SupplierOption[]) || []).filter(s => s && (s as any).id != null && (s as any).name);
   } catch (_e) {
     console.error('AddTemplateComponent.loadSuppliers error', _e);
   }
@@ -236,18 +237,22 @@ function onSearchCancel() {
   searchVisible.value = false;
 }
 
-function toggleSupplierSelection(params: { supplier: SupplierOption }) {
-  const { supplier } = params;
+function toggleSupplierSelection(params: { supplier?: SupplierOption } | SupplierOption | null | undefined) {
+  // Accept either an object { supplier } or the supplier directly to be defensive
+  const supplier = params && (typeof params === 'object' && 'supplier' in params ? (params as any).supplier : params) as SupplierOption | undefined | null;
   if (props.dayClosed) return;
+  if (!supplier) return; // defensive guard
 
   const id = supplier.id as IDBValidKey;
+  if (id == null) return;
   const idx = form.supplierIds.indexOf(id);
   if (idx === -1) form.supplierIds.push(id);
   else form.supplierIds.splice(idx, 1);
 }
 
-function getSupplierNameById(params: { id: IDBValidKey }): string | null {
-  const { id } = params;
+function getSupplierNameById(param: { id: IDBValidKey } | IDBValidKey): string | null {
+  // Allow calling with either the id or an object { id }
+  const id = param && typeof param === 'object' && 'id' in param ? (param as any).id : (param as any);
   const s = suppliers.value.find(x => x.id === id);
   return s ? s.name : null;
 }
@@ -305,10 +310,10 @@ try {
       name: newName,
       description,
       suppliers: form.supplierIds.slice(),
-      suppliersSnapshot: form.supplierIds.map((id: IDBValidKey) => ({
-        id,
-        name: getSupplierNameById(id) || '',
-      })),
+        suppliersSnapshot: form.supplierIds.map((id: IDBValidKey) => ({
+          id,
+          name: getSupplierNameById({ id }) || '',
+        })),
     };
 
     if (isEditMode.value && props.editingTmpl && props.editingTmpl.id) {

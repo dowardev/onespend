@@ -28,7 +28,8 @@ export const useTemplatesStore = defineStore('templates', () => {
     if (idx !== -1) {
       const template = templates.value[idx];
       templates.value.splice(idx, 1);
-      syncTemplate(template, 'delete');
+      // useSync.syncTemplate expects an object { template, operation }
+      syncTemplate({ template, operation: 'delete' });
     }
   }
 
@@ -38,11 +39,11 @@ export const useTemplatesStore = defineStore('templates', () => {
     if (idx !== -1) {
       copy.updatedAt = Date.now();
       templates.value[idx] = copy;
-      syncTemplate(copy, 'update');
+      syncTemplate({ template: copy, operation: 'update' });
     } else {
       copy.createdAt = Date.now();
       templates.value.push(copy);
-      syncTemplate(copy, 'create');
+      syncTemplate({ template: copy, operation: 'create' });
     }
   }
 

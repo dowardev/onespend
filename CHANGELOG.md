@@ -1,3 +1,24 @@
+## [v0.39.3] - 2026-01-24
+
+### Fixed
+
+- Prevent Uncaught TypeError when calling sync functions by passing object-shaped parameters (`{ template, operation }`) to `useSync.syncTemplate`; this ensures the `template` value is defined inside the composable.
+- Add defensive guards and normalize input shapes in template-related UI and migration helpers to avoid runtime errors when callers pass `null`, positional args, or unexpected shapes.
+- Validate supplier lists and supplier snapshot generation to skip invalid supplier entries.
+
+### Files Changed
+
+- `front/src/controllers/TempalteController.ts` — use object-shaped params when calling `syncTemplate` for create/update/delete.
+- `front/src/controllers/migrationService.ts` — make `normalizeEntryData` accept `null`, direct data object, or `{ data }` and guard non-object inputs.
+- `front/src/stores/templatesStore.ts` — call `syncTemplate({ template, operation })` after template create/update/delete.
+- `front/src/views/templates/modals/AddTemplateComponent.vue` — accept flexible supplier params, add defensive guards, filter invalid suppliers and fix snapshot mapping.
+
+### Notes
+
+- No breaking changes.
+
+---
+
 ## [v0.39.2] - 2026-01-24
 
 ### Added
