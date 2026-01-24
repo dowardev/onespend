@@ -1,4 +1,4 @@
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted, toRaw } from 'vue';
 import { syncService, type SyncItem, type SyncItemData } from '@/services/syncService';
 import { useBudgetStore } from '@/stores/budgetStore';
 import { useAccountsStore } from '@/stores/accountsStore';
@@ -134,48 +134,77 @@ export function useSync() {
     pendingChanges.value = syncService.getQueueCount();
   }
 
-  function syncProvider(params: { provider: SyncProviderParams; operation?: 'create' | 'update' | 'delete' }) {
-    const { provider, operation = 'create' } = params;
+  function syncProvider(
+    paramsOrProvider: { provider?: SyncProviderParams; operation?: 'create' | 'update' | 'delete' } | SyncProviderParams,
+    maybeOperation?: 'create' | 'update' | 'delete'
+  ) {
+    // Support two calling styles:
+    // 1) syncProvider({ provider: {...}, operation: 'create' })
+    // 2) syncProvider(providerObject, 'create')
+    let provider: SyncProviderParams | undefined;
+    let operation: 'create' | 'update' | 'delete' = 'create';
+
+    if (!paramsOrProvider) {
+      console.error('[useSync] syncProvider called with no arguments');
+      return;
+    }
+
+    if ((paramsOrProvider as any).provider !== undefined) {
+      provider = (paramsOrProvider as any).provider as SyncProviderParams;
+      operation = (paramsOrProvider as any).operation || maybeOperation || 'create';
+    } else {
+      provider = paramsOrProvider as SyncProviderParams;
+      operation = maybeOperation || (provider as any).operation || 'create';
+    }
+
+    if (!provider) {
+      console.error('[useSync] syncProvider: provider is undefined or null', { paramsOrProvider, maybeOperation });
+      return;
+    }
+
+    // If provider is a reactive proxy, get the raw object to avoid trapped getters
+    const prov = toRaw(provider) as SyncProviderParams;
+
     console.log('%c[useSync] 🔵 syncProvider LLAMADO', 'color: blue; font-weight: bold', {
-      name: provider.name as string,
+      name: prov?.name as string,
       operation,
-      sync_id: provider.sync_id,
-      id: provider.id
+      sync_id: prov?.sync_id,
+      id: (prov as any).id,
     });
-    
-    let syncId = provider.sync_id;
-    
+
+    let syncId = prov.sync_id as string | undefined;
+
     if (!syncId) {
-      syncId = provider.sync_id = String(provider.id || generateSyncId());
+      syncId = prov.sync_id = String((prov as any).id || generateSyncId());
       console.log('[useSync] syncId generado:', syncId);
     }
-    
+
     const syncItem: Omit<SyncItem, 'timestamp' | 'retryCount'> = {
       id: syncId,
       entityType: 'supplier',
       operation,
       data: {
-        name: provider.name as string,
-        date: provider.date as number,
-        estimated: provider.estimated as number,
-        account_id: provider.accountId as string,
-        efectivo: provider.efectivo as number,
-        tarjeta: provider.tarjeta as number,
-        credito: provider.credito as number,
-        notes: provider.notes as string,
-        visited: provider.visited as boolean,
-        _supplier_id: provider._supplierId as string,
-        _supplier_name: provider._supplierName as string,
+        name: prov?.name as string || null,
+        date: prov?.date as number || null,
+        estimated: prov?.estimated as number || null,
+        account_id: prov?.accountId as string || null,
+        efectivo: prov?.efectivo as number || null,
+        tarjeta: prov?.tarjeta as number || null,
+        credito: prov?.credito as number || null,
+        notes: prov?.notes as string || null,
+        visited: prov?.visited as boolean || null,
+        _supplier_id: prov?._supplierId as string || null,
+        _supplier_name: prov?._supplierName as string || null,
         updated_at: Date.now(),
       },
     };
 
     console.log('[useSync] syncItem creado:', syncItem);
     console.log('[useSync] Llamando syncService.queueOperation...');
-    
+
     syncService.queueOperation(syncItem);
     pendingChanges.value = syncService.getQueueCount();
-    
+
     console.log('[useSync] ✅ queueOperation completado, pendingChanges:', pendingChanges.value);
   }
 
@@ -227,21 +256,46 @@ export function useSync() {
     pendingChanges.value = syncService.getQueueCount();
   }
 
-  function syncSupplierProduct(params: { product: SyncSupplierProductParams; operation?: 'create' | 'update' | 'delete' }) {
-    const { product, operation = 'create' } = params;
+  function syncSupplierProduct(
+    paramsOrProduct: { product?: SyncSupplierProductParams; operation?: 'create' | 'update' | 'delete' } | SyncSupplierProductParams,
+    maybeOperation?: 'create' | 'update' | 'delete'
+  ) {
+    // Support two calling styles for robustness:
+    // 1) syncSupplierProduct({ product: {...}, operation: 'create' })
+    // 2) syncSupplierProduct(productObject, 'create')
+    let product: SyncSupplierProductParams | undefined;
+    let operation: 'create' | 'update' | 'delete' = 'create';
+
+    if (!paramsOrProduct) {
+      console.error('[useSync] syncSupplierProduct called with no arguments');
+      return;
+    }
+
+    if ((paramsOrProduct as any).product !== undefined) {
+      product = (paramsOrProduct as any).product as SyncSupplierProductParams;
+      operation = (paramsOrProduct as any).operation || maybeOperation || 'create';
+    } else {
+      product = paramsOrProduct as SyncSupplierProductParams;
+      operation = maybeOperation || (product as any).operation || 'create';
+    }
+
+    if (!product) {
+      console.error('[useSync] syncSupplierProduct: product is undefined or null', { paramsOrProduct, maybeOperation });
+      return;
+    }
+
     console.log('%c[useSync] 🔵 syncSupplierProduct LLAMADO', 'color: purple; font-weight: bold', {
-      name: product.name,
+      name: product?.name,
       operation,
-      sync_id: product.sync_id,
-      supplierId: product.supplierId
+      sync_id: product?.sync_id,
+      supplierId: product?.supplierId
     });
-    
-    let syncId = product.sync_id;
+
+    let syncId = product.sync_id as string | undefined;
     
     if (!syncId) {
       // Generate a unique sync_id for the product
-      // Use supplier_id + name + price as base for consistency, or generate random
-      const baseId = product.supplierId 
+      const baseId = product.supplierId
         ? `${product.supplierId}-${product.name}-${product.price}`
         : `${product.name}-${product.price}-${Date.now()}`;
       syncId = product.sync_id = `sp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;

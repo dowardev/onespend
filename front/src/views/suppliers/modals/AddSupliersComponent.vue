@@ -450,6 +450,9 @@ function onSubmit() {
 
   emit('saved', payload);
   console.log('[AddSupliersComponent] ✅ emitted saved');
+  // Also request modal dismissal to ensure it closes even if parent handler has errors
+  emit('dismiss');
+  console.log('[AddSupliersComponent] ✅ emitted dismiss');
 }
 </script>
 

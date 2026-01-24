@@ -83,11 +83,15 @@ class SuppliersController {
         entry.products = entry.products.map((product: Product) => {
           const tempProductSyncId = `temp_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
           console.log('[suppliersController] 🔵 syncSupplierProduct para:', product.name);
+          // call syncSupplierProduct with product object and operation
           syncSupplierProduct({
-            supplierId: entry.sync_id,
-            ...product,
-            sync_id: tempProductSyncId,
-          }, 'create');
+            product: {
+              supplierId: entry.sync_id,
+              ...product,
+              sync_id: tempProductSyncId,
+            },
+            operation: 'create'
+          });
           console.log('[suppliersController] ✅ syncSupplierProduct completado');
           return {
             ...product,
@@ -101,7 +105,8 @@ class SuppliersController {
       
       // Luego sincronizar el proveedor
       console.log('[suppliersController] 🔵 LLAMANDO syncProvider');
-      syncProvider(entry, 'create');
+      // Ensure provider shape expected by useSync
+      syncProvider({ provider: entry }, 'create');
       console.log('[suppliersController] ✅ syncProvider ejecutado');
 
       const localId = await ctrl.addEntry({ entry });
@@ -152,17 +157,21 @@ class SuppliersController {
       };
 
       const { syncProvider, syncSupplierProduct } = useSync();
-      syncProvider(entry, 'create');
+      // Ensure provider shape expected by useSync
+      syncProvider({ provider: entry }, 'create');
 
       // Update products with sync_id before saving to IndexedDB
       if (entry.products && entry.products.length > 0) {
         entry.products = entry.products.map((product: Product) => {
           const tempProductSyncId = `temp_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
           syncSupplierProduct({
-            supplierId: entry.sync_id,
-            ...product,
-            sync_id: tempProductSyncId,
-          }, 'create');
+            product: {
+              supplierId: entry.sync_id,
+              ...product,
+              sync_id: tempProductSyncId,
+            },
+            operation: 'create'
+          });
           return {
             ...product,
             sync_id: tempProductSyncId,
@@ -200,7 +209,8 @@ class SuppliersController {
 
       if (supplier) {
         const { syncProvider } = useSync();
-        syncProvider(supplier, 'delete');
+        // Ensure provider is passed as an object with `provider` prop
+        syncProvider({ provider: supplier }, 'delete');
       }
     } catch (e) {
       store.error = e as Error;
@@ -273,12 +283,20 @@ class SuppliersController {
 
   getSuppliers() {
     const store = this.getStore();
+    // If the store exposes a ref, return its inner value (array); otherwise return as-is
+    try {
+      if (store && store.suppliers && typeof store.suppliers === 'object' && 'value' in store.suppliers) {
+        return (store.suppliers as any).value;
+      }
+    } catch (_e) {
+      // fallback
+    }
     return store.suppliers;
   }
 
   getLoading() {
     const store = this.getStore();
-    return store.loading;
+    return store.loading?.value ?? store.loading;
   }
 
   getError() {

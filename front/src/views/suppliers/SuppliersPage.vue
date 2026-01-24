@@ -212,19 +212,27 @@ function onDeleteAlertDidDismissSupplier() {
 
 async function onModalSaved(payload: Supplier) {
   if (!payload) return;
-  
-  if (payload.id != null) {
-    const existingSupplier = suppliers.value.find((s: Supplier) => String(s.id) === String(payload.id));
-    if (existingSupplier && existingSupplier.sync_id) {
-      payload.sync_id = existingSupplier.sync_id;
-    }
-    await suppliersController.updateSupplier({ s: payload });
-  } else {
-    await suppliersController.addSupplier({ s: payload });
-  }
 
-  cancelModal();
-  await suppliersController.listSuppliers();
+  try {
+    if (payload.id != null) {
+      const existingSupplier = suppliers.value.find((s: Supplier) => String(s.id) === String(payload.id));
+      if (existingSupplier && existingSupplier.sync_id) {
+        payload.sync_id = existingSupplier.sync_id;
+      }
+      await suppliersController.updateSupplier({ s: payload });
+    } else {
+      await suppliersController.addSupplier({ s: payload });
+    }
+  } catch (e) {
+    console.error('[SuppliersPage] onModalSaved - error saving supplier:', e);
+  } finally {
+    try {
+      cancelModal();
+      await suppliersController.listSuppliers();
+    } catch (e) {
+      console.error('[SuppliersPage] onModalSaved - error during final steps:', e);
+    }
+  }
 }
 
 async function remove(id: IDBValidKey | undefined) {
@@ -279,6 +287,15 @@ const filteredSuppliers = computed(() => {
 // Methods
 
 // Watch
+
+// Load suppliers when the page mounts
+onMounted(async () => {
+  try {
+    await suppliersController.listSuppliers();
+  } catch (e) {
+    console.error('[SuppliersPage] Error loading suppliers on mount:', e);
+  }
+});
 </script>
 
 <style scoped>

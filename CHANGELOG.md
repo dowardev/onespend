@@ -18,6 +18,34 @@
 
 ---
 
+## [v0.39.1] - 2026-01-23
+
+### Added
+
+- Add robust supplier-product sync flow: supplier products are now synced before the supplier record to ensure product sync_ids exist and are referenced correctly by provider/budget payloads.
+- Generate temporary `sync_id` values for new supplier products and suppliers to allow immediate queuing of sync operations while preserving stable identifiers.
+- Extensive debug logging across suppliers sync flow and UI components to aid troubleshooting during offline/online sync operations.
+
+### Fixed
+
+- Prevent missing/undefined payloads when calling sync functions by accepting object-shaped parameters and validating inputs.
+- Fix cases where IndexedDB had no suppliers by falling back to a full server sync and saving results to local DB.
+
+### Changed
+
+- Use object-shaped parameters for `syncProvider`, `syncSupplierProduct` and related calls to match `useSync` composable expectations.
+- Improve local UI behavior and form handling in suppliers modal: read native input values when adding products, clear inputs reliably, and ensure modal emits `saved` and `dismiss` events consistently.
+
+### Files Changed
+
+- `front/src/composables/useSync.ts` — add product sync id generation, strengthen payload shapes and add defensive logging
+- `front/src/controllers/suppliersController.ts` — sync supplier products first, generate temporary sync_ids, call `syncService.processQueue()` after save, add extensive debug logs and full-sync fallback
+- `front/src/views/suppliers/SuppliersPage.vue` — UI refinements, safer edit/open modal flow and enhanced console logging
+- `front/src/views/suppliers/modals/AddSupliersComponent.vue` — improved product add/edit logic, file-to-base64 handling and input value reading
+
+---
+
+
 ## [v0.38.0] - 2026-01-23
 
 ### Refactored
