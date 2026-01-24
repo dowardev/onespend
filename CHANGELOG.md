@@ -1,40 +1,24 @@
-## [v0.39.4] - 2026-01-24
+## [v0.39.5] - 2026-01-24
 
 ### Fixed
 
-- Harden `useSync` and related controllers/composables to accept both object-shaped and positional argument forms and to guard against undefined/null inputs; this prevents runtime TypeErrors when callers pass unexpected shapes.
-- Make account sync handling robust: safely read reactive proxies, ensure `sync_id` generation falls back to a stable generated id, and avoid writing to non-writable proxies.
-- Defensive fixes across UI components to avoid runtime errors when optional params are missing.
-
-### Added
-
-- `front/src/utils/date.ts`: `safeIntlFormat(date, locale, options)` — a safe wrapper around `Intl.DateTimeFormat` that returns an empty string for invalid inputs or on failure.
+- StatisticsController: expose `getPopovers()` and return the `modalOpen` ref from `getModalOpen()` so callers can read/write `.value`; this prevents incorrect usage and potential runtime errors.
+- Performance views (Day/Year): update callers to match the controller API (use `getPopovers()`, call `providerValue(p)`, `formatCurrency(val)`, `formatPercent(val)`, and `setSnapshots(val)` with simplified argument shapes) to avoid mismatched parameter shapes.
 
 ### Changed
 
-- Chart utilities and chart components: accept multiple call shapes for `applyNeonStyles` (either ChartData or { data, colorIndex }) and tolerate missing datasets.
-- Date utilities: `formatLocalDate` and `parseLocalDate` accept either `{ d }` or a direct date-like argument for flexibility.
-- Views: small template/prop hardening and presentation fixes to avoid rendering/runtime issues when values are null or undefined.
+- Simplify StatisticsController helper signatures to accept positional values where appropriate and return refs when components need to mutate reactive state directly.
 
 ### Files Changed
 
-- `front/src/composables/useSync.ts` — support flexible `syncAccount(...)` call shapes; defensively resolve reactive inputs and ensure reliable `sync_id` handling.
-- `front/src/controllers/accountsController.ts` — accept flexible `addAccount` parameter shapes and guard missing account data.
-- `front/src/utils/chartColors.ts` — allow multiple input shapes for `applyNeonStyles` and return empty ChartData when input is invalid.
-- `front/src/utils/date.ts` — accept alternate parameter shapes for `formatLocalDate`/`parseLocalDate` and add `safeIntlFormat`.
-- `front/src/views/statistics/cashFlow/day/DayChartComponent.vue` — use `safeIntlFormat` and accept flexible `applyNeonStyles` inputs.
-- `front/src/views/statistics/cashFlow/month/MonthChartComponent.vue` — use `safeIntlFormat` and more robust label parsing.
-- `front/src/views/statistics/cashFlow/month/MonthComponent.vue` — ensure `ion-datetime` value binding tolerates null.
-- `front/src/views/statistics/cashFlow/year/YearChartComponent.vue` — use `safeIntlFormat` for month/year formatting.
-- `front/src/views/statistics/cashFlow/year/YearComponent.vue` — presentation change for `ion-datetime` to `year`.
-- `front/src/views/statistics/performance/year/YearPerformanceComponent.vue` — use `safeIntlFormat` when building month labels.
-- `front/src/views/suppliers/accounts/AccountsPage.vue` — accept modal saved payload in a simpler shape when creating/updating accounts.
-- `front/package.json` — bump frontend package version to `0.39.4`.
+- `front/src/controllers/statisticsController.ts` — add `getPopovers()`; change `getModalOpen()` to return the ref instead of the `.value`.
+- `front/src/views/statistics/performance/day/DayPerformanceComponent.vue` — update call sites to the new controller getters and simplified parameter shapes.
+- `front/src/views/statistics/performance/year/YearPerformanceComponent.vue` — update call sites to the new controller getters and simplified parameter shapes.
+- `front/package.json` — bump frontend package version to `0.39.5`.
 
 ### Notes
 
-- No breaking changes expected; the edits increase tolerance for multiple call shapes and add safe fallbacks for formatting/undefined values.
-- Frontend package version updated to `0.39.4`.
+- No breaking changes expected; updated components now match the controller's API.
 
 ---
 
