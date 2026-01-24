@@ -354,15 +354,16 @@ function openDatePicker(params: { event: Event }) {
     showDaySummaryModal.value = true;
   }
 
-function onDateSelected(e: CustomEvent) {
-  const value = e.detail?.value;
-  if (value) {
-    const d = new Date(value);
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    budgetController.setDate({ date: `${y}-${m}-${day}` });
-    showDatePicker.value = false;
+  function onDateSelected(e: CustomEvent) {
+    const value = e.detail?.value;
+    if (value) {
+      const d = new Date(value);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      budgetController.setDate({ date: `${y}-${m}-${day}` });
+      showDatePicker.value = false;
+    }
   }
 
   function goBack() {
@@ -599,5 +600,4 @@ function onDateSelected(e: CustomEvent) {
   });
 
   // End Computed
-}
 </script>
