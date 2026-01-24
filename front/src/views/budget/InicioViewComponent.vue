@@ -3,7 +3,7 @@
     <ion-row class="ion-justify-content-center">
       <ion-col size="12" size-md="4" size-lg="6" size-xl="4">
         <ion-list class="transparent">
-          <ion-list-header>
+  <ion-list-header>
             <ion-label>Registro</ion-label>
 
             <ion-button
@@ -220,6 +220,7 @@ import AccountCards from './components/AccountCards.vue';
 import EditProviderModal from './components/EditProviderModal.vue';
 import EditEntryModal from './components/EditEntryModal.vue';
 import { computed, ref, onMounted, reactive, watch } from 'vue';
+// AccountsController not needed here (use BudgetView's test data helper)
 // End Imports
 
 // Controllers
@@ -288,6 +289,8 @@ const editEntryModalData = ref({
   entryType: 'ingreso' as 'ingreso' | 'egreso',
   name: '',
 });
+
+// dev flag removed from this component (use BudgetView's test helper)
 
 const entryItems = ref<Array<EntryGroup>>([
   { amount: 0, accountId: null },
@@ -560,6 +563,8 @@ function openAddEntryModal() {
   editEntryModalOpen.value = true;
   console.log('editEntryModalData.id after set:', editEntryModalData.value.id);
 }
+
+// sample entry helper removed from this component to avoid duplication
 
 function formatProviderAmount(provider: Provider) {
   return formatCurrencyLocal({ v: Number(provider?.estimated) || 0 });

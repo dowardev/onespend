@@ -1,3 +1,21 @@
+## [v0.39.7] - 2026-01-24
+
+### Fixed
+
+- `front/src/views/statistics/cashFlow/day/DayComponent.vue` — Improve backup selection and daily totals: robustly match backups for budget components (allow component or id/key matches), separate ingresos (income) and egresos (expenses) sums, compute previous-day comparison, and update chart labels/datasets to show previous and current day side-by-side.
+- `front/src/views/budget/InicioViewComponent.vue` — Minor cleanup: remove development helpers/flags and unused comments, fix list header indentation and stray imports/comments to reduce duplicate behavior and improve maintainability.
+
+### Files Changed
+
+- `front/src/views/statistics/cashFlow/day/DayComponent.vue` — backup matching, entry aggregation and chart data improvements.
+- `front/src/views/budget/InicioViewComponent.vue` — small code cleanup and comment removal.
+
+### Notes
+
+- Patch-level frontend fixes and refactors; no breaking changes expected. Bump frontend package to `0.39.7`.
+
+---
+
 ## [v0.39.6] - 2026-01-24
 
 ### Fixed
