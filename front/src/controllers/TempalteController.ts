@@ -104,7 +104,10 @@ class TemplateController {
     };
 
     const { syncTemplate } = useSync();
-    syncTemplate(entry, template.id ? 'update' : 'create');
+    // useSync.syncTemplate expects a single params object: { template, operation }
+    // previously we were calling it with positional args which made `template` undefined
+    // inside useSync. Pass the correct shape to avoid the TypeError.
+    syncTemplate({ template: entry, operation: template.id ? 'update' : 'create' });
 
     try {
       let key: IDBValidKey;
@@ -161,7 +164,8 @@ class TemplateController {
 
       if (template) {
         const { syncTemplate } = useSync();
-        syncTemplate(template, 'delete');
+        // Pass the expected params object when requesting deletion
+        syncTemplate({ template, operation: 'delete' });
       }
 
       return true;

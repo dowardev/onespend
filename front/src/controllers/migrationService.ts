@@ -16,13 +16,20 @@ export function normalizeDateIfNeeded(params: { val: unknown }): {
   }
 }
 
-export function normalizeEntryData(params: { data: Record<string, unknown> }): {
-  newData: Record<string, unknown>;
+export function normalizeEntryData(
+  params?: { data: Record<string, unknown> } | Record<string, unknown> | null
+): {
+  newData: Record<string, unknown> | unknown;
   changed: boolean;
 } {
-  const { data } = params;
-  if (!data || typeof data !== 'object')
-    return { newData: data, changed: false };
+  // Be defensive: callers sometimes pass null/undefined (or a raw data object).
+  // Accept either { data } or the data object directly.
+  let data: unknown;
+  if (params == null) data = params;
+  else if (typeof params === 'object' && 'data' in params) data = (params as any).data;
+  else data = params;
+
+  if (!data || typeof data !== 'object') return { newData: data, changed: false };
   let changed = false;
   const clone = Object.assign({}, data);
 
