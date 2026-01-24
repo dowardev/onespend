@@ -399,12 +399,12 @@ const {
   providerValue,
   isoDate,
 } = {
-  popovers: statisticsController.getHovered(),
+  popovers: statisticsController.getPopovers(),
   hovered: statisticsController.getHovered(),
   setHover: (key: string, value: boolean) => statisticsController.setHover(key, value),
-  formatCurrency: (val: number | null | undefined) => statisticsController.formatCurrency({ params: { val } }),
-  formatPercent: (val: number | null | undefined) => statisticsController.formatPercent({ params: { val } }),
-  providerValue: (p: ProviderValue) => statisticsController.providerValue({ params: { p } }),
+  formatCurrency: (val: number | null | undefined) => statisticsController.formatCurrency(val),
+  formatPercent: (val: number | null | undefined) => statisticsController.formatPercent(val),
+  providerValue: (p: ProviderValue) => statisticsController.providerValue(p),
   isoDate: (d: Date) => statisticsController.isoDate({ d }),
 };
 

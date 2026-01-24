@@ -437,13 +437,13 @@ const {
   formatCurrency: sharedFormatCurrency,
   formatPercent: sharedFormatPercent,
 } = {
-  popovers: statisticsController.getHovered(),
+  popovers: statisticsController.getPopovers(),
   hovered: statisticsController.getHovered(),
   setHover: (key: string, value: boolean) => statisticsController.setHover(key, value),
   isoDate: (d: Date) => statisticsController.isoDate({ d }),
-  providerValue: (p: ProviderValue) => statisticsController.providerValue({ params: { p } }),
-  formatCurrency: (val: number | null | undefined) => statisticsController.formatCurrency({ params: { val } }),
-  formatPercent: (val: number | null | undefined) => statisticsController.formatPercent({ params: { val } }),
+  providerValue: (p: ProviderValue) => statisticsController.providerValue(p),
+  formatCurrency: (val: number | null | undefined) => statisticsController.formatCurrency(val),
+  formatPercent: (val: number | null | undefined) => statisticsController.formatPercent(val),
 };
 
 // Shared snapshots & modal state (extracted to StatisticsController)
@@ -454,7 +454,7 @@ const {
 } = {
   snapshots: statisticsController.getSnapshots(),
   modalOpen: statisticsController.getModalOpen(),
-  setSnapshots: (val: Snapshots) => statisticsController.setSnapshots({ params: { val } }),
+  setSnapshots: (val: Snapshots) => statisticsController.setSnapshots(val),
 };
 const dayOffset = ref<number>(0);
 const dailyProfit = ref<number>(0);

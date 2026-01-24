@@ -69,6 +69,10 @@ class StatisticsController {
     return this.hovered;
   }
 
+  getPopovers() {
+    return this.popovers;
+  }
+
   isoDate(params: { d: Date }) {
     const { d } = params;
     return formatLocalDate({ d });
@@ -110,8 +114,9 @@ class StatisticsController {
     return String(Math.round(n));
   }
 
+  // Return the ref so callers can read/write `.value`
   getModalOpen() {
-    return this.modalOpen.value;
+    return this.modalOpen;
   }
 
   setModalOpen(value: boolean) {
