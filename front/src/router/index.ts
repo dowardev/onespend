@@ -34,6 +34,61 @@ const routes: Array<RouteRecordRaw> = [
     component: HomePage,
   },
   {
+    path: '/budget',
+    name: 'BudgetView',
+    component: BudgetView,
+  },
+  {
+    path: '/statistics',
+    name: 'StatisticsPage',
+    component: StatisticsPage,
+  },
+  {
+    path: '/suppliers',
+    name: 'SuppliersPage',
+    component: SuppliersPage,
+  },
+  {
+    path: '/accounts',
+    name: 'AccountsPage',
+    component: AccountsPage,
+  },
+  {
+    path: '/templates',
+    name: 'TemplatesView',
+    component: TemplatesView,
+  },
+  {
+    path: '/sync',
+    name: 'SyncView',
+    component: SyncView,
+  },
+  {
+    path: '/admin/personalization',
+    name: 'PersonalizationPage',
+    component: PersonalizationPage,
+  },
+  {
+    path: '/admin/maintenance',
+    name: 'MaintenancePage',
+    component: MaintenancePage,
+  },
+  {
+    path: '/admin/maintenance/dates',
+    name: 'MigrateDates',
+    component: MigrateDates,
+  },
+  {
+    path: '/admin/maintenance/entries',
+    name: 'MigrateEntries',
+    component: MigrateEntries,
+  },
+  {
+    path: '/admin/maintenance/statistics-fields',
+    name: 'StatisticsConfigPage',
+    component: StatisticsConfigPage,
+  },
+  {
     path: '/login',
     name: 'Login',
     component: LoginView,
