@@ -1,3 +1,36 @@
+## [v0.40.2] - 2026-01-26
+
+### Features
+- Add comprehensive performance testing framework for validating Phase 1 optimizations
+- Implement interactive performance test dashboard at `/test/performance`
+- Add performance monitoring utilities with memory tracking, timing measurements, and cloning comparisons
+- Create detailed performance test report template for documentation
+
+### Performance
+- Add performance monitoring utilities for memory usage tracking and timing measurements
+- Implement JSON cloning performance comparison between JSON.parse(JSON.stringify()) and structuredClone
+- Add image compression testing functionality to validate optimization effectiveness
+- Include DOM memory impact testing for keep-contents-mounted removal validation
+
+### Added
+- **PerformanceTestPage.vue** - Interactive test interface with real-time monitoring
+- **performanceMonitor.ts** - Performance monitoring utilities with comprehensive test suite
+- **PERFORMANCE_TEST_REPORT.md** - Documentation template for test results and expected improvements
+
+### Changed
+- Add performance test navigation item to MainMenu with speedometer icon
+- Remove virtual scrolling from AccountCards and ProvidersSummary components (reverting to standard v-for)
+- Update router configuration to include performance test route
+- Register route moved from `/register` to `/auth/register` for better organization
+
+### Test Coverage
+- Memory usage testing with before/after operation comparisons
+- JSON cloning performance testing with configurable iterations
+- Image compression validation with size reduction analysis
+- Real-time memory status display with MB formatting
+
+---
+
 ## [v0.40.1] - 2026-01-26
 
 ### Performance

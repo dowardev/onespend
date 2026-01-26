@@ -10,18 +10,14 @@
 
     <div class="list-content">
       <template v-if="accounts.length > 0">
-        <ion-virtual-scroll
-          :items="accounts"
-          :approx-item-height="80"
-          key-property="id"
+        <ion-item
+          v-for="acc in accounts"
+          :key="acc.id"
+          class="transparent"
+          lines="full"
+          :button="acc.id != null"
+          @click="acc.id != null && edit(acc)"
         >
-          <template #default="{ item: acc }">
-            <ion-item
-              class="transparent"
-              lines="full"
-              :button="acc.id != null"
-              @click="acc.id != null && edit(acc)"
-            >
           <ion-label>
             <h2>{{ acc.name }}</h2>
             <p>Inicial: {{ formatCurrency(acc.initialBalance) }}</p>
@@ -38,16 +34,15 @@
             </p>
           </ion-label>
 
-              <div slot="end" class="chart-wrapper">
-                <AccountBarChart
-                  v-if="acc.ingresos > 0 || acc.egresos > 0"
-                  :ingresos="acc.ingresos"
-                  :egresos="acc.egresos"
-                />
-              </div>
-            </ion-item>
-          </template>
-        </ion-virtual-scroll>
+          <div slot="end" class="chart-wrapper">
+            <AccountBarChart
+              v-if="acc.ingresos > 0 || acc.egresos > 0"
+              :ingresos="acc.ingresos"
+              :egresos="acc.egresos"
+            />
+          </div>
+        </ion-item>
+      </template>
 
       <template v-else>
         <ion-item lines="none">

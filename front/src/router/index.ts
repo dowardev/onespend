@@ -16,6 +16,7 @@ const PersonalizationPage = () => import('@/views/admin/PersonalizationPage.vue'
 const SyncView = () => import('@/views/sync/SyncView.vue');
 const LoginView = () => import('../views/auth/LoginView.vue');
 const RegisterView = () => import('../views/auth/RegisterView.vue');
+const PerformanceTestPage = () => import('../views/test/PerformanceTestPage.vue');
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -33,80 +34,14 @@ const routes: Array<RouteRecordRaw> = [
     component: LoginView,
   },
   {
-    path: '/register',
+    path: '/auth/register',
     name: 'Register',
     component: RegisterView,
   },
   {
-    path: '/budget',
-    name: 'Budget',
-    component: BudgetView,
-  },
-  {
-    path: '/templates',
-    name: 'Templates',
-    component: TemplatesView,
-  },
-  {
-    path: '/suppliers',
-    name: 'SuppliersPage',
-    component: SuppliersPage,
-  },
-  {
-    path: '/suppliers/accounts',
-    name: 'SuppliersAccounts',
-    component: AccountsPage,
-  },
-  {
-    path: '/admin/maintenance',
-    name: 'MaintenancePage',
-    component: MaintenancePage,
-  },
-  {
-    path: '/admin/maintenance/migrate-dates',
-    name: 'MigrateDates',
-    component: MigrateDates,
-  },
-  {
-    path: '/admin/maintenance/migrate-entries',
-    name: 'MigrateEntries',
-    component: MigrateEntries,
-  },
-  {
-    path: '/admin/personalization',
-    name: 'PersonalizationPage',
-    component: PersonalizationPage,
-  },
-  {
-    path: '/sync',
-    name: 'Sync',
-    component: SyncView,
-  },
-  {
-    path: '/admin/migrate-dates',
-    redirect: '/admin/maintenance/migrate-dates',
-  },
-  {
-    path: '/statistics',
-    name: 'Statistics',
-    component: StatisticsPage,
-    children: [
-      {
-        path: 'cash-flow',
-        name: 'StatisticsCashFlow',
-        component: StatisticsPage,
-      },
-      {
-        path: 'performance',
-        name: 'StatisticsPerformance',
-        component: StatisticsPage,
-      },
-      {
-        path: 'config',
-        name: 'StatisticsConfigPage',
-        component: StatisticsConfigPage,
-      },
-    ],
+    path: '/test/performance',
+    name: 'PerformanceTest',
+    component: PerformanceTestPage,
   },
 ];
 
