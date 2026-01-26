@@ -1,5 +1,8 @@
 <template>
   <ion-app>
+    <!-- DOM Cleanup Component (invisible) -->
+    <DOMCleanupComponent />
+    
     <ion-split-pane when="(min-width: 992px)" content-id="main-content">
       <MainMenu
         ref="menuRef"
@@ -36,6 +39,7 @@ import {
 import { onMounted, ref, reactive } from 'vue';
 import { useRouter } from 'vue-router';
 import MainMenu from '@/components/MainMenu.vue';
+import DOMCleanupComponent from '@/components/DOMCleanupComponent.vue';
 import {
   needsNormalizeCheck,
   migrateNormalizeBackupDates,
@@ -97,20 +101,26 @@ async function applyTheme() {
   const theme = await systemController.getTheme();
   const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
-  document.body.classList.remove(
-    'dark',
-    'catppuccin-latte-maroon',
-    'catppuccin-macchiato-maroon'
-  );
+  if (document.body) {
+    document.body.classList.remove(
+      'dark',
+      'catppuccin-latte-maroon',
+      'catppuccin-macchiato-maroon'
+    );
+  }
 
   if (
     theme === 'catppuccin-latte-maroon' ||
     theme === 'catppuccin-macchiato-maroon'
   ) {
-    document.body.classList.add(theme);
+    if (document.body) {
+      document.body.classList.add(theme);
+    }
   } else {
     const isDark = theme === 'dark' || (theme === 'auto' && prefersDark);
-    document.body.classList.toggle('dark', isDark);
+    if (document.body) {
+      document.body.classList.toggle('dark', isDark);
+    }
   }
 }
 
@@ -123,7 +133,9 @@ function setupThemeListener() {
         const isDark = window.matchMedia(
           '(prefers-color-scheme: dark)'
         ).matches;
-        document.body.classList.toggle('dark', isDark);
+        if (document.body) {
+          document.body.classList.toggle('dark', isDark);
+        }
       }
     });
 }

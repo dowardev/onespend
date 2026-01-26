@@ -1,5 +1,6 @@
 import { createRouter, createWebHashHistory } from '@ionic/vue-router';
 import { RouteRecordRaw } from 'vue-router';
+import { setupNavigationCleanup, removeTemporaryElements } from '@/utils/domCleanup';
 // Lazy loaded components for better code splitting
 const HomePage = () => import('../views/HomePage.vue');
 const BudgetView = () => import('../views/budget/BudgetView.vue');
@@ -38,16 +39,18 @@ const routes: Array<RouteRecordRaw> = [
     path: '/statistics',
     name: 'StatisticsPage',
     component: StatisticsPage,
-  },
-  {
-    path: '/statistics/cash-flow',
-    name: 'StatisticsCashFlow',
-    component: CashFlowPage,
-  },
-  {
-    path: '/statistics/performance',
-    name: 'StatisticsPerformance',
-    component: PerformancePage,
+    children: [
+      {
+        path: 'cash-flow',
+        name: 'StatisticsCashFlow',
+        component: CashFlowPage,
+      },
+      {
+        path: 'performance',
+        name: 'StatisticsPerformance',
+        component: PerformancePage,
+      },
+    ],
   },
   {
     path: '/suppliers',
@@ -116,19 +119,42 @@ const router = createRouter({
   routes,
 });
 
+// Setup automatic cleanup on route navigation
+setupNavigationCleanup(router);
+
+// Additional cleanup for performance test route
+router.beforeEach((to, from, next) => {
+  // Clean up temporary elements on every navigation
+  removeTemporaryElements();
+  
+  // Additional cleanup when leaving performance test
+  if (from.path === '/test/performance') {
+    setTimeout(() => {
+      removeTemporaryElements();
+    }, 100); // Delay to ensure cleanup after route change
+  }
+  
+  next();
+});
+
 // Prefetch critical routes for better performance
 router.beforeResolve(async (to, from) => {
+  // Disable prefetching to prevent component contamination
   // Only prefetch on production builds
   if (import.meta.env.DEV) return;
 
-  // Define critical routes to prefetch
+  // Define critical routes to prefetch (excluding statistics to prevent issues)
   const criticalRoutes = [
     'HomePage',
     'BudgetView',
-    'StatisticsPage',
     'AccountsPage',
     'TemplatesView',
   ];
+
+  // Add safety check to prevent prefetching statistics routes
+  if (String(to.name).includes('Statistics') || String(to.name).includes('Performance')) {
+    return;
+  }
 
   // Prefetch if navigating to these routes
   if (criticalRoutes.includes(String(to.name))) {

@@ -16,11 +16,9 @@
       </ion-toolbar>
     </ion-header>
 
-    <ion-content>
+    <ion-content class="statistics-content">
       <ion-card class="shadow1 main-card-content">
-        <CashFlowComponent v-if="$route.name == 'StatisticsCashFlow'" />
-
-        <PerformancePage v-if="$route.name == 'StatisticsPerformance'" />
+        <router-view />
       </ion-card>
     </ion-content>
   </ion-page>
@@ -38,9 +36,8 @@ import {
   IonTitle,
   IonToolbar,
 } from '@ionic/vue';
-import { computed } from 'vue';
-import CashFlowComponent from '@/views/statistics/cashFlow/CashFlow.vue';
-import PerformancePage from '@/views/statistics/performance/PerformancePage.vue';
+import { computed, onBeforeUnmount } from 'vue';
+
 import { settingsOutline } from 'ionicons/icons';
 // End Imports
 
@@ -56,6 +53,26 @@ import systemController from '@/controllers/systemConfigController';
 const designMode = computed(() => systemController.getDesignMode());
 
 // End Computed
+
+// Life cycle
+onBeforeUnmount(() => {
+  // Clean up any potential DOM contamination
+  const testElements = document.querySelectorAll('[data-test-container], [data-test-element]');
+  testElements.forEach(element => {
+    if (element.parentNode) {
+      element.parentNode.removeChild(element);
+    }
+  });
+  
+  // Clean up any performance test content that might have leaked
+  const performanceElements = document.querySelectorAll('.performance-test, .test-results, [data-v-fa7b0ac9]');
+  performanceElements.forEach(element => {
+    if (element.parentNode && element.closest('.statistics-content') === null) {
+      element.parentNode.removeChild(element);
+    }
+  });
+});
+// End Life cycle
 </script>
 
 <style scoped></style>

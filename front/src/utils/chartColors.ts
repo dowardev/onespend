@@ -1,4 +1,5 @@
 import type { ChartData } from 'chart.js';
+import { registerCleanup } from './domCleanup';
 
 // Use Ionic theme colors (CSS variables) for success/danger
 // We rely on the theme providing both the RGB var (e.g. --ion-color-success-rgb)
@@ -85,11 +86,29 @@ function resolveColorRgb(varNameRgb: string, varNameHex: string, fallbackHex: st
     if (typeof document !== 'undefined' && document.createElement) {
       const el = document.createElement('span');
       el.style.display = 'none';
+      el.style.position = 'absolute';
+      el.style.left = '-9999px';
+      el.style.visibility = 'hidden';
       // use var() form for the property
       el.style.color = `var(${varNameHex})`;
-      document.documentElement.appendChild(el);
+      el.setAttribute('data-chart-colors-temp', 'true');
+      
+      // Use document.body instead of documentElement for better isolation
+      document.body.appendChild(el);
       const computed = getComputedStyle(el).color;
-      document.documentElement.removeChild(el);
+      
+      // Register cleanup task
+      registerCleanup(`chart-colors-${varNameHex}`, () => {
+        if (el.parentNode) {
+          el.parentNode.removeChild(el);
+        }
+      }, el);
+      
+      // Immediate cleanup
+      if (el.parentNode) {
+        el.parentNode.removeChild(el);
+      }
+      
       const forced = rgbStringToRgb(computed);
       if (forced) return forced;
       const fromHex2 = hexToRgb(computed);
