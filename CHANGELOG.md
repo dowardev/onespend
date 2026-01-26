@@ -1,3 +1,29 @@
+## [v0.40.3] - 2026-01-26
+
+### Performance
+- Optimize daySummary calculations in BudgetView with single-pass algorithm replacing multiple filter/reduce operations
+- Improve memory management by adding proper event listener cleanup in main.ts
+- Add resize listener cleanup support to prevent memory leaks on app unmount
+
+### Features  
+- Add Progressive Web App (PWA) support with service worker and offline capabilities
+- Configure PWA manifest with app metadata, icons, and theme colors
+- Implement runtime caching strategies for images and static resources
+- Add build optimization with terser minification and console removal in production
+
+### Refactoring
+- Replace multiple array iterations with single-loop processing in daySummary computed property
+- Add proper cleanup methods for event listeners to improve memory management
+- Restructure Vite configuration to include PWA plugin and optimization settings
+
+### Files Changed
+- `front/src/main.ts` — Add resize listener cleanup and memory management improvements
+- `front/src/views/budget/BudgetView.vue` — Optimize daySummary with single-pass calculations
+- `front/vite.config.ts` — Add PWA configuration and build optimizations
+- `front/package.json` — Bump version to 0.40.3
+
+---
+
 ## [v0.40.2] - 2026-01-26
 
 ### Features
