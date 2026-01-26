@@ -99,30 +99,59 @@ export const useBudgetStore = defineStore('budget', () => {
     timestamp: number;
   } | null>(null);
 
+  // Optimized single-pass financial calculations
+  const financialSummary = computed(() => {
+    let ingresos = 0,
+      egresos = 0,
+      ingresosEfectivo = 0,
+      ingresosTarjeta = 0,
+      egresosEfectivo = 0,
+      egresosTarjeta = 0;
+    let netTotal = 0;
+
+    for (const entry of entries) {
+      const amount = Number(entry.amount || 0);
+      netTotal += entry.entryType === 'egreso' ? -amount : amount;
+
+      if (entry.entryType === 'ingreso') {
+        ingresos += amount;
+        if (entry.paymentType === 'cash') {
+          ingresosEfectivo += amount;
+        } else if (entry.paymentType === 'digital') {
+          ingresosTarjeta += amount;
+        }
+      } else {
+        egresos += amount;
+        if (entry.paymentType === 'cash') {
+          egresosEfectivo += amount;
+        } else if (entry.paymentType === 'digital') {
+          egresosTarjeta += amount;
+        }
+      }
+    }
+
+    return {
+      ingresos,
+      egresos,
+      netTotal,
+      ingresosEfectivo,
+      ingresosTarjeta,
+      egresosEfectivo,
+      egresosTarjeta,
+    };
+  });
+
   const ingresos = computed(() =>
     entries.filter(e => e.entryType === 'ingreso')
   );
 
   const egresos = computed(() => entries.filter(e => e.entryType === 'egreso'));
 
-  const totalIngresos = computed(() =>
-    ingresos.value.reduce((s, i) => s + Number(i.amount || 0), 0)
-  );
+  const totalIngresos = computed(() => financialSummary.value.ingresos);
 
-  const totalEgresos = computed(() =>
-    egresos.value.reduce((s, i) => s + Number(i.amount || 0), 0)
-  );
+  const totalEgresos = computed(() => financialSummary.value.egresos);
 
-  const netTotal = computed(() =>
-    entries.reduce(
-      (s, i) =>
-        s +
-        (i.entryType === 'egreso'
-          ? -Number(i.amount || 0)
-          : Number(i.amount || 0)),
-      0
-    )
-  );
+  const netTotal = computed(() => financialSummary.value.netTotal);
 
   const totalEfectivo = computed(() =>
     providers.reduce((s, p) => s + Number(p.efectivo || 0), 0)
@@ -145,49 +174,19 @@ export const useBudgetStore = defineStore('budget', () => {
 
   const faltante = computed(() => netTotal.value - totalEstimacion.value);
 
-  const ingresosEfectivo = computed(() =>
-    entries.reduce(
-      (s, i) =>
-        s +
-        (i.paymentType === 'cash' && i.entryType === 'ingreso'
-          ? Number(i.amount || 0)
-          : 0),
-      0
-    )
+  const ingresosEfectivo = computed(
+    () => financialSummary.value.ingresosEfectivo
   );
 
-  const ingresosTarjeta = computed(() =>
-    entries.reduce(
-      (s, i) =>
-        s +
-        (i.paymentType === 'digital' && i.entryType === 'ingreso'
-          ? Number(i.amount || 0)
-          : 0),
-      0
-    )
+  const ingresosTarjeta = computed(
+    () => financialSummary.value.ingresosTarjeta
   );
 
-  const egresosEfectivo = computed(() =>
-    entries.reduce(
-      (s, i) =>
-        s +
-        (i.paymentType === 'cash' && i.entryType === 'egreso'
-          ? Number(i.amount || 0)
-          : 0),
-      0
-    )
+  const egresosEfectivo = computed(
+    () => financialSummary.value.egresosEfectivo
   );
 
-  const egresosTarjeta = computed(() =>
-    entries.reduce(
-      (s, i) =>
-        s +
-        (i.paymentType === 'digital' && i.entryType === 'egreso'
-          ? Number(i.amount || 0)
-          : 0),
-      0
-    )
-  );
+  const egresosTarjeta = computed(() => financialSummary.value.egresosTarjeta);
 
   const providerIdsWithEntries = computed(() => {
     const ids = new Set<string | number>();
@@ -288,11 +287,16 @@ export const useBudgetStore = defineStore('budget', () => {
     }
 
     if (changes.name !== undefined) updatedProvider.name = String(changes.name);
-    if (changes.notes !== undefined) updatedProvider.notes = String(changes.notes);
-    if (changes.visited !== undefined) updatedProvider.visited = !!changes.visited;
-    if (changes._justAdded !== undefined) updatedProvider._justAdded = changes._justAdded;
-    if (changes._supplierId !== undefined) updatedProvider._supplierId = changes._supplierId;
-    if (changes._supplierName !== undefined) updatedProvider._supplierName = changes._supplierName;
+    if (changes.notes !== undefined)
+      updatedProvider.notes = String(changes.notes);
+    if (changes.visited !== undefined)
+      updatedProvider.visited = !!changes.visited;
+    if (changes._justAdded !== undefined)
+      updatedProvider._justAdded = changes._justAdded;
+    if (changes._supplierId !== undefined)
+      updatedProvider._supplierId = changes._supplierId;
+    if (changes._supplierName !== undefined)
+      updatedProvider._supplierName = changes._supplierName;
 
     providers.splice(idx, 1, updatedProvider);
   }
@@ -325,7 +329,9 @@ export const useBudgetStore = defineStore('budget', () => {
       if (provider._supplierId) {
         const supplierSyncId = provider._supplierId;
         const matchingSupplier = suppliers.find(
-          s => String(s.sync_id) === String(supplierSyncId) || String(s.id) === String(supplierSyncId)
+          s =>
+            String(s.sync_id) === String(supplierSyncId) ||
+            String(s.id) === String(supplierSyncId)
         );
 
         if (matchingSupplier) {
@@ -337,13 +343,18 @@ export const useBudgetStore = defineStore('budget', () => {
             needsUpdate = true;
           }
 
-          if (matchingSupplier.products && matchingSupplier.products.length > 0) {
+          if (
+            matchingSupplier.products &&
+            matchingSupplier.products.length > 0
+          ) {
             const serverProducts = matchingSupplier.products;
             const localProducts = provider._supplierProducts || [];
 
-            const syncedProducts = serverProducts.map((serverProduct) => {
+            const syncedProducts = serverProducts.map(serverProduct => {
               const localMatch = localProducts.find(
-                (lp) => lp.name === serverProduct.name && lp.price === serverProduct.price
+                lp =>
+                  lp.name === serverProduct.name &&
+                  lp.price === serverProduct.price
               );
               return {
                 ...serverProduct,
