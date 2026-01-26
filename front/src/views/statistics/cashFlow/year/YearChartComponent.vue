@@ -58,7 +58,7 @@ const safeChartData = shallowRef<ChartData<'bar'>>(
 );
 const safeChartOptions = shallowRef<ChartOptions<'bar'>>(
   props.chartOptions
-    ? JSON.parse(JSON.stringify(props.chartOptions))
+    ? (structuredClone ? structuredClone(props.chartOptions) : JSON.parse(JSON.stringify(props.chartOptions)))
     : ({} as ChartOptions<'bar'>)
 );
 // end vars
@@ -67,20 +67,8 @@ const safeChartOptions = shallowRef<ChartOptions<'bar'>>(
 watch(
   () => props.chartData,
   v => {
-    const cloned = v
-      ? JSON.parse(JSON.stringify(v))
-      : { labels: [], datasets: [] };
-    cloned.labels = (cloned.labels || []).map(translateDayLabel);
-    safeChartData.value = applyNeonStyles(cloned, props.colorIndex);
-  },
-  { immediate: true, deep: true }
-);
-
-watch(
-  () => props.chartOptions,
-  v => {
-    safeChartOptions.value = v
-      ? JSON.parse(JSON.stringify(v))
+const cloned = v
+      ? (structuredClone ? structuredClone(v) : JSON.parse(JSON.stringify(v)))
       : ({} as ChartOptions<'bar'>);
   },
   { immediate: true, deep: true }

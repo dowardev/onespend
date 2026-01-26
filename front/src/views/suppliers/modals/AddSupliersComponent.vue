@@ -271,8 +271,54 @@ const selectedId = computed(() => props.supplier?.id ?? null);
 // end vars
 const fileInput = ref<HTMLInputElement | null>(null);
 
-// file helpers
+// file helpers with compression
+async function compressImage(file: File, quality = 0.6): Promise<string> {
+  return await new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d')!;
+      
+      // Reduce dimensions for better compression
+      const maxSize = 1024;
+      let { width, height } = img;
+      
+      if (width > height && width > maxSize) {
+        height = (height * maxSize) / width;
+        width = maxSize;
+      } else if (height > maxSize) {
+        width = (width * maxSize) / height;
+        height = maxSize;
+      }
+      
+      canvas.width = width;
+      canvas.height = height;
+      ctx.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = () => reject(new Error('Failed to compress image'));
+    img.src = URL.createObjectURL(file);
+  });
+}
+
 async function fileToBase64(file: File): Promise<string> {
+  // Compress image before converting to Base64
+  if (file.type.startsWith('image/')) {
+    try {
+      return await compressImage(file, 0.6); // 60% quality
+    } catch (err) {
+      console.warn('Image compression failed, using original:', err);
+      // Fallback to original method
+      return await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result));
+        reader.onerror = () => reject(new Error('Failed to read file'));
+        reader.readAsDataURL(file);
+      });
+    }
+  }
+  
+  // For non-image files, use original method
   return await new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result));
@@ -309,7 +355,7 @@ watch(
   s => {
     if (s) {
       form.name = s.name || '';
-      form.products = s.products ? JSON.parse(JSON.stringify(s.products)) : [];
+      form.products = s.products ? (structuredClone ? structuredClone(s.products) : JSON.parse(JSON.stringify(s.products))) : [];
       showNewProductFields.value = !form.products || form.products.length === 0;
     } else {
       form.name = '';

@@ -161,7 +161,6 @@
       <ion-popover
         :is-open="showDatePicker"
         :event="datePickerEvent"
-        :keep-contents-mounted="true"
         @did-dismiss="showDatePicker = false"
       >
         <ion-content class="centered-popover">
@@ -187,7 +186,6 @@
       <ion-popover
         :is-open="showMoreOptions"
         :event="moreOptionsEvent"
-        :keep-contents-mounted="true"
         :dismiss-on-select="true"
         @did-dismiss="showMoreOptions = false"
       >

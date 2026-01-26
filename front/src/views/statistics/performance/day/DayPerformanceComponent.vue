@@ -338,7 +338,6 @@
   <ion-popover
     :is-open="popovers.mainDate.open"
     :event="popovers.mainDate.event"
-    :keep-contents-mounted="true"
     @did-dismiss="popovers.mainDate.open = false"
   >
     <ion-content>
@@ -878,7 +877,7 @@ async function loadDayData(dateParam?: string | Date) {
           ingresosSum,
           proveedoresSum,
           newData,
-          chartData: JSON.parse(JSON.stringify(chartData)),
+          chartData: structuredClone ? structuredClone(chartData) : JSON.parse(JSON.stringify(chartData)),
         });
       } catch (_e) {
         // noop

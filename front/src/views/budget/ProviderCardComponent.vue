@@ -25,7 +25,6 @@
   <ion-popover
     :is-open="popovers.open"
     :event="popovers.event"
-    keep-contents-mounted="true"
     @did-dismiss="popovers.open = false"
   >
     <ion-content>
@@ -48,7 +47,6 @@
   <ion-popover
     :is-open="optionsPopover.open"
     :event="optionsPopover.event"
-    keep-contents-mounted="true"
     @did-dismiss="closeOptionsPopover"
   >
     <ion-content>

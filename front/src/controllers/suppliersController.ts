@@ -52,7 +52,7 @@ class SuppliersController {
       const ctrl = this.getController();
       const now = Date.now();
 
-      const clean = JSON.parse(JSON.stringify(s)) as Omit<Supplier, 'id' | 'createdAt' | 'updatedAt'>;
+      const clean = structuredClone ? structuredClone(s) as Omit<Supplier, 'id' | 'createdAt' | 'updatedAt'> : JSON.parse(JSON.stringify(s)) as Omit<Supplier, 'id' | 'createdAt' | 'updatedAt'>;
 
       const entry: Supplier = {
         ...clean,
@@ -147,7 +147,7 @@ class SuppliersController {
     try {
       const ctrl = this.getController();
 
-      const clean = JSON.parse(JSON.stringify(s)) as Supplier;
+      const clean = structuredClone ? structuredClone(s) as Supplier : JSON.parse(JSON.stringify(s)) as Supplier;
 
       const entry: Supplier = {
         ...clean,

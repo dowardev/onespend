@@ -23,18 +23,24 @@
 
           <div class="list-content">
             <template v-if="providers.length">
-              <ProviderCardComponent
-                v-for="p in providers"
-                :key="p.id"
-                :provider="p"
-                :has-products="false"
-                :is-closed="isDayClosed"
-                :is-disabled="providerIdsWithEntries.has(p.id)"
-                @update-provider="handleUpdateProvider"
-                @confirm-remove-proveedor="confirmRemoveProveedor"
-                @open-notes-modal="handleOpenNotesModal"
-                @open-edit-modal="openEditProviderModal"
-              />
+              <ion-virtual-scroll
+                :items="providers"
+                :approx-item-height="120"
+                key-property="id"
+              >
+                <template #default="{ item: p }">
+                  <ProviderCardComponent
+                    :provider="p"
+                    :has-products="false"
+                    :is-closed="isDayClosed"
+                    :is-disabled="providerIdsWithEntries.has(p.id)"
+                    @update-provider="handleUpdateProvider"
+                    @confirm-remove-proveedor="confirmRemoveProveedor"
+                    @open-notes-modal="handleOpenNotesModal"
+                    @open-edit-modal="openEditProviderModal"
+                  />
+                </template>
+              </ion-virtual-scroll>
             </template>
 
             <template v-else>
@@ -308,7 +314,7 @@ async function openEditProviderModal(params: { provider: ProviderData }) {
     _supplierId: fullSupplier?.sync_id || supplierSyncId || fullSupplier?.id,
     _supplierName: providerData._supplierName || providerData.name,
     products: fullSupplier?.products || [],
-    _supplier: fullSupplier ? JSON.parse(JSON.stringify(fullSupplier)) : undefined,
+    _supplier: fullSupplier ? (structuredClone ? structuredClone(fullSupplier) : JSON.parse(JSON.stringify(fullSupplier))) : undefined,
   };
 
   showAddProviderModal.value = true;
@@ -334,7 +340,7 @@ function handleProviderSaved(payload: {
         _supplierId: payload.providerId,
         _supplierName: payload.providerName,
         products: payload.products,
-        _supplier: editingProvider.value._supplier ? JSON.parse(JSON.stringify(editingProvider.value._supplier)) : undefined,
+        _supplier: editingProvider.value._supplier ? (structuredClone ? structuredClone(editingProvider.value._supplier) : JSON.parse(JSON.stringify(editingProvider.value._supplier))) : undefined,
       },
     });
   } else {
@@ -346,7 +352,7 @@ function handleProviderSaved(payload: {
       _supplierId: payload.providerId,
       _supplierName: payload.providerName,
       products: payload.products,
-      _supplier: editingProvider.value?._supplier ? JSON.parse(JSON.stringify(editingProvider.value._supplier)) : undefined,
+      _supplier: editingProvider.value?._supplier ? (structuredClone ? structuredClone(editingProvider.value._supplier) : JSON.parse(JSON.stringify(editingProvider.value._supplier))) : undefined,
     });
   }
   budgetController.saveData();
