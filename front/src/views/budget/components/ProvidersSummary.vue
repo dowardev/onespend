@@ -6,12 +6,16 @@
 
     <div class="list-content">
       <template v-if="accountsSummary.length > 0">
-        <ion-item
-          v-for="(acc, index) in accountsSummary"
-          :key="acc.name"
-          class="transparent"
-          :lines="index === accountsSummary.length - 1 ? 'none' : 'full'"
+        <ion-virtual-scroll
+          :items="accountsSummary"
+          :approx-item-height="80"
+          key-property="name"
         >
+          <template #default="{ item: acc, index }">
+            <ion-item
+              class="transparent"
+              :lines="index === accountsSummary.length - 1 ? 'none' : 'full'"
+            >
           <ion-label>
             <h2>{{ acc.name }}</h2>
             <p>Estimado: {{ formatCurrency(acc.total) }}</p>
@@ -40,15 +44,16 @@
             </p>
           </ion-label>
 
-          <div slot="end" class="chart-wrapper">
-            <AccountBarChart
-              v-if="acc.ingreso > 0 || acc.total > 0"
-              :ingresos="acc.ingreso"
-              :egresos="acc.total"
-            />
-          </div>
-        </ion-item>
-      </template>
+            <div slot="end" class="chart-wrapper">
+              <AccountBarChart
+                v-if="acc.ingreso > 0 || acc.total > 0"
+                :ingresos="acc.ingreso"
+                :egresos="acc.total"
+              />
+            </div>
+          </ion-item>
+        </template>
+      </ion-virtual-scroll>
 
       <template v-else>
         <ion-item lines="none">

@@ -1,3 +1,27 @@
+## [v0.40.1] - 2026-01-26
+
+### Performance
+- Replace JSON.parse(JSON.stringify()) with structuredClone for better performance and browser compatibility
+- Add structuredClone fallback implementation for older browsers
+- Optimize object cloning across multiple components
+
+### Features
+- Implement virtual scrolling for large lists in ProvidersComponent
+- Add virtual scrolling to AccountCards component for better performance
+- Implement virtual scrolling in ProvidersSummary component
+- Add image compression functionality to AddSupliersComponent
+
+### Fixes
+- Remove deprecated keep-contents-mounted props from ion-popover components
+- Fix popover behavior in DayChartComponent, WeekChartComponent, MonthChartComponent, YearChartComponent
+- Fix popover behavior in DayPerformanceComponent, WeekPerformanceComponent, MonthPerformanceComponent, YearPerformanceComponent
+- Fix popover behavior in PeriodChartWrapper component
+
+### Refactoring
+- Clean up cloning methods in suppliersController
+- Optimize performance across statistics views
+- Improve code quality and maintainability
+
 ## [v0.40.0] - 2026-01-26
 
 ### Features

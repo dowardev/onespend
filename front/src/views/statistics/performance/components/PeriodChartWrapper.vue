@@ -24,7 +24,7 @@ const props = withDefaults(
 // safe reactive clone used for the canvas chart
 const styledChartData = shallowRef<ChartData<'bar'>>(
   props.chartData
-    ? JSON.parse(JSON.stringify(props.chartData))
+    ? (structuredClone ? structuredClone(props.chartData) : JSON.parse(JSON.stringify(props.chartData)))
     : { labels: [], datasets: [] }
 );
 
@@ -43,7 +43,7 @@ const pastelNeonColors = [
 function applyNeonStyles(data: ChartData<'bar'>): ChartData<'bar'> {
   if (!data || !data.datasets) return data;
 
-  const cloned = JSON.parse(JSON.stringify(data));
+  const cloned = structuredClone ? structuredClone(data) : JSON.parse(JSON.stringify(data));
 
   cloned.datasets = (cloned.datasets || []).map(
     (dataset: ChartDataset<'bar'>, datasetIndex: number) => {
@@ -99,12 +99,12 @@ watch(
   v => {
     try {
       const cloned = v
-        ? JSON.parse(JSON.stringify(v))
+        ? (structuredClone ? structuredClone(v) : JSON.parse(JSON.stringify(v)))
         : { labels: [], datasets: [] };
       styledChartData.value = applyNeonStyles(cloned as ChartData<'bar'>);
     } catch (_e) {
       styledChartData.value = props.chartData
-        ? JSON.parse(JSON.stringify(props.chartData))
+        ? (structuredClone ? structuredClone(props.chartData) : JSON.parse(JSON.stringify(props.chartData)))
         : { labels: [], datasets: [] };
     }
   },
