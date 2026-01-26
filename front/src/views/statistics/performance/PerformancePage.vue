@@ -21,17 +21,17 @@
 
       <!-- week -->
       <ion-col v-if="mainSegment == 'week'" size="12">
-        <WeekComponent />
+        <WeekPerformanceComponent />
       </ion-col>
 
       <!-- month -->
       <ion-col v-if="mainSegment == 'month'" size="12">
-        <MonthComponent />
+        <MonthPerformanceComponent />
       </ion-col>
 
       <!-- year -->
       <ion-col v-if="mainSegment == 'year'" size="12">
-        <YearComponent />
+        <YearPerformanceComponent />
       </ion-col>
     </ion-row>
   </ion-grid>
@@ -45,9 +45,9 @@ import { ref } from 'vue';
 
 // Components
 import DayPerformanceComponent from '@/views/statistics/performance/day/DayPerformanceComponent.vue';
-import WeekComponent from '@/views/statistics/performance/week/WeekPerformanceComponent.vue';
-import MonthComponent from '@/views/statistics/performance/month/MonthPerformanceComponent.vue';
-import YearComponent from '@/views/statistics/performance/year/YearPerformanceComponent.vue';
+import WeekPerformanceComponent from '@/views/statistics/performance/week/WeekPerformanceComponent.vue';
+import MonthPerformanceComponent from '@/views/statistics/performance/month/MonthPerformanceComponent.vue';
+import YearPerformanceComponent from '@/views/statistics/performance/year/YearPerformanceComponent.vue';
 // End Components
 
 // Vars

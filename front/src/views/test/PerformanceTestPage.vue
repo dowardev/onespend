@@ -87,7 +87,7 @@
           <div v-for="(result, index) in testResults" :key="index">
             <h3>{{ result.test }}</h3>
             <p>{{ result.result }}</p>
-            <ion-separator />
+            <div class="ion-separator" v-if="index < testResults.length - 1"></div>
           </div>
         </ion-card-content>
       </ion-card>
@@ -118,7 +118,24 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue';
+import { 
+  IonPage, 
+  IonHeader, 
+  IonToolbar, 
+  IonTitle, 
+  IonContent, 
+  IonCard, 
+  IonCardHeader, 
+  IonCardTitle, 
+  IonCardSubtitle, 
+  IonCardContent, 
+  IonItem, 
+  IonLabel, 
+  IonButton, 
+  IonNote
+} from '@ionic/vue';
 import { usePerformanceMonitoring } from '@/utils/performanceMonitor';
+import { registerCleanup, removeTemporaryElements, useDOMCleanup } from '@/utils/domCleanup';
 
 const {
   startTimer,
@@ -141,16 +158,25 @@ const memoryStatus = ref({
 
 // Update memory status periodically
 let memoryInterval: NodeJS.Timeout;
+// Use DOM cleanup utility
+const { registerTask, unregisterCleanup: unregisterTask } = useDOMCleanup();
 
 onMounted(() => {
   updateMemoryStatus();
   memoryInterval = setInterval(updateMemoryStatus, 2000);
+  
+  // Remove any existing temporary elements on mount
+  removeTemporaryElements();
 });
 
 onUnmounted(() => {
+  // Clear memory interval
   if (memoryInterval) {
     clearInterval(memoryInterval);
   }
+  
+  // Clean up all temporary elements
+  removeTemporaryElements();
 });
 
 function updateMemoryStatus() {
@@ -167,19 +193,54 @@ function formatMemory(bytes: number): string {
 }
 
 function testMemoryUsage() {
+  // Ensure document and body exist before proceeding
+  if (!document || !document.body) {
+    console.error('Document or document.body is not available');
+    return;
+  }
+
+  // Create isolated container to prevent DOM pollution
+  const testContainer = document.createElement('div');
+  testContainer.style.position = 'absolute';
+  testContainer.style.left = '-9999px';
+  testContainer.style.visibility = 'hidden';
+  testContainer.setAttribute('data-performance-test', 'container');
+  document.body.appendChild(testContainer);
+  
+  // Register cleanup task
+  registerTask('memory-test-container', () => {
+    if (testContainer.parentNode) {
+      testContainer.parentNode.removeChild(testContainer);
+    }
+  }, testContainer);
+  
   testMemoryWithDOM(() => {
-    // Simulate DOM operations that would benefit from keep-contents-mounted removal
+    // Ensure document exists before creating elements
+    if (!document) {
+      console.error('Document is not available');
+      return;
+    }
+
     const container = document.createElement('div');
+    container.setAttribute('data-test-container', 'true');
+    
     for (let i = 0; i < 100; i++) {
       const div = document.createElement('div');
       div.innerHTML = `<p>Test element ${i}</p>`;
+      div.setAttribute('data-test-element', 'true');
       container.appendChild(div);
     }
     
-    // Test cleanup
-    setTimeout(() => {
-      container.innerHTML = '';
-    }, 1000);
+    // Add to isolated container first
+    testContainer.appendChild(container);
+    
+    // Immediate cleanup instead of timeout to prevent race conditions
+    if (container.parentNode) {
+      container.parentNode.removeChild(container);
+    }
+    
+    // Clean up test container
+    unregisterTask('memory-test-container');
   });
 
   testResults.value.push({
@@ -210,6 +271,10 @@ function runJSONCloningTest() {
     test: 'JSON Cloning Performance',
     result: 'JSON cloning test completed - check console for timing comparison',
   });
+}
+
+function testJSONCloning() {
+  runJSONCloningTest();
 }
 
 function triggerImageTest() {
@@ -266,5 +331,11 @@ ion-item {
 
 .test-results p {
   margin-bottom: 16px;
+}
+
+.ion-separator {
+  height: 1px;
+  background: var(--ion-color-light);
+  margin: 16px 0;
 }
 </style>

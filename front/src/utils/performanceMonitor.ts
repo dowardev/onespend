@@ -84,6 +84,8 @@ class PerformanceMonitor {
     return new Promise((resolve) => {
       this.startTimer('original-image-size');
       const reader = new FileReader();
+      const objectURLs: string[] = []; // Track created URLs for cleanup
+      
       reader.onload = () => {
         const originalSize = String(reader.result).length;
         this.endTimer('original-image-size');
@@ -91,6 +93,9 @@ class PerformanceMonitor {
         this.startTimer('image-compression');
         
         const img = new Image();
+        const objectURL = URL.createObjectURL(file);
+        objectURLs.push(objectURL);
+        
         img.onload = () => {
           const canvas = document.createElement('canvas');
           const ctx = canvas.getContext('2d')!;
@@ -120,9 +125,31 @@ class PerformanceMonitor {
           console.log(`Compressed size: ${(compressedSize / 1024).toFixed(2)} KB`);
           console.log(`Compression ratio: ${((1 - compressedSize / originalSize) * 100).toFixed(1)}%`);
           
+          // Cleanup object URLs to prevent memory leaks
+          objectURLs.forEach(url => {
+            try {
+              URL.revokeObjectURL(url);
+            } catch (e) {
+              console.warn('Failed to revoke object URL:', e);
+            }
+          });
+          
           resolve();
         };
-        img.src = URL.createObjectURL(file);
+        
+        img.onerror = () => {
+          // Cleanup on error
+          objectURLs.forEach(url => {
+            try {
+              URL.revokeObjectURL(url);
+            } catch (e) {
+              console.warn('Failed to revoke object URL on error:', e);
+            }
+          });
+          resolve();
+        };
+        
+        img.src = objectURL;
       };
       reader.readAsDataURL(file);
     });

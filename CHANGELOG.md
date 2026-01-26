@@ -1,3 +1,27 @@
+## [v0.41.0] - 2026-01-27
+
+### 🚀 Features
+- **Performance & Memory Management**: Implemented comprehensive DOM cleanup system to prevent memory leaks and improve application performance
+- **Dynamic Router**: Added dynamic statistics router configuration for better route management and memory handling
+
+### 🔧 Improvements
+- **App.vue**: Enhanced theme switching safety with proper cleanup methods to prevent DOM element leaks
+- **Theme Management**: Improved theme switching with proper node cleanup and null checks to prevent memory leaks
+- **Chart Performance**: Optimized chart colors management with proper cleanup and null checks for better memory usage
+- **Type Safety**: Enhanced type safety across components with optional chaining and null validation
+- **Performance Tests**: Updated performance test utilities with browser performance APIs integration
+
+### 🐛 Bug Fixes
+- **Memory Leaks**: Fixed multiple memory leak issues in component lifecycle management
+- **DOM Cleanup**: Resolved DOM element accumulation in charts and theme switching
+- **Component Cleanup**: Fixed component unmounting and cleanup processes to prevent memory buildup
+
+### 📝 Technical Details
+- **New Files**: `DOMCleanupComponent.vue`, `domCleanup.ts` utility for comprehensive DOM management
+- **Router Updates**: Enhanced router structure for statistics with dynamic configuration
+- **Chart System**: Improved chart color management with proper cleanup and resource management
+- **Testing**: Enhanced performance testing capabilities with browser API integration
+
 ## [v0.40.6] - 2026-01-26
 
 ### Fixed

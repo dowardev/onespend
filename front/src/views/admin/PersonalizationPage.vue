@@ -152,6 +152,11 @@ function applyTheme(t: ThemeMode | string) {
   console.log('applyTheme called with:', t);
   const body = document.body;
 
+  if (!body) {
+    console.warn('document.body is not available');
+    return;
+  }
+
   body.classList.remove(
     'dark',
     'catppuccin-latte-maroon',
