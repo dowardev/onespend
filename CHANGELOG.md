@@ -1,3 +1,26 @@
+## [v0.40.6] - 2026-01-26
+
+### Fixed
+- Add missing router configuration for StatisticsCashFlow and StatisticsPerformance routes
+- Resolve DataCloneError in cash flow chart components by replacing structuredClone with JSON.parse(JSON.stringify())
+- Fix chart component initialization and data cloning issues across all time period views
+
+### Added
+- New routes: `/statistics/cash-flow` and `/statistics/performance` for proper navigation access
+- Router imports for CashFlowPage and PerformancePage components
+
+### Changed
+- `front/src/router/index.ts` - Add missing route definitions for statistics pages
+- `front/src/views/statistics/cashFlow/*/ChartComponent.vue` - Replace structuredClone with safe JSON cloning method in Day, Week, Month, and Year chart components
+- `front/package.json` - Update version to 0.40.6
+
+### Notes
+- Non-breaking changes that resolve navigation errors and browser compatibility issues
+- Chart components now use universally supported JSON cloning instead of structuredClone
+- Improved error handling and data cloning reliability in statistics components
+
+---
+
 ## [v0.40.5] - 2026-01-26
 
 ### Fixed

@@ -40,12 +40,12 @@ const { loadChartDependencies } = useChart();
 // vars
 const safeChartData = shallowRef<ChartData<'bar'>>(
   props.chartData
-    ? (structuredClone ? structuredClone(props.chartData) : JSON.parse(JSON.stringify(props.chartData)))
+    ? JSON.parse(JSON.stringify(props.chartData))
     : { labels: [], datasets: [] }
 );
 const safeChartOptions = shallowRef<ChartOptions<'bar'>>(
   props.chartOptions
-    ? (structuredClone ? structuredClone(props.chartOptions) : JSON.parse(JSON.stringify(props.chartOptions)))
+    ? JSON.parse(JSON.stringify(props.chartOptions))
     : ({} as ChartOptions<'bar'>)
 );
 // end vars
@@ -115,7 +115,7 @@ watch(
   () => props.chartData,
   v => {
     const cloned = v
-      ? (structuredClone ? structuredClone(v) : JSON.parse(JSON.stringify(v)))
+      ? JSON.parse(JSON.stringify(v))
       : { labels: [], datasets: [] };
     cloned.labels = (cloned.labels || []).map(l => translateDayLabel({ label: l }));
     safeChartData.value = applyNeonStyles(cloned);
@@ -134,7 +134,7 @@ watch(
   () => props.chartOptions,
   v => {
     safeChartOptions.value = v
-      ? (structuredClone ? structuredClone(v) : JSON.parse(JSON.stringify(v)))
+      ? JSON.parse(JSON.stringify(v))
       : ({} as ChartOptions<'bar'>);
   },
   { immediate: true, deep: true }
