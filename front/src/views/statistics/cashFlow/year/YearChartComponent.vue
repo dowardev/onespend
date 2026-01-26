@@ -58,7 +58,7 @@ const safeChartData = shallowRef<ChartData<'bar'>>(
 );
 const safeChartOptions = shallowRef<ChartOptions<'bar'>>(
   props.chartOptions
-    ? (structuredClone ? structuredClone(props.chartOptions) : JSON.parse(JSON.stringify(props.chartOptions)))
+    ? JSON.parse(JSON.stringify(props.chartOptions))
     : ({} as ChartOptions<'bar'>)
 );
 // end vars
@@ -68,7 +68,7 @@ watch(
   () => props.chartData,
   v => {
 const cloned = v
-      ? (structuredClone ? structuredClone(v) : JSON.parse(JSON.stringify(v)))
+      ? JSON.parse(JSON.stringify(v))
       : ({} as ChartOptions<'bar'>);
   },
   { immediate: true, deep: true }

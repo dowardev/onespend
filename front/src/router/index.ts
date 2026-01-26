@@ -16,6 +16,8 @@ const SyncView = () => import('../views/sync/SyncView.vue');
 const LoginView = () => import('../views/auth/LoginView.vue');
 const RegisterView = () => import('../views/auth/RegisterView.vue');
 const PerformanceTestPage = () => import('../views/test/PerformanceTestPage.vue');
+const CashFlowPage = () => import('../views/statistics/cashFlow/CashFlow.vue');
+const PerformancePage = () => import('../views/statistics/performance/PerformancePage.vue');
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -36,6 +38,16 @@ const routes: Array<RouteRecordRaw> = [
     path: '/statistics',
     name: 'StatisticsPage',
     component: StatisticsPage,
+  },
+  {
+    path: '/statistics/cash-flow',
+    name: 'StatisticsCashFlow',
+    component: CashFlowPage,
+  },
+  {
+    path: '/statistics/performance',
+    name: 'StatisticsPerformance',
+    component: PerformancePage,
   },
   {
     path: '/suppliers',
