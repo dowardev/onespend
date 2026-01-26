@@ -78,7 +78,18 @@ router.isReady().then(async () => {
 
   app.mount('#app');
   logBreakpoint();
-  window.addEventListener('resize', logBreakpoint);
+  
+  // Add resize listener with cleanup support
+  const resizeListener = () => logBreakpoint();
+  window.addEventListener('resize', resizeListener);
+  
+  // Cleanup on app unmount (if needed)
+  app.unmount = () => {
+    window.removeEventListener('resize', resizeListener);
+    // Call original unmount
+    const originalUnmount = app.unmount;
+    if (originalUnmount) originalUnmount();
+  };
   // Expose controller for debugging in development (MCP/DevTools).
   try {
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment

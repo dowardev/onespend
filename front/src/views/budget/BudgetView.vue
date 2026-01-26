@@ -537,30 +537,47 @@ function openDatePicker(params: { event: Event }) {
   // Computed
 // finish-day related computed values removed
 
+  // Optimized daySummary with single-pass calculations
   const daySummary = computed(() => {
     const entries = budgetController.getEntries();
     const providers = budgetController.getProviders();
 
-    const ingresos = entries.filter((e: Income) => e.entryType === 'ingreso');
-    const egresos = entries.filter((e: Income) => e.entryType === 'egreso');
+    // Single-pass calculations for better performance
+    let totalIncome = 0;
+    let totalExpense = 0;
+    let totalEstimated = 0;
+    const ingresos: Income[] = [];
+    const egresos: Income[] = [];
+    const validTimestamps: number[] = [];
 
-    const totalIncome = ingresos.reduce(
-      (sum: number, e: Income) => sum + Number(e.amount || 0),
-      0
-    );
-    const totalExpense = egresos.reduce(
-      (sum: number, e: Income) => sum + Number(e.amount || 0),
-      0
-    );
-    const totalEstimated = providers.reduce(
-      (sum: number, p: Provider) => sum + Number(p.estimated || 0),
-      0
-    );
+    // Process entries in single loop
+    for (const entry of entries) {
+      const amount = Number(entry.amount || 0);
+      
+      if (entry.entryType === 'ingreso') {
+        ingresos.push(entry);
+        totalIncome += amount;
+      } else {
+        egresos.push(entry);
+        totalExpense += amount;
+      }
 
-    const allTimestamps = entries
-      .map((e: Income) => Number(e.createdAt))
-      .filter((t: number) => t > 0)
-      .sort((a: number, b: number) => a - b);
+      // Collect valid timestamps
+      const timestamp = Number(entry.createdAt);
+      if (timestamp > 0) {
+        validTimestamps.push(timestamp);
+      }
+    }
+
+    // Process providers in single loop
+    for (const provider of providers) {
+      totalEstimated += Number(provider.estimated || 0);
+    }
+
+    // Sort timestamps only if we have valid ones
+    const allTimestamps = validTimestamps.length > 0 
+      ? validTimestamps.sort((a, b) => a - b)
+      : [];
 
     const startTime =
       allTimestamps.length > 0
