@@ -346,32 +346,17 @@
 <script setup lang="ts">
 // Imports
 import { ref, reactive, computed, onMounted } from 'vue';
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-} from 'chart.js';
-import {
-  startOfYear,
-  addMonths,
-  differenceInCalendarYears,
-  format,
-} from 'date-fns';
-import { parseLocalDate, safeIntlFormat } from '@/utils/date';
-import { downloadOutline, informationCircleOutline } from 'ionicons/icons';
+import { Bar } from 'vue-chartjs';
+import type { ChartData, ChartOptions } from 'chart.js';
+import { useToast } from '@/composables/useToast';
+import { useBudgetStore } from '@/stores/budgetStore';
+import { translateMonth } from '@/utils/date';
+import { COLORS } from '@/utils/chartColors';
+import { useChart } from '@/composables/useChart';
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend
-);
+// Initialize chart dependencies
+const { loadChartDependencies } = useChart();
+onMounted(loadChartDependencies);
 
 // Components
 import PeriodLayout from '../components/PeriodLayout.vue';

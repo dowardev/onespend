@@ -15,29 +15,15 @@
 </template>
 
 <script setup lang="ts">
-import { shallowRef, watch } from 'vue';
+import { shallowRef, watch, onMounted } from 'vue';
 import { Bar } from 'vue-chartjs';
-import {
-  Chart as ChartJS,
-  Title,
-  Tooltip,
-  Legend,
-  BarElement,
-  CategoryScale,
-  LinearScale,
-} from 'chart.js';
 import type { ChartOptions, ChartData } from 'chart.js';
 import { applyNeonStyles } from '@/utils/chartColors';
+import { useChart } from '@/composables/useChart';
 
-// Register Chart.js components
-ChartJS.register(
-  Title,
-  Tooltip,
-  Legend,
-  BarElement,
-  CategoryScale,
-  LinearScale
-);
+// Initialize chart dependencies
+const { loadChartDependencies } = useChart();
+onMounted(loadChartDependencies);
 
 // interface
 interface Props {

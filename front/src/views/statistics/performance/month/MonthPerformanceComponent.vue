@@ -396,24 +396,11 @@ import {
   lastDayOfMonth,
 } from 'date-fns';
 import { parseLocalDate } from '@/utils/date';
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-} from 'chart.js';
+import { useChart } from '@/composables/useChart';
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend
-);
+// Initialize chart dependencies
+const { loadChartDependencies } = useChart();
+onMounted(loadChartDependencies);
 
 // controllers
 import { DixieController } from '@/controllers/dixie';

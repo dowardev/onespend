@@ -1,4 +1,46 @@
-## [v0.39.9] - 2026-01-26
+## [v0.40.0] - 2026-01-26
+
+### Features
+
+- **Chart Management**: Add `useChart` composable for dynamic Chart.js dependency loading with lazy loading, caching, and proper error handling.
+- **Code Splitting**: Implement lazy-loaded components throughout router for better initial load performance and reduced bundle size.
+- **Build Optimization**: Enhanced Vite configuration with improved chunk separation strategy (vendor, charts, pdf, utils) for better caching and loading performance.
+
+### Performance
+
+- **Bundle Size**: Reduce initial JavaScript payload by implementing lazy loading for all route components and Chart.js dependencies.
+- **Chart Loading**: Replace static Chart.js imports with dynamic loading across 12+ chart components, eliminating redundant registration code.
+- **Chunk Strategy**: Optimize build chunks with intelligent separation (vendor/charts/pdf/utils) for improved browser caching.
+
+### Refactored
+
+- **Chart Components**: Unified Chart.js initialization in `AccountBarChart.vue`, `DayChartComponent.vue`, `MonthChartComponent.vue`, `WeekChartComponent.vue`, `YearChartComponent.vue`, `DayPerformanceChart.vue`, `DayPerformanceComponent.vue`, `MonthPerformanceComponent.vue`, `WeekPerformanceComponent.vue`, and `YearPerformanceComponent.vue`.
+- **Router Configuration**: Convert all route imports to lazy loading pattern for better code splitting.
+- **Dependency Management**: Centralize Chart.js registration in `useChart` composable, removing duplicate code across chart components.
+
+### Files Changed
+
+- `front/src/composables/useChart.ts` — (new) Dynamic Chart.js loading with caching and error handling
+- `front/src/router/index.ts` — Convert all route components to lazy loading
+- `front/vite.config.ts` — Optimized chunk splitting strategy with vendor/charts/pdf/utils separation
+- `front/src/views/budget/components/AccountBarChart.vue` — Use useChart composable
+- `front/src/views/statistics/cashFlow/day/DayChartComponent.vue` — Use useChart composable, simplify data handling
+- `front/src/views/statistics/cashFlow/month/MonthChartComponent.vue` — Use useChart composable
+- `front/src/views/statistics/cashFlow/week/WeekChartComponent.vue` — Use useChart composable
+- `front/src/views/statistics/cashFlow/year/YearChartComponent.vue` — Use useChart composable
+- `front/src/views/statistics/performance/day/DayPerformanceChart.vue` — Use useChart composable
+- `front/src/views/statistics/performance/day/DayPerformanceComponent.vue` — Use useChart composable
+- `front/src/views/statistics/performance/month/MonthPerformanceComponent.vue` — Use useChart composable
+- `front/src/views/statistics/performance/week/WeekPerformanceComponent.vue` — Use useChart composable
+- `front/src/views/statistics/performance/year/YearPerformanceComponent.vue` — Use useChart composable
+
+### Notes
+
+- Major architectural improvement for chart loading and bundle optimization.
+- No breaking changes - all existing functionality preserved with performance enhancements.
+- Improved developer experience with centralized chart dependency management.
+
+---
 
 ### Performance
 
