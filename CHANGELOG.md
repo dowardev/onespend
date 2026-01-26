@@ -1,3 +1,29 @@
+## [v0.40.4] - 2026-01-26
+
+### Performance
+- Add route prefetching for critical routes in production to improve navigation performance
+- Implement request caching utility with TTL support and automatic cleanup for API optimization
+- Add intelligent cache management with periodic cleanup of expired entries
+
+### Dependency Management
+- Move @faker-js/faker from dependencies to devDependencies for proper build separation
+- Move @types/html2canvas and @types/jspdf from dependencies to devDependencies
+- Fix faker-js/faker import path in devDependencies configuration
+- Update terser from 5.4.0 to 5.4.1 for latest build optimizations
+
+### Code Quality
+- Improve router code formatting with better line breaks for enhanced readability
+- Add comprehensive request caching utilities with configurable TTL and cleanup strategies
+
+### Added
+- `front/src/utils/requestCache.ts` — Request caching utilities with TTL support and automatic cleanup
+
+### Changed
+- `front/src/router/index.ts` — Add production route prefetching for critical routes
+- `front/package.json` — Update dependencies and version to 0.40.4
+
+---
+
 ## [v0.40.3] - 2026-01-26
 
 ### Performance
