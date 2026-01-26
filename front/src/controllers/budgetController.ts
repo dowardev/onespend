@@ -18,6 +18,7 @@ interface BudgetData {
 
 class BudgetController {
   private _store: ReturnType<typeof useBudgetStore> | null = null;
+  private pendingTimeouts: Set<NodeJS.Timeout> | null = null;
 
   private get store(): ReturnType<typeof useBudgetStore> {
     if (!this._store) {
@@ -351,12 +352,21 @@ class BudgetController {
     console.log('budgetController.addProvider - sincronizando provider con productos');
     syncBudgetProvider({ provider: newProvider, operation: 'create', products, supplierSyncId });
 
-      setTimeout(() => {
+      const timeoutId = setTimeout(() => {
         const provider = this.store.providers.find(p => p.id === newProvider.id);
         if (provider) {
           this.updateProvider({ id: provider.id, changes: { _justAdded: false } });
         }
       }, 400);
+      
+      // Store timeout ID for potential cleanup
+      if (!this.pendingTimeouts) {
+        this.pendingTimeouts = new Set<NodeJS.Timeout>();
+      }
+      this.pendingTimeouts.add(timeoutId);
+      setTimeout(() => {
+        this.pendingTimeouts?.delete(timeoutId);
+      }, 500);
   }
 
   updateProvider(params: { id: string | number; changes: Partial<Provider> }) {
@@ -465,9 +475,17 @@ class BudgetController {
 
   private toPlainObject(obj: unknown): unknown {
     try {
-      return JSON.parse(JSON.stringify(obj));
+      return structuredClone ? structuredClone(obj) : JSON.parse(JSON.stringify(obj));
     } catch {
       return {};
+    }
+  }
+
+  // Cleanup method for timeouts
+  cleanup() {
+    if (this.pendingTimeouts) {
+      this.pendingTimeouts.forEach(timeoutId => clearTimeout(timeoutId));
+      this.pendingTimeouts.clear();
     }
   }
 }

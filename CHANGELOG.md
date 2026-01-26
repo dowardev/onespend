@@ -1,3 +1,30 @@
+## [v0.39.9] - 2026-01-26
+
+### Performance
+
+- **BudgetStore**: Optimize financial calculations with single-pass algorithm replacing multiple computed properties, significantly reducing computation overhead for income/expense aggregations.
+- **BudgetController**: Add timeout management and cleanup to prevent memory leaks from untracked setTimeout calls.
+- **TemplatesStore**: Replace JSON.parse(JSON.stringify()) with structuredClone for faster deep cloning when duplicating template objects.
+
+### Refactored
+
+- **AccountsStore**: Migrate from reactive array to ref-based reactive state for improved Vue 3 reactivity patterns and performance.
+- **SuppliersStore**: Remove manual subscription pattern (subscribeToChanges/notifyChange) in favor of Vue's built-in watchEffect for cleaner reactive programming.
+
+### Files Changed
+
+- `front/src/controllers/budgetController.ts` — Add pendingTimeouts Set for tracking setTimeout IDs, implement cleanup() method, update addProvider with timeout management.
+- `front/src/stores/accountsStore.ts` — Convert accounts from reactive([]) to ref<Account[]>([]), update all array operations to use .value.
+- `front/src/stores/budgetStore.ts` — Add financialSummary computed property with single-pass calculation, refactor totalIngresos/totalEgresos/netTotal to use optimized summary.
+- `front/src/stores/suppliersStore.ts` — Remove onChangeCallbacks array, subscribeToChanges, and notifyChange methods.
+- `front/src/stores/templatesStore.ts` — Replace JSON cloning with structuredClone for better performance and browser compatibility.
+
+### Notes
+
+- Patch-level performance optimizations and code quality improvements. No breaking changes expected. Bump frontend package to 0.39.9.
+
+---
+
 ## [v0.39.8] - 2026-01-24
 
 ### Changed
