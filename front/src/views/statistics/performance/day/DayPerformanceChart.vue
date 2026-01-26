@@ -7,17 +7,11 @@
 <script setup lang="ts">
 import { onMounted, onBeforeUnmount, watch, ref } from 'vue';
 import type { ChartOptions, ChartData } from 'chart.js';
-import {
-  Chart,
-  BarElement,
-  CategoryScale,
-  LinearScale,
-  Tooltip,
-  Legend,
-} from 'chart.js';
+import { useChart } from '@/composables/useChart';
 
-// Register required Chart.js components
-Chart.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend);
+// Initialize chart dependencies
+const { loadChartDependencies } = useChart();
+onMounted(loadChartDependencies);
 
 const props = defineProps<{
   chartData: ChartData<'bar'> | null;

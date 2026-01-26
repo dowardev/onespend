@@ -400,26 +400,11 @@ import { computed, reactive, onMounted, ref } from 'vue';
 import type { ChartData, ChartOptions } from 'chart.js';
 import { format, addDays, differenceInCalendarDays } from 'date-fns';
 import { parseLocalDate } from '@/utils/date';
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-} from 'chart.js';
+import { useChart } from '@/composables/useChart';
 
-// end chart.js registration
-
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend
-);
+// Initialize chart dependencies
+const { loadChartDependencies } = useChart();
+onMounted(loadChartDependencies);
 
 // controllers
 import { DixieController } from '@/controllers/dixie';

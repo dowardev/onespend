@@ -15,30 +15,12 @@
 </template>
 
 <script setup lang="ts">
-import { shallowRef, watch } from 'vue';
+import { shallowRef, watch, onMounted } from 'vue';
 import { Bar } from 'vue-chartjs';
-import {
-  Chart as ChartJS,
-  Title,
-  Tooltip,
-  Legend,
-  BarElement,
-  CategoryScale,
-  LinearScale,
-} from 'chart.js';
 import type { ChartOptions, ChartData } from 'chart.js';
 import { applyNeonStyles } from '@/utils/chartColors';
 import { parseLocalDate } from '@/utils/date';
-
-// Register Chart.js components
-ChartJS.register(
-  Title,
-  Tooltip,
-  Legend,
-  BarElement,
-  CategoryScale,
-  LinearScale
-);
+import { useChart } from '@/composables/useChart';
 
 // interface
 interface Props {
@@ -48,25 +30,17 @@ interface Props {
 }
 // end interface
 
-// main
-const props = withDefaults(defineProps<Props>(), {
-  colorIndex: 0,
-});
-// end main
+// props
+const props = defineProps<Props>();
+// end props
+
+// Chart composable
+const { loadChartDependencies } = useChart();
 
 // vars
-// Provide reactive shallow refs that mirror the incoming props but are safe for vue-chartjs
 const safeChartData = shallowRef<ChartData<'bar'>>(
   props.chartData
-    ? applyNeonStyles(
-        JSON.parse(
-          JSON.stringify({
-            ...props.chartData,
-            labels: (props.chartData.labels || []).map(translateDayLabel),
-          })
-        ),
-        props.colorIndex
-      )
+    ? JSON.parse(JSON.stringify(props.chartData))
     : { labels: [], datasets: [] }
 );
 const safeChartOptions = shallowRef<ChartOptions<'bar'>>(
@@ -75,6 +49,15 @@ const safeChartOptions = shallowRef<ChartOptions<'bar'>>(
     : ({} as ChartOptions<'bar'>)
 );
 // end vars
+
+// Load chart dependencies on mount
+onMounted(async () => {
+  try {
+    await loadChartDependencies();
+  } catch (error) {
+    console.error('Failed to load chart dependencies:', error);
+  }
+});
 
 // watch
 watch(

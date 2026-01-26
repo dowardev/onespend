@@ -21,12 +21,18 @@ export default defineConfig(({ command }) => ({
   build: {
     // Keep modern JS features (BigInt etc.) available to avoid transpile errors
     target: 'esnext',
-    chunkSizeWarningLimit: 1200,
+    chunkSizeWarningLimit: 800,
     rollupOptions: {
       output: {
         manualChunks: {
-          // Agrupa librerías pesadas en chunks separados
-          vendor: ['jspdf', 'html2canvas', 'chart.js'],
+          // Core Vue and framework libraries
+          vendor: ['vue', 'vue-router', 'pinia', '@ionic/vue', '@ionic/core'],
+          // Chart libraries - separate for better caching
+          charts: ['chart.js', 'vue-chartjs'],
+          // PDF generation libraries - lazy loaded
+          pdf: ['jspdf', 'html2canvas'],
+          // Other heavy utilities
+          utils: ['dayjs'],
         },
       },
     },
