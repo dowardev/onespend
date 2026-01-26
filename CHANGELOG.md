@@ -1,3 +1,21 @@
+## [v0.40.5] - 2026-01-26
+
+### Fixed
+- Update MainMenu navigation from path-based to name-based routing for better maintainability
+- Convert hardcoded path navigation to use named routes following Vue Router best practices
+- Improve router code formatting with better line breaks and consolidated imports
+
+### Changed
+- `front/src/components/MainMenu.vue` — Replace path-based navigation with named routes for BudgetView, TemplatesView, SuppliersPage, AccountsPage, StatisticsCashFlow, and StatisticsPerformance
+- `front/src/router/index.ts` — Code formatting improvements with cleaner import structure and line breaks
+- `front/package.json` — Update version to 0.40.5
+
+### Notes
+- Non-breaking changes that improve code maintainability and follow Vue Router best practices
+- Enhanced navigation reliability by using named routes instead of hardcoded paths
+
+---
+
 ## [v0.40.4] - 2026-01-26
 
 ### Performance

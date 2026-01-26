@@ -56,7 +56,7 @@
             lines="none"
             :class="{ 'menu-active': isBudget }"
             :aria-current="isBudget ? 'page' : undefined"
-            @click="navigate({ path: '/budget' })"
+            @click="navigate({ name: 'BudgetView' })"
           >
             <ion-icon slot="start" :icon="walletOutline"></ion-icon>
             <ion-label>Presupuesto</ion-label>
@@ -67,7 +67,7 @@
             lines="none"
             :class="{ 'menu-active': isTemplates }"
             :aria-current="isTemplates ? 'page' : undefined"
-            @click="navigate({ path: '/templates' })"
+            @click="navigate({ name: 'TemplatesView' })"
           >
             <ion-icon slot="start" :icon="documentTextOutline"></ion-icon>
             <ion-label>Templates</ion-label>
@@ -78,7 +78,7 @@
             lines="none"
             :class="{ 'menu-active': isSuppliers }"
             :aria-current="isSuppliers ? 'page' : undefined"
-            @click="navigate({ path: '/suppliers' })"
+            @click="navigate({ name: 'SuppliersPage' })"
           >
             <ion-icon slot="start" :icon="businessOutline"></ion-icon>
             <ion-label>Provedores</ion-label>
@@ -89,7 +89,7 @@
             lines="none"
             :class="{ 'menu-active': isSuppliersAccounts }"
             :aria-current="isSuppliersAccounts ? 'page' : undefined"
-            @click="navigate({ path: '/suppliers/accounts' })"
+            @click="navigate({ name: 'AccountsPage' })"
           >
             <ion-icon slot="start" :icon="layersOutline"></ion-icon>
             <ion-label>Cuentas</ion-label>
@@ -124,7 +124,7 @@
             lines="none"
             :class="{ 'menu-active': isStatisticsCashFlow }"
             :aria-current="isStatisticsCashFlow ? 'page' : undefined"
-            @click="navigate({ path: '/statistics/cash-flow' })"
+            @click="navigate({ name: 'StatisticsCashFlow' })"
           >
             <ion-icon slot="start" :icon="statsChartOutline"></ion-icon>
             <ion-label>Flujo de caja</ion-label>
@@ -135,7 +135,7 @@
             lines="none"
             :class="{ 'menu-active': isStatisticsPerformance }"
             :aria-current="isStatisticsPerformance ? 'page' : undefined"
-            @click="navigate({ path: '/statistics/performance' })"
+            @click="navigate({ name: 'StatisticsPerformance' })"
           >
             <ion-icon slot="start" :icon="speedometerOutline"></ion-icon>
             <ion-label>Rendimiento</ion-label>
