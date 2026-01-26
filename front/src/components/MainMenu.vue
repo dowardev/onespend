@@ -176,6 +176,17 @@
             <ion-icon slot="start" :icon="colorPaletteOutline"></ion-icon>
             <ion-label>Personalización</ion-label>
           </ion-item>
+
+          <ion-item
+            button
+            lines="none"
+            :class="{ 'menu-active': isPerformanceTest }"
+            :aria-current="isPerformanceTest ? 'page' : undefined"
+            @click="navigate({ name: 'PerformanceTest' })"
+          >
+            <ion-icon slot="start" :icon="speedometerOutline"></ion-icon>
+            <ion-label>Pruebas Rendimiento</ion-label>
+          </ion-item>
         </div>
       </ion-list>
     </ion-content>
@@ -262,6 +273,9 @@ const isStatisticsPerformance = computed(
 const isAdmin = computed(() => route.path.startsWith('/admin/maintenance'));
 const isPersonalization = computed(
   () => route.path === '/admin/personalization'
+);
+const isPerformanceTest = computed(
+  () => route.path === '/test/performance'
 );
 
 const isLogin = computed(() => route.path === '/login');
