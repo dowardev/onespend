@@ -1,3 +1,42 @@
+## [v0.42.0] - 2026-01-27
+
+### 🚀 Performance
+- **Backend Sync Optimizations**: Major performance improvements for sync operations
+  - Fixed N+1 query problems with eager loading relationships
+  - Implemented caching for full sync operations (30-minute cache)
+  - Added supplier products caching to prevent redundant queries
+  - Optimized field selection for reduced data transfer
+- **Database Indexes**: Added comprehensive optimization indexes
+  - Composite indexes for sync operations (user_id, status, updated_at)
+  - Individual indexes for frequently queried fields
+  - Performance indexes for entries, accounts, supplier products, and budget tables
+- **MySQL Configuration**: Optimized for shared hosting environments
+  - Enabled persistent connections for better connection reuse
+  - Disabled strict mode for better compatibility
+  - Configured sticky connections for write operations
+  - Optimized query buffering for large datasets
+
+### 🗄️ Database
+- **Migration**: Added optimization indexes migration file
+- **Cache Configuration**: Switched from database to file cache for better performance
+
+### 🧪 Testing
+- **Performance Testing**: Added comprehensive optimization testing script
+  - Query count analysis before and after optimizations
+  - Cache performance validation
+  - Database index effectiveness testing
+  - Memory usage monitoring
+  - Concurrent request simulation
+
+### 🔧 Configuration
+- **Cache Store**: Changed default cache store from database to file
+- **Database Settings**: Enhanced MySQL configuration for production environments
+
+### 📊 Metrics
+- **Query Reduction**: Significant decrease in database queries for sync operations
+- **Response Time**: Improved API response times through caching and indexing
+- **Memory Efficiency**: Optimized memory usage for large dataset operations
+
 ## [v0.41.0] - 2026-01-27
 
 ### 🚀 Features
