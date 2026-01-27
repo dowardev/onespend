@@ -1,3 +1,15 @@
+## [v0.43.1] - 2026-01-27
+
+### 🐛 Bug Fixes
+- **Authentication Routes**: Simplify register route path from `/auth/register` to `/register` for better user experience and easier navigation access
+- **Router Navigation**: Fix RegisterView to use proper Vue Router `<router-link>` component instead of plain HTML anchor tag for consistent SPA navigation
+
+### 🔧 Improvements
+- **User Experience**: Streamlined registration flow with more intuitive route structure
+- **Navigation Consistency**: Ensure all authentication pages follow Vue Router best practices for single-page application behavior
+
+---
+
 ## [v0.43.0] - 2026-01-27
 
 ### 🚀 Performance

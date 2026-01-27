@@ -117,7 +117,7 @@
         </form>
 
         <div class="auth-footer">
-          <p>¿Ya tienes cuenta? <a href="/login">Inicia Sesión</a></p>
+          <p>¿Ya tienes cuenta? <router-link to="/login">Inicia Sesión</router-link></p>
         </div>
       </div>
     </ion-content>
