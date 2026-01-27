@@ -103,7 +103,7 @@ const routes: Array<RouteRecordRaw> = [
     component: LoginView,
   },
   {
-    path: '/auth/register',
+    path: '/register',
     name: 'Register',
     component: RegisterView,
   },
