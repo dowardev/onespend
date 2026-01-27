@@ -111,6 +111,195 @@ class SyncController extends Controller
         ]);
     }
 
+    /**
+     * Bulk create suppliers for better performance
+     */
+    private function bulkCreateSuppliers(array $items, int $userId): array
+    {
+        $results = [];
+        if (empty($items)) {
+            return $results;
+        }
+        
+        $insertData = [];
+        $now = now();
+        
+        foreach ($items as $item) {
+            $syncId = $item['id'] ?? null;
+            if (!$syncId) continue;
+            
+            $data = $item;
+            $data['user_id'] = $userId;
+            $data['sync_id'] = $syncId;
+            $data['created_at'] = $now;
+            $data['updated_at'] = $now;
+            
+            // Convert timestamp fields
+            if (isset($data['updated_at']) && is_numeric($data['updated_at'])) {
+                $timestamp = $data['updated_at'];
+                if ($timestamp > 10000000000) {
+                    $timestamp = $timestamp / 1000;
+                }
+                $data['updated_at'] = date('Y-m-d H:i:s', $timestamp);
+            }
+            
+            unset($data['id']);
+            $insertData[] = $data;
+        }
+        
+        if (!empty($insertData)) {
+            Supplier::insert($insertData);
+            
+            // Get inserted records to return their IDs
+            $syncIds = array_column($insertData, 'sync_id');
+            $createdRecords = Supplier::whereIn('sync_id', $syncIds)->get(['id', 'sync_id']);
+            
+            foreach ($createdRecords as $record) {
+                $results[] = ['sync_id' => $record->sync_id, 'id' => $record->id];
+                $this->updateSyncMetadata('supplier', $record->sync_id, 'synced', $userId);
+            }
+        }
+        
+        return $results;
+    }
+    
+    /**
+     * Bulk update suppliers for better performance
+     */
+    private function bulkUpdateSuppliers(array $items, int $userId): array
+    {
+        $results = [];
+        if (empty($items)) {
+            return $results;
+        }
+        
+        foreach ($items as $itemData) {
+            $item = $itemData['item'];
+            $syncId = $itemData['sync_id'];
+            
+            $updateFields = $item;
+            unset($updateFields['id'], $updateFields['sync_id']);
+            
+            // Convert timestamp fields
+            foreach ($updateFields as $key => $value) {
+                if (in_array($key, ['updated_at']) && is_numeric($value)) {
+                    $timestamp = $value;
+                    if ($timestamp > 10000000000) {
+                        $timestamp = $timestamp / 1000;
+                    }
+                    $updateFields[$key] = date('Y-m-d H:i:s', $timestamp);
+                }
+            }
+            
+            Supplier::where('sync_id', $syncId)->update($updateFields);
+            $this->updateSyncMetadata('supplier', $syncId, 'synced', $userId);
+            $results[] = ['sync_id' => $syncId];
+        }
+        
+        return $results;
+    }
+    
+    /**
+     * Bulk delete suppliers for better performance
+     */
+    private function bulkDeleteSuppliers(array $syncIds, int $userId): array
+    {
+        $results = [];
+        if (empty($syncIds)) {
+            return $results;
+        }
+        
+        foreach ($syncIds as $syncId) {
+            $existing = Supplier::where('sync_id', $syncId)->first();
+            if ($existing) {
+                $existing->update(['status' => 'deleted', 'deleted_at' => now()]);
+                $this->updateSyncMetadata('supplier', $syncId, 'deleted', $userId);
+                $results[] = $syncId;
+            }
+        }
+        
+        return $results;
+    }
+
+    /**
+     * Bulk create items for better performance
+     */
+    private function bulkCreateItems(string $entityType, array $items, int $userId): array
+    {
+        $modelClass = self::ENTITY_TYPES[$entityType];
+        $results = [];
+        
+        if (empty($items)) {
+            return $results;
+        }
+        
+        // Prepare data for bulk insert
+        $insertData = [];
+        $now = now();
+        
+        foreach ($items as $item) {
+            $syncId = $item['id'] ?? null;
+            if (!$syncId) {
+                continue;
+            }
+            
+            $data = $item;
+            $data['user_id'] = $userId;
+            $data['sync_id'] = $syncId;
+            $data['created_at'] = $now;
+            $data['updated_at'] = $now;
+            
+            // Convert timestamp fields
+            if (isset($data['updated_at']) && is_numeric($data['updated_at'])) {
+                $timestamp = $data['updated_at'];
+                if ($timestamp > 10000000000) {
+                    $timestamp = $timestamp / 1000;
+                }
+                $data['updated_at'] = date('Y-m-d H:i:s', $timestamp);
+            }
+            
+            // Handle special cases
+            if ($entityType === 'budget_provider_product' && isset($data['supplier_product_id'])) {
+                $spId = $data['supplier_product_id'];
+                if (!is_numeric($spId)) {
+                    $sp = SupplierProduct::where('sync_id', $spId)->first();
+                    $data['supplier_product_id'] = $sp ? $sp->id : null;
+                } else {
+                    $data['supplier_product_id'] = (int)$spId;
+                }
+            }
+            
+            if ($entityType === 'budget_provider' && isset($data['_supplier_id'])) {
+                $supplierId = $data['_supplier_id'];
+                if (!is_numeric($supplierId)) {
+                    $supplier = Supplier::where('sync_id', $supplierId)->first();
+                    $data['_supplier_id'] = $supplier ? $supplier->id : null;
+                } else {
+                    $data['_supplier_id'] = (int)$supplierId;
+                }
+            }
+            
+            unset($data['id']);
+            $insertData[] = $data;
+        }
+        
+        // Perform bulk insert
+        if (!empty($insertData)) {
+            $inserted = $modelClass::insert($insertData);
+            
+            // Get inserted records to return their IDs
+            $syncIds = array_column($insertData, 'sync_id');
+            $createdRecords = $modelClass::whereIn('sync_id', $syncIds)->get(['id', 'sync_id']);
+            
+            foreach ($createdRecords as $record) {
+                $results[] = ['sync_id' => $record->sync_id, 'id' => $record->id];
+                $this->updateSyncMetadata($entityType, $record->sync_id, 'synced', $userId);
+            }
+        }
+        
+        return $results;
+    }
+
     public function merge(Request $request): JsonResponse
     {
         $user = $request->user();
@@ -128,27 +317,52 @@ class SyncController extends Controller
         DB::beginTransaction();
 
         try {
-            // Process suppliers first (for dependency)
+            // Process suppliers first (for dependency) - using bulk operations
             if (isset($data['supplier'])) {
                 $items = $data['supplier'];
-                Log::info("SyncController::merge - Processing entityType: supplier", ['items_count' => count($items)]);
+                Log::info("SyncController::merge - Bulk processing entityType: supplier", ['items_count' => count($items)]);
+                
+                // Separate creates, updates, deletes for bulk operations
+                $toCreate = [];
+                $toUpdate = [];
+                $toDelete = [];
+                $conflicts = [];
                 
                 foreach ($items as $item) {
-                    $result = $this->processItem('supplier', $item, $user->id);
+                    $syncId = $item['id'] ?? null;
+                    if (!$syncId) continue;
                     
-                    if ($result['status'] === 'created') {
-                        $results['created']['supplier'][] = ['sync_id' => $result['sync_id'], 'id' => $result['id']];
-                    } elseif ($result['status'] === 'updated') {
-                        $results['updated']['supplier'][] = ['sync_id' => $result['sync_id'], 'id' => $result['id'] ?? null];
-                    } elseif ($result['status'] === 'deleted') {
-                        $results['deleted']['supplier'][] = $result['sync_id'];
-                    } elseif ($result['status'] === 'conflict') {
-                        $results['conflicts']['supplier'][] = $result;
+                    if (isset($item['_deleted']) && $item['_deleted'] === true) {
+                        $toDelete[] = $syncId;
+                    } else {
+                        $existing = Supplier::where('sync_id', $syncId)->first();
+                        if ($existing) {
+                            $localUpdatedAt = $existing->updated_at->timestamp;
+                            $clientUpdatedAt = $item['updated_at'] ?? 0;
+                            
+                            if ($clientUpdatedAt > $localUpdatedAt) {
+                                $toUpdate[] = ['sync_id' => $syncId, 'item' => $item, 'existing' => $existing];
+                            } elseif ($clientUpdatedAt < $localUpdatedAt) {
+                                $conflicts[] = ['sync_id' => $syncId, 'server_data' => $existing];
+                            }
+                        } else {
+                            $toCreate[] = $item;
+                        }
                     }
                 }
+                
+                // Process bulk operations
+                $created = $this->bulkCreateSuppliers($toCreate, $user->id);
+                $updated = $this->bulkUpdateSuppliers($toUpdate, $user->id);
+                $deleted = $this->bulkDeleteSuppliers($toDelete, $user->id);
+                
+                $results['created']['supplier'] = $created;
+                $results['updated']['supplier'] = $updated;
+                $results['deleted']['supplier'] = $deleted;
+                $results['conflicts']['supplier'] = $conflicts;
             }
 
-            // Process supplier_products second (depends on suppliers)
+            // Process supplier_products second (depends on suppliers) - using individual for now due to complexity
             if (isset($data['supplier_product'])) {
                 $items = $data['supplier_product'];
                 Log::info("SyncController::merge - Processing entityType: supplier_product", ['items_count' => count($items)]);

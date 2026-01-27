@@ -1,3 +1,38 @@
+## [v0.43.0] - 2026-01-27
+
+### 🚀 Performance
+- **Bulk Operations**: Implemented comprehensive bulk operations for supplier synchronization
+  - Added `bulkCreateSuppliers()` method for efficient batch supplier creation
+  - Added `bulkUpdateSuppliers()` method for optimized batch supplier updates  
+  - Added `bulkDeleteSuppliers()` method for streamlined batch supplier deletion
+  - Added `bulkCreateItems()` method for generic entity bulk creation with special handling
+- **Sync Performance**: Significantly improved sync operation performance by reducing database queries
+  - Separated create, update, and delete operations for batch processing
+  - Optimized conflict detection with timestamp-based comparison
+  - Reduced individual database round trips through bulk insert operations
+
+### 🧪 Testing
+- **Performance Testing**: Added comprehensive bulk operations testing script
+  - Performance comparison between individual and bulk operations
+  - Query count analysis and timing measurements
+  - Memory usage monitoring for large dataset operations
+  - Automated performance validation with detailed metrics reporting
+
+### 🔧 Improvements
+- **SyncController**: Enhanced merge functionality with intelligent operation batching
+  - Automatic separation of creates, updates, and deletes for optimal processing
+  - Improved conflict resolution with server-side timestamp comparison
+  - Better error handling and logging throughout bulk operations
+- **Database Optimization**: Optimized database queries with bulk insert patterns
+  - Single bulk insert operation replacing multiple individual inserts
+  - Efficient sync metadata updates for batch operations
+  - Proper timestamp handling for millisecond/second conversion
+
+### 📊 Metrics
+- **Query Reduction**: Significant decrease in database queries for supplier sync operations
+- **Performance Improvement**: Measurable speed improvements for bulk vs individual operations
+- **Memory Efficiency**: Optimized memory usage for large dataset synchronization
+
 ## [v0.42.0] - 2026-01-27
 
 ### 🚀 Performance
