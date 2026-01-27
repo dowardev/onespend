@@ -56,10 +56,13 @@ return [
             'collation' => env('DB_COLLATION', 'utf8mb4_unicode_ci'),
             'prefix' => '',
             'prefix_indexes' => true,
-            'strict' => true,
+            'strict' => false, // Better for shared hosting
             'engine' => null,
+            'sticky' => true, // Reuse connection after writes
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 (PHP_VERSION_ID >= 80500 ? \Pdo\Mysql::ATTR_SSL_CA : \PDO::MYSQL_ATTR_SSL_CA) => env('MYSQL_ATTR_SSL_CA'),
+                PDO::ATTR_PERSISTENT => true, // Enable persistent connections
+                PDO::MYSQL_ATTR_USE_BUFFERED_QUERY => false, // For large datasets
             ]) : [],
         ],
 

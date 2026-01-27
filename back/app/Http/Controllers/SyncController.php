@@ -15,6 +15,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 
 class SyncController extends Controller
 {
@@ -36,6 +37,31 @@ class SyncController extends Controller
         $entityTypes = $request->input('types', array_keys(self::ENTITY_TYPES));
 
         $changes = [];
+        $lastSyncDateTime = date('Y-m-d H:i:s', $lastSync);
+
+        // Preload supplier sync IDs to cache supplier products and avoid N+1 queries
+        $supplierSyncIds = [];
+        foreach ($entityTypes as $entityType) {
+            if ($entityType === 'supplier') {
+                $modelClass = self::ENTITY_TYPES[$entityType];
+                $supplierSyncIds = $modelClass::forUser($user->id)
+                    ->where('updated_at', '>', $lastSyncDateTime)
+                    ->pluck('sync_id')
+                    ->toArray();
+            }
+        }
+
+        // Cache supplier products for all suppliers that changed
+        $supplierProductsCache = [];
+        if (!empty($supplierSyncIds)) {
+            $products = SupplierProduct::whereIn('supplier_id', $supplierSyncIds)
+                ->where('status', 'active')
+                ->get(['id', 'supplier_id', 'name', 'price', 'image_base64', 'sync_id']);
+            
+            foreach ($products as $product) {
+                $supplierProductsCache[$product->supplier_id][] = $product;
+            }
+        }
 
         foreach ($entityTypes as $entityType) {
             if (!isset(self::ENTITY_TYPES[$entityType])) {
@@ -44,18 +70,33 @@ class SyncController extends Controller
 
             $modelClass = self::ENTITY_TYPES[$entityType];
 
-            $items = $modelClass::forUser($user->id)
-                ->where('updated_at', '>', date('Y-m-d H:i:s', $lastSync))
-                ->get();
+            // Add eager loading based on entity type
+            $query = $modelClass::forUser($user->id)
+                ->where('updated_at', '>', $lastSyncDateTime);
+
+            // Optimize based on entity type relationships
+            switch ($entityType) {
+                case 'entry':
+                    $query->with(['account:id,name']);
+                    break;
+                case 'budget_provider':
+                    $query->with(['account:id,name', 'supplier:id,name']);
+                    break;
+                case 'budget_provider_product':
+                    $query->with(['budgetProvider:id,name', 'supplierProduct:id,name,price']);
+                    break;
+            }
+
+            $items = $query->get();
 
             foreach ($items as $item) {
-                $changes[$entityType][] = $this->formatItem($entityType, $item);
+                $changes[$entityType][] = $this->formatItem($entityType, $item, $supplierProductsCache);
             }
 
             $deletedIds = SyncMetadata::forUser($user->id)
                 ->byEntity($entityType, '')
                 ->where('sync_status', 'deleted')
-                ->where('server_updated_at', '>', date('Y-m-d H:i:s', $lastSync))
+                ->where('server_updated_at', '>', $lastSyncDateTime)
                 ->pluck('entity_id');
 
             if ($deletedIds->isNotEmpty()) {
@@ -286,23 +327,57 @@ class SyncController extends Controller
     public function fullSync(Request $request): JsonResponse
     {
         $user = $request->user();
+        $userId = $user->id;
 
-        $data = [
-            'accounts' => Account::forUser($user->id)->active()->get(),
-            'budgets' => Budget::forUser($user->id)->active()->get(),
-            'budget_providers' => BudgetProvider::forUser($user->id)->active()->get(),
-            'budget_provider_products' => BudgetProviderProduct::forUser($user->id)->active()->get(),
-            'entries' => Entry::forUser($user->id)->active()->get(),
-            'suppliers' => Supplier::forUser($user->id)->active()->get(),
-            'supplier_products' => SupplierProduct::forUser($user->id)->active()->get(),
-            'templates' => Template::forUser($user->id)->active()->get(),
-        ];
+        // Use cache for full sync data (30 minutes cache)
+        $cacheKey = "full_sync_user_{$userId}";
+        
+        $formatted = Cache::remember($cacheKey, 1800, function() use ($userId) {
+            // Preload suppliers to cache their products and avoid N+1 queries
+            $suppliers = Supplier::forUser($userId)->active()->get(['id', 'sync_id', 'name']);
+            $supplierSyncIds = $suppliers->pluck('sync_id')->toArray();
+            
+            // Cache supplier products grouped by supplier_id
+            $supplierProductsCache = [];
+            if (!empty($supplierSyncIds)) {
+                $products = SupplierProduct::whereIn('supplier_id', $supplierSyncIds)
+                    ->where('status', 'active')
+                    ->get(['id', 'supplier_id', 'name', 'price', 'image_base64', 'sync_id']);
+                
+                foreach ($products as $product) {
+                    $supplierProductsCache[$product->supplier_id][] = $product;
+                }
+            }
 
-        $formatted = [];
+            // Load data with eager loading for relationships and field selectivity
+            $data = [
+                'accounts' => Account::forUser($userId)->active()
+                    ->get(['id', 'sync_id', 'user_id', 'name', 'status', 'updated_at']),
+                'budgets' => Budget::forUser($userId)->active()
+                    ->get(['id', 'sync_id', 'user_id', 'date', 'status', 'updated_at']),
+                'budget_providers' => BudgetProvider::forUser($userId)->active()
+                    ->with(['account:id,name'])
+                    ->get(['id', 'sync_id', 'user_id', 'account_id', '_supplier_id', '_supplier_name', 'name', 'status', 'updated_at']),
+                'budget_provider_products' => BudgetProviderProduct::forUser($userId)->active()
+                    ->with(['budgetProvider:id,name', 'supplierProduct:id,name,price'])
+                    ->get(['id', 'sync_id', 'user_id', 'budget_provider_id', 'supplier_product_id', 'product_name', 'product_price', 'quantity', 'status', 'updated_at']),
+                'entries' => Entry::forUser($userId)->active()
+                    ->with(['account:id,name'])
+                    ->get(['id', 'sync_id', 'user_id', 'account_id', 'date', 'amount', 'name', 'payment_type', 'entry_type', 'status', 'updated_at']),
+                'suppliers' => $suppliers,
+                'supplier_products' => SupplierProduct::forUser($userId)->active()
+                    ->get(['id', 'sync_id', 'user_id', 'supplier_id', 'name', 'price', 'status', 'updated_at']),
+                'templates' => Template::forUser($userId)->active()
+                    ->get(['id', 'sync_id', 'user_id', 'name', 'status', 'updated_at']),
+            ];
 
-        foreach ($data as $entityType => $items) {
-            $formatted[$entityType] = $items->map(fn($item) => $this->formatItem($entityType, $item))->toArray();
-        }
+            $formatted = [];
+            foreach ($data as $entityType => $items) {
+                $formatted[$entityType] = $items->map(fn($item) => $this->formatItem($entityType, $item, $supplierProductsCache))->toArray();
+            }
+            
+            return $formatted;
+        });
 
         return response()->json([
             'success' => true,
@@ -343,7 +418,7 @@ class SyncController extends Controller
         ]);
     }
 
-    private function formatItem(string $entityType, $item): array
+    private function formatItem(string $entityType, $item, array $supplierProductsCache = []): array
     {
         Log::info("formatItem - entityType: " . $entityType);
         $data = $item->toArray();
@@ -353,23 +428,20 @@ class SyncController extends Controller
 
         // Include supplier products with their IDs for supplier entity
         if ($entityType === 'suppliers') {
-            // Use sync_id to match supplier_id in supplier_products table
+            // Use cached supplier products to avoid N+1 query
             Log::info("formatItem - supplier sync_id: " . $item->sync_id);
-            $supplierProducts = SupplierProduct::where('supplier_id', $item->sync_id)
-                ->where('status', 'active')
-                ->get(['id', 'name', 'price', 'image_base64'])
-                ->toArray();
+            $supplierProducts = $supplierProductsCache[$item->sync_id] ?? [];
 
-            Log::info("formatItem - supplier products count: " . count($supplierProducts), ['products' => $supplierProducts]);
+            Log::info("formatItem - supplier products count: " . count($supplierProducts));
 
             // Map products to include 'sync_id' field (use supplier_product's id if no sync_id)
             $data['products'] = array_map(function($product) {
                 return [
-                    'sync_id' => $product['sync_id'] ?? $product['id'],
-                    'id' => $product['id'],
-                    'name' => $product['name'],
-                    'price' => $product['price'],
-                    'imageBase64' => $product['image_base64'],
+                    'sync_id' => $product->sync_id ?? $product->id,
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'price' => $product->price,
+                    'imageBase64' => $product->image_base64,
                 ];
             }, $supplierProducts);
 
