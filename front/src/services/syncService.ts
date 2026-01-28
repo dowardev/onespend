@@ -500,6 +500,139 @@ class SyncService {
 
     return conflicts;
   }
+
+  async pullChanges(): Promise<Record<string, SyncItemData[]>> {
+    if (!this.isOnline) {
+      throw new Error('Cannot pull changes while offline');
+    }
+
+    const lastSync = localStorage.getItem(LAST_SYNC_KEY) || '0';
+    const headers = await this.getAuthHeaders();
+
+    // Try /api/sync/changes first, fallback to /api/sync/full if it fails
+    try {
+      const response = await fetch(`${API_URL}/api/sync/changes?last_sync=${lastSync}`, {
+        method: 'GET',
+        headers,
+      });
+
+      if (response.ok) {
+        const result = await response.json() as ServerSyncResponse;
+        
+        if (result.changes || result.data) {
+          const changes = result.changes || result.data || {};
+          await this.saveChangesToLocalDb(changes);
+          return changes;
+        }
+      } else {
+        console.warn('[SyncService] /api/sync/changes failed, trying /api/sync/full');
+      }
+    } catch (error) {
+      console.warn('[SyncService] /api/sync/changes error, trying /api/sync/full:', error);
+    }
+
+    // Fallback to full sync
+    const fullResponse = await fetch(`${API_URL}/api/sync/full`, {
+      method: 'GET',
+      headers,
+    });
+
+    if (!fullResponse.ok) {
+      throw new Error(`Failed to pull changes: ${fullResponse.statusText}`);
+    }
+
+    const fullResult = await fullResponse.json() as ServerSyncResponse;
+    
+    if (fullResult.data || fullResult.changes) {
+      const changes = fullResult.data || fullResult.changes || {};
+      await this.saveChangesToLocalDb(changes);
+      return changes;
+    }
+
+    return {};
+  }
+
+  private async saveChangesToLocalDb(changes: Record<string, SyncItemData[]>): Promise<void> {
+    console.log('[SyncService] Saving changes to local DB:', Object.keys(changes));
+    
+    const { DixieController } = await import('@/controllers/dixie');
+    
+    const entityTypeToStore: Record<string, string> = {
+      'account': 'accounts',
+      'budget': 'budget',
+      'budget_provider': 'budget_providers',
+      'budget_provider_product': 'budget_provider_products',
+      'entry': 'entries',
+      'supplier': 'suppliers',
+      'supplier_product': 'supplier_products',
+      'template': 'templates',
+    };
+
+    for (const [entityType, items] of Object.entries(changes)) {
+      if (!Array.isArray(items) || items.length === 0) continue;
+      
+      const storeName = entityTypeToStore[entityType];
+      if (!storeName) {
+        console.warn(`[SyncService] Unknown entity type: ${entityType}`);
+        continue;
+      }
+
+      const ctrl = new DixieController({ name: 'ABOgazDB', storeName });
+      
+      for (const item of items) {
+        try {
+          const syncId = item.sync_id;
+          if (!syncId) {
+            console.warn(`[SyncService] Item missing sync_id:`, item);
+            continue;
+          }
+
+          if (item._deleted) {
+            await ctrl.deleteBackup(syncId);
+            console.log(`[SyncService] Deleted ${entityType} with sync_id: ${syncId}`);
+          } else {
+            const existing = await ctrl.getEntry(syncId);
+            if (existing) {
+              const updated = { ...existing, ...item, synced_at: Date.now() };
+              await ctrl.putEntry({ entry: updated });
+              console.log(`[SyncService] Updated ${entityType} with sync_id: ${syncId}`);
+            } else {
+              const newItem = { ...item, synced_at: Date.now() };
+              await ctrl.addEntry({ entry: newItem });
+              console.log(`[SyncService] Added ${entityType} with sync_id: ${syncId}`);
+            }
+          }
+        } catch (error) {
+          console.error(`[SyncService] Failed to save ${entityType} item:`, error);
+        }
+      }
+    }
+  }
+
+  async fullSyncAndSave(): Promise<void> {
+    console.log('[SyncService] Starting full sync and save...');
+    
+    if (!this.isOnline) {
+      throw new Error('Cannot perform full sync while offline');
+    }
+
+    try {
+      // First, pull all changes from server
+      await this.pullChanges();
+      console.log('[SyncService] Pull changes completed');
+      
+      // Then, process any pending local changes
+      const queueResult = await this.processQueue();
+      if (queueResult) {
+        console.log('[SyncService] Queue processed successfully');
+      }
+      
+      console.log('[SyncService] Full sync and save completed');
+    } catch (error) {
+      console.error('[SyncService] Full sync and save failed:', error);
+      throw error;
+    }
+  }
 }
 
 export const syncService = new SyncService();
