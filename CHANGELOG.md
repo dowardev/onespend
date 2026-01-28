@@ -1,3 +1,18 @@
+## [v0.43.2] - 2026-01-27
+
+### 🐛 Bug Fixes
+- **Sync Service**: Fix critical TypeError where `syncService.fullSyncAndSave` was not a function
+- **API Endpoint**: Update `pullChanges` to use correct `/api/sync/changes` endpoint instead of non-existent `/api/sync/pull`
+- **Error Handling**: Add fallback to `/api/sync/full` when incremental sync fails, improving reliability
+- **IndexedDB Integration**: Add missing `saveChangesToLocalDb` method to persist server changes to local storage
+
+### 🔧 Improvements
+- **Sync Reliability**: Implement robust sync flow with proper error handling and endpoint fallbacks
+- **Data Persistence**: Ensure server changes are properly saved to IndexedDB for offline access
+- **Logging**: Add comprehensive debug logging throughout sync operations for better troubleshooting
+
+---
+
 ## [v0.43.1] - 2026-01-27
 
 ### 🐛 Bug Fixes
