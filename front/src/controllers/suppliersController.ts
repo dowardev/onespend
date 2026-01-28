@@ -117,7 +117,6 @@ class SuppliersController {
       await ctrl.putEntry({ entry });
 
       store.suppliers = [result, ...store.suppliers];
-      store.notifyChange();
 
       console.log('[suppliersController] Esperando sincronizacion...');
       console.log('%c[suppliersController] 🔄 LLAMANDO syncService.processQueue()', 'color: orange; font-size: 14px');
@@ -182,7 +181,6 @@ class SuppliersController {
       await ctrl.putEntry({ entry });
 
       store.suppliers = store.suppliers.map(s => s.id === entry.id ? entry : s);
-      store.notifyChange();
 
       return entry;
     } catch (e) {
@@ -205,7 +203,6 @@ class SuppliersController {
       await ctrl.deleteBackup({ id });
 
       store.suppliers = allSuppliers.filter(s => s.id !== id);
-      store.notifyChange();
 
       if (supplier) {
         const { syncProvider } = useSync();

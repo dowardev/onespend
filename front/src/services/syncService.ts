@@ -292,7 +292,9 @@ class SyncService {
       });
 
       if (!response.ok) {
-        throw new Error(`Sync failed: ${response.statusText}`);
+        console.warn('[SyncService] Server sync failed, items will remain in queue for later:', response.statusText);
+        // Don't throw error, just return early so items stay in queue for later sync
+        return false;
       }
 
       const result = await response.json();
