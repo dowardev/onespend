@@ -1,3 +1,17 @@
+## [v0.43.3] - 2026-01-27
+
+### 🐛 Bug Fixes
+- **Pinia Store**: Remove non-existent `store.notifyChange()` calls from suppliersController
+- **Error Handling**: Improve sync error handling to prevent blocking user operations when server fails
+- **Offline Functionality**: Allow supplier operations to continue locally when sync server is unavailable
+
+### 🔧 Improvements
+- **Sync Reliability**: Items remain in sync queue for later retry when server is temporarily unavailable
+- **User Experience**: Users can add/edit/delete suppliers even during server outages
+- **Graceful Degradation**: App continues to function locally with automatic sync when server is back
+
+---
+
 ## [v0.43.2] - 2026-01-27
 
 ### 🐛 Bug Fixes
