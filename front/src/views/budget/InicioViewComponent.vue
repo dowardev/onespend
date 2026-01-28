@@ -489,16 +489,14 @@ watch(
 // End Watch
 
 // Life cycle
-onMounted(() => {
-  (async () => {
-    try {
-      await accountsController.loadAll();
-    } catch (e) {}
-    try {
-      // Ensure budget data for the current selected date is loaded when this view mounts
-      await budgetController.loadDataForCurrentDate();
-    } catch (e) {}
-  })();
+onMounted(async () => {
+  try {
+    await accountsController.loadAll();
+  } catch (e) {}
+  try {
+    // Ensure budget data for the current selected date is loaded when this view mounts
+    await budgetController.loadDataForCurrentDate();
+  } catch (e) {}
 });
 
 // End Life cycle
