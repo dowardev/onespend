@@ -1,4 +1,13 @@
-## [v0.43.3] - 2026-01-27
+## [v0.43.4] - 2026-01-28
+
+### 🐛 Bug Fixes
+- **BudgetView**: Remove FinishDayForm component from template to fix component reference errors
+- **IonModal**: Add missing IonModal import to BudgetView component
+
+### 🔧 Improvements
+- **Code Quality**: Refactor InicioViewComponent onMounted lifecycle to use async/await pattern instead of immediately invoked async function expression for better readability and maintainability
+
+---
 
 ### 🐛 Bug Fixes
 - **Pinia Store**: Remove non-existent `store.notifyChange()` calls from suppliersController

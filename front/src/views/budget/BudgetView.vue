@@ -66,13 +66,7 @@
           </ion-row>
         </ion-grid>
 
-        <ion-grid v-if="activeView === 'form'">
-          <ion-row>
-            <ion-col size="12">
-              <FinishDayForm :finish-day="finishDay" @save="onFinishDaySaved" />
-            </ion-col>
-          </ion-row>
-        </ion-grid>
+
 
         <ion-grid v-if="activeView === 'resumen'">
           <ion-row class="ion-justify-content-center">
@@ -268,6 +262,7 @@ import {
   IonList,
   IonListHeader,
   IonNote,
+  IonModal,
 } from '@ionic/vue';
 import { computed, ref, onMounted } from 'vue';
 import {
