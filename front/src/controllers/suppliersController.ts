@@ -52,7 +52,23 @@ class SuppliersController {
       const ctrl = this.getController();
       const now = Date.now();
 
-      const clean = structuredClone ? structuredClone(s) as Omit<Supplier, 'id' | 'createdAt' | 'updatedAt'> : JSON.parse(JSON.stringify(s)) as Omit<Supplier, 'id' | 'createdAt' | 'updatedAt'>;
+      // Safe clone function to handle non-cloneable objects
+      const safeClone = (obj: any): any => {
+        try {
+          return structuredClone ? structuredClone(obj) : JSON.parse(JSON.stringify(obj));
+        } catch (e) {
+          // Fallback to manual deep clone for problematic objects
+          return JSON.parse(JSON.stringify(obj, (key, value) => {
+            // Handle circular references and non-serializable values
+            if (typeof value === 'function' || value instanceof Error) {
+              return undefined;
+            }
+            return value;
+          }));
+        }
+      };
+      
+      const clean = safeClone(s) as Omit<Supplier, 'id' | 'createdAt' | 'updatedAt'>;
 
       const entry: Supplier = {
         ...clean,
@@ -146,7 +162,23 @@ class SuppliersController {
     try {
       const ctrl = this.getController();
 
-      const clean = structuredClone ? structuredClone(s) as Supplier : JSON.parse(JSON.stringify(s)) as Supplier;
+      // Safe clone function to handle non-cloneable objects
+      const safeClone = (obj: any): any => {
+        try {
+          return structuredClone ? structuredClone(obj) : JSON.parse(JSON.stringify(obj));
+        } catch (e) {
+          // Fallback to manual deep clone for problematic objects
+          return JSON.parse(JSON.stringify(obj, (key, value) => {
+            // Handle circular references and non-serializable values
+            if (typeof value === 'function' || value instanceof Error) {
+              return undefined;
+            }
+            return value;
+          }));
+        }
+      };
+      
+      const clean = safeClone(s) as Supplier;
 
       const entry: Supplier = {
         ...clean,
