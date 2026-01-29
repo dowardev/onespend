@@ -1,3 +1,10 @@
+## [v0.43.5] - 2026-01-29
+
+### 🐛 Bug Fixes
+- **Authentication**: Added token validation before sync operations to prevent unauthorized access
+- **SuppliersController**: Enhanced authentication checking in listSuppliers endpoint
+- **SyncService**: Improved error handling for missing authentication tokens in full sync operations
+
 ## [v0.43.4] - 2026-01-28
 
 ### 🐛 Bug Fixes

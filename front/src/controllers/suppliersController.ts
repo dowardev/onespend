@@ -227,9 +227,20 @@ class SuppliersController {
 
       console.log('suppliersController.listSuppliers - IndexedDB suppliers count:', all?.length || 0);
 
-      // If no suppliers in IndexedDB, do a full sync to get data from backend
+      // If no suppliers in IndexedDB, check authentication before doing full sync
       if (!all || all.length === 0) {
-        console.log('suppliersController.listSuppliers - No suppliers in IndexedDB, fetching from backend...');
+        console.log('suppliersController.listSuppliers - No suppliers in IndexedDB, checking auth...');
+        
+        // Check if user has authentication token before attempting sync
+        const { hasToken } = await import('@/services/tokenStorage');
+        
+        if (!hasToken()) {
+          console.log('suppliersController.listSuppliers - No authentication token, skipping sync');
+          store.suppliers = [];
+          return [];
+        }
+        
+        console.log('suppliersController.listSuppliers - Token found, fetching from backend...');
         try {
           const { syncService } = await import('@/services/syncService');
           console.log('suppliersController.listSuppliers - Calling fullSyncAndSave...');

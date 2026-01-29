@@ -618,6 +618,13 @@ class SyncService {
       throw new Error('Cannot perform full sync while offline');
     }
 
+    // Check authentication before attempting any sync operations
+    const { hasToken } = await import('@/services/tokenStorage');
+    if (!(await hasToken())) {
+      console.log('[SyncService] No authentication token available, skipping sync');
+      return;
+    }
+
     try {
       // First, pull all changes from server
       await this.pullChanges();
