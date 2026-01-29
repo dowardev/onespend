@@ -343,13 +343,7 @@ class SuppliersController {
     return null;
   }
 
-  subscribeToChanges(params?: { callback?: (suppliers: Array<Supplier>) => void }) {
-    const store = this.getStore();
-    if (params?.callback) {
-      return store.subscribeToChanges(params.callback);
-    }
-    return () => {};
-  }
+
 }
 
 const suppliersController = new SuppliersController();

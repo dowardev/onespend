@@ -221,11 +221,13 @@ export const useBudgetStore = defineStore('budget', () => {
   }
 
   function setEntries(data: Income[]) {
-    entries.splice(0, entries.length, ...data);
+    const dataArray = Array.isArray(data) ? data : [];
+    entries.splice(0, entries.length, ...dataArray);
   }
 
   function setProviders(data: Provider[]) {
-    providers.splice(0, providers.length, ...data);
+    const dataArray = Array.isArray(data) ? data : [];
+    providers.splice(0, providers.length, ...dataArray);
   }
 
   function setFinishDayData(data: FinishDayData) {

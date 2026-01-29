@@ -489,15 +489,7 @@ watch(
 // End Watch
 
 // Life cycle
-onMounted(async () => {
-  try {
-    await accountsController.loadAll();
-  } catch (e) {}
-  try {
-    // Ensure budget data for the current selected date is loaded when this view mounts
-    await budgetController.loadDataForCurrentDate();
-  } catch (e) {}
-});
+// Note: Data loading handled by parent component (BudgetView) to avoid lifecycle conflicts
 
 // End Life cycle
 

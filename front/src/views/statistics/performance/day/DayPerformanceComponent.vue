@@ -504,6 +504,14 @@ const chartOptions = reactive<ChartOptions<'bar'>>({
     legend: { display: true, position: 'top' },
     title: { display: true, text: 'Ingresos y Egresos (día)' },
   },
+  scales: {
+    x: {
+      type: 'category',
+    },
+    y: {
+      type: 'linear',
+    },
+  },
 });
 
 const popovers = sharedPopovers;

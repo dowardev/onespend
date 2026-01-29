@@ -1,6 +1,6 @@
 <template>
   <div class="chart-wrapper">
-    <Bar v-if="hasData" :data="chartData" :options="chartOptions" />
+    <Bar v-if="canRenderChart" :data="chartData" :options="chartOptions" />
   </div>
 </template>
 
@@ -11,8 +11,13 @@ import type { ChartData, ChartOptions } from 'chart.js';
 import { useChart } from '@/composables/useChart';
 
 // Initialize chart dependencies
-const { loadChartDependencies } = useChart();
-onMounted(loadChartDependencies);
+const { loadChartDependencies, isLoaded } = useChart();
+onMounted(() => {
+  loadChartDependencies().catch(e => console.error('Failed to load chart dependencies:', e));
+});
+
+// Only render chart when data exists AND Chart.js dependencies are loaded
+const canRenderChart = computed(() => hasData.value && isLoaded.value);
 
 const props = defineProps<{
   ingresos: number;
@@ -57,6 +62,7 @@ const chartOptions = computed<ChartOptions<'bar'>>(() => ({
   },
   scales: {
     x: {
+      type: 'linear',
       stacked: true,
       grid: {
         display: false,
@@ -66,6 +72,7 @@ const chartOptions = computed<ChartOptions<'bar'>>(() => ({
       },
     },
     y: {
+      type: 'category',
       stacked: true,
       grid: {
         display: false,

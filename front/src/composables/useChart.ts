@@ -8,35 +8,35 @@ export function useChart() {
   let chartComponents: any = null;
 
   async function loadChartDependencies() {
-    if (isLoaded.value) {
-      return { ChartJS: ChartJSInstance, chartComponents };
-    }
-
-    if (loading.value) {
-      // Wait for loading to complete
-      await new Promise(resolve => {
-        const checkLoaded = () => {
-          if (isLoaded.value) resolve(true);
-          else setTimeout(checkLoaded, 50);
-        };
-        checkLoaded();
-      });
+    if (isLoaded.value || loading.value) {
       return { ChartJS: ChartJSInstance, chartComponents };
     }
 
     loading.value = true;
 
     try {
-      // Dynamically import Chart.js and required components
-      const [
-        chartModule,
-        { CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend }
-      ] = await Promise.all([
-        import('chart.js'),
-        import('chart.js/auto')
-      ]);
+      // Explicitly import Chart.js components
+      const { 
+        Chart, 
+        CategoryScale, 
+        LinearScale, 
+        BarElement, 
+        Title, 
+        Tooltip, 
+        Legend 
+      } = await import('chart.js');
 
-      ChartJSInstance = chartModule.Chart || chartModule.default;
+      // Explicitly register components to ensure LinearScale is available
+      Chart.register(
+        CategoryScale,
+        LinearScale,
+        BarElement,
+        Title,
+        Tooltip,
+        Legend
+      );
+
+      ChartJSInstance = Chart;
       chartComponents = {
         CategoryScale,
         LinearScale,
@@ -46,22 +46,9 @@ export function useChart() {
         Legend
       };
 
-      // Register components
-      if (ChartJSInstance && ChartJSInstance.register) {
-        ChartJSInstance.register(
-          CategoryScale,
-          LinearScale,
-          BarElement,
-          Title,
-          Tooltip,
-          Legend
-        );
-      }
-
       isLoaded.value = true;
     } catch (error) {
-      console.error('Failed to load Chart.js:', error);
-      throw error;
+      console.error('Failed to load Chart.js dependencies:', error);
     } finally {
       loading.value = false;
     }

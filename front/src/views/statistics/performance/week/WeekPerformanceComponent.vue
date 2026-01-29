@@ -459,6 +459,14 @@ const chartOptions = reactive<ChartOptions<'bar'>>({
     legend: { display: true, position: 'top' },
     title: { display: true, text: 'Ingresos y Egresos (semana)' },
   },
+  scales: {
+    x: {
+      type: 'category',
+    },
+    y: {
+      type: 'linear',
+    },
+  },
 });
 
 const weeklyProfit = ref<number>(0);

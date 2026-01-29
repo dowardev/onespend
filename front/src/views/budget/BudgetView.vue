@@ -53,7 +53,7 @@
         <ion-grid v-if="activeView === 'inicio'">
           <ion-row>
             <ion-col size="12">
-              <InicioViewComponent />
+              <InicioViewComponent v-if="isDataLoaded" />
             </ion-col>
           </ion-row>
         </ion-grid>
@@ -305,6 +305,7 @@ const activeView = ref<'inicio' | 'proveedores' | 'resumen'>('inicio');
 const showClearConfirm = ref(false);
 const datePickerEvent = ref<Event | null>(null);
 const moreOptionsEvent = ref<Event | null>(null);
+const isDataLoaded = ref(false);
 const designMode = computed(() => systemController.getDesignMode());
 const isDev = computed(() => import.meta.env.DEV);
 
@@ -524,7 +525,13 @@ function openDatePicker(params: { event: Event }) {
 
   // Life cycle
   onMounted(async () => {
-    await budgetController.loadDataForCurrentDate();
+    try {
+      await budgetController.loadDataForCurrentDate();
+      isDataLoaded.value = true;
+    } catch (error) {
+      console.error('Failed to load budget data:', error);
+      isDataLoaded.value = true; // Still set to true to allow component to render
+    }
   });
 
   // End Life cycle

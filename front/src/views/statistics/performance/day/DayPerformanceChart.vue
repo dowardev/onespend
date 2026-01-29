@@ -5,12 +5,12 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount, watch, ref } from 'vue';
+import { onMounted, onBeforeUnmount, watch, ref, computed } from 'vue';
 import type { ChartOptions, ChartData } from 'chart.js';
 import { useChart } from '@/composables/useChart';
 
 // Initialize chart dependencies
-const { loadChartDependencies } = useChart();
+const { loadChartDependencies, isLoaded } = useChart();
 onMounted(loadChartDependencies);
 
 const props = defineProps<{
@@ -22,8 +22,18 @@ const props = defineProps<{
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 let chartInstance: Chart<'bar'> | null = null;
 
+const hasData = computed(() => 
+  props.chartData && 
+  props.chartData.labels && 
+  props.chartData.labels.length > 0 &&
+  props.chartData.datasets && 
+  props.chartData.datasets.length > 0
+);
+
+const canRenderChart = computed(() => hasData.value && isLoaded.value);
+
 function createChart() {
-  if (!canvasRef.value) return;
+  if (!canvasRef.value || !canRenderChart.value) return;
   // clean up previous instance if any
   if (chartInstance) {
     try {

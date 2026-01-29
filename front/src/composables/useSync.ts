@@ -193,8 +193,6 @@ export function useSync() {
         credito: prov?.credito as number || null,
         notes: prov?.notes as string || null,
         visited: prov?.visited as boolean || null,
-        _supplier_id: prov?._supplierId as string || null,
-        _supplier_name: prov?._supplierName as string || null,
         updated_at: Date.now(),
       },
     };

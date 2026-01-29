@@ -23,24 +23,20 @@
 
           <div class="list-content">
             <template v-if="providers.length">
-              <ion-virtual-scroll
-                :items="providers"
-                :approx-item-height="120"
-                key-property="id"
-              >
-                <template #default="{ item: p }">
-                  <ProviderCardComponent
-                    :provider="p"
-                    :has-products="false"
-                    :is-closed="isDayClosed"
-                    :is-disabled="providerIdsWithEntries.has(p.id)"
-                    @update-provider="handleUpdateProvider"
-                    @confirm-remove-proveedor="confirmRemoveProveedor"
-                    @open-notes-modal="handleOpenNotesModal"
-                    @open-edit-modal="openEditProviderModal"
-                  />
-                </template>
-              </ion-virtual-scroll>
+              <div class="provider-list">
+                <ProviderCardComponent
+                  v-for="p in providers"
+                  :key="p.id"
+                  :provider="p"
+                  :has-products="false"
+                  :is-closed="isDayClosed"
+                  :is-disabled="providerIdsWithEntries.has(p.id)"
+                  @update-provider="handleUpdateProvider"
+                  @confirm-remove-proveedor="confirmRemoveProveedor"
+                  @open-notes-modal="handleOpenNotesModal"
+                  @open-edit-modal="openEditProviderModal"
+                />
+              </div>
             </template>
 
             <template v-else>
@@ -160,7 +156,7 @@ import {
   IonContent,
   onIonViewWillEnter,
 } from '@ionic/vue';
-import { ref, reactive, computed, onMounted, onUnmounted } from 'vue';
+import { ref, reactive, computed, onMounted, onUnmounted, watchEffect } from 'vue';
 import {
   addOutline,
   documentOutline,
@@ -192,7 +188,7 @@ import NotesModal from './components/NotesModal.vue';
 // End Components
 
 // Vars
-  const budgetCtrl = new BudgetController();
+  const budgetCtrl = budgetController;
 const suppliersCtrl = new SuppliersController();
 const accountsCtrl = new AccountsController();
 const syncCtrl = new SyncController();
@@ -210,7 +206,7 @@ const conflictMessage = ref('');
 const templatesList = ref<Array<TemplateRecord>>([]);
 const pendingTemplate = ref<TemplateRecord | null>(null);
 const pendingProviders = ref<Array<{ name: string; estimated: number }>>([]);
-let unsubscribeFromSuppliers: (() => void) | null = null;
+
 
 const deleteConfirm = reactive({
   open: false,
@@ -230,21 +226,21 @@ const providerIdsWithEntries = computed(() => budgetCtrl.getProviderIdsWithEntri
 onMounted(async () => {
   await loadSuppliers();
   loadAccounts();
+});
 
-  unsubscribeFromSuppliers = suppliersCtrl.subscribeToChanges({ callback: (suppliers: Array<Supplier>) => {
+onMounted(() => {
+  const stopWatcher = watchEffect(() => {
+    const suppliers = suppliersCtrl.getSuppliers();
     console.log(
       '[Suppliers Change] Received update, suppliers count:',
       suppliers.length
     );
     budgetCtrl.syncProvidersWithSuppliers({ suppliers });
-  } });
-});
+  });
 
-onUnmounted(() => {
-  if (unsubscribeFromSuppliers) {
-    unsubscribeFromSuppliers();
-    unsubscribeFromSuppliers = null;
-  }
+  onUnmounted(() => {
+    stopWatcher();
+  });
 });
 
 onIonViewWillEnter(async () => {

@@ -1,13 +1,7 @@
 <template>
   <div>
     <Bar
-      v-if="
-        safeChartData &&
-        safeChartData.labels &&
-        safeChartData.labels.length &&
-        safeChartData.datasets &&
-        safeChartData.datasets.length
-      "
+      v-if="canRenderChart"
       :data="safeChartData"
       :options="safeChartOptions"
     />
@@ -15,7 +9,7 @@
 </template>
 
 <script setup lang="ts">
-import { shallowRef, watch, onMounted } from 'vue';
+import { shallowRef, watch, onMounted, computed } from 'vue';
 import { Bar } from 'vue-chartjs';
 import type { ChartOptions, ChartData } from 'chart.js';
 import { applyNeonStyles } from '@/utils/chartColors';
@@ -23,7 +17,7 @@ import { parseLocalDate, safeIntlFormat } from '@/utils/date';
 import { useChart } from '@/composables/useChart';
 
 // Initialize chart dependencies
-const { loadChartDependencies } = useChart();
+const { loadChartDependencies, isLoaded } = useChart();
 onMounted(loadChartDependencies);
 
 // interface
@@ -41,6 +35,18 @@ const props = withDefaults(defineProps<Props>(), {
   chartOptions: () => ({}) as ChartOptions<'bar'>,
 });
 // end main
+
+// computed
+const hasData = computed(() => 
+  props.chartData && 
+  props.chartData.labels && 
+  props.chartData.labels.length > 0 &&
+  props.chartData.datasets && 
+  props.chartData.datasets.length > 0
+);
+
+const canRenderChart = computed(() => hasData.value && isLoaded.value);
+// end computed
 
 // vars
 // Provide reactive shallow refs that mirror the incoming props but are safe for vue-chartjs
