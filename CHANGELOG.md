@@ -1,3 +1,10 @@
+## [v0.43.6] - 2026-01-29
+
+### 🐛 Bug Fixes
+- **SuppliersController**: Enhanced object cloning safety with robust error handling for non-cloneable objects
+- **Data Safety**: Added safeClone function to handle circular references and non-serializable values (functions, Error objects)
+- **Reliability**: Improved addProvider and updateProvider methods with fallback cloning mechanisms
+
 ## [v0.43.5] - 2026-01-29
 
 ### 🐛 Bug Fixes
