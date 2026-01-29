@@ -137,6 +137,14 @@ const chartOptions = reactive<ChartOptions<'bar'>>({
       text: `Comparativa anual (\u00faltimos ${yearsToCompare.value} a\u00f1os)`,
     },
   },
+  scales: {
+    x: {
+      type: 'category',
+    },
+    y: {
+      type: 'linear',
+    },
+  },
 });
 
 const yearProfit = ref<number>(0);

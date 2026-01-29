@@ -137,6 +137,14 @@ const chartOptions = reactive<ChartOptions<'bar'>>({
     legend: { display: true, position: 'top' },
     title: { display: true, text: 'Ingresos y Egresos (últimos 12 meses)' },
   },
+  scales: {
+    x: {
+      type: 'category',
+    },
+    y: {
+      type: 'linear',
+    },
+  },
 });
 
 const monthlyProfit = ref<number>(0);

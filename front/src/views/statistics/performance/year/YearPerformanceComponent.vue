@@ -410,6 +410,14 @@ const chartOptions = reactive({
       text: `Comparativa anual (últimos ${yearsToCompare.value} años)`,
     },
   },
+  scales: {
+    x: {
+      type: 'category',
+    },
+    y: {
+      type: 'linear',
+    },
+  },
 } as ChartOptions<'bar'>);
 
 const yearlyProfit = ref<number>(0);

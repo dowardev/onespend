@@ -209,6 +209,7 @@ class BudgetController {
     
     const { syncEntry } = useSync();
     syncEntry({ entry: newIngreso, operation: 'create' });
+    this.saveData();
   }
 
   addEgreso(params: {
@@ -243,6 +244,7 @@ class BudgetController {
     
     const { syncEntry } = useSync();
     syncEntry({ entry: newEgreso, operation: 'create' });
+    this.saveData();
   }
 
   addProviderEgresos(params: { provider: Provider }) {
@@ -409,9 +411,15 @@ class BudgetController {
 
   async saveData() {
     try {
-      const entriesData = this.toPlainObject(this.store.entries);
-      const providersData = this.toPlainObject(this.store.providers);
-      const finishDayDataPlain = this.toPlainObject({ ...this.store.finishDayData });
+      // Pinia/vue reactive proxies can serialize oddly with structuredClone.
+      // Convert to plain JSON arrays/objects first to ensure proper persistence.
+      const entriesData = Array.isArray(this.store.entries)
+        ? JSON.parse(JSON.stringify(this.store.entries))
+        : JSON.parse(JSON.stringify(Array.from(this.store.entries || [])));
+      const providersData = Array.isArray(this.store.providers)
+        ? JSON.parse(JSON.stringify(this.store.providers))
+        : JSON.parse(JSON.stringify(Array.from(this.store.providers || [])));
+      const finishDayDataPlain = JSON.parse(JSON.stringify({ ...this.store.finishDayData }));
 
       const dateKey = `budget:${this.store.selectedDate}`;
       console.log('[BudgetController.saveData] Guardando datos...', {

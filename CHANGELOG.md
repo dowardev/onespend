@@ -1,3 +1,30 @@
+## [v0.43.7] - 2026-01-29
+
+### 🔧 Improvements
+- **Chart Loading & Stability**: Centralize Chart.js dependency handling in `useChart` with explicit imports and component registration; chart components now wait for dependencies to load before rendering to avoid runtime errors and duplicate registrations.
+
+### 🐛 Bug Fixes
+- **Data Persistence**: Serialize reactive Pinia/Vue proxies to plain JSON before saving; this fixes unstable persistence/serialization when saving `entries`, `providers`, and `finishDayData`.
+- **Save on Create**: Ensure budget data is persisted after creating entries/providers by calling `saveData()` from `budgetController` after sync operations.
+- **Suppliers Reactivity**: Remove legacy `subscribeToChanges` and adopt `watchEffect` in `ProvidersComponent` to reactively sync suppliers with the store.
+- **Defensive Store Setters**: Guard `setEntries` and `setProviders` in `budgetStore` to accept only arrays and avoid runtime exceptions from unexpected shapes.
+
+### 🧭 UI / UX
+- **Stable Mounting**: Defer rendering of `InicioViewComponent` until budget data loads to avoid lifecycle/data race conditions.
+- **Providers List Rendering**: Replace virtual-scroll with a standard `v-for` provider list to simplify rendering and avoid virtualization edge cases.
+
+### Files Changed (selected)
+- `front/src/composables/useChart.ts` — explicit Chart.js import, registration, loading guards
+- `front/src/views/*/*ChartComponent.vue` & `AccountBarChart.vue` — render guards, `canRenderChart` computed, scale types added
+- `front/src/controllers/budgetController.ts` — serialize store state before save; call `saveData()` after creates
+- `front/src/controllers/suppliersController.ts` — remove `subscribeToChanges` method
+- `front/src/stores/budgetStore.ts` — defensive array handling in setters
+- `front/src/views/budget/ProvidersComponent.vue` — replace virtual-scroll with `v-for`, use `watchEffect`
+- `front/src/views/budget/BudgetView.vue` & `InicioViewComponent.vue` — coordinate data loading and child mounting
+- `front/package.json` — bump version to `0.43.7`
+
+---
+
 ## [v0.43.6] - 2026-01-29
 
 ### 🐛 Bug Fixes
