@@ -1,24 +1,27 @@
 import { createRouter, createWebHashHistory } from '@ionic/vue-router';
 import { RouteRecordRaw } from 'vue-router';
-import { setupNavigationCleanup, removeTemporaryElements } from '@/utils/domCleanup';
-// Lazy loaded components for better code splitting
-const HomePage = () => import('../views/HomePage.vue');
-const BudgetView = () => import('../views/budget/BudgetView.vue');
-const TemplatesView = () => import('../views/templates/TemplatesView.vue');
-const SuppliersPage = () => import('../views/suppliers/SuppliersPage.vue');
-const AccountsPage = () => import('../views/suppliers/accounts/AccountsPage.vue');
-const StatisticsPage = () => import('../views/statistics/StatisticsPage.vue');
-const StatisticsConfigPage = () => import('../views/statistics/config/StatisticsConfigPage.vue');
-const MaintenancePage = () => import('../views/admin/MaintenancePage.vue');
-const MigrateDates = () => import('../views/admin/maintenance/MigrateDates.vue');
-const MigrateEntries = () => import('../views/admin/maintenance/MigrateEntries.vue');
-const PersonalizationPage = () => import('../views/admin/PersonalizationPage.vue');
-const SyncView = () => import('../views/sync/SyncView.vue');
-const LoginView = () => import('../views/auth/LoginView.vue');
-const RegisterView = () => import('../views/auth/RegisterView.vue');
-const PerformanceTestPage = () => import('../views/test/PerformanceTestPage.vue');
-const CashFlowPage = () => import('../views/statistics/cashFlow/CashFlow.vue');
-const PerformancePage = () => import('../views/statistics/performance/PerformancePage.vue');
+import {
+  setupNavigationCleanup,
+  removeTemporaryElements,
+} from '@/utils/domCleanup';
+// Static imports (no relative paths) — match original file structure but using '@' alias
+import HomePage from '@/views/HomePage.vue';
+import BudgetView from '@/views/budget/BudgetView.vue';
+import TemplatesView from '@/views/templates/TemplatesView.vue';
+import SuppliersPage from '@/views/suppliers/SuppliersPage.vue';
+import AccountsPage from '@/views/suppliers/accounts/AccountsPage.vue';
+import StatisticsPage from '@/views/statistics/StatisticsPage.vue';
+import StatisticsConfigPage from '@/views/statistics/config/StatisticsConfigPage.vue';
+import MaintenancePage from '@/views/admin/MaintenancePage.vue';
+import MigrateDates from '@/views/admin/maintenance/MigrateDates.vue';
+import MigrateEntries from '@/views/admin/maintenance/MigrateEntries.vue';
+import PersonalizationPage from '@/views/admin/PersonalizationPage.vue';
+import SyncView from '@/views/sync/SyncView.vue';
+import LoginView from '@/views/auth/LoginView.vue';
+import RegisterView from '@/views/auth/RegisterView.vue';
+import PerformanceTestPage from '@/views/test/PerformanceTestPage.vue';
+import CashFlowPage from '@/views/statistics/cashFlow/CashFlow.vue';
+import PerformancePage from '@/views/statistics/performance/PerformancePage.vue';
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -126,14 +129,14 @@ setupNavigationCleanup(router);
 router.beforeEach((to, from, next) => {
   // Clean up temporary elements on every navigation
   removeTemporaryElements();
-  
+
   // Additional cleanup when leaving performance test
   if (from.path === '/test/performance') {
     setTimeout(() => {
       removeTemporaryElements();
     }, 100); // Delay to ensure cleanup after route change
   }
-  
+
   next();
 });
 
@@ -152,7 +155,10 @@ router.beforeResolve(async (to, from) => {
   ];
 
   // Add safety check to prevent prefetching statistics routes
-  if (String(to.name).includes('Statistics') || String(to.name).includes('Performance')) {
+  if (
+    String(to.name).includes('Statistics') ||
+    String(to.name).includes('Performance')
+  ) {
     return;
   }
 
