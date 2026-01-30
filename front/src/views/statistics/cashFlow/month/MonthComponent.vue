@@ -4,7 +4,7 @@
       <ion-label>Mensual</ion-label>
 
       <ion-buttons>
-        <ion-button fill="clear" @click="prevMonth">
+        <ion-button fill="clear" @click="onPrev">
           <ion-icon :icon="chevronBackOutline"> </ion-icon>
         </ion-button>
 
@@ -17,7 +17,7 @@
           {{ monthRangeLabel }}
         </ion-button>
 
-        <ion-button fill="clear" @click="nextMonth">
+        <ion-button fill="clear" @click="onNext">
           <ion-icon :icon="chevronForwardOutline"></ion-icon>
         </ion-button>
       </ion-buttons>
@@ -56,7 +56,7 @@
         :value="selectedDate || null"
         style="background: transparent"
         presentation="year"
-        @ion-change="onPopoverDateChange"
+        @ion-change="onPopoverDateChange($event)"
       ></ion-datetime>
 
       <ion-item>
@@ -66,7 +66,7 @@
           class="no-shadow"
           color="primary"
           size="small"
-          @click="resetToToday()"
+          @click="onResetToToday()"
           >Hoy</ion-button
         >
       </ion-item>
@@ -76,245 +76,37 @@
 </template>
 
 <script setup lang="ts">
-// Imports
-import {
-  IonButtons,
-  IonButton,
-  IonCard,
-  IonCol,
-  IonContent,
-  IonDatetime,
-  IonIcon,
-  IonItem,
-  IonLabel,
-  IonList,
-  IonListHeader,
-  IonPopover,
-  IonRow,
-} from '@ionic/vue';
-import { computed, reactive, onMounted, ref } from 'vue';
-import type { ChartData, ChartOptions } from 'chart.js';
-import {
-  format,
-  startOfMonth,
-  addMonths,
-  differenceInCalendarMonths,
-} from 'date-fns';
-import { parseLocalDate } from '@/utils/date';
-import { es } from 'date-fns/locale';
-import dixieController from '@/controllers/dixie';
-
+import { defineProps } from 'vue';
 import MonthChartComponent from '@/views/statistics/cashFlow/month/MonthChartComponent.vue';
 import { chevronBackOutline, chevronForwardOutline } from 'ionicons/icons';
 
-// life
-onMounted(() => {
-  void loadMonthlyData();
-});
-// end life
-
-// vars
-// month navigation state: offset (number of months from current), and helpers to navigate
-const monthOffset = ref<number>(0);
-const popovers = reactive({
-  mainDate: { open: false, event: null as Event | null },
-});
-
-// selected date for the popover datetime
-const selectedDate = ref<string>(format(new Date(), 'yyyy-MM-dd'));
-const chartData = reactive<ChartData<'bar'>>({
-  labels: [],
-  datasets: [
-    { label: 'Ingresos', data: [] },
-    { label: 'Egresos', data: [] },
-  ],
+const props = defineProps({
+  chartData: { type: Object, default: () => ({ labels: [], datasets: [] }) },
+  chartOptions: { type: Object, default: () => ({}) },
+  monthRangeLabel: { type: String, default: '' },
+  formattedMonthlyProfit: { type: String, default: '' },
+  selectedDate: { type: String, default: '' },
+  popovers: { type: Object, default: () => ({ mainDate: { open: false, event: null } }) },
+  onPrev: { type: Function, required: false },
+  onNext: { type: Function, required: false },
+  onPopoverDateChange: { type: Function, required: false },
+  resetToToday: { type: Function, required: false },
 });
 
-const chartOptions = reactive<ChartOptions<'bar'>>({
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: { display: true, position: 'top' },
-    title: { display: true, text: 'Ingresos y Egresos (últimos 12 meses)' },
-  },
-  scales: {
-    x: {
-      type: 'category',
-    },
-    y: {
-      type: 'linear',
-    },
-  },
-});
-
-const monthlyProfit = ref<number>(0);
-// end vars
-
-// computed
-const monthRangeLabel = computed(() => {
-  // Show window of months (e.g. Ene 2024 - Dic 2024 for 12 months)
-  const N = 12;
-  const endMonth = addMonths(startOfMonth(new Date()), monthOffset.value);
-  const startWindow = addMonths(endMonth, -(N - 1));
-  return `${format(startWindow, 'MMM yyyy', { locale: es })} - ${format(endMonth, 'MMM yyyy', { locale: es })}`;
-});
-
-const formattedMonthlyProfit = computed(() =>
-  new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(
-    monthlyProfit.value
-  )
-);
-// end computed
-
-// helpers
-function providerValue(p: ProviderValue) {
-  try {
-    const efectivo = Number(p?.efectivo || 0);
-    const tarjeta = Number(p?.tarjeta || 0);
-    const credito = Number(p?.credito || 0);
-    const sumPayments = efectivo + tarjeta + credito;
-    if (sumPayments > 0) return sumPayments;
-    const e = Number(p?.estimated || 0);
-    return e;
-  } catch (_e) {
-    return 0;
-  }
+function onPrev() {
+  if (props.onPrev) props.onPrev();
 }
 
-// navigation functions
-function prevMonth() {
-  monthOffset.value -= 1;
-  void loadMonthlyData();
+function onNext() {
+  if (props.onNext) props.onNext();
 }
 
-function nextMonth() {
-  monthOffset.value += 1;
-  void loadMonthlyData();
-}
-
-/**
- * Handle date selection from the popover datetime.
- * This computes how many calendar months away the selected date is
- * from the current month start and updates monthOffset accordingly,
- * then reloads the monthly data.
- */
 function onPopoverDateChange(e: CustomEvent) {
-  try {
-    const val = e?.detail?.value || selectedDate.value;
-    const parsed = parseLocalDate({ d: String(val).slice(0, 10) });
-    selectedDate.value = format(parsed, 'yyyy-MM-dd');
-    const currentMonthStart = startOfMonth(new Date());
-    monthOffset.value = differenceInCalendarMonths(parsed, currentMonthStart);
-  } catch (_err) {
-    monthOffset.value = 0;
-  }
-  popovers.mainDate.open = false;
-  void loadMonthlyData();
+  if (props.onPopoverDateChange) props.onPopoverDateChange(e);
 }
 
-/**
- * loadMonthlyData aggregated by months (last N months window)
- */
-async function loadMonthlyData() {
-  try {
-    const all = ((await dixieController.listBackups()) as Backup[]) || [];
-
-    const N = 12; // number of months to display
-    const labels: string[] = [];
-    const ingresosArr: number[] = [];
-    const egresosArr: number[] = [];
-
-    const endMonth = addMonths(startOfMonth(new Date()), monthOffset.value);
-
-    for (let i = N - 1; i >= 0; i--) {
-      const month = addMonths(endMonth, -i);
-      const monthKey = format(month, 'yyyy-MM'); // e.g. 2025-01
-      labels.push(format(month, 'MMM yyyy', { locale: es }));
-
-      // filter backups that belong to this month
-      const matches = (Array.isArray(all) ? all : []).filter(
-        b =>
-          b &&
-          (b.component === 'BudgetView' ||
-            String((b && b.component) || '').includes('Budget')) &&
-          b.data &&
-          String(b.data.selectedDate || '').slice(0, 7) === monthKey
-      );
-
-      // we want the latest backup per day inside this month to avoid duplicate days
-      const latestPerDay: Record<string, Backup> = {};
-      (matches || []).forEach(mb => {
-        const dayKey = String(mb.data?.selectedDate || '').slice(0, 10);
-        if (!dayKey) return;
-        const curr = latestPerDay[dayKey];
-        if (!curr || (mb.createdAt || 0) > (curr.createdAt || 0)) {
-          latestPerDay[dayKey] = mb;
-        }
-      });
-
-      let monthIngresos = 0;
-      let monthProveedores = 0;
-
-      Object.values(latestPerDay).forEach((latest: BackupData) => {
-        if (!latest || !latest.data) return;
-        const d = latest.data;
-        if (Array.isArray(d.ingresos || d.entries)) {
-          monthIngresos += (d.ingresos || d.entries).reduce(
-            (s: number, i: Income) => s + (Number(i.amount || 0) || 0),
-            0
-          );
-        }
-        if (Array.isArray(d.proveedores)) {
-          monthProveedores += d.proveedores.reduce(
-            (s: number, p: Provider) => s + (Number(providerValue(p) || 0) || 0),
-            0
-          );
-        }
-      });
-
-      ingresosArr.push(Number(monthIngresos || 0));
-      egresosArr.push(Number(monthProveedores || 0));
-    }
-
-    // assign to reactive chartData
-    chartData.labels = labels as string[];
-    chartData.datasets[0].data = ingresosArr as number[];
-    chartData.datasets[1].data = egresosArr as number[];
-
-    // calculate current monthly profit (for the endMonth)
-    try {
-      const idx = ingresosArr.length - 1;
-      if (idx >= 0) {
-        monthlyProfit.value =
-          Number(ingresosArr[idx] || 0) - Number(egresosArr[idx] || 0);
-      } else {
-        monthlyProfit.value = 0;
-      }
-    } catch (_err) {
-      monthlyProfit.value = 0;
-    }
-
-    // Note: Monthly profit UI restored and computed above.
-  } catch (e) {
-    console.error('loadMonthlyData error', e);
-  }
-}
-
-function resetToToday() {
-  try {
-    const today = new Date();
-    selectedDate.value = format(today, 'yyyy-MM-dd');
-
-    // update monthOffset so the charts reflect the current month window
-    const currentMonthStart = startOfMonth(new Date());
-    monthOffset.value = differenceInCalendarMonths(today, currentMonthStart);
-
-    // close the popover and reload monthly data
-    popovers.mainDate.open = false;
-    void loadMonthlyData();
-  } catch (_e) {
-    /* noop */
-  }
+function onResetToToday() {
+  if (props.resetToToday) props.resetToToday();
 }
 </script>
 
