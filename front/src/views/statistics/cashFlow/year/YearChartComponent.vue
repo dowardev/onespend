@@ -2,6 +2,7 @@
   <div>
     <Bar
       v-if="canRenderChart"
+      :key="chartKey"
       :data="safeChartData"
       :options="safeChartOptions"
     />
@@ -9,15 +10,22 @@
 </template>
 
 <script setup lang="ts">
-import { shallowRef, watch, onMounted, computed } from 'vue';
+import { shallowRef, watch, onMounted, computed, ref } from 'vue';
 import { Bar } from 'vue-chartjs';
 import type { ChartOptions, ChartData } from 'chart.js';
 import { applyNeonStyles } from '@/utils/chartColors';
+import { parseLocalDate, safeIntlFormat } from '@/utils/date';
 import { useChart } from '@/composables/useChart';
 
 // Initialize chart dependencies
 const { loadChartDependencies, isLoaded } = useChart();
-onMounted(loadChartDependencies);
+onMounted(async () => {
+  try {
+    await loadChartDependencies();
+  } catch (e) {
+    console.error('Failed to load chart dependencies:', e);
+  }
+});
 
 // interface
 interface Props {
@@ -63,19 +71,22 @@ const safeChartData = shallowRef<ChartData<'bar'>>(
     : { labels: [], datasets: [] }
 );
 const safeChartOptions = shallowRef<ChartOptions<'bar'>>(
-  props.chartOptions
-    ? JSON.parse(JSON.stringify(props.chartOptions))
-    : ({} as ChartOptions<'bar'>)
+  props.chartOptions ? JSON.parse(JSON.stringify(props.chartOptions)) : ({} as ChartOptions<'bar'>)
 );
+
+// Force remount key to ensure vue-chartjs fully re-renders when data changes
+const chartKey = ref(0);
 // end vars
 
 // watch
+// update safeChartData whenever props.chartData changes
 watch(
   () => props.chartData,
   v => {
-const cloned = v
-      ? JSON.parse(JSON.stringify(v))
-      : ({} as ChartOptions<'bar'>);
+    const cloned = v ? JSON.parse(JSON.stringify(v)) : { labels: [], datasets: [] };
+    cloned.labels = (cloned.labels || []).map(translateDayLabel);
+    safeChartData.value = applyNeonStyles(cloned, props.colorIndex);
+    try { chartKey.value = (chartKey.value || 0) + 1; } catch (_e) {}
   },
   { immediate: true, deep: true }
 );

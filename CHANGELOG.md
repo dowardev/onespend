@@ -1,3 +1,24 @@
+## [v0.44.0] - 2026-01-30
+
+### 🔧 Refactor
+- **Statistics — Cash Flow:** Centralize data loading and state management in `front/src/views/statistics/cashFlow/CashFlow.vue`. Period views (Day/Week/Month/Year) are converted to presentational, prop-driven components that receive chart data, labels, formatted totals and callback handlers from the parent.
+
+### 🛠 Improvements
+- **Chart Stability:** Month chart now forces remount when underlying data changes and ensures Chart.js dependencies are loaded before render; safer cloning and label translation added to reduce runtime errors and visual glitches.
+- **Defensive Parsing & Debugging:** Added robust backup/date parsing helpers, provider amount extraction helpers, and optional debug exports for easier local debugging.
+
+### Files Changed (selected)
+- `front/src/views/statistics/cashFlow/CashFlow.vue` — centralize loaders, state, helpers and expose props/callbacks
+- `front/src/views/statistics/cashFlow/day/DayComponent.vue` — converted to presentational component (props + callbacks)
+- `front/src/views/statistics/cashFlow/week/WeekComponent.vue` — converted to presentational component
+- `front/src/views/statistics/cashFlow/month/MonthComponent.vue` — converted to presentational component
+- `front/src/views/statistics/cashFlow/month/MonthChartComponent.vue` — improved chart remounting and dependency loading
+- `front/src/views/statistics/cashFlow/year/YearComponent.vue` — converted to presentational component
+- `front/src/views/statistics/cashFlow/year/YearChartComponent.vue` — minor chart stability improvements
+- `front/package.json` — bump version to `0.44.0`
+
+---
+
 ## [v0.43.7] - 2026-01-29
 
 ### 🔧 Improvements

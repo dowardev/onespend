@@ -2,6 +2,7 @@
   <div>
     <Bar
       v-if="canRenderChart"
+      :key="chartKey"
       :data="safeChartData"
       :options="safeChartOptions"
     />
@@ -9,16 +10,12 @@
 </template>
 
 <script setup lang="ts">
-import { shallowRef, watch, onMounted, computed } from 'vue';
+import { shallowRef, watch, onMounted, computed, ref } from 'vue';
 import { Bar } from 'vue-chartjs';
 import type { ChartOptions, ChartData } from 'chart.js';
 import { applyNeonStyles } from '@/utils/chartColors';
 import { parseLocalDate, safeIntlFormat } from '@/utils/date';
 import { useChart } from '@/composables/useChart';
-
-// Initialize chart dependencies
-const { loadChartDependencies, isLoaded } = useChart();
-onMounted(loadChartDependencies);
 
 // interface
 interface Props {
@@ -26,37 +23,36 @@ interface Props {
   chartOptions?: ChartOptions<'bar'>;
   colorIndex?: number;
 }
-// end interface
 
-// main
+// props
 const props = withDefaults(defineProps<Props>(), {
   colorIndex: 0,
   chartData: () => ({ labels: [], datasets: [] }) as ChartData<'bar'>,
   chartOptions: () => ({}) as ChartOptions<'bar'>,
 });
-// end main
+
+// Chart composable
+const { loadChartDependencies, isLoaded } = useChart();
 
 // computed
-const hasData = computed(() => 
-  props.chartData && 
-  props.chartData.labels && 
+const hasData = computed(() =>
+  props.chartData &&
+  props.chartData.labels &&
   props.chartData.labels.length > 0 &&
-  props.chartData.datasets && 
+  props.chartData.datasets &&
   props.chartData.datasets.length > 0
 );
 
 const canRenderChart = computed(() => hasData.value && isLoaded.value);
-// end computed
 
 // vars
-// Provide reactive shallow refs that mirror the incoming props but are safe for vue-chartjs
 const safeChartData = shallowRef<ChartData<'bar'>>(
   props.chartData
     ? applyNeonStyles(
         JSON.parse(
           JSON.stringify({
             ...props.chartData,
-            labels: (props.chartData.labels || []).map(translateDayLabel),
+            labels: (props.chartData.labels || []).map(translateMonthLabel),
           })
         ),
         props.colorIndex
@@ -64,21 +60,31 @@ const safeChartData = shallowRef<ChartData<'bar'>>(
     : { labels: [], datasets: [] }
 );
 const safeChartOptions = shallowRef<ChartOptions<'bar'>>(
-  props.chartOptions
-    ? JSON.parse(JSON.stringify(props.chartOptions))
-    : ({} as ChartOptions<'bar'>)
+  props.chartOptions ? JSON.parse(JSON.stringify(props.chartOptions)) : ({} as ChartOptions<'bar'>)
 );
+
+// Force remount key to ensure vue-chartjs fully re-renders when data changes
+const chartKey = ref(0);
+
+// Load chart dependencies on mount (await like other chart components)
+onMounted(async () => {
+  try {
+    await loadChartDependencies();
+  } catch (error) {
+    console.error('Failed to load chart dependencies:', error);
+  }
+});
 
 // watch
 watch(
   () => props.chartData,
   v => {
-    const cloned = v
-      ? JSON.parse(JSON.stringify(v))
-      : { labels: [], datasets: [] };
-    cloned.labels = (cloned.labels || []).map(translateDayLabel);
-    // Apply neon styles so monthly chart uses the shared pastel-neon palette
-    safeChartData.value = applyNeonStyles(cloned, props.colorIndex);
+    const cloned = v ? JSON.parse(JSON.stringify(v)) : { labels: [], datasets: [] };
+    cloned.labels = (cloned.labels || []).map(translateMonthLabel);
+  safeChartData.value = applyNeonStyles(cloned, props.colorIndex);
+    // bump key to force Bar remount (works around chart update detection issues)
+    try { chartKey.value = (chartKey.value || 0) + 1; } catch (_e) {}
+    // debug logs removed
   },
   { immediate: true, deep: true }
 );
@@ -86,31 +92,34 @@ watch(
 watch(
   () => props.chartOptions,
   v => {
-    safeChartOptions.value = v
-      ? JSON.parse(JSON.stringify(v))
-      : ({} as ChartOptions<'bar'>);
+    safeChartOptions.value = v ? JSON.parse(JSON.stringify(v)) : ({} as ChartOptions<'bar'>);
   },
   { immediate: true, deep: true }
 );
-// end watch
 
-// computed
-// end computed
+// watch chart loading state to help debugging
+watch(
+  () => isLoaded.value,
+  v => {
+    // debug logs removed
+  },
+  { immediate: true }
+);
 
 // functions
-function translateDayLabel(label: unknown): string {
+function translateMonthLabel(label: unknown): string {
   if (label == null) return '';
   const labelStr = String(label).trim();
 
   // If label is YYYY-MM (month key) -> format as "Ene 2025"
   if (/^\d{4}-\d{2}$/.test(labelStr)) {
-      try {
-        const d = parseLocalDate({ d: labelStr + '-01' });
-        const formatted = safeIntlFormat(d, 'es-MX', { month: 'short', year: 'numeric' });
-        if (formatted) return formatted.replace(/\./g, '').replace(/^(.)/, s => s.toUpperCase());
-      } catch (_e) {
-        // fall through
-      }
+    try {
+      const d = parseLocalDate({ d: labelStr + '-01' });
+      const formatted = safeIntlFormat(d, 'es-MX', { month: 'short', year: 'numeric' });
+      if (formatted) return formatted.replace(/\./g, '').replace(/^(.)/, s => s.toUpperCase());
+    } catch (_e) {
+      // fall through
+    }
   }
 
   // If label is a full ISO date YYYY-MM-DD, treat it as a month label as well
@@ -131,46 +140,17 @@ function translateDayLabel(label: unknown): string {
     return parts.join(' ');
   }
 
-  // Try parsing full date (ISO fallback) and return short weekday + day
-  const d = parseLocalDate(labelStr);
-  if (!isNaN(d.getTime())) {
-    const weekday = safeIntlFormat(d, 'es-MX', { weekday: 'short' });
-    const dayNum = safeIntlFormat(d, 'es-MX', { day: 'numeric' });
-    const weekdayNorm = weekday.replace(/\.$/, '');
-    const capitalized =
-      weekdayNorm.charAt(0).toUpperCase() + weekdayNorm.slice(1);
-    return `${capitalized} ${dayNum}`;
+  // Fallback: try to parse as date and return month-year
+  try {
+    const d = parseLocalDate({ d: labelStr });
+    if (!isNaN(d.getTime())) {
+      const formatted = safeIntlFormat(d, 'es-MX', { month: 'short', year: 'numeric' });
+      if (formatted) return formatted.replace(/\./g, '').replace(/^(.)/, s => s.toUpperCase());
+    }
+  } catch (_e) {
+    // ignore
   }
 
-  const map: Record<string, string> = {
-    sunday: 'Domingo',
-    monday: 'Lunes',
-    tuesday: 'Martes',
-    wednesday: 'Miércoles',
-    thursday: 'Jueves',
-    friday: 'Viernes',
-    saturday: 'Sábado',
-    sun: 'Dom',
-    mon: 'Lun',
-    tue: 'Mar',
-    wed: 'Mié',
-    thu: 'Jue',
-    fri: 'Vie',
-    sat: 'Sáb',
-    domingo: 'Domingo',
-    lunes: 'Lunes',
-    martes: 'Martes',
-    miércoles: 'Miércoles',
-    jueves: 'Jueves',
-    viernes: 'Viernes',
-    sábado: 'Sábado',
-  };
-  const lower = labelStr.toLowerCase().replace(/\./g, '');
-  const numMatch = labelStr.match(/\d+/);
-  if (map[lower]) return numMatch ? `${map[lower]} ${numMatch[0]}` : map[lower];
-  // try first three letters
-  const key3 = lower.slice(0, 3);
-  if (map[key3]) return numMatch ? `${map[key3]} ${numMatch[0]}` : map[key3];
   return labelStr;
 }
 </script>
