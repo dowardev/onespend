@@ -1,23 +1,23 @@
-## [v0.44.0] - 2026-01-30
+## [v0.44.1] - 2026-01-30
 
-### 🔧 Refactor
-- **Statistics — Cash Flow:** Centralize data loading and state management in `front/src/views/statistics/cashFlow/CashFlow.vue`. Period views (Day/Week/Month/Year) are converted to presentational, prop-driven components that receive chart data, labels, formatted totals and callback handlers from the parent.
+### Features
+- **Statistics — Cash Flow:** Add robust backup parsing and dedicated aggregators to better handle heterogeneous backup shapes and improve accuracy of ingresos/egresos aggregation across Day/Week/Month/Year period loaders.
 
-### 🛠 Improvements
-- **Chart Stability:** Month chart now forces remount when underlying data changes and ensures Chart.js dependencies are loaded before render; safer cloning and label translation added to reduce runtime errors and visual glitches.
-- **Defensive Parsing & Debugging:** Added robust backup/date parsing helpers, provider amount extraction helpers, and optional debug exports for easier local debugging.
+### 🔧 Improvements
+- Add `sumIngresosFromData` and `sumEgresosFromData` helpers in `front/src/views/statistics/cashFlow/CashFlow.vue` to support multiple backup shapes (`ingresos`, `incomes`, `entries` with `entryType`, `proveedores`, `providers`, `gastos`, `expenses`, and fallback numeric extraction).
+- Replace ad-hoc per-period summation logic with the new helpers in weekly, monthly and yearly loaders; split yearly datasets into `Ingresos` and `Egresos` for clearer charting and correct profit calculation.
+- Expose lightweight debug snapshots on `window` (`__debug_week`, `__debug_week_allMatches`, `__debug_week_backups`, `__debug_year_totals`) to help local troubleshooting when backup shapes vary.
+
+### 🐛 Fixes
+- Reduce runtime errors from malformed or unexpected backup shapes by adding defensive try/catch blocks around parsing and aggregation steps.
 
 ### Files Changed (selected)
-- `front/src/views/statistics/cashFlow/CashFlow.vue` — centralize loaders, state, helpers and expose props/callbacks
-- `front/src/views/statistics/cashFlow/day/DayComponent.vue` — converted to presentational component (props + callbacks)
-- `front/src/views/statistics/cashFlow/week/WeekComponent.vue` — converted to presentational component
-- `front/src/views/statistics/cashFlow/month/MonthComponent.vue` — converted to presentational component
-- `front/src/views/statistics/cashFlow/month/MonthChartComponent.vue` — improved chart remounting and dependency loading
-- `front/src/views/statistics/cashFlow/year/YearComponent.vue` — converted to presentational component
-- `front/src/views/statistics/cashFlow/year/YearChartComponent.vue` — minor chart stability improvements
-- `front/package.json` — bump version to `0.44.0`
+- `front/src/views/statistics/cashFlow/CashFlow.vue` — add robust aggregators, debug helpers, and stabilize weekly/monthly/yearly loaders
+- `front/package.json` — bump version to `0.44.1`
 
 ---
+
+## [v0.44.0] - 2026-01-30
 
 ## [v0.43.7] - 2026-01-29
 
