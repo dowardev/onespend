@@ -123,6 +123,79 @@ function extractAmountFromItem(item: any) {
   }
 }
 
+// Robust helpers to extract total ingresos/egresos from a backup data object
+function sumIngresosFromData(d: any) {
+  try {
+    if (!d) return 0;
+    // common explicit ingresos array
+    if (Array.isArray(d.ingresos)) return d.ingresos.reduce((s: number, i: any) => s + (Number(i?.amount || 0) || 0), 0);
+    // english alternative
+    if (Array.isArray(d.incomes)) return d.incomes.reduce((s: number, i: any) => s + (Number(i?.amount || 0) || 0), 0);
+    // entries with entryType 'ingreso' or 'income'
+    if (Array.isArray(d.entries)) {
+      return (d.entries || []).filter((e: any) => {
+        const t = String(e?.entryType || '').toLowerCase();
+        return t === 'ingreso' || t === 'income';
+      }).reduce((s: number, i: any) => s + (Number(i?.amount || 0) || 0), 0);
+    }
+    // fallback: try to find any numeric property
+    return extractAmountFromItem(d) || 0;
+  } catch (_e) {
+    return 0;
+  }
+}
+
+function sumEgresosFromData(d: any) {
+  try {
+    if (!d) return 0;
+
+    // Prefer entries-based egresos (day uses entries). If entries contain egreso/expense items, use that.
+    let entriesEgresos = 0;
+    if (Array.isArray(d.entries)) {
+      entriesEgresos = (d.entries || []).filter((e: any) => {
+        const t = String(e?.entryType || '').toLowerCase();
+        return t === 'egreso' || t === 'expense';
+      }).reduce((s: number, i: any) => s + (Number(i?.amount || i?.monto || i?.total || 0) || 0), 0);
+    }
+    if (entriesEgresos && entriesEgresos !== 0) return entriesEgresos;
+
+    // Otherwise fall back to proveedores/providers arrays or explicit egresos/gastos arrays
+    let proveedoresSum = 0;
+    if (Array.isArray(d.proveedores)) {
+      proveedoresSum += d.proveedores.reduce((s: number, p: any) => {
+        if (p == null) return s;
+        if (typeof p === 'number') return s + Number(p || 0);
+        const extracted = extractAmountFromItem(p);
+        if (extracted && extracted !== 0) return s + extracted;
+        return s + (Number(providerValue(p) || 0) || 0);
+      }, 0);
+    }
+    if (Array.isArray(d.providers)) {
+      proveedoresSum += d.providers.reduce((s: number, p: any) => {
+        if (p == null) return s;
+        if (typeof p === 'number') return s + Number(p || 0);
+        const extracted = extractAmountFromItem(p);
+        if (extracted && extracted !== 0) return s + extracted;
+        return s + (Number(providerValue(p) || 0) || 0);
+      }, 0);
+    }
+
+    const egKeys = ['egresos', 'gastos', 'expenses'];
+    for (const k of egKeys) {
+      if (Array.isArray(d[k])) {
+        proveedoresSum += d[k].reduce((s: number, i: any) => s + (Number(i?.amount || i?.monto || i?.total || 0) || 0), 0);
+      }
+    }
+
+    if (proveedoresSum && proveedoresSum !== 0) return proveedoresSum;
+
+    // final fallback: try to extract any numeric amount from object
+    return extractAmountFromItem(d) || 0;
+  } catch (_e) {
+    return 0;
+  }
+}
+
 function isoDate(d: Date) {
   return format(d, 'yyyy-MM-dd');
 }
@@ -336,28 +409,54 @@ async function loadWeeklyData() {
         }
       });
 
+      // expose all matches for this day (safe copy) to help debugging when sums differ
+      try {
+        const safeMatchesAll = (matches || []).slice(0, 50).map(m => {
+          try { return JSON.parse(JSON.stringify(m)); } catch (_e) { return { id: m && (m.id || m.key || m.name), createdAt: m && m.createdAt, dataKeys: m && m.data ? Object.keys(m.data) : null }; }
+        });
+        try { (window as any).__debug_week_allMatches = (window as any).__debug_week_allMatches || {}; (window as any).__debug_week_allMatches[target] = safeMatchesAll; } catch (_e) {}
+      } catch (_e) { /* ignore debug helpers */ }
+
       const latest = (matches || []).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))[0];
 
       let ingresosSum = 0;
       let proveedoresSum = 0;
 
       if (latest && latest.data) {
-        const d = latest.data;
-        if (Array.isArray(d.ingresos || d.entries)) {
-          ingresosSum = (d.ingresos || d.entries).reduce((s: number, i: any) => s + (Number(i.amount || 0) || 0), 0);
-        }
-        if (Array.isArray(d.proveedores)) {
-          proveedoresSum = d.proveedores.reduce((s: number, p: any) => s + (Number(providerValue(p) || 0) || 0), 0);
-        }
+        try {
+          ingresosSum = sumIngresosFromData(latest.data);
+        } catch (_e) { ingresosSum = 0; }
+        try {
+          proveedoresSum = sumEgresosFromData(latest.data);
+        } catch (_e) { proveedoresSum = 0; }
       }
 
       ingresosArr.push(Number(ingresosSum || 0));
       egresosArr.push(Number(proveedoresSum || 0));
+
+      // collect minimal debug info about the 'latest' backup used for this day
+      try {
+        const safeLatest = latest && typeof latest === 'object' ? {
+          id: latest.id || latest.key || latest.name || null,
+          createdAt: latest.createdAt || null,
+          selectedDate: getBackupSelectedDate(latest) || null,
+          dataKeys: latest.data ? Object.keys(latest.data) : null,
+          ingresosSample: latest.data && Array.isArray(latest.data.ingresos) ? (latest.data.ingresos || []).slice(0,5) : null,
+          proveedoresSample: latest.data && Array.isArray(latest.data.proveedores) ? (latest.data.proveedores || []).slice(0,5) : null,
+          entriesSample: latest.data && Array.isArray(latest.data.entries) ? (latest.data.entries || []).slice(0,10) : null,
+        } : null;
+        try { (window as any).__debug_week_backups = (window as any).__debug_week_backups || []; if (safeLatest) (window as any).__debug_week_backups.push(safeLatest); } catch (_e) {}
+      } catch (_e) { /* ignore debug collection errors */ }
     }
 
     week.chartData.labels = labels as string[];
     week.chartData.datasets[0].data = ingresosArr as number[];
     week.chartData.datasets[1].data = egresosArr as number[];
+
+    try {
+      // expose week debug object for easier inspection in browser console
+      try { (window as any).__debug_week = { labels: labels.slice(0, 50), ingresosArr: ingresosArr.slice(0, 50), egresosArr: egresosArr.slice(0, 50) }; } catch (_e) {}
+    } catch (_e) {}
 
     try {
       const totalIngresos = ingresosArr.reduce((s, v) => s + Number(v || 0), 0);
@@ -396,13 +495,8 @@ async function loadWeeklyData() {
         let prevProveedoresSum = 0;
 
         if (prevLatest && prevLatest.data) {
-          const d = prevLatest.data;
-          if (Array.isArray(d.ingresos || d.entries)) {
-            prevIngresosSum = (d.ingresos || d.entries).reduce((s: number, i: any) => s + (Number(i.amount || 0) || 0), 0);
-          }
-          if (Array.isArray(d.proveedores)) {
-            prevProveedoresSum = d.proveedores.reduce((s: number, p: any) => s + (Number(providerValue(p) || 0) || 0), 0);
-          }
+          try { prevIngresosSum = sumIngresosFromData(prevLatest.data); } catch (_e) { prevIngresosSum = 0; }
+          try { prevProveedoresSum = sumEgresosFromData(prevLatest.data); } catch (_e) { prevProveedoresSum = 0; }
         }
 
         prevIngresosArr.push(Number(prevIngresosSum || 0));
@@ -485,35 +579,15 @@ async function loadMonthlyData() {
 
       let monthIngresos = 0;
       let monthProveedores = 0;
-      Object.values(latestPerDay).forEach((latest: any) => {
-        if (!latest || !latest.data) return;
-        const d = latest.data;
-
-        // Sum ingresos: support multiple shapes (d.ingresos array OR d.entries with entryType 'ingreso')
-        try {
-          if (Array.isArray(d.ingresos)) {
-            monthIngresos += d.ingresos.reduce((s: number, i: any) => s + (Number(i?.amount || 0) || 0), 0);
-          } else if (Array.isArray(d.entries)) {
-            // entries may contain both ingresos and egresos; filter by entryType
-            const ingresosEntries = d.entries.filter((e: any) => String(e?.entryType || '').toLowerCase() === 'ingreso');
-            monthIngresos += ingresosEntries.reduce((s: number, i: any) => s + (Number(i?.amount || 0) || 0), 0);
-          }
-        } catch (_e) {
-          /* ignore malformed ingreso data */
-        }
-
-        // Sum egresos/proveedores: support d.proveedores OR d.entries with entryType 'egreso'
-        try {
-          if (Array.isArray(d.proveedores)) {
-            monthProveedores += d.proveedores.reduce((s: number, p: any) => s + (Number(providerValue(p) || 0) || 0), 0);
-          } else if (Array.isArray(d.entries)) {
-            const egresoEntries = d.entries.filter((e: any) => String(e?.entryType || '').toLowerCase() === 'egreso');
-            monthProveedores += egresoEntries.reduce((s: number, i: any) => s + (Number(i?.amount || 0) || 0), 0);
-          }
-        } catch (_e) {
-          /* ignore malformed egreso data */
-        }
-      });
+        Object.values(latestPerDay).forEach((latest: any) => {
+          if (!latest || !latest.data) return;
+          try {
+            monthIngresos += sumIngresosFromData(latest.data);
+          } catch (_e) { /* ignore per-day ingreso errors */ }
+          try {
+            monthProveedores += sumEgresosFromData(latest.data);
+          } catch (_e) { /* ignore per-day egreso errors */ }
+        });
 
       ingresosArr.push(Number(monthIngresos || 0));
       egresosArr.push(Number(monthProveedores || 0));
@@ -560,11 +634,13 @@ async function loadYearData() {
     for (let y = startYear; y <= selectedYear; y++) yearsArr.push(y);
 
     const labels: string[] = yearsArr.map(y => String(y));
-    const yearTotals: number[] = [];
+    const yearIngresosTotals: number[] = [];
+    const yearEgresosTotals: number[] = [];
 
     for (let yi = 0; yi < yearsArr.length; yi++) {
       const y = yearsArr[yi];
-      let yearTotal = 0;
+      let yearIngresos = 0;
+      let yearEgresos = 0;
 
       const yearBase = new Date(yearStart);
       yearBase.setFullYear(y);
@@ -587,8 +663,6 @@ async function loadYearData() {
           }
         });
 
-        // (debug logging removed)
-
         const latestPerDay: Record<string, any> = {};
         (matches || []).forEach(mb => {
           const dayKey = String(getBackupSelectedDate(mb) || '').slice(0, 10);
@@ -602,43 +676,47 @@ async function loadYearData() {
         let monthProveedores = 0;
         Object.values(latestPerDay).forEach((latest: any) => {
           if (!latest || !latest.data) return;
-          const d = latest.data;
           try {
-            if (Array.isArray(d.ingresos)) {
-              monthIngresos += (d.ingresos).reduce((s: number, i: any) => s + (Number(i.amount || 0) || 0), 0);
-            } else if (Array.isArray(d.entries)) {
-              monthIngresos += (d.entries || []).filter((e: any) => String(e?.entryType || '').toLowerCase() === 'ingreso').reduce((s: number, i: any) => s + (Number(i.amount || 0) || 0), 0);
-            }
+            monthIngresos += sumIngresosFromData(latest.data);
           } catch (_e) { /* ignore malformed ingresos */ }
-
           try {
-            if (Array.isArray(d.proveedores)) {
-              monthProveedores += d.proveedores.reduce((s: number, p: any) => s + (Number(providerValue(p) || 0) || 0), 0);
-            } else if (Array.isArray(d.entries)) {
-              monthProveedores += (d.entries || []).filter((e: any) => String(e?.entryType || '').toLowerCase() === 'egreso').reduce((s: number, i: any) => s + (Number(i.amount || 0) || 0), 0);
-            }
+            monthProveedores += sumEgresosFromData(latest.data);
           } catch (_e) { /* ignore malformed proveedores */ }
-
         });
 
-        yearTotal += Number((monthIngresos || 0) - (monthProveedores || 0));
+        yearIngresos += Number(monthIngresos || 0);
+        yearEgresos += Number(monthProveedores || 0);
       }
 
-      yearTotals.push(yearTotal);
+      yearIngresosTotals.push(Number(yearIngresos || 0));
+      yearEgresosTotals.push(Number(yearEgresos || 0));
     }
 
     year.chartData.labels = labels as string[];
-    // replace datasets to ensure reactivity and numeric types
-    year.chartData.datasets = [ { label: `Ganancia`, data: yearTotals.map(v => Number(v || 0)) } ];
+    // replace datasets to ensure reactivity and numeric types (Ingresos / Egresos)
+    year.chartData.datasets = [
+      { label: 'Ingresos', data: yearIngresosTotals.map(v => Number(v || 0)) },
+      { label: 'Egresos', data: yearEgresosTotals.map(v => Number(v || 0)) }
+    ];
     try {
       // eslint-disable-next-line no-console
       console.log('[loadYearData] assigned year.chartData.datasets sample:', JSON.stringify(year.chartData.datasets));
     } catch (_e) {}
 
     try {
+      // expose simple year debug totals for console inspection
+      try { (window as any).__debug_year_totals = { labels: labels.slice(0, 20), ingresos: yearIngresosTotals.slice(0, 20), egresos: yearEgresosTotals.slice(0, 20) }; } catch (_e) {}
+    } catch (_e) {}
+
+    try {
       const selectedIndex = yearsArr.indexOf(selectedYear);
-      if (selectedIndex >= 0) year.yearProfit = Number(yearTotals[selectedIndex] || 0);
-      else year.yearProfit = 0;
+      if (selectedIndex >= 0) {
+        const ingresos = Number(yearIngresosTotals[selectedIndex] || 0);
+        const egresos = Number(yearEgresosTotals[selectedIndex] || 0);
+        year.yearProfit = ingresos - egresos;
+      } else {
+        year.yearProfit = 0;
+      }
     } catch (_err) {
       year.yearProfit = 0;
     }
