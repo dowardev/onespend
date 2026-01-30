@@ -1,3 +1,17 @@
+## [v0.44.2] - 2026-01-30
+
+### Refactor
+- Convert route component imports in `front/src/router/index.ts` from dynamic (lazy) imports to static imports to simplify router initialization and avoid duplicated dynamic import registrations.
+
+### Improvements
+- Clean up import formatting and router guard formatting in `front/src/router/index.ts` for clearer structure and maintainability.
+
+### Files Changed (selected)
+- `front/src/router/index.ts` — replace dynamic route imports with static imports and adjust formatting
+- `front/package.json` — bump version to `0.44.2`
+
+---
+
 ## [v0.44.1] - 2026-01-30
 
 ### Features
