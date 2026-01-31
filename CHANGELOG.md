@@ -1,3 +1,28 @@
+## [v0.44.3] - 2026-01-31
+
+### Refactor
+- Restructure statistics routes from nested children to flat routes (`/statistics/cash-flow`, `/statistics/performance`)
+- Move StatisticsConfigPage from `/statistics/config/` to `/statistics/performance/config/`
+- Remove StatisticsPage parent container (no longer needed as separate component)
+- Update router import paths for StatisticsConfigPage
+
+### Features
+- **Cash Flow**: Wrap page in ion-page with header for proper Ionic structure
+- **Performance**: Wrap page in ion-page with header and settings button
+- **Config Modal**: Add StatisticsConfigPage as modal in Performance page for improved UX
+- New StatisticsConfigPage component designed for modal presentation
+
+### Files Changed (selected)
+- `front/src/router/index.ts` — Convert nested statistics routes to flat routes
+- `front/src/views/statistics/StatisticsPage.vue` — Removed (no longer needed)
+- `front/src/views/statistics/cashFlow/CashFlow.vue` — Add ion-page wrapper with header
+- `front/src/views/statistics/performance/PerformancePage.vue` — Add ion-page wrapper, header, and config modal
+- `front/src/views/statistics/config/StatisticsConfigPage.vue` — Removed
+- `front/src/views/statistics/performance/config/StatisticsConfigPage.vue` — New modal-based config page
+- `front/package.json` — bump version to `0.44.3`
+
+---
+
 ## [v0.44.2] - 2026-01-30
 
 ### Refactor

@@ -11,7 +11,7 @@ import TemplatesView from '@/views/templates/TemplatesView.vue';
 import SuppliersPage from '@/views/suppliers/SuppliersPage.vue';
 import AccountsPage from '@/views/suppliers/accounts/AccountsPage.vue';
 import StatisticsPage from '@/views/statistics/StatisticsPage.vue';
-import StatisticsConfigPage from '@/views/statistics/config/StatisticsConfigPage.vue';
+import StatisticsConfigPage from '@/views/statistics/performance/config/StatisticsConfigPage.vue';
 import MaintenancePage from '@/views/admin/MaintenancePage.vue';
 import MigrateDates from '@/views/admin/maintenance/MigrateDates.vue';
 import MigrateEntries from '@/views/admin/maintenance/MigrateEntries.vue';
@@ -39,21 +39,14 @@ const routes: Array<RouteRecordRaw> = [
     component: BudgetView,
   },
   {
-    path: '/statistics',
-    name: 'StatisticsPage',
-    component: StatisticsPage,
-    children: [
-      {
-        path: 'cash-flow',
-        name: 'StatisticsCashFlow',
-        component: CashFlowPage,
-      },
-      {
-        path: 'performance',
-        name: 'StatisticsPerformance',
-        component: PerformancePage,
-      },
-    ],
+    path: '/statistics/cash-flow',
+    name: 'StatisticsCashFlow',
+    component: CashFlowPage,
+  },
+  {
+    path: '/statistics/performance',
+    name: 'StatisticsPerformance',
+    component: PerformancePage,
   },
   {
     path: '/suppliers',
