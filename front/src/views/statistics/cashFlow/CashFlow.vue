@@ -1,71 +1,80 @@
 <template>
-  <ion-grid style="height: 100%">
-    <ion-row style="height: 100%; overflow: auto">
-      <!-- day -->
-      <ion-col size="6">
-        <DayComponent
-          :chart-data="day.chartData"
-          :chart-options="day.chartOptions"
-          :day-label="day.dayLabel"
-          :formatted-daily-profit="day.formattedDailyProfit"
-          :selected-date="day.selectedDate"
-          :on-prev="dayPrev"
-          :on-next="dayNext"
-          :on-popover-date-change="dayOnPopoverDateChange"
-          :reset-to-today="dayResetToToday"
-          :popovers="day.popovers"
-        />
-      </ion-col>
+  <ion-page>
+  <ion-header class="ion-no-border" mode="ios">
+      <ion-toolbar>
+        <ion-title>Cash Flow</ion-title>
+      </ion-toolbar>
+    </ion-header>
+    <ion-content>
+      <ion-grid style="height: 100%">
+        <ion-row style="height: 100%; overflow: auto">
+          <!-- day -->
+          <ion-col size="6">
+            <DayComponent
+              :chart-data="day.chartData"
+              :chart-options="day.chartOptions"
+              :day-label="day.dayLabel"
+              :formatted-daily-profit="day.formattedDailyProfit"
+              :selected-date="day.selectedDate"
+              :on-prev="dayPrev"
+              :on-next="dayNext"
+              :on-popover-date-change="dayOnPopoverDateChange"
+              :reset-to-today="dayResetToToday"
+              :popovers="day.popovers"
+            />
+          </ion-col>
 
-      <!-- week -->
-      <ion-col size="6">
-        <WeekComponent
-          :chart-data="week.chartData"
-          :chart-options="week.chartOptions"
-          :week-range-label="week.weekRangeLabel"
-          :formatted-weekly-profit="week.formattedWeeklyProfit"
-          :selected-date="week.selectedDate"
-          :on-prev="weekPrev"
-          :on-next="weekNext"
-          :on-popover-date-change="weekOnPopoverDateChange"
-          :reset-to-today="weekResetToToday"
-          :popovers="week.popovers"
-        />
-      </ion-col>
+          <!-- week -->
+          <ion-col size="6">
+            <WeekComponent
+              :chart-data="week.chartData"
+              :chart-options="week.chartOptions"
+              :week-range-label="week.weekRangeLabel"
+              :formatted-weekly-profit="week.formattedWeeklyProfit"
+              :selected-date="week.selectedDate"
+              :on-prev="weekPrev"
+              :on-next="weekNext"
+              :on-popover-date-change="weekOnPopoverDateChange"
+              :reset-to-today="weekResetToToday"
+              :popovers="week.popovers"
+            />
+          </ion-col>
 
-      <!-- month -->
-      <ion-col size="6">
-        <MonthComponent
-          :chart-data="month.chartData"
-          :chart-options="month.chartOptions"
-          :month-range-label="month.monthRangeLabel"
-          :formatted-monthly-profit="month.formattedMonthlyProfit"
-          :selected-date="month.selectedDate"
-          :on-prev="monthPrev"
-          :on-next="monthNext"
-          :on-popover-date-change="monthOnPopoverDateChange"
-          :reset-to-today="monthResetToToday"
-          :popovers="month.popovers"
-        />
-      </ion-col>
+          <!-- month -->
+          <ion-col size="6">
+            <MonthComponent
+              :chart-data="month.chartData"
+              :chart-options="month.chartOptions"
+              :month-range-label="month.monthRangeLabel"
+              :formatted-monthly-profit="month.formattedMonthlyProfit"
+              :selected-date="month.selectedDate"
+              :on-prev="monthPrev"
+              :on-next="monthNext"
+              :on-popover-date-change="monthOnPopoverDateChange"
+              :reset-to-today="monthResetToToday"
+              :popovers="month.popovers"
+            />
+          </ion-col>
 
-      <!-- year -->
-      <ion-col size="6">
-        <YearComponent
-          :chart-data="year.chartData"
-          :chart-options="year.chartOptions"
-          :year-label="year.yearLabel"
-          :formatted-year-profit="year.formattedYearProfit"
-          :selected-date="year.selectedDate"
-          :on-prev="yearPrev"
-          :on-next="yearNext"
-          :on-popover-date-change="yearOnPopoverDateChange"
-          :reset-to-today="yearResetToToday"
-          :popovers="year.popovers"
-        />
-      </ion-col>
-    </ion-row>
-  </ion-grid>
+          <!-- year -->
+          <ion-col size="6">
+            <YearComponent
+              :chart-data="year.chartData"
+              :chart-options="year.chartOptions"
+              :year-label="year.yearLabel"
+              :formatted-year-profit="year.formattedYearProfit"
+              :selected-date="year.selectedDate"
+              :on-prev="yearPrev"
+              :on-next="yearNext"
+              :on-popover-date-change="yearOnPopoverDateChange"
+              :reset-to-today="yearResetToToday"
+              :popovers="year.popovers"
+            />
+          </ion-col>
+        </ion-row>
+      </ion-grid>
+    </ion-content>
+  </ion-page>
 </template>
 
 <script lang="ts" setup>
