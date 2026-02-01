@@ -1,3 +1,11 @@
+## [v0.45.1] - 2026-02-01
+
+### Features
+
+- **Chart Modal Integration**: Integrate chart modals (IncomesChartModal, ExpensesChartModal, GoalsChartModal) into the unified PerformanceComponent
+
+---
+
 ## [v0.45.0] - 2026-02-01
 
 ### Features

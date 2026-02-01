@@ -294,6 +294,9 @@ import {
 } from '@ionic/vue';
 import PeriodLayout from '../components/PeriodLayout.vue';
 import PeriodSnapshots from '@/views/statistics/performance/components/PeriodSnapshots.vue';
+import IncomesChartModal from '@/views/statistics/performance/components/IncomesChartModal.vue';
+import ExpensesChartModal from '@/views/statistics/performance/components/ExpensesChartModal.vue';
+import GoalsChartModal from '@/views/statistics/performance/components/GoalsChartModal.vue';
 import {
   downloadOutline,
   informationCircleOutline,
