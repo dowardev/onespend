@@ -1,3 +1,35 @@
+## [v0.45.0] - 2026-02-01
+
+### Features
+
+- **Excel Export**: Add spreadsheet export capability for financial reports using xlsx library
+  - New download button in PerformancePage for exporting to Excel
+  - Generates detailed reports with income, expenses, summary, and goals sections
+  - Supports day, week, month, and year periods
+
+### Refactor
+
+- **Unified Performance Component**: Consolidate day/week/month/year performance components
+  - Replace individual DayPerformanceComponent, WeekPerformanceComponent, MonthPerformanceComponent, YearPerformanceComponent with single PerformanceComponent
+  - Component accepts `period` prop to determine time range
+  - Reduced code duplication and improved maintainability
+- **PeriodLayout Relocation**: Move PeriodLayout to components folder for better organization
+
+### Breaking Changes
+
+- Removed separate day/week/month/year component files (now unified in PerformanceComponent)
+- Old component files renamed to .bak for reference
+
+### Files Changed (selected)
+
+- `front/src/views/statistics/performance/PerformancePage.vue` — Use unified PerformanceComponent, add export button
+- `front/src/controllers/statisticsController.ts` — Add downloadExcel method
+- `front/src/views/statistics/performance/components/PerformanceComponent.vue` — New unified component
+- `front/src/views/statistics/performance/components/PeriodLayout.vue` — Moved from day/ folder
+- `front/package.json` — Add xlsx dependency, bump version to 0.45.0
+
+---
+
 ## [v0.44.5] - 2026-02-01
 
 ### Features
