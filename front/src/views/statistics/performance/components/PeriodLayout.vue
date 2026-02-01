@@ -21,30 +21,6 @@
     </ion-item>
   </section>
 
-  <section>
-    <ion-grid>
-      <ion-row class="ion-padding">
-        <ion-col size="12" size-md="6">
-          <div style="height: 320px; margin-bottom: 16px">
-            <slot name="chart" />
-          </div>
-        </ion-col>
-
-        <ion-col size="12" size-md="6">
-          <ion-list class="transparent">
-            <ion-list-header>
-              <ion-label></ion-label>
-
-              <ion-button @click="toggleModal(true)">Mas</ion-button>
-            </ion-list-header>
-
-            <slot name="snapshots" />
-          </ion-list>
-        </ion-col>
-      </ion-row>
-    </ion-grid>
-  </section>
-
   <slot name="analysis" />
 
   <!-- modals -->

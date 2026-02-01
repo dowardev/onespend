@@ -1,3 +1,45 @@
+## [v0.44.5] - 2026-02-01
+
+### Features
+
+- **Personal Finance Tracking**: Complete redesign of Performance page from business-focused metrics to personal finance dashboard
+  - New income tracking categories: salary, investments, other income sources
+  - New expense categories: housing, food, transport, entertainment, health, other
+  - Daily balance tracking replacing net profit metric
+  - Savings tracking with daily savings amount and percentage
+  - Monthly savings goals with progress visualization
+- **New Chart Modals**: Interactive pie charts for expenses and incomes breakdown
+- **Goals Visualization**: Doughnut and bar charts showing savings goal progress
+- **Configuration Modal**: PersonalFinanceConfigModal for managing savings goals, category budgets, and alert thresholds
+
+### Refactor
+
+- Renamed "Rendimiento" to "Mis Finanzas" with updated UI branding
+- Changed layout from single-column to responsive side-by-side columns (6-column grid)
+- Added download button for report generation
+- Added responsive styles for desktop (modal 90% height, 50% width)
+- Removed chart and snapshots sections from PeriodLayout
+- Replaced StatisticsConfigPage with PersonalFinanceConfigModal
+
+### Breaking Changes
+
+- Income data structure: sales-based (salesCash, salesCard, creditSales) → personal (salary, investments, other)
+- Expense categories: business-focused → personal finance categories
+- Removed business metrics: dailyBreakEvenPoint, salesOverBreakEven, netMarginDay, grossProfit
+
+### Files Changed (selected)
+
+- `front/src/views/statistics/performance/PerformancePage.vue` — UI redesign, layout changes, new components
+- `front/src/views/statistics/performance/day/DayPerformanceComponent.vue` — Complete financial summary refactor
+- `front/src/views/statistics/performance/components/PeriodLayout.vue` — Removed chart and snapshots sections
+- `front/src/views/statistics/performance/components/ExpensesChartModal.vue` — New modal for expenses visualization
+- `front/src/views/statistics/performance/components/IncomesChartModal.vue` — New modal for income visualization
+- `front/src/views/statistics/performance/components/GoalsChartModal.vue` — New modal for goals progress
+- `front/src/views/statistics/performance/components/PersonalFinanceConfigModal.vue` — New config modal
+- `front/package.json` — bump version to `0.44.5`
+
+---
+
 ## [v0.44.4] - 2026-02-01
 
 ### Refactor
