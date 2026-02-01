@@ -20,9 +20,9 @@ onMounted(() => {
     // Log cleanup state for debugging
     if (import.meta.env.DEV) {
       const taskCount = domCleanup.getTaskCount();
-      if (taskCount > 0) {
-        console.log(`[DOMCleanup] Active cleanup tasks: ${taskCount}`);
-      }
+      // if (taskCount > 0) {
+      //   console.log(`[DOMCleanup] Active cleanup tasks: ${taskCount}`);
+      // }
     }
   }, 5000);
 });

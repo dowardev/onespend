@@ -1,3 +1,26 @@
+## [v0.44.4] - 2026-02-01
+
+### Refactor
+- Replace structuredClone with custom safeCloneChartData function for chart data cloning in PeriodChartWrapper
+- Convert chart creation from synchronous to asynchronous in DayPerformanceChart to properly await chart dependencies
+
+### Fix
+- Fix backup matching logic in DayPerformanceComponent to handle different backup structures (BudgetView and direct budget format with id="budget:YYYY-MM-DD")
+- Improve error handling in chart instance destruction
+
+### Improvement
+- Add comprehensive debug logging for day performance data loading to aid troubleshooting
+- Add new watch on isLoaded.value to ensure chart renders after dependencies fully load
+- Add explicit Chart type import for better TypeScript support
+
+### Files Changed (selected)
+- `front/src/views/statistics/performance/components/PeriodChartWrapper.vue` — replace structuredClone with safeCloneChartData
+- `front/src/views/statistics/performance/day/DayPerformanceChart.vue` — convert createChart to async, add isLoaded watch
+- `front/src/views/statistics/performance/day/DayPerformanceComponent.vue` — improve backup matching logic, add debug logging
+- `front/package.json` — bump version to `0.44.4`
+
+---
+
 ## [v0.44.3] - 2026-01-31
 
 ### Refactor

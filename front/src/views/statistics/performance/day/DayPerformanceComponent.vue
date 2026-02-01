@@ -394,6 +394,9 @@ import {
   IonPopover,
   IonRow,
 } from '@ionic/vue';
+import PeriodLayout from '../components/PeriodLayout.vue';
+import PeriodChartWrapper from '@/views/statistics/performance/components/PeriodChartWrapper.vue';
+import PeriodSnapshots from '@/views/statistics/performance/components/PeriodSnapshots.vue';
 import { downloadOutline, informationCircleOutline } from 'ionicons/icons';
 import { computed, reactive, onMounted, ref } from 'vue';
 import type { ChartData, ChartOptions } from 'chart.js';
@@ -403,10 +406,14 @@ import { useChart } from '@/composables/useChart';
 
 // Initialize chart dependencies
 const { loadChartDependencies } = useChart();
-onMounted(loadChartDependencies);
+onMounted(() => {
+  loadChartDependencies();
+  void loadDayData();
+});
 
 // controllers
 import { DixieController } from '@/controllers/dixie';
+import dixieController from '@/controllers/dixie';
 import { StatisticsController } from '@/controllers/statisticsController';
 
 const statisticsController = new StatisticsController();
@@ -618,6 +625,8 @@ function nextDay() {
 // compute the corresponding dayOffset and keep selectedDate in sync.
 async function loadDayData(dateParam?: string | Date) {
   try {
+    console.log('[DayPerformance] loadDayData iniciada');
+    
     // If a specific date was provided, update dayOffset and selectedDate accordingly
     if (typeof dateParam !== 'undefined' && dateParam !== null) {
       try {
@@ -638,7 +647,15 @@ async function loadDayData(dateParam?: string | Date) {
       }
     }
 
+    console.log('[DayPerformance] dayOffset:', dayOffset.value);
     const all = ((await dixieController.listBackups()) as Backup[]) || [];
+    console.log('[DayPerformance] total backups:', all.length);
+    all.forEach((b, i) => console.log(`[DayPerformance] backup[${i}]:`, JSON.stringify(b).substring(0, 500)));
+
+    // targetDay ya se define más abajo, no redeclarar aquí
+    // const targetDay = addDays(new Date(), dayOffset.value);
+    // const target = isoDate({ d: targetDay });
+    console.log('[DayPerformance] target date (se definirá más abajo)');
 
     // Load statistics config fields (statisticsFields store) and sum their amounts
     try {
@@ -675,20 +692,30 @@ async function loadDayData(dateParam?: string | Date) {
 
     const targetDay = addDays(new Date(), dayOffset.value);
     const target = isoDate({ d: targetDay });
+    console.log('[DayPerformance] target date:', target);
 
-    // find latest backup for that day (BudgetView / Budget components)
-    const matches = (Array.isArray(all) ? all : []).filter(
-      b =>
-        b &&
-        (b.component === 'BudgetView' ||
-          String((b && b.component) || '').includes('Budget')) &&
-        b.data &&
-        String(b.data.selectedDate || '').slice(0, 10) === target
-    );
+    // find latest backup for that day
+    // Handle different backup structures:
+    // 1. BudgetView backups with component and data.selectedDate
+    // 2. Direct budget backups with id="budget:YYYY-MM-DD" and data.entries
+    const matches = (Array.isArray(all) ? all : []).filter(b => {
+      if (!b) return false;
+      // Check for BudgetView structure
+      if (b.component === 'BudgetView' || String(b.component || '').includes('Budget')) {
+        return b.data && String(b.data.selectedDate || '').slice(0, 10) === target;
+      }
+      // Check for direct budget structure (id="budget:YYYY-MM-DD")
+      if (b.id && String(b.id).startsWith('budget:')) {
+        const idDate = String(b.id).replace('budget:', '').slice(0, 10);
+        return idDate === target;
+      }
+      return false;
+    });
 
     const latest = (matches || []).sort(
       (a, b) => (b.createdAt || 0) - (a.createdAt || 0)
     )[0];
+    console.log('[DayPerformance] latest backup:', latest ? { component: latest.component, selectedDate: latest.data?.selectedDate, createdAt: latest.createdAt } : null);
 
     let ingresosSum = 0;
     let proveedoresSum = 0;
@@ -751,12 +778,16 @@ async function loadDayData(dateParam?: string | Date) {
         (s: number, i: Income) => s + (Number(i.amount || 0) || 0),
         0
       );
+      console.log('[DayPerformance] ingresosSum:', ingresosSum, 'entries count:', (d.ingresos || d.entries).length);
       }
       if (Array.isArray(d.proveedores)) {
       proveedoresSum = d.proveedores.reduce(
         (s: number, p: Provider) => s + (Number(providerValue(p) || 0) || 0),
         0
       );
+      console.log('[DayPerformance] proveedoresSum:', proveedoresSum);
+      } else {
+        console.log('[DayPerformance] proveedores no encontrado en backup');
       }
 
       // If a finishDay payload exists either embedded in the BudgetView backup or as a
@@ -1162,22 +1193,6 @@ async function loadDayData(dateParam?: string | Date) {
 
     // update shared snapshots state
     try {
-      // Set chart to show Ayer vs Hoy (ventas)
-      try {
-        chartData.labels = ['Ayer', 'Hoy'];
-        chartData.datasets = [
-          {
-            label: 'Ventas',
-            data: [
-              Number(previousTotalSales.value ?? 0),
-              Number(income.totalSales ?? 0),
-            ],
-          },
-        ];
-      } catch (_e) {
-        // fallback: keep previous chart values
-      }
-
       setSnapshots({
         current: {
           totalSales: Number(income.totalSales ?? 0),

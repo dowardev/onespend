@@ -10,7 +10,7 @@
 <script setup lang="ts">
 import { shallowRef, watch } from 'vue';
 import DayPerformanceChart from '@/views/statistics/performance/day/DayPerformanceChart.vue';
-import type { ChartData, ChartOptions } from 'chart.js';
+import type { ChartData, ChartOptions, ChartDataset } from 'chart.js';
 
 const props = withDefaults(
   defineProps<{
@@ -21,10 +21,27 @@ const props = withDefaults(
   { colorIndex: 1, chartOptions: null }
 );
 
+function safeCloneChartData(data: ChartData<'bar'>): ChartData<'bar'> {
+  return {
+    labels: data.labels ? JSON.parse(JSON.stringify(data.labels)) : [],
+    datasets: (data.datasets || []).map(dataset => ({
+      label: dataset.label,
+      data: Array.isArray(dataset.data) ? [...dataset.data] : dataset.data,
+      backgroundColor: dataset.backgroundColor,
+      borderColor: dataset.borderColor,
+      borderWidth: dataset.borderWidth,
+      borderRadius: dataset.borderRadius,
+      hoverBackgroundColor: dataset.hoverBackgroundColor,
+      hoverBorderColor: dataset.hoverBorderColor,
+      hoverBorderWidth: dataset.hoverBorderWidth,
+    })),
+  };
+}
+
 // safe reactive clone used for the canvas chart
 const styledChartData = shallowRef<ChartData<'bar'>>(
   props.chartData
-    ? (structuredClone ? structuredClone(props.chartData) : JSON.parse(JSON.stringify(props.chartData)))
+    ? safeCloneChartData(props.chartData)
     : { labels: [], datasets: [] }
 );
 
@@ -43,7 +60,7 @@ const pastelNeonColors = [
 function applyNeonStyles(data: ChartData<'bar'>): ChartData<'bar'> {
   if (!data || !data.datasets) return data;
 
-  const cloned = structuredClone ? structuredClone(data) : JSON.parse(JSON.stringify(data));
+  const cloned = JSON.parse(JSON.stringify(data)) as ChartData<'bar'>;
 
   cloned.datasets = (cloned.datasets || []).map(
     (dataset: ChartDataset<'bar'>, datasetIndex: number) => {
@@ -98,13 +115,11 @@ watch(
   () => props.chartData,
   v => {
     try {
-      const cloned = v
-        ? (structuredClone ? structuredClone(v) : JSON.parse(JSON.stringify(v)))
-        : { labels: [], datasets: [] };
-      styledChartData.value = applyNeonStyles(cloned as ChartData<'bar'>);
+      const cloned = v ? safeCloneChartData(v) : { labels: [], datasets: [] };
+      styledChartData.value = applyNeonStyles(cloned);
     } catch (_e) {
-      styledChartData.value = props.chartData
-        ? (structuredClone ? structuredClone(props.chartData) : JSON.parse(JSON.stringify(props.chartData)))
+      styledChartData.value = v
+        ? safeCloneChartData(v)
         : { labels: [], datasets: [] };
     }
   },

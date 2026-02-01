@@ -6,7 +6,7 @@
 
 <script setup lang="ts">
 import { onMounted, onBeforeUnmount, watch, ref, computed } from 'vue';
-import type { ChartOptions, ChartData } from 'chart.js';
+import type { ChartOptions, ChartData, Chart } from 'chart.js';
 import { useChart } from '@/composables/useChart';
 
 // Initialize chart dependencies
@@ -21,6 +21,7 @@ const props = defineProps<{
 
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 let chartInstance: Chart<'bar'> | null = null;
+let ChartJSInstance: Chart | null = null;
 
 const hasData = computed(() => 
   props.chartData && 
@@ -32,20 +33,24 @@ const hasData = computed(() =>
 
 const canRenderChart = computed(() => hasData.value && isLoaded.value);
 
-function createChart() {
+async function createChart() {
   if (!canvasRef.value || !canRenderChart.value) return;
+  
+  const { ChartJS } = await loadChartDependencies();
+  if (!ChartJS || !canvasRef.value) return;
+  
+  ChartJSInstance = ChartJS;
+  
   // clean up previous instance if any
   if (chartInstance) {
     try {
       chartInstance.destroy();
-    } catch (_e) {
-      // noop
-    }
+    } catch (_e) {}
     chartInstance = null;
   }
 
   try {
-    chartInstance = new Chart(
+    chartInstance = new ChartJS(
       canvasRef.value.getContext('2d') as CanvasRenderingContext2D,
       {
         type: 'bar',
@@ -90,6 +95,15 @@ watch(
     }
   },
   { immediate: true, deep: true }
+);
+
+watch(
+  () => isLoaded.value,
+  (loaded) => {
+    if (loaded) {
+      createChart();
+    }
+  }
 );
 
 watch(
