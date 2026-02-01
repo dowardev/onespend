@@ -7,7 +7,7 @@ export type Html2CanvasOptions = Record<string, unknown>;
 export type JsPdfOptions = { orientation?: string; unit?: string; format?: string };
 
 export type UsePdfReportOptions = {
-  containerRef: Ref<HTMLElement | null>;
+  containerRef: HTMLElement | Ref<HTMLElement | null> | null;
   buttonSelector?: string;
   filenameFactory?: () => string;
   html2canvasOptions?: Html2CanvasOptions;
@@ -159,17 +159,36 @@ class StatisticsController {
   }
 
   async downloadPdf(opts: UsePdfReportOptions): Promise<boolean> {
-    if (!opts || !opts.containerRef) return false;
-    const elRef = opts.containerRef;
-    if (!elRef.value) {
+    console.log('[StatisticsController] downloadPdf started');
+    if (!opts || !opts.containerRef) {
+      console.log('[StatisticsController] No containerRef');
+      return false;
+    }
+    
+    // Handle both Ref and direct HTMLElement
+    let el: HTMLElement;
+    if (opts.containerRef instanceof HTMLElement) {
+      el = opts.containerRef;
+    } else if (opts.containerRef && 'value' in opts.containerRef) {
+      el = opts.containerRef.value as HTMLElement;
+    } else {
       console.warn('[StatisticsController] container element not available');
       return false;
     }
+    
+    if (!el) {
+      console.warn('[StatisticsController] container element is null');
+      return false;
+    }
 
-    if (this.isGeneratingPdf.value) return false;
+    if (this.isGeneratingPdf.value) {
+      console.log('[StatisticsController] Already generating PDF');
+      return false;
+    }
     this.isGeneratingPdf.value = true;
 
     try {
+      console.log('[StatisticsController] Importing html2canvas and jspdf...');
       const html2canvasModule = await import('html2canvas');
       const html2canvas =
         html2canvasModule && (html2canvasModule.default ?? html2canvasModule);
@@ -178,27 +197,92 @@ class StatisticsController {
         jsPDFModule &&
         (jsPDFModule.jsPDF ?? jsPDFModule.default ?? jsPDFModule);
 
-      const el = elRef.value as HTMLElement;
+      console.log('[StatisticsController] html2canvas:', !!html2canvas, 'jspdf:', !!jsPDF);
+
+      console.log('[StatisticsController] Element found:', !!el);
 
       const selector = opts.buttonSelector || '#dowBut';
       const downloadBtn = el.querySelector(selector) as HTMLElement | null;
+      console.log('[StatisticsController] downloadBtn found:', !!downloadBtn);
       const prevDisplay = downloadBtn ? downloadBtn.style.display : null;
       if (downloadBtn) downloadBtn.style.display = 'none';
 
+      // Apply white theme and hide elements not needed in PDF
+      const originalClassName = el.className;
+      el.classList.add('pdf-report-mode');
+      
+      // Create a style element for PDF mode
+      const styleEl = document.createElement('style');
+      styleEl.textContent = `
+        .pdf-report-mode {
+          background-color: #ffffff !important;
+          color: #000000 !important;
+        }
+        .pdf-report-mode ion-button {
+          display: none !important;
+        }
+        .pdf-report-mode ion-item {
+          --background: #ffffff !important;
+          background-color: #ffffff !important;
+        }
+        .pdf-report-mode ion-item.transparent {
+          --background: #ffffff !important;
+          background-color: #ffffff !important;
+        }
+        .pdf-report-mode .list-content {
+          background-color: #ffffff !important;
+        }
+        .pdf-report-mode .positive-profit, 
+        .pdf-report-mode .negative-profit {
+          background-color: #f5f5f5 !important;
+          border: 1px solid #e0e0e0 !important;
+          border-radius: 4px;
+          padding: 4px 8px;
+        }
+        .pdf-report-mode .positive-profit {
+          color: #155724 !important;
+        }
+        .pdf-report-mode .negative-profit {
+          color: #721c24 !important;
+        }
+        .pdf-report-mode ion-card-title {
+          color: #000000 !important;
+        }
+        .pdf-report-mode ion-list-header {
+          --background: #ffffff !important;
+          background-color: #ffffff !important;
+        }
+        .pdf-report-mode ion-label {
+          color: #000000 !important;
+        }
+        .pdf-report-mode ion-note {
+          color: #000000 !important;
+        }
+      `;
+      document.head.appendChild(styleEl);
+
+      console.log('[StatisticsController] Creating canvas...');
       await new Promise(r => setTimeout(r, 50));
 
       const canvas = await html2canvas(el, {
         scale: 2,
         useCORS: true,
         backgroundColor: '#ffffff',
+        logging: false,
         ...(opts.html2canvasOptions || {}),
       });
+      console.log('[StatisticsController] Canvas created:', canvas.width, 'x', canvas.height);
+
+      // Clean up PDF mode styles
+      el.className = originalClassName;
+      document.head.removeChild(styleEl);
 
       if (downloadBtn && prevDisplay !== null) {
         downloadBtn.style.display = prevDisplay;
       }
 
       const imgData = canvas.toDataURL('image/png');
+      console.log('[StatisticsController] imgData length:', imgData.length);
 
       const pdf = new jsPDF({
         orientation:
@@ -220,6 +304,7 @@ class StatisticsController {
       const xOffset = Math.max(0, (pageWidth - renderedWidth) / 2);
       const yOffset = 0;
 
+      console.log('[StatisticsController] Adding image to PDF...');
       pdf.addImage(
         imgData,
         'PNG',
@@ -232,7 +317,9 @@ class StatisticsController {
       const filename = opts.filenameFactory
         ? opts.filenameFactory()
         : `report_${format(new Date(), 'yyyy-MM-dd')}.pdf`;
+      console.log('[StatisticsController] Saving PDF:', filename);
       pdf.save(filename);
+      console.log('[StatisticsController] PDF saved successfully');
 
       return true;
     } catch (err) {
@@ -245,6 +332,120 @@ class StatisticsController {
 
   getIsGeneratingPdf() {
     return this.isGeneratingPdf.value;
+  }
+
+  async downloadExcel(opts: {
+    period: string;
+    dateLabel: string;
+    incomeData: {
+      salary: number;
+      investments: number;
+      other: number;
+      total: number;
+    };
+    expensesData: {
+      housing: number;
+      food: number;
+      transport: number;
+      entertainment: number;
+      health: number;
+      other: number;
+      total: number;
+    };
+    summaryData: {
+      balance: number;
+      savings: number;
+      savingsPercentage: number;
+    };
+    goalsData: {
+      monthlySavingsGoal: number;
+      progress: number;
+      progressPercentage: number;
+    };
+    filenameFactory?: () => string;
+  }): Promise<boolean> {
+    try {
+      const XLSX = await import('xlsx');
+      const worksheet = XLSX.utils.aoa_to_sheet([]);
+
+      const periodLabels: Record<string, string> = {
+        day: 'Día',
+        week: 'Semana',
+        month: 'Mes',
+        year: 'Año',
+      };
+
+      let row = 1;
+
+      worksheet['!cols'] = [{ wch: 20 }, { wch: 20 }, { wch: 15 }];
+
+      XLSX.utils.sheet_add_aoa(worksheet, [[`Reporte de ${periodLabels[opts.period]} ${opts.dateLabel}`]], { origin: `A${row}` });
+      row += 2;
+
+      XLSX.utils.sheet_add_aoa(worksheet, [['INGRESOS']], { origin: `A${row}` });
+      row++;
+      XLSX.utils.sheet_add_aoa(worksheet, [['Concepto', 'Monto']], { origin: `A${row}` });
+      row++;
+      XLSX.utils.sheet_add_aoa(worksheet, [['Salario', opts.incomeData.salary]], { origin: `A${row}` });
+      row++;
+      XLSX.utils.sheet_add_aoa(worksheet, [['Inversiones', opts.incomeData.investments]], { origin: `A${row}` });
+      row++;
+      XLSX.utils.sheet_add_aoa(worksheet, [['Otros', opts.incomeData.other]], { origin: `A${row}` });
+      row++;
+      XLSX.utils.sheet_add_aoa(worksheet, [['TOTAL INGRESOS', opts.incomeData.total]], { origin: `A${row}` });
+      row += 2;
+
+      XLSX.utils.sheet_add_aoa(worksheet, [['GASTOS']], { origin: `A${row}` });
+      row++;
+      XLSX.utils.sheet_add_aoa(worksheet, [['Concepto', 'Monto']], { origin: `A${row}` });
+      row++;
+      XLSX.utils.sheet_add_aoa(worksheet, [['Vivienda', opts.expensesData.housing]], { origin: `A${row}` });
+      row++;
+      XLSX.utils.sheet_add_aoa(worksheet, [['Alimentación', opts.expensesData.food]], { origin: `A${row}` });
+      row++;
+      XLSX.utils.sheet_add_aoa(worksheet, [['Transporte', opts.expensesData.transport]], { origin: `A${row}` });
+      row++;
+      XLSX.utils.sheet_add_aoa(worksheet, [['Entretenimiento', opts.expensesData.entertainment]], { origin: `A${row}` });
+      row++;
+      XLSX.utils.sheet_add_aoa(worksheet, [['Salud', opts.expensesData.health]], { origin: `A${row}` });
+      row++;
+      XLSX.utils.sheet_add_aoa(worksheet, [['Otros', opts.expensesData.other]], { origin: `A${row}` });
+      row++;
+      XLSX.utils.sheet_add_aoa(worksheet, [['TOTAL GASTOS', opts.expensesData.total]], { origin: `A${row}` });
+      row += 2;
+
+      XLSX.utils.sheet_add_aoa(worksheet, [['RESUMEN']], { origin: `A${row}` });
+      row++;
+      XLSX.utils.sheet_add_aoa(worksheet, [['Balance', opts.summaryData.balance]], { origin: `A${row}` });
+      row++;
+      XLSX.utils.sheet_add_aoa(worksheet, [['Ahorro', opts.summaryData.savings]], { origin: `A${row}` });
+      row++;
+      XLSX.utils.sheet_add_aoa(worksheet, [['Porcentaje de ahorro', `${opts.summaryData.savingsPercentage}%`]], { origin: `A${row}` });
+      row += 2;
+
+      XLSX.utils.sheet_add_aoa(worksheet, [['METAS']], { origin: `A${row}` });
+      row++;
+      XLSX.utils.sheet_add_aoa(worksheet, [['Meta de ahorro', opts.goalsData.monthlySavingsGoal]], { origin: `A${row}` });
+      row++;
+      XLSX.utils.sheet_add_aoa(worksheet, [['Progreso actual', opts.goalsData.progress]], { origin: `A${row}` });
+      row++;
+      XLSX.utils.sheet_add_aoa(worksheet, [['Completado', `${opts.goalsData.progressPercentage}%`]], { origin: `A${row}` });
+
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Reporte');
+
+      const filename = opts.filenameFactory
+        ? opts.filenameFactory()
+        : `reporte_${opts.period}_${format(new Date(), 'yyyy-MM-dd')}.xlsx`;
+
+      XLSX.writeFile(workbook, filename);
+
+      console.log('[StatisticsController] Excel saved successfully');
+      return true;
+    } catch (err) {
+      console.error('[StatisticsController] downloadExcel error', err);
+      return false;
+    }
   }
 }
 

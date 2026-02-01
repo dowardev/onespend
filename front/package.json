@@ -1,7 +1,7 @@
 {
   "name": "OneSpend",
   "private": true,
-  "version": "0.44.5",
+  "version": "0.45.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -48,7 +48,8 @@
     "pinia": "^2.0.34",
     "vue": "^3.3.0",
     "vue-chartjs": "^5.1.1",
-    "vue-router": "^4.2.0"
+    "vue-router": "^4.2.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@capacitor/cli": "8.0.1",

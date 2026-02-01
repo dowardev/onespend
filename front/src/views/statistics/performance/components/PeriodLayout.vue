@@ -13,10 +13,6 @@
         <ion-icon :icon="chevronForwardOutline" />
       </ion-button>
 
-      <ion-button slot="end" fill="clear" @click="$emit('download-report')">
-        <ion-icon :icon="downloadOutline" />
-      </ion-button>
-
       <slot name="header-actions" />
     </ion-item>
   </section>

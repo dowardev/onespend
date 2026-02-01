@@ -4,7 +4,7 @@
       <ion-toolbar>
         <ion-title>Mis Finanzas</ion-title>
         <ion-buttons slot="end">
-          <ion-button id="downloadButton" >
+          <ion-button @click="exportToExcel" :disabled="isExporting">
             <ion-icon :icon="downloadOutline"></ion-icon>
           </ion-button>
 
@@ -29,21 +29,12 @@
       </ion-grid>
 
       <ion-grid style="height: 94%">
-        <ion-row class="ion-justify-content-center" >
-          <ion-col v-if="mainSegment == 'day'" size="6">
-            <DayPerformanceComponent />
-          </ion-col>
-
-          <ion-col v-if="mainSegment == 'week'" size="6">
-            <WeekPerformanceComponent />
-          </ion-col>
-
-          <ion-col v-if="mainSegment == 'month'" size="6">
-            <MonthPerformanceComponent />
-          </ion-col>
-
-          <ion-col v-if="mainSegment == 'year'" size="6">
-            <YearPerformanceComponent />
+        <ion-row class="ion-justify-content-center">
+          <ion-col size="12" size-md="10" size-lg="8">
+            <PerformanceComponent
+              ref="performanceComponentRef"
+              :period="mainSegment"
+            />
           </ion-col>
         </ion-row>
       </ion-grid>
@@ -55,6 +46,8 @@
       >
         <PersonalFinanceConfigModal @close="closeConfigModal" />
       </ion-modal>
+
+      <ion-loading :is-open="isExporting" message="Generando Excel..." />
     </ion-content>
   </ion-page>
 </template>
@@ -75,18 +68,22 @@ import {
   IonButton,
   IonIcon,
   IonModal,
+  IonLoading,
 } from '@ionic/vue';
 import { ref } from 'vue';
 import { downloadOutline, settingsOutline } from 'ionicons/icons';
+import { format } from 'date-fns';
+import { StatisticsController } from '@/controllers/statisticsController';
 
-import DayPerformanceComponent from '@/views/statistics/performance/day/DayPerformanceComponent.vue';
-import WeekPerformanceComponent from '@/views/statistics/performance/week/WeekPerformanceComponent.vue';
-import MonthPerformanceComponent from '@/views/statistics/performance/month/MonthPerformanceComponent.vue';
-import YearPerformanceComponent from '@/views/statistics/performance/year/YearPerformanceComponent.vue';
+import PerformanceComponent from '@/views/statistics/performance/components/PerformanceComponent.vue';
 import PersonalFinanceConfigModal from '@/views/statistics/performance/components/PersonalFinanceConfigModal.vue';
+
+const statisticsController = new StatisticsController();
 
 const mainSegment = ref('day' as 'day' | 'week' | 'month' | 'year');
 const isConfigModalOpen = ref(false);
+const isExporting = ref(false);
+const performanceComponentRef = ref<any>(null);
 
 function openConfigModal() {
   isConfigModalOpen.value = true;
@@ -95,13 +92,63 @@ function openConfigModal() {
 function closeConfigModal() {
   isConfigModalOpen.value = false;
 }
+
+async function exportToExcel() {
+  if (isExporting.value) {
+    return;
+  }
+
+  isExporting.value = true;
+
+  try {
+    await statisticsController.downloadExcel({
+      period: mainSegment.value,
+      dateLabel: performanceComponentRef.value?.dateLabel || format(new Date(), 'yyyy-MM-dd'),
+      incomeData: {
+        salary: performanceComponentRef.value?.income?.salary || 0,
+        investments: performanceComponentRef.value?.income?.investments || 0,
+        other: performanceComponentRef.value?.income?.other || 0,
+        total: performanceComponentRef.value?.income?.total || 0,
+      },
+      expensesData: {
+        housing: performanceComponentRef.value?.expenses?.housing || 0,
+        food: performanceComponentRef.value?.expenses?.food || 0,
+        transport: performanceComponentRef.value?.expenses?.transport || 0,
+        entertainment: performanceComponentRef.value?.expenses?.entertainment || 0,
+        health: performanceComponentRef.value?.expenses?.health || 0,
+        other: performanceComponentRef.value?.expenses?.other || 0,
+        total: performanceComponentRef.value?.expenses?.total || 0,
+      },
+      summaryData: {
+        balance: performanceComponentRef.value?.summary?.balance || 0,
+        savings: performanceComponentRef.value?.summary?.savings || 0,
+        savingsPercentage: performanceComponentRef.value?.summary?.savingsPercentage || 0,
+      },
+      goalsData: {
+        monthlySavingsGoal: performanceComponentRef.value?.goals?.monthlySavingsGoal || 0,
+        progress: performanceComponentRef.value?.goals?.progress || 0,
+        progressPercentage: performanceComponentRef.value?.goals?.progressPercentage || 0,
+      },
+      filenameFactory: () =>
+        `reporte_${mainSegment.value}_${format(new Date(), 'yyyy-MM-dd')}.xlsx`,
+    });
+  } catch (error) {
+    console.error('[PerformancePage] Excel error:', error);
+  } finally {
+    isExporting.value = false;
+  }
+}
 </script>
 
 <style scoped>
 @media (min-width: 768px) {
   .config-modal {
     --height: 90%;
-    --width: 50%;
+    --max-height: 700px;
+    --max-width: 500px;
+    --min-height: 400px;
+    --min-width: 300px;
+    --width: 90%;
   }
 }
 </style>
