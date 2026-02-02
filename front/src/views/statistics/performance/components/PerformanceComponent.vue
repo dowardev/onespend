@@ -75,7 +75,11 @@
                     <ion-label>Total gastos</ion-label>
                     <ion-label slot="end"
                       ><span style="font-weight: bold">{{
-                        formatCurrency(expenses.total)
+                        formatCurrency(
+                          config.categories.length > 0
+                            ? categoriesTotal
+                            : expenses.total
+                        )
                       }}</span></ion-label
                     >
                   </ion-item>
@@ -296,32 +300,14 @@ async function loadConfig() {
       const latest = savedConfig.sort(
         (a, b) => (b as any).createdAt - (a as any).createdAt
       )[0];
-      if (latest.data && latest.data.component === 'PersonalFinanceConfig') {
-        if (
-          Array.isArray(latest.data.categories) &&
-          latest.data.categories.length > 0
-        ) {
-          const categoryMap: Record<string, keyof typeof expenses> = {
-            housing: 'housing',
-            food: 'food',
-            transport: 'transport',
-            entertainment: 'entertainment',
-            health: 'health',
-            other: 'other',
-          };
 
-          latest.data.categories.forEach((cat: BudgetCategory) => {
-            const expenseKey = categoryMap[cat.key];
-            if (expenseKey) {
-              expenses[expenseKey] = cat.amount;
-            }
-          });
+      if (latest.data) {
+        if (Array.isArray(latest.data.categories) && latest.data.categories.length > 0) {
+          config.categories = [...latest.data.categories];
         }
 
         if (latest.data.savingsPercent) {
           config.savingsPercent = latest.data.savingsPercent;
-        } else if (latest.data.minSavingsPercent) {
-          config.savingsPercent = latest.data.minSavingsPercent;
         }
       }
     }
@@ -332,6 +318,7 @@ async function loadConfig() {
 
 import { DixieController } from '@/controllers/dixie';
 import dixieController from '@/controllers/dixie';
+import budgetController from '@/controllers/budgetController';
 import { StatisticsController } from '@/controllers/statisticsController';
 
 const statisticsController = new StatisticsController();
@@ -400,6 +387,7 @@ interface BudgetCategory {
 
 const config = reactive({
   savingsPercent: 20,
+  categories: [] as BudgetCategory[],
 });
 
 const income = reactive({
@@ -445,6 +433,12 @@ const incomesList = computed(() => {
 });
 
 const expensesList = computed(() => {
+  if (config.categories.length > 0) {
+    return config.categories.map(cat => ({
+      name: cat.name,
+      amount: cat.amount || 0,
+    }));
+  }
   return [
     { name: 'Vivienda', amount: expenses.housing },
     { name: 'Alimentación', amount: expenses.food },
@@ -487,6 +481,10 @@ const targetClass = computed(() => {
   return Number(summary.savingsPercentage ?? 0) >= config.savingsPercent
     ? 'positive-profit'
     : 'negative-profit';
+});
+
+const categoriesTotal = computed(() => {
+  return config.categories.reduce((sum, cat) => sum + (cat.amount || 0), 0);
 });
 
 const dateLabel = computed(() => {
@@ -596,62 +594,45 @@ function onPopoverDateChange(e: CustomEvent) {
 async function loadData() {
   try {
     const targetDate = getBaseDate();
-    const target = isoDate({ d: targetDate });
+    const year = targetDate.getFullYear();
+    const month = String(targetDate.getMonth() + 1).padStart(2, '0');
+    const day = String(targetDate.getDate()).padStart(2, '0');
+    const target = `${year}-${month}-${day}`;
 
-    const all = ((await dixieController.listBackups()) as Backup[]) || [];
+    budgetController.setDate({ date: target });
+    await budgetController.loadDataForCurrentDate();
 
-    const matches = (Array.isArray(all) ? all : []).filter(b => {
-      if (!b) return false;
-      if (
-        b.component === 'BudgetView' ||
-        String(b.component || '').includes('Budget')
-      ) {
-        return (
-          b.data && String(b.data.selectedDate || '').slice(0, 10) === target
-        );
-      }
-      if (b.id && String(b.id).startsWith('budget:')) {
-        const idDate = String(b.id).replace('budget:', '').slice(0, 10);
-        return idDate === target;
-      }
-      return false;
-    });
-
-    const latest = (matches || []).sort(
-      (a, b) => (b.createdAt || 0) - (a.createdAt || 0)
-    )[0];
+    const entries = budgetController.getEntries();
+    const providers = budgetController.getProviders();
 
     let currentIncome = 0;
     let currentExpenses = 0;
 
-    if (latest && latest.data) {
-      const d = latest.data;
-      if (Array.isArray(d.ingresos || d.entries)) {
-        currentIncome = (d.ingresos || d.entries).reduce(
-          (s: number, i: Income) => s + (Number(i.amount || 0) || 0),
-          0
-        );
-      }
-      if (Array.isArray(d.proveedores)) {
-        currentExpenses = d.proveedores.reduce(
-          (s: number, p: Provider) => s + (Number(p.amount || 0) || 0),
-          0
-        );
+    for (const entry of entries) {
+      const amount = Number(entry.amount || 0);
+      if (entry.entryType === 'ingreso') {
+        currentIncome += amount;
+      } else {
+        currentExpenses += amount;
       }
     }
 
+    for (const provider of providers) {
+      currentExpenses += Number(provider.estimated || 0);
+    }
+
+    income.total = currentIncome;
     income.salary = Math.floor(currentIncome * 0.7);
     income.investments = Math.floor(currentIncome * 0.1);
     income.other = Math.floor(currentIncome * 0.2);
-    income.total = currentIncome;
 
+    expenses.total = currentExpenses;
     expenses.housing = Math.floor(currentExpenses * 0.5);
     expenses.food = Math.floor(currentExpenses * 0.2);
     expenses.transport = Math.floor(currentExpenses * 0.1);
     expenses.entertainment = Math.floor(currentExpenses * 0.1);
     expenses.health = Math.floor(currentExpenses * 0.05);
     expenses.other = Math.floor(currentExpenses * 0.05);
-    expenses.total = currentExpenses;
 
     summary.balance = income.total - expenses.total;
     summary.savings = summary.balance;
@@ -661,43 +642,39 @@ async function loadData() {
         : 0;
 
     const prevDate = getPreviousPeriodDate();
-    const prevTarget = isoDate({ d: prevDate });
+    const prevYear = prevDate.getFullYear();
+    const prevMonth = String(prevDate.getMonth() + 1).padStart(2, '0');
+    const prevDay = String(prevDate.getDate()).padStart(2, '0');
+    const prevTarget = `${prevYear}-${prevMonth}-${prevDay}`;
 
-    const prevMatches = (Array.isArray(all) ? all : []).filter(
-      b =>
-        b &&
-        (b.component === 'BudgetView' ||
-          String((b && b.component) || '').includes('Budget')) &&
-        b.data &&
-        String(b.data.selectedDate || '').slice(0, 10) === prevTarget
-    );
+    budgetController.setDate({ date: prevTarget });
+    await budgetController.loadDataForCurrentDate();
 
-    const prevLatest = (prevMatches || []).sort(
-      (a, b) => (b.createdAt || 0) - (a.createdAt || 0)
-    )[0];
+    const prevEntries = budgetController.getEntries();
+    const prevProviders = budgetController.getProviders();
 
     let prevInc = 0;
     let prevExp = 0;
 
-    if (prevLatest && prevLatest.data) {
-      const d = prevLatest.data;
-      if (Array.isArray(d.ingresos || d.entries)) {
-        prevInc = (d.ingresos || d.entries).reduce(
-          (s: number, i: Income) => s + (Number(i.amount || 0) || 0),
-          0
-        );
+    for (const entry of prevEntries) {
+      const amount = Number(entry.amount || 0);
+      if (entry.entryType === 'ingreso') {
+        prevInc += amount;
+      } else {
+        prevExp += amount;
       }
-      if (Array.isArray(d.proveedores)) {
-        prevExp = d.proveedores.reduce(
-          (s: number, p: Provider) => s + (Number(p.amount || 0) || 0),
-          0
-        );
-      }
+    }
+
+    for (const provider of prevProviders) {
+      prevExp += Number(provider.estimated || 0);
     }
 
     previousIncome.value = prevInc;
     previousExpenses.value = prevExp;
     previousBalance.value = prevInc - prevExp;
+
+    budgetController.setDate({ date: target });
+    await budgetController.loadDataForCurrentDate();
 
     setSnapshots({
       current: {
