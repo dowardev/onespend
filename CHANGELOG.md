@@ -1,4 +1,29 @@
-## [v0.46.0] - 2026-02-02
+## [v0.46.1] - 2026-02-02
+
+### Refactor
+
+- **Config Handling**: Simplified personal finance config loading by removing complex category-to-expense mapping
+  - Direct category array storage replacing the multi-step category mapping logic
+  - Cleaner config structure with `categories` array stored directly from backup data
+- **Data Loading**: Migrated from direct Dixie backup reading to budgetController API
+  - Replaced dixieController.listBackups() with budgetController.setDate() and loadDataForCurrentDate()
+  - Simplified data extraction using budgetController.getEntries() and getProviders()
+  - More consistent use of the centralized budgetController throughout the component
+
+### Features
+
+- **Dynamic Expense List**: Added dynamic expensesList computed property
+  - When config.categories exists, calculates expenses from category data
+  - Falls back to static expense categories when no custom categories configured
+- **Category Total Calculation**: New categoriesTotal computed property for summing category amounts
+
+### Files Changed
+
+- `front/src/views/statistics/performance/components/PerformanceComponent.vue` — Refactor config handling, integrate budgetController, add dynamic expense calculations
+
+---
+
+
 
 ### Breaking Changes
 
