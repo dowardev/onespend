@@ -1,3 +1,31 @@
+## [v0.46.2] - 2026-02-02
+
+### Features
+
+- **Period-Based Expense Calculation**: Added support for flexible expense period tracking
+  - Categories now support `interval` (frequency count) and `period` (daily/weekly/biweekly/monthly/yearly) fields
+  - New `getPeriodDivider()` and `getPeriodLabel()` utilities convert various periods to monthly equivalents
+  - `expensesList` computed property now calculates adjusted monthly amounts based on category frequency
+  - Users can specify expenses that occur every N days, weeks, quincenas, months, or years
+  - Automatic normalization to monthly values for consistent financial reporting
+
+### Improvements
+
+- **Config Modal UI**: Enhanced PersonalFinanceConfigModal with period selection controls
+  - Added `ion-select` dropdown for period selection (días/semanas/quincenas/meses/años)
+  - Added numeric input for interval (default: 1)
+  - Improved category display with CSS styling for name, amount, interval, and period columns
+  - All existing categories initialized with monthly period and interval of 1
+
+### Files Changed
+
+- `front/src/views/statistics/performance/components/PerformanceComponent.vue` — Add period calculation utilities, update expensesList
+- `front/src/views/statistics/performance/components/PersonalFinanceConfigModal.vue` — Add interval/period fields, period selector UI
+- `front/src/views/statistics/performance/PerformancePage.vue` — Add save handler to refresh config after changes
+- `front/package.json` — Bump version to 0.46.2
+
+---
+
 ## [v0.46.1] - 2026-02-02
 
 ### Refactor
