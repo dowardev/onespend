@@ -15,7 +15,7 @@
             <ion-icon :icon="trashOutline"></ion-icon>
           </ion-button>
 
-          <ion-button @click="saveConfig">
+          <ion-button :disabled="isFormInvalid" @click="saveConfig">
             <ion-icon :icon="saveOutline"></ion-icon>
           </ion-button>
         </ion-buttons>
@@ -34,12 +34,19 @@
               <div class="list-content">
                 <ion-item class="transparent" lines="full">
                   <ion-input
-                    v-model="config.monthlySavingsGoal"
+                    :value="form.monthlySavingsGoal"
                     label="Meta de ahorro mensual"
                     label-placement="start"
                     type="number"
                     placeholder="5000"
                     style="border: none"
+                    :error-text="v$.form.monthlySavingsGoal.$errors[0]?.$message?.toString()"
+                    :class="{
+                      'ion-invalid': v$.form.monthlySavingsGoal.$invalid && v$.form.monthlySavingsGoal.$dirty,
+                      'ion-touched': v$.form.monthlySavingsGoal.$dirty,
+                    }"
+                    @ion-input="form.monthlySavingsGoal = Number($event.detail.value)"
+                    @click="v$.form.monthlySavingsGoal.$touch()"
                   ></ion-input>
                 </ion-item>
               </div>
@@ -56,18 +63,25 @@
 
               <div class="list-content">
                 <ion-item
-                  v-for="(category, index) in categories"
+                  v-for="(category, index) in form.categories"
                   :key="index"
                   class="transparent"
                   lines="full"
                 >
                   <ion-input
-                    v-model="category.amount"
+                    :value="category.amount"
                     :label="category.name"
                     label-placement="start"
                     type="number"
                     :placeholder="category.placeholder || '0'"
                     style="border: none"
+                    :error-text="v$.form.categories.$errors[0]?.$message?.toString()"
+                    :class="{
+                      'ion-invalid': category.amount <= 0 && category.amount !== undefined && category.amount !== '' && v$.form.categories.$dirty,
+                      'ion-touched': v$.form.categories.$dirty,
+                    }"
+                    @ion-input="category.amount = Number($event.detail.value)"
+                    @click="v$.form.categories.$touch()"
                   ></ion-input>
 
                   <ion-button
@@ -80,7 +94,7 @@
                   </ion-button>
                 </ion-item>
 
-                <ion-item v-if="categories.length === 0" lines="none">
+                <ion-item v-if="form.categories.length === 0" lines="none">
                   <ion-label color="medium"
                     >Sin categorías configuradas</ion-label
                   >
@@ -96,12 +110,19 @@
               <div class="list-content">
                 <ion-item class="transparent" lines="full">
                   <ion-input
-                    v-model="config.minSavingsPercent"
+                    :value="form.minSavingsPercent"
                     label="Ahorro esperado(%)"
                     label-placement="start"
                     type="number"
                     placeholder="20"
                     style="border: none"
+                    :error-text="v$.form.minSavingsPercent.$errors[0]?.$message?.toString()"
+                    :class="{
+                      'ion-invalid': v$.form.minSavingsPercent.$invalid && v$.form.minSavingsPercent.$dirty,
+                      'ion-touched': v$.form.minSavingsPercent.$dirty,
+                    }"
+                    @ion-input="form.minSavingsPercent = Number($event.detail.value)"
+                    @click="v$.form.minSavingsPercent.$touch()"
                   ></ion-input>
                 </ion-item>
               </div>
@@ -181,6 +202,8 @@ import {
 } from 'ionicons/icons';
 import { reactive, ref, onMounted, computed } from 'vue';
 import { DixieController } from '@/controllers/dixie';
+import useVuelidate from '@vuelidate/core';
+import { required, minValue, helpers } from '@vuelidate/validators';
 
 interface PersonalFinanceConfig {
   monthlySavingsGoal: number;
@@ -217,17 +240,43 @@ const defaultConfig: PersonalFinanceConfig = {
   minSavingsPercent: 20,
 };
 
-const config = reactive<PersonalFinanceConfig>({ ...defaultConfig });
-
-const categories = reactive<BudgetCategory[]>([]);
+const form = reactive({
+  monthlySavingsGoal: 5000,
+  minSavingsPercent: 20,
+  categories: [] as BudgetCategory[],
+});
 
 const dixieController = new DixieController({
-  storeName: 'personalFinanceConfig',
+  storeName: 'config',
 });
 
 const showCategoryPopover = ref(false);
 const popoverEvent = ref<Event | null>(null);
 const customCategoryName = ref('');
+
+const rules = {
+  form: {
+    monthlySavingsGoal: {
+      required: helpers.withMessage('El valor es obligatorio', required),
+      minValue: helpers.withMessage('El valor debe ser mayor a 0', minValue(1)),
+    },
+    minSavingsPercent: {
+      required: helpers.withMessage('El valor es obligatorio', required),
+      minValue: helpers.withMessage('El valor debe ser mayor a 0', minValue(1)),
+    },
+    categories: {
+      validCategories: helpers.withMessage(
+        'Todos los montos deben ser mayores a 0',
+        (cats: BudgetCategory[]) =>
+          cats.length === 0 || cats.every(cat => cat.amount > 0)
+      ),
+    },
+  },
+};
+
+const v$ = useVuelidate(rules, { form });
+
+const isFormInvalid = computed(() => v$.value?.$invalid ?? false);
 
 onMounted(async () => {
   try {
@@ -237,12 +286,10 @@ onMounted(async () => {
         (a, b) => (b as any).createdAt - (a as any).createdAt
       )[0];
       if (latest.data) {
-        Object.assign(config, {
-          monthlySavingsGoal: latest.data.monthlySavingsGoal,
-          minSavingsPercent: latest.data.minSavingsPercent,
-        });
+        form.monthlySavingsGoal = latest.data.monthlySavingsGoal;
+        form.minSavingsPercent = latest.data.minSavingsPercent;
         if (Array.isArray(latest.data.categories)) {
-          categories.splice(0, categories.length, ...latest.data.categories);
+          form.categories.splice(0, form.categories.length, ...latest.data.categories);
         }
       }
     }
@@ -256,27 +303,35 @@ function close() {
 }
 
 async function saveConfig() {
+  const isValid = await v$.value.$validate();
+  if (!isValid) return;
+
   try {
-    await dixieController.addBackup({
-      component: 'PersonalFinanceConfig',
-      data: {
-        ...config,
-        categories: [...categories],
+    await dixieController.addEntry({
+      entry: {
+        component: 'PersonalFinanceConfig',
+        data: {
+          ...form,
+          categories: [...form.categories],
+        },
+        createdAt: Date.now(),
       },
-      createdAt: Date.now(),
     });
-    emit('save', { ...config });
+    emit('save', { ...form });
     emit('close');
   } catch (e) {
     console.error('Error saving config:', e);
-    emit('save', { ...config });
+    emit('save', { ...form });
     emit('close');
   }
 }
 
 function resetDefaults() {
-  Object.assign(config, defaultConfig);
-  categories.splice(0, categories.length);
+  Object.assign(form, {
+    monthlySavingsGoal: defaultConfig.monthlySavingsGoal,
+    minSavingsPercent: defaultConfig.minSavingsPercent,
+  });
+  form.categories.splice(0, form.categories.length);
 }
 
 function openCategoryPopover(event: Event) {
@@ -285,7 +340,7 @@ function openCategoryPopover(event: Event) {
 }
 
 function isCategoryAdded(key: string): boolean {
-  return categories.some(cat => cat.key === key);
+  return form.categories.some(cat => cat.key === key);
 }
 
 const availableCategoriesFiltered = computed(() => {
@@ -294,7 +349,7 @@ const availableCategoriesFiltered = computed(() => {
 
 function addCategory(category: BudgetCategory) {
   if (!isCategoryAdded(category.key)) {
-    categories.push({
+    form.categories.push({
       key: category.key,
       name: category.name,
       amount: 0,
@@ -305,16 +360,16 @@ function addCategory(category: BudgetCategory) {
 }
 
 function removeCategory(index: number) {
-  categories.splice(index, 1);
+  form.categories.splice(index, 1);
 }
 
 function addCustomCategory() {
   const name = customCategoryName.value.trim();
   if (
     name &&
-    !categories.some(cat => cat.name.toLowerCase() === name.toLowerCase())
+    !form.categories.some(cat => cat.name.toLowerCase() === name.toLowerCase())
   ) {
-    categories.push({
+    form.categories.push({
       key: `custom_${Date.now()}`,
       name: name,
       amount: 0,

@@ -1,3 +1,37 @@
+## [v0.45.2] - 2026-02-02
+
+### Features
+
+- **Form Validation**: Add comprehensive form validation to PersonalFinanceConfigModal using Vuelidate
+  - Required field validation for monthly savings goal and minimum savings percentage
+  - Min value validation (values must be greater than 0)
+  - Category amount validation ensuring all budget categories have valid amounts
+  - Disabled save button when form is invalid with visual error feedback
+
+### Improvements
+
+- **Config Persistence**: Load personal finance configuration on PerformanceComponent mount
+  - Automatically restore saved goals, category budgets, and savings percentage settings
+  - Centralize config storage in 'config' IndexedDB store for consistency
+
+### Refactor
+
+- **Form Structure**: Refactor PersonalFinanceConfigModal from direct config binding to form reactive pattern
+  - Improved separation between form state and business logic
+  - Better integration with Vuelidate validation framework
+- **Storage Method**: Change from `addBackup` to `addEntry` method for saving configuration entries
+  - Cleaner API usage aligned with DixieController's intended interface
+
+### Files Changed
+
+- `front/src/views/statistics/performance/components/PersonalFinanceConfigModal.vue` — Add Vuelidate validation, refactor form structure
+- `front/src/views/statistics/performance/components/PerformanceComponent.vue` — Add config loading on mount
+- `front/src/controllers/dixie.ts` — Add personalFinanceConfig store to IndexedDB schema
+- `front/src/views/TemplateView.vue` — New template scaffold (new file)
+- `front/package.json` — Bump version to 0.45.2
+
+---
+
 ## [v0.45.1] - 2026-02-01
 
 ### Features

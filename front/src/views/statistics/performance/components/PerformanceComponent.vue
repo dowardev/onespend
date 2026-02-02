@@ -8,7 +8,6 @@
     :modal-open="modalOpen"
     @update:modal-from-layout="setModalFromLayout"
   >
-    
     <template #analysis>
       <ion-grid>
         <ion-row>
@@ -323,8 +322,51 @@ import { useChart } from '@/composables/useChart';
 const { loadChartDependencies } = useChart();
 onMounted(() => {
   loadChartDependencies();
+  void loadConfig();
   void loadData();
 });
+
+async function loadConfig() {
+  try {
+    const configDixie = new DixieController({ storeName: 'config' });
+    const savedConfig = ((await configDixie.listBackups()) as any[]) || [];
+    if (savedConfig.length > 0) {
+      const latest = savedConfig.sort(
+        (a, b) => (b as any).createdAt - (a as any).createdAt
+      )[0];
+      if (latest.data && latest.data.component === 'PersonalFinanceConfig') {
+        goals.monthlySavingsGoal = latest.data.monthlySavingsGoal || 5000;
+
+        if (
+          Array.isArray(latest.data.categories) &&
+          latest.data.categories.length > 0
+        ) {
+          const categoryMap: Record<string, keyof typeof expenses> = {
+            housing: 'housing',
+            food: 'food',
+            transport: 'transport',
+            entertainment: 'entertainment',
+            health: 'health',
+            other: 'other',
+          };
+
+          latest.data.categories.forEach((cat: BudgetCategory) => {
+            const expenseKey = categoryMap[cat.key];
+            if (expenseKey) {
+              expenses[expenseKey] = cat.amount;
+            }
+          });
+        }
+
+        if (latest.data.minSavingsPercent) {
+          config.minSavingsPercent = latest.data.minSavingsPercent;
+        }
+      }
+    }
+  } catch (e) {
+    console.error('Error loading config:', e);
+  }
+}
 
 import { DixieController } from '@/controllers/dixie';
 import dixieController from '@/controllers/dixie';
@@ -387,6 +429,17 @@ const showGoalsModal = ref(false);
 
 const periodOffset = ref(0);
 const selectedDate = ref<string>(format(new Date(), 'yyyy-MM-dd'));
+
+interface BudgetCategory {
+  key: string;
+  name: string;
+  amount: number;
+  placeholder?: string;
+}
+
+const config = reactive({
+  minSavingsPercent: 20,
+});
 
 const income = reactive({
   salary: 500,

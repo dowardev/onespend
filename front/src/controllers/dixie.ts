@@ -15,7 +15,7 @@ class DixieController {
       
       req.onupgradeneeded = (event) => {
         const d = (event.target as IDBOpenDBRequest).result;
-        const allStores = ['suppliers', 'accounts', 'templates', 'budget', 'backups', 'config'];
+        const allStores = ['suppliers', 'accounts', 'templates', 'budget', 'backups', 'config', 'personalFinanceConfig'];
         for (const store of allStores) {
           if (!d.objectStoreNames.contains(store)) {
             d.createObjectStore(store, {
@@ -28,7 +28,7 @@ class DixieController {
       
       req.onsuccess = () => {
         const db = req.result;
-        const allStores = ['suppliers', 'accounts', 'templates', 'budget', 'backups', 'config'];
+        const allStores = ['suppliers', 'accounts', 'templates', 'budget', 'backups', 'config', 'personalFinanceConfig'];
         const missingStores = allStores.filter(store => !db.objectStoreNames.contains(store));
         
         if (missingStores.length > 0) {
@@ -101,7 +101,7 @@ class DixieController {
       const req = indexedDB.open(name, newVersion);
       req.onupgradeneeded = () => {
         const d = req.result;
-        const allStores = ['suppliers', 'accounts', 'templates', 'budget', 'backups', 'config'];
+        const allStores = ['suppliers', 'accounts', 'templates', 'budget', 'backups', 'config', 'personalFinanceConfig'];
         for (const store of allStores) {
           if (!d.objectStoreNames.contains(store)) {
             d.createObjectStore(store, {
