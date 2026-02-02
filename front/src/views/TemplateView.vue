@@ -29,11 +29,25 @@
 // ionic icons
 // end ionic icons
 
+// other imports
+// vue,etc
+// end other imports
+
+// controllers
+// end controllers
+
+// components
+// end components
+
 // interface ansd types imports
 // end interface ansd types imports
 
-// vars
-// end vars
+// main
+// this section will contain elements that are necessary for the component such as props, emits, etc.
+// end main
+
+// vars and const
+// end vars and const
 
 // watch
 // end

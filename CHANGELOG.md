@@ -1,3 +1,21 @@
+## [v0.45.3] - 2026-02-02
+
+### Refactor
+
+- **Code Structure**: Reorganize Vue components with consistent section comments following codebase conventions
+  - Add section markers for imports, components, vars, functions, lifecycle, computed, and watch sections
+  - Improve code readability and maintainability with standardized organization
+- **TemplateView.vue**: Refactor section comment structure for better organization
+- **PersonalFinanceConfigModal.vue**: Reorganize imports and code structure with section comments
+
+### Files Changed
+
+- `front/src/views/TemplateView.vue` — Refactor section comments organization
+- `front/src/views/statistics/performance/components/PersonalFinanceConfigModal.vue` — Reorganize imports and code with section comments
+- `front/package.json` — Bump version to 0.45.3
+
+---
+
 ## [v0.45.2] - 2026-02-02
 
 ### Features
