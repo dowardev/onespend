@@ -122,12 +122,11 @@ async function exportToExcel() {
       summaryData: {
         balance: performanceComponentRef.value?.summary?.balance || 0,
         savings: performanceComponentRef.value?.summary?.savings || 0,
-        savingsPercentage: performanceComponentRef.value?.summary?.savingsPercentage || 0,
+        savingsPercentage:
+          performanceComponentRef.value?.summary?.savingsPercentage || 0,
       },
-      goalsData: {
-        monthlySavingsGoal: performanceComponentRef.value?.goals?.monthlySavingsGoal || 0,
-        progress: performanceComponentRef.value?.goals?.progress || 0,
-        progressPercentage: performanceComponentRef.value?.goals?.progressPercentage || 0,
+      configData: {
+        savingsPercent: performanceComponentRef.value?.config?.savingsPercent || 20,
       },
       filenameFactory: () =>
         `reporte_${mainSegment.value}_${format(new Date(), 'yyyy-MM-dd')}.xlsx`,

@@ -1,3 +1,27 @@
+## [v0.46.0] - 2026-02-02
+
+### Breaking Changes
+
+- **Config Data Structure**: Replace `monthlySavingsGoal` (absolute amount) with `savingsPercent` (percentage threshold)
+- **Removed Goals Feature**: Eliminate monthly savings goal tracking with progress visualization
+- **Database Schema Change**: Config entries now store `savingsPercent` instead of `monthlySavingsGoal` and `minSavingsPercent`
+
+### Refactor
+
+- **Configuration Simplification**: Consolidate two config fields (`monthlySavingsGoal`, `minSavingsPercent`) into single `savingsPercent` field
+- **UI Cleanup**: Remove "Metas" section and GoalsChartModal from PerformanceComponent
+- **Validation Updates**: Add maxValue(100) validation for savings percentage
+
+### Files Changed
+
+- `front/src/controllers/statisticsController.ts` — Update Excel export to use configData
+- `front/src/views/statistics/performance/PerformancePage.vue` — Update export call
+- `front/src/views/statistics/performance/components/PerformanceComponent.vue` — Remove goals section, update config handling
+- `front/src/views/statistics/performance/components/PersonalFinanceConfigModal.vue` — Simplify form to single savingsPercent field
+- `front/package.json` — Bump version to 0.46.0
+
+---
+
 ## [v0.45.3] - 2026-02-02
 
 ### Refactor
