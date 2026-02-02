@@ -44,7 +44,10 @@
         :is-open="isConfigModalOpen"
         @did-dismiss="closeConfigModal"
       >
-        <PersonalFinanceConfigModal @close="closeConfigModal" />
+        <PersonalFinanceConfigModal
+          @close="closeConfigModal"
+          @save="onConfigSave"
+        />
       </ion-modal>
 
       <ion-loading :is-open="isExporting" message="Generando Excel..." />
@@ -91,6 +94,11 @@ function openConfigModal() {
 
 function closeConfigModal() {
   isConfigModalOpen.value = false;
+}
+
+async function onConfigSave() {
+  isConfigModalOpen.value = false;
+  await performanceComponentRef.value?.loadConfig();
 }
 
 async function exportToExcel() {

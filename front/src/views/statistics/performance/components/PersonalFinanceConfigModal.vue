@@ -80,27 +80,37 @@
                   class="transparent"
                   lines="full"
                 >
+                  <ion-label class="category-name">{{ category.name }}</ion-label>
+                  
                   <ion-input
                     :value="category.amount"
-                    :label="category.name"
-                    label-placement="start"
                     type="number"
                     :placeholder="category.placeholder || '0'"
-                    style="border: none"
-                    :error-text="
-                      v$.form.categories.$errors[0]?.$message?.toString()
-                    "
-                    :class="{
-                      'ion-invalid':
-                        category.amount <= 0 &&
-                        category.amount !== undefined &&
-                        category.amount !== '' &&
-                        v$.form.categories.$dirty,
-                      'ion-touched': v$.form.categories.$dirty,
-                    }"
+                    class="category-amount"
                     @ion-input="category.amount = Number($event.detail.value)"
-                    @click="v$.form.categories.$touch()"
                   ></ion-input>
+
+                  <ion-input
+                    :value="category.interval"
+                    type="number"
+                    placeholder="1"
+                    class="category-interval"
+                    @ion-input="category.interval = Number($event.detail.value)"
+                  ></ion-input>
+
+                  <ion-select
+                    v-model="category.period"
+                    interface="popover"
+                    class="category-period"
+                  >
+                    <ion-select-option
+                      v-for="opt in periodOptions"
+                      :key="opt.value"
+                      :value="opt.value"
+                    >
+                      {{ opt.label }}
+                    </ion-select-option>
+                  </ion-select>
 
                   <ion-button
                     slot="end"
@@ -188,6 +198,9 @@ import {
   IonButtons,
   IonIcon,
   IonPopover,
+  IonSelect,
+  IonSelectOption,
+  IonDatetime,
 } from '@ionic/vue';
 // end ionic components imports
 
@@ -224,8 +237,18 @@ interface BudgetCategory {
   key: string;
   name: string;
   amount: number;
+  interval: number;
+  period: 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'yearly';
   placeholder?: string;
 }
+
+const periodOptions = [
+  { value: 'daily', label: 'días' },
+  { value: 'weekly', label: 'semanas' },
+  { value: 'biweekly', label: 'quincenas' },
+  { value: 'monthly', label: 'meses' },
+  { value: 'yearly', label: 'años' },
+];
 // end interface and types imports
 
 // main
@@ -235,26 +258,30 @@ const emit = defineEmits<{
 }>();
 
 const availableCategories: BudgetCategory[] = [
-  { key: 'housing', name: 'Vivienda', amount: 0, placeholder: '3000' },
-  { key: 'food', name: 'Alimentación', amount: 0, placeholder: '2000' },
-  { key: 'transport', name: 'Transporte', amount: 0, placeholder: '1000' },
+  { key: 'housing', name: 'Vivienda', amount: 0, interval: 1, period: 'monthly', placeholder: '3000' },
+  { key: 'food', name: 'Alimentación', amount: 0, interval: 1, period: 'monthly', placeholder: '2000' },
+  { key: 'transport', name: 'Transporte', amount: 0, interval: 1, period: 'monthly', placeholder: '1000' },
   {
     key: 'entertainment',
     name: 'Entretenimiento',
     amount: 0,
+    interval: 1,
+    period: 'monthly',
     placeholder: '500',
   },
-  { key: 'health', name: 'Salud', amount: 0, placeholder: '800' },
-  { key: 'other', name: 'Otros gastos', amount: 0, placeholder: '500' },
+  { key: 'health', name: 'Salud', amount: 0, interval: 1, period: 'monthly', placeholder: '800' },
+  { key: 'other', name: 'Otros gastos', amount: 0, interval: 1, period: 'monthly', placeholder: '500' },
   {
     key: 'subscriptions',
     name: 'Suscripciones',
     amount: 0,
+    interval: 1,
+    period: 'monthly',
     placeholder: '300',
   },
-  { key: 'education', name: 'Educación', amount: 0, placeholder: '400' },
-  { key: 'clothing', name: 'Ropa', amount: 0, placeholder: '300' },
-  { key: 'personal', name: 'Cuidado personal', amount: 0, placeholder: '200' },
+  { key: 'education', name: 'Educación', amount: 0, interval: 1, period: 'monthly', placeholder: '400' },
+  { key: 'clothing', name: 'Ropa', amount: 0, interval: 1, period: 'monthly', placeholder: '300' },
+  { key: 'personal', name: 'Cuidado personal', amount: 0, interval: 1, period: 'monthly', placeholder: '200' },
 ];
 
 const defaultConfig: PersonalFinanceConfig = {
@@ -382,6 +409,8 @@ function addCategory(category: BudgetCategory) {
       key: category.key,
       name: category.name,
       amount: 0,
+      interval: category.interval || 1,
+      period: category.period || 'monthly',
       placeholder: category.placeholder,
     });
   }
@@ -402,6 +431,8 @@ function addCustomCategory() {
       key: `custom_${Date.now()}`,
       name: name,
       amount: 0,
+      interval: 1,
+      period: 'monthly',
     });
     customCategoryName.value = '';
   }
@@ -416,6 +447,24 @@ ion-input {
   border: 1px solid var(--ion-color-light, #e0e0e0);
   border-radius: 4px;
   margin-top: 4px;
+}
+
+.category-name {
+  width: 80px;
+  font-weight: 600;
+}
+
+.category-amount {
+  width: 80px;
+}
+
+.category-interval {
+  width: 50px;
+  text-align: center;
+}
+
+.category-period {
+  width: 90px;
 }
 
 .transparent {

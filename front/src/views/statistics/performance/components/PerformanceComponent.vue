@@ -66,9 +66,9 @@
                     lines="full"
                   >
                     <ion-label>{{ item.name }}</ion-label>
-                    <ion-label slot="end">{{
-                      formatCurrency(item.amount)
-                    }}</ion-label>
+                    <ion-label slot="end"
+                      >{{ formatCurrency(item.amount) }}{{ item.periodLabel }}</ion-label
+                    >
                   </ion-item>
 
                   <ion-item lines="full">
@@ -432,23 +432,6 @@ const incomesList = computed(() => {
   ];
 });
 
-const expensesList = computed(() => {
-  if (config.categories.length > 0) {
-    return config.categories.map(cat => ({
-      name: cat.name,
-      amount: cat.amount || 0,
-    }));
-  }
-  return [
-    { name: 'Vivienda', amount: expenses.housing },
-    { name: 'Alimentación', amount: expenses.food },
-    { name: 'Transporte', amount: expenses.transport },
-    { name: 'Entretenimiento', amount: expenses.entertainment },
-    { name: 'Salud', amount: expenses.health },
-    { name: 'Otros gastos', amount: expenses.other },
-  ];
-});
-
 const balanceDelta = computed(() => {
   return Number(summary.balance || 0) - Number(previousBalance.value || 0);
 });
@@ -483,8 +466,72 @@ const targetClass = computed(() => {
     : 'negative-profit';
 });
 
+const periodFactors: Record<string, number> = {
+  daily: 30,
+  weekly: 4,
+  biweekly: 2,
+  monthly: 1,
+  yearly: 0.083,
+};
+
+const getPeriodDivider = (): number => {
+  switch (props.period) {
+    case 'day':
+      return 30;
+    case 'week':
+      return 4;
+    case 'month':
+      return 1;
+    case 'year':
+      return 0.083;
+    default:
+      return 1;
+  }
+};
+
+const getPeriodLabel = (period: string): string => {
+  const labels: Record<string, string> = {
+    daily: '/mes',
+    weekly: '/mes',
+    biweekly: '/mes',
+    monthly: '',
+    yearly: '/mes',
+  };
+  return labels[period] || '';
+};
+
+const expensesList = computed(() => {
+  const divider = getPeriodDivider();
+  if (config.categories.length > 0) {
+    return config.categories.map(cat => {
+      const factor = periodFactors[cat.period] || 1;
+      const interval = cat.interval || 1;
+      const adjustedAmount = (cat.amount || 0) / interval / factor / divider;
+      return {
+        name: cat.name,
+        amount: Number(adjustedAmount.toFixed(2)),
+        periodLabel: getPeriodLabel(cat.period),
+      };
+    });
+  }
+  return [
+    { name: 'Vivienda', amount: expenses.housing, periodLabel: '' },
+    { name: 'Alimentación', amount: expenses.food, periodLabel: '' },
+    { name: 'Transporte', amount: expenses.transport, periodLabel: '' },
+    { name: 'Entretenimiento', amount: expenses.entertainment, periodLabel: '' },
+    { name: 'Salud', amount: expenses.health, periodLabel: '' },
+    { name: 'Otros gastos', amount: expenses.other, periodLabel: '' },
+  ];
+});
+
 const categoriesTotal = computed(() => {
-  return config.categories.reduce((sum, cat) => sum + (cat.amount || 0), 0);
+  const divider = getPeriodDivider();
+  return config.categories.reduce((sum, cat) => {
+    const factor = periodFactors[cat.period] || 1;
+    const interval = cat.interval || 1;
+    const adjustedAmount = (cat.amount || 0) / interval / factor / divider;
+    return sum + adjustedAmount;
+  }, 0);
 });
 
 const dateLabel = computed(() => {
@@ -728,6 +775,7 @@ defineExpose({
   summary,
   config,
   dateLabel,
+  loadConfig,
 });
 </script>
 
