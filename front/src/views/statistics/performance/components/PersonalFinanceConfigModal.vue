@@ -28,32 +28,38 @@
           <ion-col size="10">
             <ion-list>
               <ion-list-header>
-                <ion-label>Metas</ion-label>
+                <ion-label>Ahorro</ion-label>
               </ion-list-header>
 
               <div class="list-content">
                 <ion-item class="transparent" lines="full">
                   <ion-input
-                    :value="form.monthlySavingsGoal"
-                    label="Meta de ahorro mensual"
+                    :value="form.savingsPercent"
+                    label="Porcentaje de ahorro esperado"
                     label-placement="start"
                     type="number"
-                    placeholder="5000"
+                    placeholder="20"
                     style="border: none"
                     :error-text="
-                      v$.form.monthlySavingsGoal.$errors[0]?.$message?.toString()
+                      v$.form.savingsPercent.$errors[0]?.$message?.toString()
                     "
                     :class="{
                       'ion-invalid':
-                        v$.form.monthlySavingsGoal.$invalid &&
-                        v$.form.monthlySavingsGoal.$dirty,
-                      'ion-touched': v$.form.monthlySavingsGoal.$dirty,
+                        v$.form.savingsPercent.$invalid &&
+                        v$.form.savingsPercent.$dirty,
+                      'ion-touched': v$.form.savingsPercent.$dirty,
                     }"
                     @ion-input="
-                      form.monthlySavingsGoal = Number($event.detail.value)
+                      form.savingsPercent = Number($event.detail.value)
                     "
-                    @click="v$.form.monthlySavingsGoal.$touch()"
+                    @click="v$.form.savingsPercent.$touch()"
                   ></ion-input>
+                </ion-item>
+
+                <ion-item lines="none">
+                  <ion-label color="medium">
+                    <small>Ejemplo: 20% de tus ingresos destinados al ahorro</small>
+                  </ion-label>
                 </ion-item>
               </div>
             </ion-list>
@@ -115,35 +121,6 @@
             </ion-list>
 
             <ion-list>
-              <ion-list-header>
-                <ion-label>Alertas</ion-label>
-              </ion-list-header>
-
-              <div class="list-content">
-                <ion-item class="transparent" lines="full">
-                  <ion-input
-                    :value="form.minSavingsPercent"
-                    label="Ahorro esperado(%)"
-                    label-placement="start"
-                    type="number"
-                    placeholder="20"
-                    style="border: none"
-                    :error-text="
-                      v$.form.minSavingsPercent.$errors[0]?.$message?.toString()
-                    "
-                    :class="{
-                      'ion-invalid':
-                        v$.form.minSavingsPercent.$invalid &&
-                        v$.form.minSavingsPercent.$dirty,
-                      'ion-touched': v$.form.minSavingsPercent.$dirty,
-                    }"
-                    @ion-input="
-                      form.minSavingsPercent = Number($event.detail.value)
-                    "
-                    @click="v$.form.minSavingsPercent.$touch()"
-                  ></ion-input>
-                </ion-item>
-              </div>
             </ion-list>
           </ion-col>
         </ion-row>
@@ -227,7 +204,7 @@ import {
 // other imports
 import { reactive, ref, onMounted, computed } from 'vue';
 import useVuelidate from '@vuelidate/core';
-import { required, minValue, helpers } from '@vuelidate/validators';
+import { required, minValue, maxValue, helpers } from '@vuelidate/validators';
 // end other imports
 
 // controllers
@@ -239,8 +216,8 @@ import { DixieController } from '@/controllers/dixie';
 
 // interface and types imports
 interface PersonalFinanceConfig {
-  monthlySavingsGoal: number;
-  minSavingsPercent: number;
+  savingsPercent: number;
+  categories: BudgetCategory[];
 }
 
 interface BudgetCategory {
@@ -281,13 +258,12 @@ const availableCategories: BudgetCategory[] = [
 ];
 
 const defaultConfig: PersonalFinanceConfig = {
-  monthlySavingsGoal: 5000,
-  minSavingsPercent: 20,
+  savingsPercent: 20,
+  categories: [],
 };
 
 const form = reactive({
-  monthlySavingsGoal: 5000,
-  minSavingsPercent: 20,
+  savingsPercent: 20,
   categories: [] as BudgetCategory[],
 });
 // end main
@@ -303,13 +279,10 @@ const customCategoryName = ref('');
 
 const rules = {
   form: {
-    monthlySavingsGoal: {
+    savingsPercent: {
       required: helpers.withMessage('El valor es obligatorio', required),
       minValue: helpers.withMessage('El valor debe ser mayor a 0', minValue(1)),
-    },
-    minSavingsPercent: {
-      required: helpers.withMessage('El valor es obligatorio', required),
-      minValue: helpers.withMessage('El valor debe ser mayor a 0', minValue(1)),
+      maxValue: helpers.withMessage('El valor no puede ser mayor a 100', maxValue(100)),
     },
     categories: {
       validCategories: helpers.withMessage(
@@ -344,8 +317,7 @@ onMounted(async () => {
         (a, b) => (b as any).createdAt - (a as any).createdAt
       )[0];
       if (latest.data) {
-        form.monthlySavingsGoal = latest.data.monthlySavingsGoal;
-        form.minSavingsPercent = latest.data.minSavingsPercent;
+        form.savingsPercent = latest.data.savingsPercent ?? latest.data.minSavingsPercent ?? 20;
         if (Array.isArray(latest.data.categories)) {
           form.categories.splice(
             0,
@@ -391,10 +363,7 @@ async function saveConfig() {
 }
 
 function resetDefaults() {
-  Object.assign(form, {
-    monthlySavingsGoal: defaultConfig.monthlySavingsGoal,
-    minSavingsPercent: defaultConfig.minSavingsPercent,
-  });
+  form.savingsPercent = defaultConfig.savingsPercent;
   form.categories.splice(0, form.categories.length);
 }
 

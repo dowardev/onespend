@@ -133,42 +133,13 @@
                       ></ion-label
                     >
                   </ion-item>
-                </div>
-              </ion-list>
-
-              <ion-list class="transparent">
-                <ion-list-header>
-                  <ion-label>Metas</ion-label>
-
-                  <ion-button @click="openGoalsChart">
-                    <ion-icon :icon="statsChartOutline"></ion-icon>
-                  </ion-button>
-                </ion-list-header>
-
-                <div class="list-content">
-                  <ion-item lines="full">
-                    <ion-label>Meta ahorro {{ periodLabel }}</ion-label>
-
-                    <ion-label slot="end">{{
-                      formatCurrency(goals.monthlySavingsGoal)
-                    }}</ion-label>
-                  </ion-item>
 
                   <ion-item lines="full">
-                    <ion-label>Progreso del {{ periodLabel }}</ion-label>
+                    <ion-label>Meta esperada</ion-label>
 
                     <ion-label slot="end"
-                      >{{ formatCurrency(goals.progress) }} /
-                      {{ formatCurrency(goals.monthlySavingsGoal) }}</ion-label
-                    >
-                  </ion-item>
-
-                  <ion-item lines="full">
-                    <ion-label>% Completado</ion-label>
-
-                    <ion-label slot="end"
-                      ><span :class="progressClass"
-                        >{{ goals.progressPercentage }}%</span
+                      ><span :class="targetClass"
+                        >{{ config.savingsPercent }}%</span
                       ></ion-label
                     >
                   </ion-item>
@@ -236,14 +207,6 @@
     />
   </ion-modal>
 
-  <ion-modal :is-open="showGoalsModal" @did-dismiss="showGoalsModal = false">
-    <GoalsChartModal
-      :goal-amount="goals.monthlySavingsGoal"
-      :current-progress="goals.progress"
-      @close="showGoalsModal = false"
-    />
-  </ion-modal>
-
   <ion-popover
     :is-open="popovers.mainDate.open"
     :event="popovers.mainDate.event"
@@ -295,7 +258,6 @@ import PeriodLayout from '../components/PeriodLayout.vue';
 import PeriodSnapshots from '@/views/statistics/performance/components/PeriodSnapshots.vue';
 import IncomesChartModal from '@/views/statistics/performance/components/IncomesChartModal.vue';
 import ExpensesChartModal from '@/views/statistics/performance/components/ExpensesChartModal.vue';
-import GoalsChartModal from '@/views/statistics/performance/components/GoalsChartModal.vue';
 import {
   downloadOutline,
   informationCircleOutline,
@@ -335,8 +297,6 @@ async function loadConfig() {
         (a, b) => (b as any).createdAt - (a as any).createdAt
       )[0];
       if (latest.data && latest.data.component === 'PersonalFinanceConfig') {
-        goals.monthlySavingsGoal = latest.data.monthlySavingsGoal || 5000;
-
         if (
           Array.isArray(latest.data.categories) &&
           latest.data.categories.length > 0
@@ -358,8 +318,10 @@ async function loadConfig() {
           });
         }
 
-        if (latest.data.minSavingsPercent) {
-          config.minSavingsPercent = latest.data.minSavingsPercent;
+        if (latest.data.savingsPercent) {
+          config.savingsPercent = latest.data.savingsPercent;
+        } else if (latest.data.minSavingsPercent) {
+          config.savingsPercent = latest.data.minSavingsPercent;
         }
       }
     }
@@ -425,7 +387,6 @@ const previousLabel = computed(() => {
 
 const showIncomesModal = ref(false);
 const showExpensesModal = ref(false);
-const showGoalsModal = ref(false);
 
 const periodOffset = ref(0);
 const selectedDate = ref<string>(format(new Date(), 'yyyy-MM-dd'));
@@ -438,7 +399,7 @@ interface BudgetCategory {
 }
 
 const config = reactive({
-  minSavingsPercent: 20,
+  savingsPercent: 20,
 });
 
 const income = reactive({
@@ -462,12 +423,6 @@ const summary = reactive({
   balance: 165,
   savings: 165,
   savingsPercentage: 25.4,
-});
-
-const goals = reactive({
-  monthlySavingsGoal: 5000,
-  progress: 165,
-  progressPercentage: 3.3,
 });
 
 const previousIncome = ref(0);
@@ -523,19 +478,15 @@ const balanceClass = computed(() => {
 });
 
 const savingsPercentageClass = computed(() => {
-  return Number(summary.savingsPercentage ?? 0) >= 20
-    ? 'positive-profit'
-    : Number(summary.savingsPercentage ?? 0) < 10
-      ? 'negative-profit'
-      : '';
+  if (Number(summary.savingsPercentage ?? 0) >= config.savingsPercent) return 'positive-profit';
+  if (Number(summary.savingsPercentage ?? 0) < config.savingsPercent / 2) return 'negative-profit';
+  return '';
 });
 
-const progressClass = computed(() => {
-  return Number(goals.progressPercentage ?? 0) >= 50
+const targetClass = computed(() => {
+  return Number(summary.savingsPercentage ?? 0) >= config.savingsPercent
     ? 'positive-profit'
-    : Number(goals.progressPercentage ?? 0) < 25
-      ? 'negative-profit'
-      : '';
+    : 'negative-profit';
 });
 
 const dateLabel = computed(() => {
@@ -709,13 +660,6 @@ async function loadData() {
         ? Number(((summary.savings / income.total) * 100).toFixed(1))
         : 0;
 
-    goals.progress += summary.savings;
-    if (goals.monthlySavingsGoal > 0) {
-      goals.progressPercentage = Number(
-        ((goals.progress / goals.monthlySavingsGoal) * 100).toFixed(1)
-      );
-    }
-
     const prevDate = getPreviousPeriodDate();
     const prevTarget = isoDate({ d: prevDate });
 
@@ -800,16 +744,12 @@ function openExpensesChart() {
   showExpensesModal.value = true;
 }
 
-function openGoalsChart() {
-  showGoalsModal.value = true;
-}
-
 defineExpose({
   pdfRef: pdfReport,
   income,
   expenses,
   summary,
-  goals,
+  config,
   dateLabel,
 });
 </script>

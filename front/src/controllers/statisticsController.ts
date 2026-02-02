@@ -357,10 +357,8 @@ class StatisticsController {
       savings: number;
       savingsPercentage: number;
     };
-    goalsData: {
-      monthlySavingsGoal: number;
-      progress: number;
-      progressPercentage: number;
+    configData: {
+      savingsPercent: number;
     };
     filenameFactory?: () => string;
   }): Promise<boolean> {
@@ -423,13 +421,9 @@ class StatisticsController {
       XLSX.utils.sheet_add_aoa(worksheet, [['Porcentaje de ahorro', `${opts.summaryData.savingsPercentage}%`]], { origin: `A${row}` });
       row += 2;
 
-      XLSX.utils.sheet_add_aoa(worksheet, [['METAS']], { origin: `A${row}` });
+      XLSX.utils.sheet_add_aoa(worksheet, [['CONFIGURACIÓN']], { origin: `A${row}` });
       row++;
-      XLSX.utils.sheet_add_aoa(worksheet, [['Meta de ahorro', opts.goalsData.monthlySavingsGoal]], { origin: `A${row}` });
-      row++;
-      XLSX.utils.sheet_add_aoa(worksheet, [['Progreso actual', opts.goalsData.progress]], { origin: `A${row}` });
-      row++;
-      XLSX.utils.sheet_add_aoa(worksheet, [['Completado', `${opts.goalsData.progressPercentage}%`]], { origin: `A${row}` });
+      XLSX.utils.sheet_add_aoa(worksheet, [['Porcentaje esperado', `${opts.configData.savingsPercent}%`]], { origin: `A${row}` });
 
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Reporte');
