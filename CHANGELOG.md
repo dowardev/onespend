@@ -1,3 +1,63 @@
+## [v0.46.3] - 2026-02-05
+
+### Features
+
+- **Budget Chart Modals**: Added new modal components for visualizing budget data with interactive pie charts
+  - `BudgetDetailModal.vue` - Displays detailed breakdown of budget items with sorted transaction list
+  - `BudgetExpensesChartModal.vue` - Pie chart visualization showing budget expenses breakdown
+  - `BudgetIncomesChartModal.vue` - Pie chart visualization showing budget incomes breakdown
+  - Both chart modals include detailed item lists with totals and formatted currency display
+
+- **Fixed Incomes Configuration**: Extended PersonalFinanceConfigModal with comprehensive fixed income management
+  - New `FixedIncome` interface supporting multiple income types (salary, investments, bonuses, commissions, rental income, dividends, freelance, other)
+  - Dedicated UI section for managing fixed incomes with add/remove functionality
+  - Popover selector for choosing predefined income types or creating custom entries
+  - Configurable interval and period settings for each income source
+
+- **Advanced Balance Calculations**: Introduced new financial metrics for better budget tracking
+  - `realBalance` - Calculated as budget incomes minus budget expenses for the current period
+  - `projectedBalance` - Projects future balance by adding fixed incomes and subtracting fixed expenses
+  - `budgetIncomesTotal` and `budgetExpensesTotal` - Aggregated totals for budget-based transactions
+
+- **Enhanced Date Navigation**: Refactored date handling system for more intuitive period navigation
+  - Replaced `selectedDate` + `periodOffset` pattern with single `referenceDate` state
+  - Added watch on `period` prop to automatically reload data when period changes
+  - Improved date range computation for day/week/month/year periods
+  - Better period boundary handling for navigation buttons (prev/next)
+
+### Improvements
+
+- **Period-Based Data Loading**: Enhanced data loading to iterate through complete date ranges
+  - `loadData()` function now processes each day within the selected period range
+  - Aggregates entries from multiple days for accurate period-based reporting
+  - Previous period comparisons now properly calculated using full date ranges
+
+- **Budget Summary UI**: New dedicated sections for Budget Incomes and Budget Expenses
+  - Added stats chart buttons to open income/expense breakdown modals
+  - New `realBalance` and `projectedBalance` display cards with color-coded formatting
+  - Improved period label formatting showing full date ranges (e.g., "01 - 28 feb 2026")
+
+- **Configuration Loading**: Added `categoriesLoaded` flag to control when custom categories are applied
+  - Prevents empty category defaults from affecting the UI until data is fully loaded
+  - Better handling of configuration persistence across sessions
+
+### Bug Fixes
+
+- **Date Navigation**: Fixed period navigation to respect period boundaries (weeks start on Monday, months show full range)
+- **Income Calculation**: Fixed income totals to properly use fixed incomes configuration when available
+- **Expense Display**: Removed redundant period labels from expense list items for cleaner UI
+
+### Files Changed
+
+- `front/src/views/statistics/performance/components/BudgetDetailModal.vue` — New modal component for budget item details
+- `front/src/views/statistics/performance/components/BudgetExpensesChartModal.vue` — New pie chart modal for expenses
+- `front/src/views/statistics/performance/components/BudgetIncomesChartModal.vue` — New pie chart modal for incomes
+- `front/src/views/statistics/performance/components/PerformanceComponent.vue` — Add chart modals, balance calculations, refactor date handling
+- `front/src/views/statistics/performance/components/PersonalFinanceConfigModal.vue` — Add fixed incomes configuration section
+- `front/package.json` — Bump version to 0.46.3
+
+---
+
 ## [v0.46.2] - 2026-02-02
 
 ### Features
