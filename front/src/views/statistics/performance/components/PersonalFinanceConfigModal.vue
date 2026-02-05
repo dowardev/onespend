@@ -66,6 +66,77 @@
 
             <ion-list>
               <ion-list-header>
+                <ion-label>Ingresos fijos</ion-label>
+
+                <ion-button @click="openIncomePopover($event)">
+                  <ion-icon :icon="addOutline"></ion-icon>
+                </ion-button>
+              </ion-list-header>
+
+              <div class="list-content">
+                <ion-item
+                  v-for="(income, index) in form.incomes"
+                  :key="index"
+                  class="transparent"
+                  lines="full"
+                >
+                  <ion-input
+                    :value="income.name"
+                    placeholder="Nombre"
+                    class="income-name"
+                    @ion-input="income.name = $event.detail.value"
+                  ></ion-input>
+
+                  <ion-input
+                    :value="income.amount"
+                    type="number"
+                    placeholder="0"
+                    class="income-amount"
+                    @ion-input="income.amount = Number($event.detail.value)"
+                  ></ion-input>
+
+                  <ion-input
+                    :value="income.interval"
+                    type="number"
+                    placeholder="1"
+                    class="income-interval"
+                    @ion-input="income.interval = Number($event.detail.value)"
+                  ></ion-input>
+
+                  <ion-select
+                    v-model="income.period"
+                    interface="popover"
+                    class="income-period"
+                  >
+                    <ion-select-option
+                      v-for="opt in periodOptions"
+                      :key="opt.value"
+                      :value="opt.value"
+                    >
+                      {{ opt.label }}
+                    </ion-select-option>
+                  </ion-select>
+
+                  <ion-button
+                    slot="end"
+                    fill="clear"
+                    color="danger"
+                    @click="removeIncome(index)"
+                  >
+                    <ion-icon :icon="trashOutline"></ion-icon>
+                  </ion-button>
+                </ion-item>
+
+                <ion-item v-if="form.incomes.length === 0" lines="none">
+                  <ion-label color="medium"
+                    >Sin ingresos fijos configurados</ion-label
+                  >
+                </ion-item>
+              </div>
+            </ion-list>
+
+            <ion-list>
+              <ion-list-header>
                 <ion-label>Presupuestos por categoría</ion-label>
 
                 <ion-button @click="openCategoryPopover($event)">
@@ -135,6 +206,48 @@
           </ion-col>
         </ion-row>
       </ion-grid>
+
+      <ion-popover
+        :is-open="showIncomePopover"
+        :event="incomePopoverEvent"
+        @did-dismiss="showIncomePopover = false"
+      >
+        <ion-content>
+          <ion-list>
+            <ion-list-header>
+              <ion-label>Seleccionar ingreso</ion-label>
+            </ion-list-header>
+            <ion-item
+              v-for="inc in availableIncomesFiltered"
+              :key="inc.key"
+              button
+              @click="addIncome(inc)"
+            >
+              <ion-label>{{ inc.name }}</ion-label>
+            </ion-item>
+            <ion-item-divider></ion-item-divider>
+            <ion-list-header>
+              <ion-label>Campo personalizado</ion-label>
+            </ion-list-header>
+            <ion-item>
+              <ion-input
+                v-model="customIncomeName"
+                label-placement="floating"
+                placeholder="Nombre del ingreso"
+                style="border: none"
+              ></ion-input>
+              <ion-button
+                slot="end"
+                fill="clear"
+                :disabled="!customIncomeName.trim()"
+                @click="addCustomIncome"
+              >
+                <ion-icon :icon="addOutline"></ion-icon>
+              </ion-button>
+            </ion-item>
+          </ion-list>
+        </ion-content>
+      </ion-popover>
 
       <ion-popover
         :is-open="showCategoryPopover"
@@ -231,6 +344,7 @@ import { DixieController } from '@/controllers/dixie';
 interface PersonalFinanceConfig {
   savingsPercent: number;
   categories: BudgetCategory[];
+  incomes: FixedIncome[];
 }
 
 interface BudgetCategory {
@@ -240,6 +354,14 @@ interface BudgetCategory {
   interval: number;
   period: 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'yearly';
   placeholder?: string;
+}
+
+interface FixedIncome {
+  key: string;
+  name: string;
+  amount: number;
+  interval: number;
+  period: 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'yearly';
 }
 
 const periodOptions = [
@@ -284,14 +406,27 @@ const availableCategories: BudgetCategory[] = [
   { key: 'personal', name: 'Cuidado personal', amount: 0, interval: 1, period: 'monthly', placeholder: '200' },
 ];
 
+const availableIncomes: FixedIncome[] = [
+  { key: 'salary', name: 'Salario', amount: 0, interval: 1, period: 'monthly' },
+  { key: 'investments', name: 'Inversiones', amount: 0, interval: 1, period: 'monthly' },
+  { key: 'bonus', name: 'Bono', amount: 0, interval: 1, period: 'monthly' },
+  { key: 'commission', name: 'Comisiones', amount: 0, interval: 1, period: 'monthly' },
+  { key: 'rental', name: 'Renta', amount: 0, interval: 1, period: 'monthly' },
+  { key: 'dividends', name: 'Dividendos', amount: 0, interval: 1, period: 'monthly' },
+  { key: 'freelance', name: 'Freelance', amount: 0, interval: 1, period: 'monthly' },
+  { key: 'other_income', name: 'Otros ingresos', amount: 0, interval: 1, period: 'monthly' },
+];
+
 const defaultConfig: PersonalFinanceConfig = {
   savingsPercent: 20,
   categories: [],
+  incomes: [],
 };
 
 const form = reactive({
   savingsPercent: 20,
   categories: [] as BudgetCategory[],
+  incomes: [] as FixedIncome[],
 });
 // end main
 
@@ -301,8 +436,11 @@ const dixieController = new DixieController({
 });
 
 const showCategoryPopover = ref(false);
+const showIncomePopover = ref(false);
 const popoverEvent = ref<Event | null>(null);
+const incomePopoverEvent = ref<Event | null>(null);
 const customCategoryName = ref('');
+const customIncomeName = ref('');
 
 const rules = {
   form: {
@@ -333,6 +471,10 @@ const isFormInvalid = computed(() => v$.value?.$invalid ?? false);
 const availableCategoriesFiltered = computed(() => {
   return availableCategories.filter(cat => !isCategoryAdded(cat.key));
 });
+
+const availableIncomesFiltered = computed(() => {
+  return availableIncomes.filter(inc => !isIncomeAdded(inc.key));
+});
 // end computed
 
 // onmounted
@@ -350,6 +492,13 @@ onMounted(async () => {
             0,
             form.categories.length,
             ...latest.data.categories
+          );
+        }
+        if (Array.isArray(latest.data.incomes)) {
+          form.incomes.splice(
+            0,
+            form.incomes.length,
+            ...latest.data.incomes
           );
         }
       }
@@ -376,6 +525,7 @@ async function saveConfig() {
         data: {
           ...form,
           categories: [...form.categories],
+          incomes: [...form.incomes],
         },
         createdAt: Date.now(),
       },
@@ -392,6 +542,7 @@ async function saveConfig() {
 function resetDefaults() {
   form.savingsPercent = defaultConfig.savingsPercent;
   form.categories.splice(0, form.categories.length);
+  form.incomes.splice(0, form.incomes.length);
 }
 
 function openCategoryPopover(event: Event) {
@@ -401,6 +552,46 @@ function openCategoryPopover(event: Event) {
 
 function isCategoryAdded(key: string): boolean {
   return form.categories.some(cat => cat.key === key);
+}
+
+function isIncomeAdded(key: string): boolean {
+  return form.incomes.some(inc => inc.key === key);
+}
+
+function openIncomePopover(event: Event) {
+  incomePopoverEvent.value = event;
+  showIncomePopover.value = true;
+}
+
+function addIncome(income: FixedIncome) {
+  if (!isIncomeAdded(income.key)) {
+    form.incomes.push({
+      key: income.key,
+      name: income.name,
+      amount: 0,
+      interval: income.interval || 1,
+      period: income.period || 'monthly',
+    });
+  }
+  showIncomePopover.value = false;
+}
+
+function addCustomIncome() {
+  const name = customIncomeName.value.trim();
+  if (
+    name &&
+    !form.incomes.some(inc => inc.name.toLowerCase() === name.toLowerCase())
+  ) {
+    form.incomes.push({
+      key: `income_custom_${Date.now()}`,
+      name: name,
+      amount: 0,
+      interval: 1,
+      period: 'monthly',
+    });
+    customIncomeName.value = '';
+  }
+  showIncomePopover.value = false;
 }
 
 function addCategory(category: BudgetCategory) {
@@ -419,6 +610,20 @@ function addCategory(category: BudgetCategory) {
 
 function removeCategory(index: number) {
   form.categories.splice(index, 1);
+}
+
+function addIncomeItem() {
+  form.incomes.push({
+    key: `income_${Date.now()}`,
+    name: '',
+    amount: 0,
+    interval: 1,
+    period: 'monthly',
+  });
+}
+
+function removeIncome(index: number) {
+  form.incomes.splice(index, 1);
 }
 
 function addCustomCategory() {

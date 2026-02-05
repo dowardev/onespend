@@ -43,7 +43,7 @@
                     <ion-label>Total ingresos</ion-label>
                     <ion-label slot="end"
                       ><span style="font-weight: bold">{{
-                        formatCurrency(income.total)
+                        formatCurrency(incomesTotal)
                       }}</span></ion-label
                     >
                   </ion-item>
@@ -66,9 +66,7 @@
                     lines="full"
                   >
                     <ion-label>{{ item.name }}</ion-label>
-                    <ion-label slot="end"
-                      >{{ formatCurrency(item.amount) }}{{ item.periodLabel }}</ion-label
-                    >
+                    <ion-label slot="end">{{ formatCurrency(item.amount) }}</ion-label>
                   </ion-item>
 
                   <ion-item lines="full">
@@ -86,69 +84,79 @@
                 </div>
               </ion-list>
 
+              <ion-list class="transparent">
+                <ion-list-header>
+                  <ion-label>Ingresos (Budget)</ion-label>
+
+                  <ion-button @click="openBudgetIncomesChart">
+                    <ion-icon :icon="statsChartOutline"></ion-icon>
+                  </ion-button>
+                </ion-list-header>
+
+                <div class="list-content">
+                  <ion-item lines="full">
+                    <ion-label>Total real</ion-label>
+                    <ion-label slot="end"
+                      ><span style="font-weight: bold; color: var(--ion-color-success, #2dd36f)">{{
+                        formatCurrency(budgetIncomesTotal)
+                      }}</span></ion-label
+                    >
+                  </ion-item>
+                </div>
+              </ion-list>
+
+              <ion-list class="transparent">
+                <ion-list-header>
+                  <ion-label>Gastos (Budget)</ion-label>
+
+                  <ion-button @click="openBudgetExpensesChart">
+                    <ion-icon :icon="statsChartOutline"></ion-icon>
+                  </ion-button>
+                </ion-list-header>
+
+                <div class="list-content">
+                  <ion-item lines="full">
+                    <ion-label>Total real</ion-label>
+                    <ion-label slot="end"
+                      ><span style="font-weight: bold; color: var(--ion-color-danger, #eb445a)">{{
+                        formatCurrency(budgetExpensesTotal)
+                      }}</span></ion-label
+                    >
+                  </ion-item>
+                </div>
+              </ion-list>
+
               <div class="ion-padding">
-                <ion-item :class="balanceClass" lines="full">
+                <ion-item :class="realBalanceClass" lines="full">
                   <ion-label>
-                    <div>Balance del {{ period }}</div>
-
-                    <small
-                      style="
-                        display: block;
-                        color: var(--ion-color-medium, #666);
-                      "
-                    >
-                      Δ vs {{ previousLabel }}:
-                      <span :class="balanceDeltaClass">{{
-                        formattedBalanceDelta
-                      }}</span></small
-                    >
+                    <div>Balance real</div>
+                    <small style="color: var(--ion-color-medium, #666)">
+                      Budget (ingresos - gastos)
+                    </small>
                   </ion-label>
-
                   <ion-label slot="end"
                     ><span style="font-weight: bold">{{
-                      formatCurrency(summary.balance)
+                      formatCurrency(realBalance)
                     }}</span></ion-label
                   >
                 </ion-item>
               </div>
 
-              <ion-list class="transparent">
-                <div class="list-content">
-                  <ion-item lines="full">
-                    <ion-label>Ahorro del {{ period }}</ion-label>
-
-                    <ion-label slot="end"
-                      ><span
-                        style="
-                          font-weight: bold;
-                          color: var(--ion-color-success, #2dd36f);
-                        "
-                        >{{ formatCurrency(summary.savings) }}</span
-                      ></ion-label
-                    >
-                  </ion-item>
-
-                  <ion-item lines="full">
-                    <ion-label>% de ahorro</ion-label>
-
-                    <ion-label slot="end"
-                      ><span :class="savingsPercentageClass"
-                        >{{ summary.savingsPercentage }}%</span
-                      ></ion-label
-                    >
-                  </ion-item>
-
-                  <ion-item lines="full">
-                    <ion-label>Meta esperada</ion-label>
-
-                    <ion-label slot="end"
-                      ><span :class="targetClass"
-                        >{{ config.savingsPercent }}%</span
-                      ></ion-label
-                    >
-                  </ion-item>
-                </div>
-              </ion-list>
+              <div class="ion-padding">
+                <ion-item :class="projectedBalanceClass" lines="full">
+                  <ion-label>
+                    <div>Balance proyectado</div>
+                    <small style="color: var(--ion-color-medium, #666)">
+                      Real + Fijo (ingresos - egresos)
+                    </small>
+                  </ion-label>
+                  <ion-label slot="end"
+                    ><span style="font-weight: bold">{{
+                      formatCurrency(projectedBalance)
+                    }}</span></ion-label
+                  >
+                </ion-item>
+              </div>
             </div>
           </ion-col>
         </ion-row>
@@ -211,6 +219,26 @@
     />
   </ion-modal>
 
+  <ion-modal
+    :is-open="showBudgetIncomesModal"
+    @did-dismiss="showBudgetIncomesModal = false"
+  >
+    <BudgetIncomesChartModal
+      :entries="budgetIncomesEntries"
+      @close="showBudgetIncomesModal = false"
+    />
+  </ion-modal>
+
+  <ion-modal
+    :is-open="showBudgetExpensesModal"
+    @did-dismiss="showBudgetExpensesModal = false"
+  >
+    <BudgetExpensesChartModal
+      :entries="budgetExpensesEntries"
+      @close="showBudgetExpensesModal = false"
+    />
+  </ion-modal>
+
   <ion-popover
     :is-open="popovers.mainDate.open"
     :event="popovers.mainDate.event"
@@ -218,7 +246,7 @@
   >
     <ion-content>
       <ion-datetime
-        :value="selectedDate"
+        :value="format(referenceDate, 'yyyy-MM-dd')"
         style="background: transparent"
         presentation="date"
         @ion-change="onPopoverDateChange"
@@ -262,6 +290,8 @@ import PeriodLayout from '../components/PeriodLayout.vue';
 import PeriodSnapshots from '@/views/statistics/performance/components/PeriodSnapshots.vue';
 import IncomesChartModal from '@/views/statistics/performance/components/IncomesChartModal.vue';
 import ExpensesChartModal from '@/views/statistics/performance/components/ExpensesChartModal.vue';
+import BudgetIncomesChartModal from '@/views/statistics/performance/components/BudgetIncomesChartModal.vue';
+import BudgetExpensesChartModal from '@/views/statistics/performance/components/BudgetExpensesChartModal.vue';
 import {
   downloadOutline,
   informationCircleOutline,
@@ -290,7 +320,13 @@ onMounted(() => {
   loadChartDependencies();
   void loadConfig();
   void loadData();
+
+  watch(() => props.period, () => {
+    void loadData();
+  });
 });
+
+const categoriesLoaded = ref(false);
 
 async function loadConfig() {
   try {
@@ -302,13 +338,19 @@ async function loadConfig() {
       )[0];
 
       if (latest.data) {
-        if (Array.isArray(latest.data.categories) && latest.data.categories.length > 0) {
+        if (Array.isArray(latest.data.categories)) {
           config.categories = [...latest.data.categories];
+        }
+
+        if (Array.isArray(latest.data.incomes)) {
+          config.incomes = [...latest.data.incomes];
         }
 
         if (latest.data.savingsPercent) {
           config.savingsPercent = latest.data.savingsPercent;
         }
+
+        categoriesLoaded.value = true;
       }
     }
   } catch (e) {
@@ -374,20 +416,32 @@ const previousLabel = computed(() => {
 
 const showIncomesModal = ref(false);
 const showExpensesModal = ref(false);
+const showBudgetIncomesModal = ref(false);
+const showBudgetExpensesModal = ref(false);
 
-const periodOffset = ref(0);
-const selectedDate = ref<string>(format(new Date(), 'yyyy-MM-dd'));
+const referenceDate = ref(new Date());
 
 interface BudgetCategory {
   key: string;
   name: string;
   amount: number;
+  interval: number;
+  period: 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'yearly';
   placeholder?: string;
+}
+
+interface FixedIncome {
+  key: string;
+  name: string;
+  amount: number;
+  interval: number;
+  period: 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'yearly';
 }
 
 const config = reactive({
   savingsPercent: 20,
   categories: [] as BudgetCategory[],
+  incomes: [] as FixedIncome[],
 });
 
 const income = reactive({
@@ -417,7 +471,49 @@ const previousIncome = ref(0);
 const previousExpenses = ref(0);
 const previousBalance = ref(0);
 
-const hovered = statisticsController.getHovered();
+// Variables para datos de Budget del período
+const periodEntries = ref<any[]>([]);
+const budgetIncomesTotal = ref(0);
+const budgetExpensesTotal = ref(0);
+const realBalance = computed(() => budgetIncomesTotal.value - budgetExpensesTotal.value);
+const realBalanceClass = computed(() => Number(realBalance.value) < 0 ? 'negative-profit' : 'positive-profit');
+
+const categoriesTotal = computed(() => {
+  const divider = getPeriodDivider();
+  return config.categories.reduce((sum, cat) => {
+    const factor = periodFactors[cat.period] || 1;
+    const interval = cat.interval || 1;
+    const adjustedAmount = ((cat.amount || 0) / interval) * factor / divider;
+    return sum + adjustedAmount;
+  }, 0);
+});
+
+const fixedBalance = computed(() => {
+  const incomes = config.incomes.length > 0 ? incomesTotal.value : income.total;
+  const expensesTotal = config.categories.length > 0 ? categoriesTotal.value : expenses.total;
+  return incomes - expensesTotal;
+});
+const projectedBalance = computed(() => realBalance.value + fixedBalance.value);
+const budgetIncomesEntries = computed(() => {
+  return periodEntries.value.filter(entry => entry.entryType === 'ingreso');
+});
+
+const budgetExpensesEntries = computed(() => {
+  return periodEntries.value.filter(entry => entry.entryType === 'gasto');
+});
+
+const incomesTotal = computed(() => {
+  const divider = getPeriodDivider();
+  if (config.incomes.length > 0) {
+    return config.incomes.reduce((sum, inc) => {
+      const factor = periodFactors[inc.period] || 1;
+      const interval = inc.interval || 1;
+      const adjustedAmount = ((inc.amount || 0) / interval) * factor / divider;
+      return sum + adjustedAmount;
+    }, 0);
+  }
+  return income.total;
+});
 const setHover = (key: string, value: boolean) =>
   statisticsController.setHover(key, value);
 const isoDate = (d: Date) => statisticsController.isoDate({ d });
@@ -425,6 +521,20 @@ const formatCurrency = (val: number | null | undefined) =>
   statisticsController.formatCurrency(val);
 
 const incomesList = computed(() => {
+  const divider = getPeriodDivider();
+  
+  if (config.incomes.length > 0) {
+    return config.incomes.map(inc => {
+      const factor = periodFactors[inc.period] || 1;
+      const interval = inc.interval || 1;
+      const adjustedAmount = ((inc.amount || 0) / interval) * factor / divider;
+      return {
+        name: inc.name || 'Sin nombre',
+        amount: Number(adjustedAmount.toFixed(2)),
+      };
+    });
+  }
+  
   return [
     { name: 'Salario', amount: income.salary },
     { name: 'Inversiones', amount: income.investments },
@@ -491,47 +601,36 @@ const getPeriodDivider = (): number => {
 
 const getPeriodLabel = (period: string): string => {
   const labels: Record<string, string> = {
-    daily: '/mes',
-    weekly: '/mes',
-    biweekly: '/mes',
-    monthly: '',
-    yearly: '/mes',
+    daily: '/día',
+    weekly: '/semana',
+    biweekly: '/quincena',
+    monthly: '/mes',
+    yearly: '/año',
   };
   return labels[period] || '';
 };
 
 const expensesList = computed(() => {
   const divider = getPeriodDivider();
-  if (config.categories.length > 0) {
+  if (categoriesLoaded.value && config.categories.length > 0) {
     return config.categories.map(cat => {
       const factor = periodFactors[cat.period] || 1;
       const interval = cat.interval || 1;
-      const adjustedAmount = (cat.amount || 0) / interval / factor / divider;
+      const adjustedAmount = ((cat.amount || 0) / interval) * factor / divider;
       return {
         name: cat.name,
         amount: Number(adjustedAmount.toFixed(2)),
-        periodLabel: getPeriodLabel(cat.period),
       };
     });
   }
   return [
-    { name: 'Vivienda', amount: expenses.housing, periodLabel: '' },
-    { name: 'Alimentación', amount: expenses.food, periodLabel: '' },
-    { name: 'Transporte', amount: expenses.transport, periodLabel: '' },
-    { name: 'Entretenimiento', amount: expenses.entertainment, periodLabel: '' },
-    { name: 'Salud', amount: expenses.health, periodLabel: '' },
-    { name: 'Otros gastos', amount: expenses.other, periodLabel: '' },
+    { name: 'Vivienda', amount: expenses.housing },
+    { name: 'Alimentación', amount: expenses.food },
+    { name: 'Transporte', amount: expenses.transport },
+    { name: 'Entretenimiento', amount: expenses.entertainment },
+    { name: 'Salud', amount: expenses.health },
+    { name: 'Otros gastos', amount: expenses.other },
   ];
-});
-
-const categoriesTotal = computed(() => {
-  const divider = getPeriodDivider();
-  return config.categories.reduce((sum, cat) => {
-    const factor = periodFactors[cat.period] || 1;
-    const interval = cat.interval || 1;
-    const adjustedAmount = (cat.amount || 0) / interval / factor / divider;
-    return sum + adjustedAmount;
-  }, 0);
 });
 
 const dateLabel = computed(() => {
@@ -540,9 +639,9 @@ const dateLabel = computed(() => {
     case 'day':
       return format(baseDate, 'dd MMM yyyy');
     case 'week':
-      return format(baseDate, 'dd MMM');
+      return `${format(startOfWeek(baseDate), 'dd')} - ${format(endOfWeek(baseDate), 'dd MMM yyyy')}`;
     case 'month':
-      return format(baseDate, 'MMMM yyyy');
+      return `${format(startOfMonth(baseDate), 'dd')} - ${format(endOfMonth(baseDate), 'dd MMM yyyy')}`;
     case 'year':
       return format(baseDate, 'yyyy');
     default:
@@ -583,18 +682,18 @@ const previousDate = computed(() => {
 });
 
 function getBaseDate(): Date {
-  const today = new Date();
+  const refDate = new Date(referenceDate.value);
   switch (props.period) {
     case 'day':
-      return addDays(today, periodOffset.value);
+      return refDate;
     case 'week':
-      return addWeeks(today, periodOffset.value);
+      return startOfWeek(refDate);
     case 'month':
-      return addMonths(today, periodOffset.value);
+      return startOfMonth(refDate);
     case 'year':
-      return addYears(today, periodOffset.value);
+      return startOfYear(refDate);
     default:
-      return today;
+      return refDate;
   }
 }
 
@@ -614,72 +713,195 @@ function getPreviousPeriodDate(): Date {
   }
 }
 
+function getBudgetDateRange(): { start: Date; end: Date } {
+  const baseDate = getBaseDate();
+  let start: Date;
+  let end: Date;
+
+  switch (props.period) {
+    case 'day':
+      start = new Date(baseDate);
+      start.setHours(0, 0, 0, 0);
+      end = new Date(baseDate);
+      end.setHours(23, 59, 59, 999);
+      break;
+    case 'week':
+      start = startOfWeek(baseDate);
+      end = endOfWeek(baseDate);
+      break;
+    case 'month':
+      start = startOfMonth(baseDate);
+      end = endOfMonth(baseDate);
+      break;
+    case 'year':
+      start = startOfYear(baseDate);
+      end = endOfYear(baseDate);
+      break;
+    default:
+      start = new Date(baseDate);
+      end = new Date(baseDate);
+  }
+
+  return { start, end };
+}
+
+function getPreviousPeriodDateRange(): { start: Date; end: Date } {
+  const baseDate = getBaseDate();
+  let start: Date;
+  let end: Date;
+
+  switch (props.period) {
+    case 'day': {
+      const prevDay = addDays(baseDate, -1);
+      start = new Date(prevDay);
+      start.setHours(0, 0, 0, 0);
+      end = new Date(prevDay);
+      end.setHours(23, 59, 59, 999);
+      break;
+    }
+    case 'week': {
+      const prevWeekStart = addWeeks(startOfWeek(baseDate), -1);
+      start = prevWeekStart;
+      end = endOfWeek(prevWeekStart);
+      break;
+    }
+    case 'month': {
+      const prevMonthStart = addMonths(startOfMonth(baseDate), -1);
+      start = prevMonthStart;
+      end = endOfMonth(prevMonthStart);
+      break;
+    }
+    case 'year': {
+      const prevYearStart = addYears(startOfYear(baseDate), -1);
+      start = prevYearStart;
+      end = endOfYear(prevYearStart);
+      break;
+    }
+    default:
+      start = new Date(baseDate);
+      end = new Date(baseDate);
+  }
+
+  return { start, end };
+}
+
 function prevPeriod() {
-  periodOffset.value -= 1;
+  const refDate = new Date(referenceDate.value);
+  switch (props.period) {
+    case 'day':
+      referenceDate.value = addDays(refDate, -1);
+      break;
+    case 'week':
+      referenceDate.value = startOfWeek(addWeeks(refDate, -1));
+      break;
+    case 'month':
+      referenceDate.value = startOfMonth(addMonths(refDate, -1));
+      break;
+    case 'year':
+      referenceDate.value = startOfYear(addYears(refDate, -1));
+      break;
+  }
   void loadData();
 }
 
 function nextPeriod() {
-  periodOffset.value += 1;
+  const refDate = new Date(referenceDate.value);
+  switch (props.period) {
+    case 'day':
+      referenceDate.value = addDays(refDate, 1);
+      break;
+    case 'week':
+      referenceDate.value = startOfWeek(addWeeks(refDate, 1));
+      break;
+    case 'month':
+      referenceDate.value = startOfMonth(addMonths(refDate, 1));
+      break;
+    case 'year':
+      referenceDate.value = startOfYear(addYears(refDate, 1));
+      break;
+  }
   void loadData();
 }
 
 function onPopoverDateChange(e: CustomEvent) {
   try {
-    const val = e?.detail?.value || selectedDate.value;
+    const val = e?.detail?.value || format(new Date(referenceDate.value), 'yyyy-MM-dd');
     const parsed = parseLocalDate({ d: String(val).slice(0, 10) });
-    selectedDate.value = format(parsed, 'yyyy-MM-dd');
-    const today = new Date();
-    periodOffset.value = differenceInCalendarDays(parsed, today);
-  } catch (_err) {
-    periodOffset.value = 0;
-  }
+    referenceDate.value = parsed;
+  } catch (_err) {}
   popovers.mainDate.open = false;
   void loadData();
 }
 
 async function loadData() {
   try {
-    const targetDate = getBaseDate();
-    const year = targetDate.getFullYear();
-    const month = String(targetDate.getMonth() + 1).padStart(2, '0');
-    const day = String(targetDate.getDate()).padStart(2, '0');
-    const target = `${year}-${month}-${day}`;
+    const { start, end } = getBudgetDateRange();
+    const allEntries: any[] = [];
+    let periodIncome = 0;
+    let periodExpenses = 0;
 
-    budgetController.setDate({ date: target });
-    await budgetController.loadDataForCurrentDate();
+    const { start: prevStart, end: prevEnd } = getPreviousPeriodDateRange();
+    let prevIncome = 0;
+    let prevExpenses = 0;
 
-    const entries = budgetController.getEntries();
-    const providers = budgetController.getProviders();
+    let currentDateIter = new Date(start);
+    while (currentDateIter <= end) {
+      const dateStr = format(currentDateIter, 'yyyy-MM-dd');
+      await budgetController.loadDataForDate({ date: dateStr });
 
-    let currentIncome = 0;
-    let currentExpenses = 0;
+      const entries = budgetController.getEntries();
+      const providers = budgetController.getProviders();
 
-    for (const entry of entries) {
-      const amount = Number(entry.amount || 0);
-      if (entry.entryType === 'ingreso') {
-        currentIncome += amount;
-      } else {
-        currentExpenses += amount;
+      for (const entry of entries) {
+        allEntries.push(entry);
+        const amount = Number(entry.amount || 0);
+        if (entry.entryType === 'ingreso') {
+          periodIncome += amount;
+        } else {
+          periodExpenses += amount;
+        }
       }
+
+      currentDateIter = addDays(currentDateIter, 1);
     }
 
-    for (const provider of providers) {
-      currentExpenses += Number(provider.estimated || 0);
+    currentDateIter = new Date(prevStart);
+    while (currentDateIter <= prevEnd) {
+      const dateStr = format(currentDateIter, 'yyyy-MM-dd');
+      await budgetController.loadDataForDate({ date: dateStr });
+
+      const entries = budgetController.getEntries();
+      for (const entry of entries) {
+        const amount = Number(entry.amount || 0);
+        if (entry.entryType === 'ingreso') {
+          prevIncome += amount;
+        } else {
+          prevExpenses += amount;
+        }
+      }
+
+      currentDateIter = addDays(currentDateIter, 1);
     }
 
-    income.total = currentIncome;
-    income.salary = Math.floor(currentIncome * 0.7);
-    income.investments = Math.floor(currentIncome * 0.1);
-    income.other = Math.floor(currentIncome * 0.2);
+    periodEntries.value = allEntries;
+    budgetIncomesTotal.value = periodIncome;
+    budgetExpensesTotal.value = periodExpenses;
 
-    expenses.total = currentExpenses;
-    expenses.housing = Math.floor(currentExpenses * 0.5);
-    expenses.food = Math.floor(currentExpenses * 0.2);
-    expenses.transport = Math.floor(currentExpenses * 0.1);
-    expenses.entertainment = Math.floor(currentExpenses * 0.1);
-    expenses.health = Math.floor(currentExpenses * 0.05);
-    expenses.other = Math.floor(currentExpenses * 0.05);
+    const today = format(new Date(), 'yyyy-MM-dd');
+    await budgetController.loadDataForDate({ date: today });
+
+    income.total = periodIncome;
+    income.salary = Math.floor(periodIncome * 0.7);
+    income.investments = Math.floor(periodIncome * 0.1);
+    income.other = Math.floor(periodIncome * 0.2);
+
+    expenses.total = periodExpenses;
+    expenses.housing = Math.floor(periodExpenses * 0.5);
+    expenses.food = Math.floor(periodExpenses * 0.2);
+    expenses.transport = Math.floor(periodExpenses * 0.1);
+    expenses.entertainment = Math.floor(periodExpenses * 0.1);
+    expenses.health = Math.floor(periodExpenses * 0.05);
+    expenses.other = Math.floor(periodExpenses * 0.05);
 
     summary.balance = income.total - expenses.total;
     summary.savings = summary.balance;
@@ -688,40 +910,9 @@ async function loadData() {
         ? Number(((summary.savings / income.total) * 100).toFixed(1))
         : 0;
 
-    const prevDate = getPreviousPeriodDate();
-    const prevYear = prevDate.getFullYear();
-    const prevMonth = String(prevDate.getMonth() + 1).padStart(2, '0');
-    const prevDay = String(prevDate.getDate()).padStart(2, '0');
-    const prevTarget = `${prevYear}-${prevMonth}-${prevDay}`;
-
-    budgetController.setDate({ date: prevTarget });
-    await budgetController.loadDataForCurrentDate();
-
-    const prevEntries = budgetController.getEntries();
-    const prevProviders = budgetController.getProviders();
-
-    let prevInc = 0;
-    let prevExp = 0;
-
-    for (const entry of prevEntries) {
-      const amount = Number(entry.amount || 0);
-      if (entry.entryType === 'ingreso') {
-        prevInc += amount;
-      } else {
-        prevExp += amount;
-      }
-    }
-
-    for (const provider of prevProviders) {
-      prevExp += Number(provider.estimated || 0);
-    }
-
-    previousIncome.value = prevInc;
-    previousExpenses.value = prevExp;
-    previousBalance.value = prevInc - prevExp;
-
-    budgetController.setDate({ date: target });
-    await budgetController.loadDataForCurrentDate();
+    previousIncome.value = prevIncome;
+    previousExpenses.value = prevExpenses;
+    previousBalance.value = prevIncome - prevExpenses;
 
     setSnapshots({
       current: {
@@ -746,8 +937,7 @@ function onMainDateClick(e: Event | null) {
 }
 
 function resetToToday() {
-  selectedDate.value = format(new Date(), 'yyyy-MM-dd');
-  periodOffset.value = 0;
+  referenceDate.value = new Date();
   popovers.mainDate.open = false;
   void loadData();
 }
@@ -768,6 +958,14 @@ function openExpensesChart() {
   showExpensesModal.value = true;
 }
 
+function openBudgetIncomesChart() {
+  showBudgetIncomesModal.value = true;
+}
+
+function openBudgetExpensesChart() {
+  showBudgetExpensesModal.value = true;
+}
+
 defineExpose({
   pdfRef: pdfReport,
   income,
@@ -775,6 +973,10 @@ defineExpose({
   summary,
   config,
   dateLabel,
+  budgetIncomesTotal,
+  budgetExpensesTotal,
+  realBalance,
+  projectedBalance,
   loadConfig,
 });
 </script>
