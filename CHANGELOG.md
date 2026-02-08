@@ -1,3 +1,49 @@
+## [v0.47.0] - 2026-02-08
+
+### Features
+
+- **Configurable Week Start Day**: Added new system configuration for customizing which day the week starts on
+  - New `weekStartDay` preference stored in system config (options: Sunday=0, Monday=1, Saturday=6)
+  - Added `getWeekStartDay()` and `setWeekStartDay()` methods to systemConfigController
+  - Integrated week start configuration into useSystemConfig Pinia store
+  - Updated PersonalFinanceConfigModal to provide week start day selection UI
+
+### Refactor
+
+- **PerformanceComponent Simplification**: Major refactoring to streamline the performance dashboard
+  - Removed budget chart modal components (IncomesChartModal, ExpensesChartModal, BudgetIncomesChartModal, BudgetExpensesChartModal)
+  - Simplified balance display by removing projected balance section
+  - Replaced hardcoded financial values with dynamic data from budget entries
+  - Added configurable week boundary functions: `startOfWeekWithConfig()` and `endOfWeekWithConfig()`
+  - Cleaned up imports and removed unused dependencies (DixieController, downloadOutline, informationCircleOutline)
+
+- **PersonalFinanceConfigModal Simplification**: Reduced from complex budget configuration to focused settings
+  - Eliminated fixed incomes management section
+  - Removed budget categories configuration
+  - Removed Vuelidate form validation dependencies
+  - Streamlined to single purpose: week start day configuration
+  - Removed period selection for categories/incomes
+
+### Improvements
+
+- **Date Navigation**: Week period boundaries now respect the configured week start day
+  - `getBudgetDateRange()` and `getPreviousPeriodDateRange()` use configurable week boundaries
+  - Better alignment between user preferences and financial reporting periods
+- **Data Flow**: Simplified income/expense totals by computing directly from period entries
+  - `expensesTotal` computed from non-income entries in period
+  - `incomesTotal` computed from income-type entries in period
+  - Removed complex category-to-expense mapping logic
+
+### Files Changed
+
+- `front/src/controllers/systemConfigController.ts` — Add getWeekStartDay/setWeekStartDay methods
+- `front/src/stores/useSystemConfig.ts` — Add weekStartDay state and persistence
+- `front/src/views/statistics/performance/components/PerformanceComponent.vue` — Major refactor, add configurable week boundaries, simplify data flow
+- `front/src/views/statistics/performance/components/PersonalFinanceConfigModal.vue` — Simplify to week start day configuration only
+- `front/package.json` — Bump version to 0.47.0
+
+---
+
 ## [v0.46.3] - 2026-02-05
 
 ### Features

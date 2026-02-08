@@ -62,6 +62,17 @@ class SystemConfigController {
     const store = useSystemConfig();
     await store.setAutoDarkTheme(value);
   }
+
+  getWeekStartDay(): number {
+    const store = useSystemConfig();
+    return store.getWeekStartDay();
+  }
+
+  setWeekStartDay(params: { value: number }) {
+    const { value } = params;
+    const store = useSystemConfig();
+    store.setWeekStartDay(value);
+  }
 }
 
 const suppliersController = new SystemConfigController();
