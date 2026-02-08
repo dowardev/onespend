@@ -100,6 +100,20 @@ export const useSystemConfig = defineStore('systemConfig', () => {
     await configController.setConfig({ key: 'autoDarkTheme', value: val });
   }
 
+  const weekStartDay = ref(0);
+  async function getWeekStartDay(): Promise<number> {
+    const saved = await configController.getConfig({ key: 'weekStartDay' });
+    if (saved !== null && saved !== undefined) {
+      weekStartDay.value = Number(saved);
+    }
+    return weekStartDay.value;
+  }
+
+  async function setWeekStartDay(val: number) {
+    weekStartDay.value = val;
+    await configController.setConfig({ key: 'weekStartDay', value: val });
+  }
+
   return {
     designMode,
     theme,
