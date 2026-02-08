@@ -1,3 +1,31 @@
+## [v0.47.1] - 2026-02-08
+
+### Features
+
+- **Entry Editing in Performance Component**: Added complete edit functionality for income and expense entries
+  - New EditEntryModal integration for modifying entry details (name, amount, account, groups)
+  - Add button and click handlers to income and expense list items
+  - Entry data preservation with proper spreading of entry properties
+  - Delete confirmation with IonAlert dialog before removal
+  - Support for entries with multiple account groups
+  - Real-time data refresh after save and delete operations
+
+### Improvements
+
+- **Account Data Loading**: Ensure accounts are loaded early in the application lifecycle
+  - Added accountsController.loadAll() call in App.vue onMounted
+  - Added accountsController.loadAll() call in BudgetView.vue onMounted
+  - Prevents potential data race conditions when accessing account information
+
+### Files Changed
+
+- `front/src/App.vue` — Add accountsController import and loadAll() call on mount
+- `front/src/views/budget/BudgetView.vue` — Add accountsController.loadAll() call on mount
+- `front/src/views/statistics/performance/components/PerformanceComponent.vue` — Add EditEntryModal integration, edit/delete functionality, and accountsController dependency
+- `front/package.json` — Bump version to 0.47.1
+
+---
+
 ## [v0.47.0] - 2026-02-08
 
 ### Features

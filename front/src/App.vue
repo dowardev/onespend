@@ -51,6 +51,7 @@ import { needsEntriesKeyCheck } from '@/migrations/addEntriesKeyToBackups';
 import systemController from '@/controllers/systemConfigController';
 import dixieController from '@/controllers/dixie';
 import authController from '@/controllers/authController';
+import accountsController from '@/controllers/accountsController';
 // End Controllers
 
 // Components
@@ -199,6 +200,8 @@ onMounted(async () => {
   setDesignMode();
   setupThemeListener();
   await applyTheme();
+
+  await accountsController.loadAll();
 
   await authController.checkAuth();
 

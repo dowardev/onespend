@@ -526,6 +526,7 @@ function openDatePicker(params: { event: Event }) {
   // Life cycle
   onMounted(async () => {
     try {
+      await accountsController.loadAll();
       await budgetController.loadDataForCurrentDate();
       isDataLoaded.value = true;
     } catch (error) {
