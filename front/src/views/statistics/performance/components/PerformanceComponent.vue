@@ -28,6 +28,8 @@
                     v-for="(item, index) in incomesList"
                     :key="index"
                     lines="full"
+                    button
+                    @click="openEditEntryModal(item)"
                   >
                     <ion-label>{{ item.name }}</ion-label>
                     <ion-label slot="end">{{
@@ -56,6 +58,8 @@
                     v-for="(item, index) in expensesList"
                     :key="index"
                     lines="full"
+                    button
+                    @click="openEditEntryModal(item)"
                   >
                     <ion-label>{{ item.name }}</ion-label>
                     <ion-label slot="end">{{ formatCurrency(item.amount) }}</ion-label>
@@ -155,6 +159,34 @@
   </ion-popover>
 
   <ion-loading :is-open="isGeneratingPdf" message="Generando PDF..." />
+
+  <EditEntryModal
+    :is-open="editEntryModalOpen"
+    :entry-data="editEntryModalData"
+    :accounts-list="accountsList"
+    :is-day-closed="isDayClosed"
+    :providers-today-with-data="[]"
+    @dismiss="editEntryModalOpen = false"
+    @save="saveEntryChanges"
+    @delete="deleteEntry"
+  />
+
+  <ion-alert
+    :is-open="showDeleteAlert"
+    header="Confirmar eliminación"
+    message="¿Estás seguro de que deseas eliminar esta entrada?"
+    :buttons="[
+      {
+        text: 'Cancelar',
+        role: 'cancel',
+        handler: () => {
+          showDeleteAlert = false;
+        },
+      },
+      { text: 'Eliminar', role: 'confirm', handler: confirmDelete },
+    ]"
+    @did-dismiss="showDeleteAlert = false"
+  ></ion-alert>
 </template>
 
 <script setup lang="ts">
@@ -171,9 +203,12 @@ import {
   IonListHeader,
   IonPopover,
   IonRow,
+  IonModal,
+  IonAlert,
 } from '@ionic/vue';
 import PeriodLayout from '../components/PeriodLayout.vue';
-import { statsChartOutline } from 'ionicons/icons';
+import EditEntryModal from '@/views/budget/components/EditEntryModal.vue';
+import accountsController from '@/controllers/accountsController';
 import { computed, reactive, onMounted, ref, watch } from 'vue';
 import {
   format,
@@ -192,6 +227,7 @@ import { parseLocalDate } from '@/utils/date';
 import budgetController from '@/controllers/budgetController';
 import systemController from '@/controllers/systemConfigController';
 import { StatisticsController, type Snapshots } from '@/controllers/statisticsController';
+import type { Income, EntryType, EntryGroup } from '@/stores/budgetStore';
 
 const statisticsController = new StatisticsController();
 const popovers = statisticsController.getPopovers();
@@ -227,6 +263,17 @@ const showExpensesModal = ref(false);
 const isGeneratingPdf = ref(false);
 const referenceDate = ref(new Date());
 const categoriesLoaded = ref(false);
+
+const editEntryModalOpen = ref(false);
+const editEntryModalData = ref({
+  id: null as string | number | null,
+  entryType: 'ingreso' as 'ingreso' | 'egreso',
+  name: '',
+});
+const showDeleteAlert = ref(false);
+const entryItems = ref<Array<{ amount: number; accountId: string | number | null }>>([
+  { amount: 0, accountId: null },
+]);
 
 const income = reactive({
   salary: 0,
@@ -278,6 +325,7 @@ const incomesList = computed(() => {
   return periodEntries.value
     .filter(entry => entry.entryType === 'ingreso')
     .map(entry => ({
+      ...entry,
       name: entry.name,
       amount: Number(entry.amount || 0),
     }));
@@ -287,10 +335,103 @@ const expensesList = computed(() => {
   return periodEntries.value
     .filter(entry => entry.entryType !== 'ingreso')
     .map(entry => ({
+      ...entry,
       name: entry.name,
       amount: Number(entry.amount || 0),
     }));
 });
+
+const isDayClosed = computed(() => false);
+
+const accountsList = computed(() => {
+  const list = accountsController.getAccounts();
+  if (!list || !Array.isArray(list)) return [];
+  return list.filter((acc: any) => acc != null && acc.id != null);
+});
+
+function getDefaultAccountId() {
+  const accounts = accountsList.value;
+  return accounts.length > 0 ? accounts[0].id : null;
+}
+
+function openEditEntryModal(item: Income) {
+  editEntryModalData.value = {
+    id: item.id,
+    entryType: item.entryType || 'ingreso',
+    name: item.name || '',
+    amount: item.amount,
+    groups: item.groups,
+  };
+
+  if (item.groups && Array.isArray(item.groups) && item.groups.length > 0) {
+    entryItems.value = item.groups.map((g: EntryGroup) => ({
+      amount: Number(g.amount) || 0,
+      accountId: g.accountId ?? getDefaultAccountId(),
+    }));
+  } else {
+    entryItems.value = [
+      {
+        amount: Number(item.amount) || 0,
+        accountId: item.accountId || getDefaultAccountId(),
+      },
+    ];
+  }
+  editEntryModalOpen.value = true;
+}
+
+function saveEntryChanges(data: {
+  entryType: EntryType;
+  name: string;
+  amount: number;
+  accountId: string | number | null;
+  groups: Array<EntryGroup>;
+}) {
+  const { entryType, name, amount, accountId, groups } = data;
+
+  if (editEntryModalData.value.id) {
+    budgetController.updateIngreso({
+      id: editEntryModalData.value.id,
+      changes: {
+        entryType,
+        name,
+        amount,
+        accountId,
+        groups,
+      },
+    });
+  }
+  budgetController.saveData();
+  editEntryModalOpen.value = false;
+  editEntryModalData.value = {
+    id: null,
+    entryType: 'ingreso',
+    name: '',
+  };
+  entryItems.value = [{ amount: 0, accountId: null }];
+  void loadData();
+}
+
+function deleteEntry() {
+  if (editEntryModalData.value.id) {
+    showDeleteAlert.value = true;
+  }
+}
+
+function confirmDelete() {
+  if (editEntryModalData.value.id) {
+    budgetController.removeIngreso({ id: editEntryModalData.value.id });
+  }
+  budgetController.saveData();
+  showDeleteAlert.value = false;
+  editEntryModalOpen.value = false;
+  editEntryModalData.value = {
+    id: null,
+    entryType: 'ingreso',
+    name: '',
+  };
+  entryItems.value = [{ amount: 0, accountId: getDefaultAccountId() }];
+  void loadData();
+}
 
 const dateLabel = computed(() => {
   const baseDate = getBaseDate();
