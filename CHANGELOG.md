@@ -1,3 +1,27 @@
+## [v0.48.0] - 2026-02-08
+
+### Features
+
+- **Reassign Entry Composable**: Add a reusable composable to centralize logic for moving budget entries between date buckets.
+  - `front/src/composables/useReassignEntry.ts` provides `reassignEntry({ entryId, newDate, originalDate?, restoreSelectedDate?, verbose? })` which loads source bucket, updates entry date, persists changes, verifies move and falls back to remove+create if necessary.
+- **Wire EditEntryModal to parents**: Parent components now handle `reassign-date` via the composable.
+  - `PerformanceComponent.vue` and `InicioViewComponent.vue` call the composable instead of duplicating move logic.
+
+### Fixes & Improvements
+
+- Improve ion-datetime reliability in `EditEntryModal.vue` by forcing remount and normalizing ISO/short date values; read picker raw value on quick clicks to avoid race conditions.
+- Coerce ID comparisons (`String(id)`) and accept multiple date formats (ISO, timestamp, Date) for robustness.
+
+### Files Changed
+
+- `front/src/composables/useReassignEntry.ts` — New composable implementing move/update/verify/fallback logic
+- `front/src/views/budget/components/EditEntryModal.vue` — Picker reliability, emit behavior and local fallback preserved
+- `front/src/views/budget/InicioViewComponent.vue` — Wire `@reassign-date` to composable and ensure modal `date` is initialized
+- `front/src/views/statistics/performance/components/PerformanceComponent.vue` — Replace inline move logic with composable call
+- `front/package.json` — Bump frontend package version to 0.48.0
+
+---
+
 ## [v0.47.1] - 2026-02-08
 
 ### Features
