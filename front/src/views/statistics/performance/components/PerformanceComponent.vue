@@ -19,6 +19,9 @@
               <ion-list class="transparent">
                 <ion-list-header>
                   <ion-label>Ingresos</ion-label>
+                  <ion-button @click="showIncomesModal = true">
+                    <ion-icon :icon="pieChartOutline" />
+                  </ion-button>
                 </ion-list-header>
 
                 <div class="list-content">
@@ -49,6 +52,9 @@
               <ion-list class="transparent">
                 <ion-list-header>
                   <ion-label>Gastos</ion-label>
+                  <ion-button @click="showExpensesModal = true">
+                    <ion-icon :icon="pieChartOutline" />
+                  </ion-button>
                 </ion-list-header>
 
                 <div class="list-content">
@@ -93,8 +99,6 @@
         </ion-row>
       </ion-grid>
     </template>
-
-    <!-- modal-content removed: not used -->
   </PeriodLayout>
 
   <ion-popover
@@ -124,6 +128,26 @@
       </ion-item>
     </ion-content>
   </ion-popover>
+
+  <ion-modal
+    :is-open="showIncomesModal"
+    @did-dismiss="showIncomesModal = false"
+  >
+    <IncomesChartModal
+      :sources="incomesList"
+      @close="showIncomesModal = false"
+    />
+  </ion-modal>
+
+  <ion-modal
+    :is-open="showExpensesModal"
+    @did-dismiss="showExpensesModal = false"
+  >
+    <ExpensesChartModal
+      :categories="expensesList"
+      @close="showExpensesModal = false"
+    />
+  </ion-modal>
 
   <ion-loading :is-open="isGeneratingPdf" message="Generando PDF..." />
 
@@ -172,10 +196,13 @@ import {
   IonListHeader,
   IonPopover,
   IonRow,
+  IonModal,
   IonAlert,
 } from '@ionic/vue';
 import PeriodLayout from '../components/PeriodLayout.vue';
 import EditEntryModal from '@/views/budget/components/EditEntryModal.vue';
+import IncomesChartModal from './IncomesChartModal.vue';
+import ExpensesChartModal from './ExpensesChartModal.vue';
 import accountsController from '@/controllers/accountsController';
 import { computed, reactive, onMounted, ref, watch } from 'vue';
 import {
@@ -199,6 +226,7 @@ import {
   StatisticsController,
   type Snapshots,
 } from '@/controllers/statisticsController';
+import { pieChartOutline } from 'ionicons/icons';
 import type { Income, EntryType, EntryGroup } from '@/stores/budgetStore';
 
 const statisticsController = new StatisticsController();
@@ -330,7 +358,6 @@ function getDefaultAccountId() {
 function openEditEntryModal(item: Income) {
   // Debug: log item when opening modal
   try {
-    // eslint-disable-next-line no-console
     console.log(
       'openEditEntryModal - item:',
       item,
@@ -384,7 +411,7 @@ function openEditEntryModal(item: Income) {
     editEntryDate.value = editEntryModalData.value.date
       ? String(editEntryModalData.value.date).slice(0, 10)
       : format(new Date(), 'yyyy-MM-dd');
-    // eslint-disable-next-line no-console
+
     console.log(
       'openEditEntryModal - init editEntryDate:',
       editEntryDate.value,
@@ -393,7 +420,7 @@ function openEditEntryModal(item: Income) {
     );
   } catch (e) {
     editEntryDate.value = format(new Date(), 'yyyy-MM-dd');
-    // eslint-disable-next-line no-console
+
     console.log(
       'openEditEntryModal - init editEntryDate (catch):',
       editEntryDate.value
@@ -488,7 +515,6 @@ async function reassignEntryFromModal(newDate: string | null) {
 
 function onEntryReassigned() {
   try {
-    // eslint-disable-next-line no-console
     console.log(
       'PerformanceComponent.onEntryReassigned - reloading data after reassignment'
     );
