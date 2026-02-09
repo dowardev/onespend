@@ -5,8 +5,6 @@
     :on-prev="prevPeriod"
     :on-next="nextPeriod"
     :on-date-click="onMainDateClick"
-    :modal-open="modalOpen"
-    @update:modal-from-layout="setModalFromLayout"
   >
     <template #analysis>
       <ion-grid>
@@ -62,7 +60,9 @@
                     @click="openEditEntryModal(item)"
                   >
                     <ion-label>{{ item.name }}</ion-label>
-                    <ion-label slot="end">{{ formatCurrency(item.amount) }}</ion-label>
+                    <ion-label slot="end">{{
+                      formatCurrency(item.amount)
+                    }}</ion-label>
                   </ion-item>
 
                   <ion-item lines="full">
@@ -94,40 +94,7 @@
       </ion-grid>
     </template>
 
-    <template #modal-content>
-      <ion-list-header>
-        <ion-label>{{ periodLabels[period] }}</ion-label>
-      </ion-list-header>
-
-      <div
-        class="list-content"
-        style="height: calc(100% - 58px); overflow-y: auto"
-      >
-        <ion-item class="transparent" lines="full">
-          <ion-label>
-            <div style="font-weight: 600">Actual — {{ currentDate }}</div>
-
-            <small style="display: block; color: var(--ion-color-medium, #666)"
-              >Ingresos: {{ formatCurrency(income.total) }} • Gastos:
-              {{ formatCurrency(expenses.total) }} • Balance:
-              {{ formatCurrency(summary.balance) }}</small
-            >
-          </ion-label>
-        </ion-item>
-
-        <ion-item class="transparent" lines="full">
-          <ion-label>
-            <div style="font-weight: 600">Anterior — {{ previousDate }}</div>
-
-            <small style="display: block; color: var(--ion-color-medium, #666)"
-              >Ingresos: {{ formatCurrency(previousIncome) }} • Gastos:
-              {{ formatCurrency(previousExpenses) }} • Balance:
-              {{ formatCurrency(previousBalance) }}</small
-            >
-          </ion-label>
-        </ion-item>
-      </div>
-    </template>
+    <!-- modal-content removed: not used -->
   </PeriodLayout>
 
   <ion-popover
@@ -170,7 +137,7 @@
     @save="saveEntryChanges"
     @delete="deleteEntry"
     @reassign-date="reassignEntryFromModal"
-  @reassigned="onEntryReassigned"
+    @reassigned="onEntryReassigned"
   />
 
   <ion-alert
@@ -205,7 +172,6 @@ import {
   IonListHeader,
   IonPopover,
   IonRow,
-  IonModal,
   IonAlert,
 } from '@ionic/vue';
 import PeriodLayout from '../components/PeriodLayout.vue';
@@ -229,12 +195,14 @@ import { parseLocalDate } from '@/utils/date';
 import budgetController from '@/controllers/budgetController';
 import { reassignEntry } from '@/composables/useReassignEntry';
 import systemController from '@/controllers/systemConfigController';
-import { StatisticsController, type Snapshots } from '@/controllers/statisticsController';
+import {
+  StatisticsController,
+  type Snapshots,
+} from '@/controllers/statisticsController';
 import type { Income, EntryType, EntryGroup } from '@/stores/budgetStore';
 
 const statisticsController = new StatisticsController();
 const popovers = statisticsController.getPopovers();
-const modalOpen = ref(false);
 const setSnapshots = (val: Snapshots) => statisticsController.setSnapshots(val);
 
 const weekStartDay = ref(1);
@@ -276,9 +244,9 @@ const editEntryModalData = ref({
 });
 const editEntryDate = ref<string | null>(null);
 const showDeleteAlert = ref(false);
-const entryItems = ref<Array<{ amount: number; accountId: string | number | null }>>([
-  { amount: 0, accountId: null },
-]);
+const entryItems = ref<
+  Array<{ amount: number; accountId: string | number | null }>
+>([{ amount: 0, accountId: null }]);
 
 const income = reactive({
   salary: 0,
@@ -322,7 +290,7 @@ const incomesTotal = computed(() => {
 
 const realBalance = computed(() => incomesTotal.value - expensesTotal.value);
 
-const realBalanceClass = computed(() => 
+const realBalanceClass = computed(() =>
   Number(realBalance.value) < 0 ? 'negative-profit' : 'positive-profit'
 );
 
@@ -363,13 +331,27 @@ function openEditEntryModal(item: Income) {
   // Debug: log item when opening modal
   try {
     // eslint-disable-next-line no-console
-    console.log('openEditEntryModal - item:', item, 'type of date:', typeof item.date, 'raw date:', item.date);
+    console.log(
+      'openEditEntryModal - item:',
+      item,
+      'type of date:',
+      typeof item.date,
+      'raw date:',
+      item.date
+    );
   } catch (e) {}
 
   // Resolve date: prefer item's date, else try to find in loaded periodEntries, else fall back to referenceDate
   let resolvedDate: string | null = null;
   try {
-    resolvedDate = (item && (item as any).date) || (periodEntries.value.find(e => String((e as any).id) === String((item as any).id)) as any)?.date || format(referenceDate.value, 'yyyy-MM-dd');
+    resolvedDate =
+      (item && (item as any).date) ||
+      (
+        periodEntries.value.find(
+          e => String((e as any).id) === String((item as any).id)
+        ) as any
+      )?.date ||
+      format(referenceDate.value, 'yyyy-MM-dd');
   } catch (e) {
     resolvedDate = format(referenceDate.value, 'yyyy-MM-dd');
   }
@@ -403,11 +385,19 @@ function openEditEntryModal(item: Income) {
       ? String(editEntryModalData.value.date).slice(0, 10)
       : format(new Date(), 'yyyy-MM-dd');
     // eslint-disable-next-line no-console
-    console.log('openEditEntryModal - init editEntryDate:', editEntryDate.value, 'resolvedDate:', editEntryModalData.value.date);
+    console.log(
+      'openEditEntryModal - init editEntryDate:',
+      editEntryDate.value,
+      'resolvedDate:',
+      editEntryModalData.value.date
+    );
   } catch (e) {
     editEntryDate.value = format(new Date(), 'yyyy-MM-dd');
     // eslint-disable-next-line no-console
-    console.log('openEditEntryModal - init editEntryDate (catch):', editEntryDate.value);
+    console.log(
+      'openEditEntryModal - init editEntryDate (catch):',
+      editEntryDate.value
+    );
   }
 }
 
@@ -478,13 +468,20 @@ async function reassignEntryFromModal(newDate: string | null) {
       restoreSelectedDate: true,
       verbose: true,
     });
-    try { console.log('PerformanceComponent.reassignEntryFromModal - result', res); } catch (e) {}
+    try {
+      console.log('PerformanceComponent.reassignEntryFromModal - result', res);
+    } catch (e) {}
   } catch (err) {
     console.error('Error in reassignEntryFromModal', err);
   }
 
   editEntryModalOpen.value = false;
-  editEntryModalData.value = { id: null, entryType: 'ingreso', name: '', date: null };
+  editEntryModalData.value = {
+    id: null,
+    entryType: 'ingreso',
+    name: '',
+    date: null,
+  };
   editEntryDate.value = null;
   await loadData();
 }
@@ -492,7 +489,9 @@ async function reassignEntryFromModal(newDate: string | null) {
 function onEntryReassigned() {
   try {
     // eslint-disable-next-line no-console
-    console.log('PerformanceComponent.onEntryReassigned - reloading data after reassignment');
+    console.log(
+      'PerformanceComponent.onEntryReassigned - reloading data after reassignment'
+    );
   } catch (e) {}
   editEntryModalOpen.value = false;
   void loadData();
@@ -711,7 +710,8 @@ function nextPeriod() {
 
 function onPopoverDateChange(e: CustomEvent) {
   try {
-    const val = e?.detail?.value || format(new Date(referenceDate.value), 'yyyy-MM-dd');
+    const val =
+      e?.detail?.value || format(new Date(referenceDate.value), 'yyyy-MM-dd');
     const parsed = parseLocalDate({ d: String(val).slice(0, 10) });
     referenceDate.value = parsed;
   } catch (_err) {}
@@ -826,11 +826,7 @@ function resetToToday() {
   void loadData();
 }
 
-function setModalFromLayout(val: boolean) {
-  try {
-    modalOpen.value = !!val;
-  } catch (_e) {}
-}
+// setModalFromLayout removed: modal control handled locally in PeriodLayout (not used here)
 
 function formatCurrency(val: number | null | undefined) {
   return new Intl.NumberFormat('es-MX', {
@@ -843,11 +839,14 @@ onMounted(() => {
   void loadWeekStartDayConfig();
   void loadData();
 
-  watch(() => props.period, (newPeriod, oldPeriod) => {
-    if (oldPeriod !== newPeriod) {
-      resetToToday();
+  watch(
+    () => props.period,
+    (newPeriod, oldPeriod) => {
+      if (oldPeriod !== newPeriod) {
+        resetToToday();
+      }
     }
-  });
+  );
 });
 
 defineExpose({

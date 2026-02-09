@@ -1,5 +1,26 @@
 ## [v0.48.0] - 2026-02-08
 
+## [v0.48.1] - 2026-02-09
+
+### Fixes
+
+- **Remove "Más detalles" modal**: Completely remove the user-invoked "Más detalles" modal flow and all related plumbing between `PerformanceComponent.vue` and `PeriodLayout.vue`.
+  - Remove header button that opened the modal from `PerformanceComponent.vue` and delete the `#modal-content` slot usage.
+  - Remove modal template and modal-related props/watchers/functions from `PeriodLayout.vue` and clean unused modal imports/icons.
+  - Remove modal state (`modalOpen`) and sync handler (`setModalFromLayout`) from `PerformanceComponent.vue`.
+
+### Cleanup
+
+- **Remove backup files referencing modal state**: Deleted legacy `.bak` component backups that referenced modal behavior (day/week/month/year components and PerformancePage backups).
+
+### Files Changed
+
+- `front/src/views/statistics/performance/components/PerformanceComponent.vue` — Remove modal invocation, header button and related state
+- `front/src/views/statistics/performance/components/PeriodLayout.vue` — Remove modal template and modal-related script (props/watchers/functions)
+- `front/package.json` — Bump frontend package version to 0.48.1
+- Deleted: `.bak` backup files under `front/src/views/statistics/performance`
+
+
 ### Features
 
 - **Reassign Entry Composable**: Add a reusable composable to centralize logic for moving budget entries between date buckets.
