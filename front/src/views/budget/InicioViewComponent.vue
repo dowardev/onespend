@@ -219,6 +219,7 @@ import {
 import AccountCards from './components/AccountCards.vue';
 import EditProviderModal from './components/EditProviderModal.vue';
 import EditEntryModal from './components/EditEntryModal.vue';
+import { reassignEntry } from '@/composables/useReassignEntry';
 import { computed, ref, onMounted, reactive, watch } from 'vue';
 // AccountsController not needed here (use BudgetView's test data helper)
 // End Imports
@@ -767,6 +768,7 @@ function openEditEntryModal(item: Income) {
     name: item.name || '',
     amount: item.amount,
     groups: item.groups,
+    date: item.date || budgetController.getSelectedDate(),
   };
 
   if (item.groups && Array.isArray(item.groups) && item.groups.length > 0) {
@@ -786,6 +788,32 @@ function openEditEntryModal(item: Income) {
   entryFormState.name = item.name || '';
   entryFormState.entryType = item.entryType || 'ingreso';
   editEntryModalOpen.value = true;
+}
+
+// Handler for reassign-date emitted by EditEntryModal
+async function reassignEntryFromModal(newDate: string | null) {
+  if (!newDate || !editEntryModalData.value.id) return;
+  try {
+    const res = await reassignEntry({
+      entryId: editEntryModalData.value.id,
+      newDate: String(newDate).slice(0, 10),
+      originalDate: editEntryModalData.value.date || undefined,
+      restoreSelectedDate: true,
+      verbose: false,
+    });
+    try { console.log('InicioViewComponent.reassignEntryFromModal - result', res); } catch (e) {}
+  } catch (err) {
+    console.error('InicioViewComponent.reassignEntryFromModal error', err);
+  }
+
+  // close modal and refresh current bucket
+  editEntryModalOpen.value = false;
+  editEntryModalData.value = { id: null, entryType: 'ingreso', name: '' };
+  entryItems.value = [{ amount: 0, accountId: getDefaultAccountId() }];
+  try {
+    const sel = budgetController.getSelectedDate && budgetController.getSelectedDate();
+    if (sel) await budgetController.loadDataForDate({ date: sel });
+  } catch (_e) {}
 }
 
 function addEntryItem() {
