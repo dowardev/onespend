@@ -169,6 +169,8 @@
     @dismiss="editEntryModalOpen = false"
     @save="saveEntryChanges"
     @delete="deleteEntry"
+    @reassign-date="reassignEntryFromModal"
+  @reassigned="onEntryReassigned"
   />
 
   <ion-alert
@@ -225,6 +227,7 @@ import {
 } from 'date-fns';
 import { parseLocalDate } from '@/utils/date';
 import budgetController from '@/controllers/budgetController';
+import { reassignEntry } from '@/composables/useReassignEntry';
 import systemController from '@/controllers/systemConfigController';
 import { StatisticsController, type Snapshots } from '@/controllers/statisticsController';
 import type { Income, EntryType, EntryGroup } from '@/stores/budgetStore';
@@ -269,7 +272,9 @@ const editEntryModalData = ref({
   id: null as string | number | null,
   entryType: 'ingreso' as 'ingreso' | 'egreso',
   name: '',
+  date: null as string | null,
 });
+const editEntryDate = ref<string | null>(null);
 const showDeleteAlert = ref(false);
 const entryItems = ref<Array<{ amount: number; accountId: string | number | null }>>([
   { amount: 0, accountId: null },
@@ -355,12 +360,27 @@ function getDefaultAccountId() {
 }
 
 function openEditEntryModal(item: Income) {
+  // Debug: log item when opening modal
+  try {
+    // eslint-disable-next-line no-console
+    console.log('openEditEntryModal - item:', item, 'type of date:', typeof item.date, 'raw date:', item.date);
+  } catch (e) {}
+
+  // Resolve date: prefer item's date, else try to find in loaded periodEntries, else fall back to referenceDate
+  let resolvedDate: string | null = null;
+  try {
+    resolvedDate = (item && (item as any).date) || (periodEntries.value.find(e => String((e as any).id) === String((item as any).id)) as any)?.date || format(referenceDate.value, 'yyyy-MM-dd');
+  } catch (e) {
+    resolvedDate = format(referenceDate.value, 'yyyy-MM-dd');
+  }
+
   editEntryModalData.value = {
     id: item.id,
     entryType: item.entryType || 'ingreso',
     name: item.name || '',
     amount: item.amount,
     groups: item.groups,
+    date: resolvedDate,
   };
 
   if (item.groups && Array.isArray(item.groups) && item.groups.length > 0) {
@@ -377,6 +397,18 @@ function openEditEntryModal(item: Income) {
     ];
   }
   editEntryModalOpen.value = true;
+  // initialize reassignment date when opening the modal for an existing entry
+  try {
+    editEntryDate.value = editEntryModalData.value.date
+      ? String(editEntryModalData.value.date).slice(0, 10)
+      : format(new Date(), 'yyyy-MM-dd');
+    // eslint-disable-next-line no-console
+    console.log('openEditEntryModal - init editEntryDate:', editEntryDate.value, 'resolvedDate:', editEntryModalData.value.date);
+  } catch (e) {
+    editEntryDate.value = format(new Date(), 'yyyy-MM-dd');
+    // eslint-disable-next-line no-console
+    console.log('openEditEntryModal - init editEntryDate (catch):', editEntryDate.value);
+  }
 }
 
 function saveEntryChanges(data: {
@@ -407,6 +439,7 @@ function saveEntryChanges(data: {
     entryType: 'ingreso',
     name: '',
   };
+  editEntryDate.value = null;
   entryItems.value = [{ amount: 0, accountId: null }];
   void loadData();
 }
@@ -430,6 +463,38 @@ function confirmDelete() {
     name: '',
   };
   entryItems.value = [{ amount: 0, accountId: getDefaultAccountId() }];
+  editEntryDate.value = null;
+  void loadData();
+}
+
+// Handler for reassign-date emitted by EditEntryModal (delegates to composable)
+async function reassignEntryFromModal(newDate: string | null) {
+  if (!newDate || !editEntryModalData.value.id) return;
+  try {
+    const res = await reassignEntry({
+      entryId: editEntryModalData.value.id,
+      newDate: String(newDate).slice(0, 10),
+      originalDate: editEntryModalData.value.date || undefined,
+      restoreSelectedDate: true,
+      verbose: true,
+    });
+    try { console.log('PerformanceComponent.reassignEntryFromModal - result', res); } catch (e) {}
+  } catch (err) {
+    console.error('Error in reassignEntryFromModal', err);
+  }
+
+  editEntryModalOpen.value = false;
+  editEntryModalData.value = { id: null, entryType: 'ingreso', name: '', date: null };
+  editEntryDate.value = null;
+  await loadData();
+}
+
+function onEntryReassigned() {
+  try {
+    // eslint-disable-next-line no-console
+    console.log('PerformanceComponent.onEntryReassigned - reloading data after reassignment');
+  } catch (e) {}
+  editEntryModalOpen.value = false;
   void loadData();
 }
 
@@ -673,7 +738,9 @@ async function loadData() {
       const entries = budgetController.getEntries();
 
       for (const entry of entries) {
-        allEntries.push(entry);
+        // ensure each entry carries its budget date so modals can show it
+        const annotated = { ...entry, date: entry.date || dateStr };
+        allEntries.push(annotated);
         const amount = Number(entry.amount || 0);
         if (entry.entryType === 'ingreso') {
           periodIncome += amount;
@@ -692,6 +759,8 @@ async function loadData() {
 
       const entries = budgetController.getEntries();
       for (const entry of entries) {
+        // annotate previous period entries with their date as well
+        // (not added to allEntries but used for totals)
         const amount = Number(entry.amount || 0);
         if (entry.entryType === 'ingreso') {
           prevIncome += amount;
