@@ -1,5 +1,19 @@
 ## [v0.48.0] - 2026-02-08
 
+## [v0.48.2] - 2026-02-09
+
+### Features
+
+- Restore chart buttons to Performance lists: Reintroduce compact chart action buttons in the "Ingresos" and "Gastos" list headers so users can open visualizations for those lists.
+- Wire existing chart modals: Hook `IncomesChartModal` and `ExpensesChartModal` into `PerformanceComponent.vue` using `IonModal` and reactive flags (`showIncomesModal`, `showExpensesModal`).
+
+### Files Changed
+
+- `front/src/views/statistics/performance/components/PerformanceComponent.vue` — add chart header buttons and wire Incomes/Expenses chart modals
+- `front/package.json` — bump frontend package version to 0.48.2
+
+
+
 ## [v0.48.1] - 2026-02-09
 
 ### Fixes
