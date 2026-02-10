@@ -1,3 +1,41 @@
+## [v0.50.0] - 2026-02-10
+
+### Features
+
+- **Chart Modals for Performance**: Add dedicated pie chart modals for visualizing income and expense breakdowns
+  - `ExpensesChartModal.vue` - Displays interactive pie chart showing expenses grouped by category with detailed breakdown list and total
+  - `IncomesChartModal.vue` - Displays interactive pie chart showing incomes grouped by source with detailed breakdown list and total
+  - Both modals include formatted currency display, color-coded pie charts, and responsive design
+
+- **Balance Color Coding**: Add visual feedback for balance status in PerformanceComponent
+  - Positive balances displayed in success color (green)
+  - Negative balances displayed in danger color (red)
+
+### Refactor
+
+- **EntriesChart.vue**: Minor code cleanup and template formatting improvements
+  - Reorder v-if/v-else directives for consistency
+  - Improve ChartJS.register call formatting
+  - Clean up CSS styles
+
+- **EntriesList.vue**: Template refactoring for better component organization
+  - Move EntriesChart inside list content div
+  - Improve import formatting
+
+- **PerformanceComponent.vue**: Color array refactoring for improved maintainability
+  - Split color arrays for incomes and expenses into multi-line format
+
+### Files Changed
+
+- `front/src/views/statistics/performance/components/ExpensesChartModal.vue` — New pie chart modal for expenses breakdown
+- `front/src/views/statistics/performance/components/IncomesChartModal.vue` — New pie chart modal for incomes breakdown
+- `front/src/views/statistics/performance/components/PerformanceComponent.vue` — Add balance color coding and wire chart modals
+- `front/src/views/statistics/performance/components/EntriesChart.vue` — Template and code cleanup
+- `front/src/views/statistics/performance/components/EntriesList.vue` — Template refactoring
+- `front/package.json` — Bump version to 0.50.0
+
+---
+
 ## [v0.49.0] - 2026-02-09
 
 ### Features
