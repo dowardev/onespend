@@ -1,6 +1,6 @@
 <template>
   <div class="chart-container" v-if="items.length > 0">
-    <Pie :data="chartData" :options="chartOptions" />
+    <Bar :data="chartData" :options="chartOptions" />
   </div>
   <div class="chart-container empty-chart" v-else>
     <ion-text color="medium">
@@ -11,10 +11,10 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
-import { Pie } from 'vue-chartjs';
+import { Chart as ChartJS, CategoryScale, Tooltip, Legend, BarElement } from 'chart.js';
+import { Bar } from 'vue-chartjs';
 
-ChartJS.register(ArcElement, Tooltip, Legend);
+ChartJS.register(CategoryScale, BarElement, Tooltip, Legend);
 
 export interface EntryChartItem {
   name: string;
@@ -37,24 +37,53 @@ const defaultColors = [
   '#C9CBCF',
 ];
 
+const sortedItems = computed(() => {
+  return [...props.items].sort((a, b) => (b.amount || 0) - (a.amount || 0));
+});
+
 const chartData = computed(() => ({
-  labels: props.items.map(item => item.name),
+  labels: sortedItems.value.map(item => item.name),
   datasets: [
     {
-      data: props.items.map(item => item.amount || 0),
-      backgroundColor: props.items.map(
+      data: sortedItems.value.map(item => item.amount || 0),
+      backgroundColor: sortedItems.value.map(
         (_, i) => (props.colors || defaultColors)[i % (props.colors || defaultColors).length]
       ),
+      borderRadius: 4,
     },
   ],
 }));
 
 const chartOptions = {
+  indexAxis: 'y' as const,
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
     legend: {
-      position: 'bottom' as const,
+      display: false,
+    },
+    tooltip: {
+      callbacks: {
+        label: (context: any) => {
+          const value = context.raw;
+          return `$${value.toLocaleString('es-MX')}`;
+        },
+      },
+    },
+  },
+  scales: {
+    x: {
+      grid: {
+        display: false,
+      },
+      ticks: {
+        callback: (value: any) => `$${value.toLocaleString('es-MX')}`,
+      },
+    },
+    y: {
+      grid: {
+        display: false,
+      },
     },
   },
 };
