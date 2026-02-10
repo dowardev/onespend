@@ -12,7 +12,11 @@
           >Resumen del {{ periodLabels[period] }} {{ dateLabel }}</ion-label
         >
 
-        <ion-label slot="end">{{ formatCurrency(realBalance) }}</ion-label>
+        <ion-label
+          slot="end"
+          :color="realBalance >= 0 ? 'success' : 'danger'"
+          >{{ formatCurrency(realBalance) }}</ion-label
+        >
       </ion-item>
 
       <ion-grid>
@@ -268,8 +272,26 @@ const expensesList = computed(() => {
     }));
 });
 
-const incomeChartColors = ['#4BC0C0', '#36A2EB', '#FFCE56', '#FF6384', '#9966FF', '#FF9F40', '#7BC225', '#C9CBCF'];
-const expenseChartColors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#C9CBCF', '#7BC225'];
+const incomeChartColors = [
+  '#4BC0C0',
+  '#36A2EB',
+  '#FFCE56',
+  '#FF6384',
+  '#9966FF',
+  '#FF9F40',
+  '#7BC225',
+  '#C9CBCF',
+];
+const expenseChartColors = [
+  '#FF6384',
+  '#36A2EB',
+  '#FFCE56',
+  '#4BC0C0',
+  '#9966FF',
+  '#FF9F40',
+  '#C9CBCF',
+  '#7BC225',
+];
 
 const isDayClosed = computed(() => false);
 

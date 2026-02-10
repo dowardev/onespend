@@ -1,10 +1,10 @@
 <template>
-  <div class="chart-wrapper" v-if="hasData">
+  <div v-if="hasData" class="chart-wrapper">
     <div class="chart-container">
       <Bar :data="chartData" :options="chartOptions" />
     </div>
   </div>
-  <div class="chart-wrapper empty" v-else>
+  <div v-else class="chart-wrapper empty">
     <ion-text color="medium">
       <em>No hay datos para mostrar</em>
     </ion-text>
@@ -25,7 +25,14 @@ import {
   LinearScale,
 } from 'chart.js';
 
-ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale);
+ChartJS.register(
+  Title,
+  Tooltip,
+  Legend,
+  BarElement,
+  CategoryScale,
+  LinearScale
+);
 
 export interface EntryChartItem {
   name: string;
@@ -61,7 +68,7 @@ const chartData = computed(() => {
   if (sortedItems.value.length === 0) {
     return { labels: [], datasets: [] };
   }
-  
+
   return {
     labels: sortedItems.value.map(item => item.name),
     datasets: [
@@ -69,7 +76,10 @@ const chartData = computed(() => {
         label: 'Monto',
         data: sortedItems.value.map(item => item.amount || 0),
         backgroundColor: sortedItems.value.map(
-          (_, i) => (props.colors || defaultColors)[i % (props.colors || defaultColors).length]
+          (_, i) =>
+            (props.colors || defaultColors)[
+              i % (props.colors || defaultColors).length
+            ]
         ),
         borderRadius: 4,
         barThickness: 20,
@@ -135,10 +145,8 @@ const chartOptions = {
 <style scoped>
 .chart-wrapper {
   width: 100%;
-  margin: 0.5rem 0;
   padding: 0.5rem;
   border: 1px solid var(--ion-color-light);
-  border-radius: 8px;
   background: var(--ion-background-color);
 }
 

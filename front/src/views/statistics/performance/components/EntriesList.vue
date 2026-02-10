@@ -1,17 +1,19 @@
 <template>
   <div class="entries-list-container">
-    <EntriesChart
-      v-if="showChart && items.length > 0"
-      :items="items"
-      :colors="chartColors"
-    />
-
     <ion-list class="transparent">
       <ion-list-header>
         <ion-label>{{ title }}</ion-label>
       </ion-list-header>
 
-      <div class="list-content" v-if="items.length > 0">
+      <div v-if="items.length > 0" class="list-content">
+        <div class="ion-padding-bottom">
+          <EntriesChart
+            v-if="showChart && items.length > 0"
+            :items="items"
+            :colors="chartColors"
+          />
+        </div>
+
         <ion-item
           v-for="item in items"
           :key="item.id"
@@ -31,7 +33,7 @@
         </ion-item>
       </div>
 
-      <div class="empty-state ion-padding" v-else>
+      <div v-else class="empty-state ion-padding">
         <ion-text color="medium">
           <em>No hay {{ title.toLowerCase() }} en este periodo</em>
         </ion-text>
@@ -41,13 +43,7 @@
 </template>
 
 <script setup lang="ts">
-import {
-  IonItem,
-  IonLabel,
-  IonList,
-  IonListHeader,
-  IonText,
-} from '@ionic/vue';
+import { IonItem, IonLabel, IonList, IonListHeader, IonText } from '@ionic/vue';
 import EntriesChart, { type EntryChartItem } from './EntriesChart.vue';
 import type { Income } from '@/stores/budgetStore';
 
