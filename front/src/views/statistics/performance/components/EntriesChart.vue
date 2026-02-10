@@ -92,8 +92,9 @@ const chartOptions = {
 
 <style scoped>
 .chart-container {
+  position: relative;
   height: 200px;
-  padding: 8px;
+  width: 100%;
 }
 
 .empty-chart {
