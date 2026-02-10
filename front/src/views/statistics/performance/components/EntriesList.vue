@@ -1,51 +1,54 @@
 <template>
-  <ion-list class="transparent">
-    <ion-list-header>
-      <ion-label>{{ title }}</ion-label>
-      <ion-button @click="emit('openChart')">
-        <ion-icon :icon="pieChartOutline" />
-      </ion-button>
-    </ion-list-header>
+  <div class="entries-list-container">
+    <EntriesChart
+      v-if="showChart && items.length > 0"
+      :items="items"
+      :colors="chartColors"
+    />
 
-    <div class="list-content" v-if="items.length > 0">
-      <ion-item
-        v-for="item in items"
-        :key="item.id"
-        lines="full"
-        button
-        @click="emit('edit', item)"
-      >
-        <ion-label>{{ item.name }}</ion-label>
-        <ion-label slot="end">{{ formatCurrency(item.amount) }}</ion-label>
-      </ion-item>
+    <ion-list class="transparent">
+      <ion-list-header>
+        <ion-label>{{ title }}</ion-label>
+      </ion-list-header>
 
-      <ion-item lines="full">
-        <ion-label>{{ footerLabel }}</ion-label>
-        <ion-label slot="end" class="total-amount">{{
-          formatCurrency(total)
-        }}</ion-label>
-      </ion-item>
-    </div>
+      <div class="list-content" v-if="items.length > 0">
+        <ion-item
+          v-for="item in items"
+          :key="item.id"
+          lines="full"
+          button
+          @click="emit('edit', item)"
+        >
+          <ion-label>{{ item.name }}</ion-label>
+          <ion-label slot="end">{{ formatCurrency(item.amount) }}</ion-label>
+        </ion-item>
 
-    <div class="empty-state ion-padding" v-else>
-      <ion-text color="medium">
-        <em>No hay {{ title.toLowerCase() }} en este periodo</em>
-      </ion-text>
-    </div>
-  </ion-list>
+        <ion-item lines="full">
+          <ion-label>{{ footerLabel }}</ion-label>
+          <ion-label slot="end" class="total-amount">{{
+            formatCurrency(total)
+          }}</ion-label>
+        </ion-item>
+      </div>
+
+      <div class="empty-state ion-padding" v-else>
+        <ion-text color="medium">
+          <em>No hay {{ title.toLowerCase() }} en este periodo</em>
+        </ion-text>
+      </div>
+    </ion-list>
+  </div>
 </template>
 
 <script setup lang="ts">
 import {
-  IonButton,
-  IonIcon,
   IonItem,
   IonLabel,
   IonList,
   IonListHeader,
   IonText,
 } from '@ionic/vue';
-import { pieChartOutline } from 'ionicons/icons';
+import EntriesChart, { type EntryChartItem } from './EntriesChart.vue';
 import type { Income } from '@/stores/budgetStore';
 
 export interface EntryListItem {
@@ -61,15 +64,17 @@ const props = withDefaults(
     items: EntryListItem[] | Income[];
     total: number;
     footerLabel?: string;
+    showChart?: boolean;
+    chartColors?: string[];
   }>(),
   {
     footerLabel: 'Total',
+    showChart: false,
   }
 );
 
 const emit = defineEmits<{
   (e: 'edit', item: EntryListItem | Income): void;
-  (e: 'openChart'): void;
 }>();
 
 function formatCurrency(val: number | null | undefined): string {
@@ -81,6 +86,11 @@ function formatCurrency(val: number | null | undefined): string {
 </script>
 
 <style scoped>
+.entries-list-container {
+  display: flex;
+  flex-direction: column;
+}
+
 .total-amount {
   font-weight: 700;
 }

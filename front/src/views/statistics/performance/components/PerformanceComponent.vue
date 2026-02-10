@@ -7,43 +7,38 @@
     :on-date-click="onMainDateClick"
   >
     <template #analysis>
+      <ion-item>
+        <ion-label
+          >Resumen del {{ periodLabels[period] }} {{ dateLabel }}</ion-label
+        >
+
+        <ion-label slot="end">{{ formatCurrency(realBalance) }}</ion-label>
+      </ion-item>
+
       <ion-grid>
         <ion-row>
-          <ion-col class="ion-padding">
-            <div ref="pdfReport">
-              <ion-card-title>
-                Resumen del {{ periodLabels[period] }} {{ dateLabel }}
-              </ion-card-title>
+          <ion-col size="6">
+            <EntriesList
+              title="Ingresos"
+              :items="incomesList"
+              :total="incomesTotal"
+              footer-label="Total ingresos"
+              :show-chart="true"
+              :chart-colors="incomeChartColors"
+              @edit="openEditEntryModal"
+            />
+          </ion-col>
 
-              <EntriesList
-                title="Ingresos"
-                :items="incomesList"
-                :total="incomesTotal"
-                footer-label="Total ingresos"
-                @edit="openEditEntryModal"
-                @open-chart="showIncomesModal = true"
-              />
-
-              <EntriesList
-                title="Gastos"
-                :items="expensesList"
-                :total="expensesTotal"
-                footer-label="Total gastos"
-                @edit="openEditEntryModal"
-                @open-chart="showExpensesModal = true"
-              />
-
-              <div class="ion-padding">
-                <ion-item :class="realBalanceClass" lines="full">
-                  <ion-label>
-                    <div>Balance</div>
-                  </ion-label>
-                  <ion-label slot="end" class="total-amount">
-                    {{ formatCurrency(realBalance) }}
-                  </ion-label>
-                </ion-item>
-              </div>
-            </div>
+          <ion-col size="6">
+            <EntriesList
+              title="Gastos"
+              :items="expensesList"
+              :total="expensesTotal"
+              footer-label="Total gastos"
+              :show-chart="true"
+              :chart-colors="expenseChartColors"
+              @edit="openEditEntryModal"
+            />
           </ion-col>
         </ion-row>
       </ion-grid>
@@ -77,26 +72,6 @@
       </ion-item>
     </ion-content>
   </ion-popover>
-
-  <ion-modal
-    :is-open="showIncomesModal"
-    @did-dismiss="showIncomesModal = false"
-  >
-    <IncomesChartModal
-      :sources="incomesList"
-      @close="showIncomesModal = false"
-    />
-  </ion-modal>
-
-  <ion-modal
-    :is-open="showExpensesModal"
-    @did-dismiss="showExpensesModal = false"
-  >
-    <ExpensesChartModal
-      :categories="expensesList"
-      @close="showExpensesModal = false"
-    />
-  </ion-modal>
 
   <ion-loading :is-open="isGeneratingPdf" message="Generando PDF..." />
 
@@ -142,16 +117,12 @@ import {
   IonLabel,
   IonPopover,
   IonRow,
-  IonModal,
   IonAlert,
   IonGrid,
-  IonCardTitle,
 } from '@ionic/vue';
 import PeriodLayout from '../components/PeriodLayout.vue';
 import EntriesList from './EntriesList.vue';
 import EditEntryModal from '@/views/budget/components/EditEntryModal.vue';
-import IncomesChartModal from './IncomesChartModal.vue';
-import ExpensesChartModal from './ExpensesChartModal.vue';
 import accountsController from '@/controllers/accountsController';
 import { computed, reactive, onMounted, ref, watch, toRef } from 'vue';
 import { format, addDays } from 'date-fns';
@@ -209,8 +180,6 @@ async function loadWeekStartDayConfig() {
   }
 }
 
-const showIncomesModal = ref(false);
-const showExpensesModal = ref(false);
 const isGeneratingPdf = ref(false);
 
 const editEntryModalOpen = ref(false);
@@ -229,9 +198,9 @@ const editEntryModalData = ref<{
 });
 const editEntryDate = ref<string | null>(null);
 const showDeleteAlert = ref(false);
-const entryItems = ref<Array<{ amount: number; accountId: string | number | null }>>([
-  { amount: 0, accountId: null },
-]);
+const entryItems = ref<
+  Array<{ amount: number; accountId: string | number | null }>
+>([{ amount: 0, accountId: null }]);
 
 const income = reactive({
   salary: 0,
@@ -299,15 +268,23 @@ const expensesList = computed(() => {
     }));
 });
 
+const incomeChartColors = ['#4BC0C0', '#36A2EB', '#FFCE56', '#FF6384', '#9966FF', '#FF9F40', '#7BC225', '#C9CBCF'];
+const expenseChartColors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#C9CBCF', '#7BC225'];
+
 const isDayClosed = computed(() => false);
 
-const accountsList = computed<Array<{ id: string | number; name: string }>>(() => {
-  const list = accountsController.getAccounts();
-  if (!list || !Array.isArray(list)) return [];
-  return list
-    .filter(acc => acc?.id != null && acc?.name != null)
-    .map(acc => ({ id: acc.id as string | number, name: acc.name as string }));
-});
+const accountsList = computed<Array<{ id: string | number; name: string }>>(
+  () => {
+    const list = accountsController.getAccounts();
+    if (!list || !Array.isArray(list)) return [];
+    return list
+      .filter(acc => acc?.id != null && acc?.name != null)
+      .map(acc => ({
+        id: acc.id as string | number,
+        name: acc.name as string,
+      }));
+  }
+);
 
 function getDefaultAccountId(): string | number | null {
   const accounts = accountsList.value;
@@ -343,7 +320,7 @@ function openEditEntryModal(item: Income) {
       },
     ];
   }
-  
+
   editEntryModalOpen.value = true;
   editEntryDate.value = editEntryModalData.value.date
     ? String(editEntryModalData.value.date).slice(0, 10)
@@ -367,7 +344,12 @@ function saveEntryChanges(data: {
   }
   budgetController.saveData();
   editEntryModalOpen.value = false;
-  editEntryModalData.value = { id: null, entryType: 'ingreso', name: '', date: null };
+  editEntryModalData.value = {
+    id: null,
+    entryType: 'ingreso',
+    name: '',
+    date: null,
+  };
   editEntryDate.value = null;
   entryItems.value = [{ amount: 0, accountId: null }];
   void loadData();
@@ -386,7 +368,12 @@ function confirmDelete() {
   budgetController.saveData();
   showDeleteAlert.value = false;
   editEntryModalOpen.value = false;
-  editEntryModalData.value = { id: null, entryType: 'ingreso', name: '', date: null };
+  editEntryModalData.value = {
+    id: null,
+    entryType: 'ingreso',
+    name: '',
+    date: null,
+  };
   entryItems.value = [{ amount: 0, accountId: getDefaultAccountId() }];
   editEntryDate.value = null;
   void loadData();
@@ -407,7 +394,12 @@ async function reassignEntryFromModal(newDate: string | null) {
   }
 
   editEntryModalOpen.value = false;
-  editEntryModalData.value = { id: null, entryType: 'ingreso', name: '', date: null };
+  editEntryModalData.value = {
+    id: null,
+    entryType: 'ingreso',
+    name: '',
+    date: null,
+  };
   editEntryDate.value = null;
   await loadData();
 }
