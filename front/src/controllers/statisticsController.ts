@@ -21,12 +21,12 @@ interface ProviderValue {
   estimated?: number | null | undefined;
 }
 
-interface SnapshotData {
+export interface SnapshotData {
   totalSales: number;
   netProfit: number;
 }
 
-interface SetSnapshotsPayload {
+export interface Snapshots {
   current?: SnapshotData;
   previous?: SnapshotData;
 }
@@ -139,7 +139,7 @@ class StatisticsController {
     return this.snapshots;
   }
 
-  setSnapshots(payload: SetSnapshotsPayload) {
+  setSnapshots(payload: Snapshots) {
     if (typeof payload.current !== 'undefined') {
       this.snapshots.current = payload.current;
     }

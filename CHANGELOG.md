@@ -1,3 +1,39 @@
+## [v0.49.0] - 2026-02-09
+
+### Features
+
+- **usePeriodRange composable**: Extract date/period logic into a reusable composable (`front/src/composables/usePeriodRange.ts`)
+  - Provides `referenceDate`, `dateLabel`, `getBudgetDateRange`, `getPreviousPeriodDateRange`, `prevPeriod`, `nextPeriod`, `resetToToday`
+  - Supports configurable week start day
+  - Exports `PeriodType`, `DateRange`, `UsePeriodRangeReturn` types
+
+- **EntriesList component**: Create reusable list component for income/expense entries (`front/src/views/statistics/performance/components/EntriesList.vue`)
+  - Props: `title`, `items`, `total`, `footerLabel`
+  - Emits: `edit`, `openChart`
+  - Includes empty state message when no entries
+  - Uses stable keys (`:key="item.id"`) instead of index
+
+### Refactor
+
+- **PerformanceComponent.vue**: Major refactor reducing ~35% code (903 → 590 lines)
+  - Replace duplicated income/expense lists with `EntriesList` component
+  - Replace inline date logic with `usePeriodRange` composable
+  - Remove debug `console.log` statements
+  - Move inline styles to CSS classes (`.total-amount`)
+  - Improve type safety for `accountsList` and `EntryGroup`
+
+- **statisticsController.ts**: Export `Snapshots` type alias for external use
+
+### Files Changed
+
+- `front/src/composables/usePeriodRange.ts` — new composable for period/date logic
+- `front/src/views/statistics/performance/components/EntriesList.vue` — new reusable list component
+- `front/src/views/statistics/performance/components/PerformanceComponent.vue` — refactored to use new composable and component
+- `front/src/controllers/statisticsController.ts` — export Snapshots type
+- `front/package.json` — bump version to 0.49.0
+
+---
+
 ## [v0.48.0] - 2026-02-08
 
 ## [v0.48.2] - 2026-02-09
