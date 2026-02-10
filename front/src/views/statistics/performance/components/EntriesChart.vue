@@ -12,10 +12,18 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { IonText } from '@ionic/vue';
-import { Chart as ChartJS, CategoryScale, Tooltip, Legend, BarElement } from 'chart.js';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+} from 'chart.js';
 import { Bar } from 'vue-chartjs';
 
-ChartJS.register(CategoryScale, BarElement, Tooltip, Legend);
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 export interface EntryChartItem {
   name: string;
@@ -39,21 +47,29 @@ const defaultColors = [
 ];
 
 const sortedItems = computed(() => {
-  return [...props.items].sort((a, b) => (b.amount || 0) - (a.amount || 0));
+  return [...props.items]
+    .filter(item => item && item.amount > 0)
+    .sort((a, b) => (b.amount || 0) - (a.amount || 0));
 });
 
-const chartData = computed(() => ({
-  labels: sortedItems.value.map(item => item.name),
-  datasets: [
-    {
-      data: sortedItems.value.map(item => item.amount || 0),
-      backgroundColor: sortedItems.value.map(
-        (_, i) => (props.colors || defaultColors)[i % (props.colors || defaultColors).length]
-      ),
-      borderRadius: 4,
-    },
-  ],
-}));
+const chartData = computed(() => {
+  if (sortedItems.value.length === 0) {
+    return { labels: [], datasets: [] };
+  }
+  
+  return {
+    labels: sortedItems.value.map(item => item.name),
+    datasets: [
+      {
+        data: sortedItems.value.map(item => item.amount || 0),
+        backgroundColor: sortedItems.value.map(
+          (_, i) => (props.colors || defaultColors)[i % (props.colors || defaultColors).length]
+        ),
+        borderRadius: 4,
+      },
+    ],
+  };
+});
 
 const chartOptions = {
   indexAxis: 'y' as const,
@@ -67,21 +83,23 @@ const chartOptions = {
       callbacks: {
         label: (context: any) => {
           const value = context.raw;
-          return `$${value.toLocaleString('es-MX')}`;
+          return new Intl.NumberFormat('es-MX', {
+            style: 'currency',
+            currency: 'MXN',
+          }).format(value);
         },
       },
     },
   },
   scales: {
     x: {
+      display: true,
       grid: {
         display: false,
       },
-      ticks: {
-        callback: (value: any) => `$${value.toLocaleString('es-MX')}`,
-      },
     },
     y: {
+      display: true,
       grid: {
         display: false,
       },
@@ -95,6 +113,7 @@ const chartOptions = {
   position: relative;
   height: 200px;
   width: 100%;
+  min-height: 100px;
 }
 
 .empty-chart {
