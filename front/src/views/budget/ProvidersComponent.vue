@@ -6,17 +6,11 @@
           <ion-list-header>
             <ion-label>Proveedores</ion-label>
 
-            <ion-button
-              :disabled="isDayClosed"
-              @click="addEmptyProvider"
-            >
+            <ion-button :disabled="isDayClosed" @click="addEmptyProvider">
               <ion-icon :icon="addOutline"></ion-icon>
             </ion-button>
 
-            <ion-button
-              :disabled="isDayClosed"
-              @click="openTemplatesModal"
-            >
+            <ion-button :disabled="isDayClosed" @click="openTemplatesModal">
               <ion-icon :icon="documentOutline"></ion-icon>
             </ion-button>
           </ion-list-header>
@@ -156,12 +150,15 @@ import {
   IonContent,
   onIonViewWillEnter,
 } from '@ionic/vue';
-import { ref, reactive, computed, onMounted, onUnmounted, watchEffect } from 'vue';
 import {
-  addOutline,
-  documentOutline,
-  trashOutline,
-} from 'ionicons/icons';
+  ref,
+  reactive,
+  computed,
+  onMounted,
+  onUnmounted,
+  watchEffect,
+} from 'vue';
+import { addOutline, documentOutline, trashOutline } from 'ionicons/icons';
 // End Imports
 
 // Controllers
@@ -176,7 +173,10 @@ import accountsController from '@/controllers/accountsController';
 import { AccountsController } from '@/controllers/accountsController';
 import { SyncController } from '@/controllers/syncController';
 import type { Supplier } from '@/controllers/suppliersController';
-import type { ProviderData, ProviderProduct } from './components/EditProviderModal.vue';
+import type {
+  ProviderData,
+  ProviderProduct,
+} from './components/EditProviderModal.vue';
 // End Controllers
 
 // Components
@@ -188,7 +188,7 @@ import NotesModal from './components/NotesModal.vue';
 // End Components
 
 // Vars
-  const budgetCtrl = budgetController;
+const budgetCtrl = budgetController;
 const suppliersCtrl = new SuppliersController();
 const accountsCtrl = new AccountsController();
 const syncCtrl = new SyncController();
@@ -207,7 +207,6 @@ const templatesList = ref<Array<TemplateRecord>>([]);
 const pendingTemplate = ref<TemplateRecord | null>(null);
 const pendingProviders = ref<Array<{ name: string; estimated: number }>>([]);
 
-
 const deleteConfirm = reactive({
   open: false,
   providerId: null as string | number | null,
@@ -218,7 +217,9 @@ const deleteConfirm = reactive({
 
 // Computed
 const providers = computed(() => budgetCtrl.getProviders());
-const providerIdsWithEntries = computed(() => budgetCtrl.getProviderIdsWithEntries());
+const providerIdsWithEntries = computed(() =>
+  budgetCtrl.getProviderIdsWithEntries()
+);
 
 // End Computed
 
@@ -275,45 +276,68 @@ function openAddProviderModal() {
   showAddProviderModal.value = true;
 }
 
-async function openEditProviderModal(params: { provider: ProviderData }) {
-  const { provider } = params;
+async function openEditProviderModal(
+  params: { provider: ProviderData } | ProviderData
+) {
+  // Accept either the provider directly or an object { provider }
+  const provider =
+    params && (params as any).provider
+      ? (params as any).provider
+      : (params as any);
   console.log('openEditProviderModal - payload:', provider);
-  const providerData = provider;
+  const providerData = (provider || {}) as ProviderData;
 
-  await forceSyncSuppliers();
+  try {
+    await forceSyncSuppliers();
 
-  let fullSupplier: Supplier | null = null;
-  const supplierSyncId = providerData._supplierId || providerData._supplierKey;
+    let fullSupplier: Supplier | null = null;
+    const supplierSyncId =
+      providerData._supplierId || (providerData as any)._supplierKey;
 
-  if (supplierSyncId) {
-    fullSupplier =
-      allSuppliers.value.find(
-        (s: Supplier) => String(s.sync_id) === String(supplierSyncId)
-      ) ||
-      allSuppliers.value.find(
-        (s: Supplier) => String(s.id) === String(supplierSyncId)
+    if (supplierSyncId) {
+      fullSupplier =
+        allSuppliers.value.find(
+          (s: Supplier) => String(s.sync_id) === String(supplierSyncId)
+        ) ||
+        allSuppliers.value.find(
+          (s: Supplier) => String(s.id) === String(supplierSyncId)
+        );
+    } else {
+      fullSupplier = allSuppliers.value.find(
+        (s: Supplier) =>
+          s.name &&
+          providerData.name &&
+          s.name.toLowerCase() === providerData.name.toLowerCase()
       );
-  } else {
-    fullSupplier = allSuppliers.value.find(
-      (s: Supplier) =>
-        s.name &&
-        providerData.name &&
-        s.name.toLowerCase() === providerData.name.toLowerCase()
-    );
+    }
+
+    editingProvider.value = {
+      id: providerData.id,
+      name: providerData.name,
+      estimated: providerData.estimated || 0,
+      accountId: providerData.accountId,
+      _supplierId: fullSupplier?.sync_id || supplierSyncId || fullSupplier?.id,
+      _supplierName: providerData._supplierName || providerData.name,
+      products: fullSupplier?.products || [],
+      _supplier: fullSupplier
+        ? structuredClone
+          ? structuredClone(fullSupplier)
+          : JSON.parse(JSON.stringify(fullSupplier))
+        : undefined,
+    };
+  } catch (err) {
+    console.error('openEditProviderModal error:', err);
+    // Fallback minimal editingProvider so modal can still open
+    editingProvider.value = {
+      id: providerData?.id,
+      name: providerData?.name || '',
+      estimated: providerData?.estimated || 0,
+      accountId: providerData?.accountId,
+    } as any;
+  } finally {
+    // Always try to open modal so user can inspect/fix
+    showAddProviderModal.value = true;
   }
-
-  editingProvider.value = {
-    id: providerData.id,
-    name: providerData.name,
-    estimated: providerData.estimated || 0,
-    accountId: providerData.accountId,
-    _supplierId: fullSupplier?.sync_id || supplierSyncId || fullSupplier?.id,
-    _supplierName: providerData._supplierName || providerData.name,
-    products: fullSupplier?.products || [],
-    _supplier: fullSupplier ? (structuredClone ? structuredClone(fullSupplier) : JSON.parse(JSON.stringify(fullSupplier))) : undefined,
-  };
-
-  showAddProviderModal.value = true;
 }
 
 function handleProviderSaved(payload: {
@@ -336,7 +360,11 @@ function handleProviderSaved(payload: {
         _supplierId: payload.providerId,
         _supplierName: payload.providerName,
         products: payload.products,
-        _supplier: editingProvider.value._supplier ? (structuredClone ? structuredClone(editingProvider.value._supplier) : JSON.parse(JSON.stringify(editingProvider.value._supplier))) : undefined,
+        _supplier: editingProvider.value._supplier
+          ? structuredClone
+            ? structuredClone(editingProvider.value._supplier)
+            : JSON.parse(JSON.stringify(editingProvider.value._supplier))
+          : undefined,
       },
     });
   } else {
@@ -348,7 +376,11 @@ function handleProviderSaved(payload: {
       _supplierId: payload.providerId,
       _supplierName: payload.providerName,
       products: payload.products,
-      _supplier: editingProvider.value?._supplier ? (structuredClone ? structuredClone(editingProvider.value._supplier) : JSON.parse(JSON.stringify(editingProvider.value._supplier))) : undefined,
+      _supplier: editingProvider.value?._supplier
+        ? structuredClone
+          ? structuredClone(editingProvider.value._supplier)
+          : JSON.parse(JSON.stringify(editingProvider.value._supplier))
+        : undefined,
     });
   }
   budgetController.saveData();
@@ -382,8 +414,10 @@ function handleUpdateProvider(payload: {
 function confirmRemoveProveedor(
   payload: { id?: string | number; name?: string } | string | number
 ) {
-  const id = typeof payload === 'object' && payload !== null ? payload.id : payload;
-  const name = typeof payload === 'object' && payload !== null ? payload.name : '';
+  const id =
+    typeof payload === 'object' && payload !== null ? payload.id : payload;
+  const name =
+    typeof payload === 'object' && payload !== null ? payload.name : '';
   deleteConfirm.providerId = id ?? null;
   deleteConfirm.providerName = name || '';
   deleteConfirm.open = true;
@@ -410,7 +444,10 @@ function handleOpenNotesModal(payload: { provider: ProviderData }) {
 
 function saveNotes() {
   if (notesProvider.value) {
-    budgetController.updateProvider({ id: notesProvider.value.id, changes: { notes: notesContent.value } });
+    budgetController.updateProvider({
+      id: notesProvider.value.id,
+      changes: { notes: notesContent.value },
+    });
     budgetController.saveData();
   }
   showNotesModal.value = false;
@@ -450,9 +487,15 @@ async function checkTemplateConflict(params: { tmpl: TemplateRecord }) {
   }
 }
 
-function applyProviders(params: { providers: Array<{ name: string; estimated: number; accountId?: string | number }> }) {
+function applyProviders(params: {
+  providers: Array<{
+    name: string;
+    estimated: number;
+    accountId?: string | number;
+  }>;
+}) {
   const { providers } = params;
-  providers.forEach((p) => {
+  providers.forEach(p => {
     budgetController.addProvider({
       name: p.name,
       estimated: p.estimated,

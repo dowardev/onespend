@@ -86,17 +86,18 @@ export async function reassignEntry(params: {
 
         try { budgetController.setDate({ date: destDate }); } catch (_) {}
         await budgetController.loadDataForDate({ date: destDate });
-        if ((srcEntry as any).entryType === 'ingreso') budgetController.addIngreso(payload);
-        else budgetController.addEgreso(payload);
+        if ((srcEntry as any).entryType === 'ingreso') {
+          const created = budgetController.addIngreso(payload) as any;
+          if (created) idToUse = created.id;
+        } else {
+          const created = budgetController.addEgreso(payload) as any;
+          if (created) idToUse = created.id;
+        }
         await budgetController.saveData();
 
-        // new entry will have a new id; attempt to find it
+        // assume created entry id is available from addIngreso/addEgreso
         const finalEntries = budgetController.getEntries() || [];
-        const found = finalEntries.find((en: any) => en.name === payload.name && Number(en.amount) === Number(payload.amount));
-        if (found) {
-          idToUse = found.id;
-          moved = true;
-        }
+        moved = finalEntries.some((en: any) => String(en.id) === String(idToUse));
       }
     }
 
