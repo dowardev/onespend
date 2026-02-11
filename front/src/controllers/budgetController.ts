@@ -210,6 +210,8 @@ class BudgetController {
     const { syncEntry } = useSync();
     syncEntry({ entry: newIngreso, operation: 'create' });
     this.saveData();
+
+    return newIngreso;
   }
 
   addEgreso(params: {
@@ -245,6 +247,8 @@ class BudgetController {
     const { syncEntry } = useSync();
     syncEntry({ entry: newEgreso, operation: 'create' });
     this.saveData();
+
+    return newEgreso;
   }
 
   addProviderEgresos(params: { provider: Provider }) {

@@ -3,13 +3,10 @@
     <ion-row class="ion-justify-content-center">
       <ion-col size="12" size-md="4" size-lg="6" size-xl="4">
         <ion-list class="transparent">
-  <ion-list-header>
+          <ion-list-header>
             <ion-label>Registro</ion-label>
 
-            <ion-button
-              :disabled="isDayClosed"
-              @click="openAddEntryModal"
-            >
+            <ion-button :disabled="isDayClosed" @click="openAddEntryModal">
               <ion-icon :icon="addOutline"></ion-icon>
             </ion-button>
           </ion-list-header>
@@ -117,7 +114,7 @@
               <span style="color: var(--ion-color-success)"
                 >Ingresos: {{ formatCurrencyLocal({ v: totalIngresos }) }}</span
               >
-              <br>
+              <br />
               <span style="color: var(--ion-color-danger)"
                 >Gastos: {{ formatCurrencyLocal({ v: totalEgresos }) }}</span
               >
@@ -132,12 +129,14 @@
   <EditProviderModal
     :is-open="editProviderModalOpen"
     :provider="editProviderData"
+    :entry-data="editProviderEntryData"
     :suppliers="allSuppliers"
     :accounts="accountsList"
-    mode="provider"
+    :mode="editingProviderEntryId ? 'entry' : 'provider'"
     @dismiss="editProviderModalOpen = false"
     @saved="handleProviderEntrySaved"
     @deleted="handleProviderEntryDeleted"
+    @reassign-date="reassignProviderFromModal"
   />
 
   <EditEntryModal
@@ -231,8 +230,19 @@ import accountsController from '@/controllers/accountsController';
 import suppliersController from '@/controllers/suppliersController';
 import type { Supplier } from '@/controllers/suppliersController';
 import type { Account } from '@/stores/accountsStore';
-import type { Income, EntryType, PaymentType, Provider } from '@/stores/budgetStore';
-import type { AccountWithBalance, EntryGroup, PendingProduct, ProviderEditData, ProviderProduct } from './components/EditProviderModal.vue';
+import type {
+  Income,
+  EntryType,
+  PaymentType,
+  Provider,
+} from '@/stores/budgetStore';
+import type {
+  AccountWithBalance,
+  EntryGroup,
+  PendingProduct,
+  ProviderEditData,
+  ProviderProduct,
+} from './components/EditProviderModal.vue';
 
 // Components
 
@@ -280,6 +290,11 @@ const quickAccountButtons = [
 
 const editProviderModalOpen = ref(false);
 const editProviderData = ref<ProviderEditData | null>(null);
+const editProviderEntryData = ref<{
+  name: string;
+  entryId: string | number | null;
+  items: Array<{ amount: number; accountId: string | number | null }>;
+} | null>(null);
 const allSuppliers = computed(() => suppliersController.getSuppliers());
 
 const editingProviderEntryId = ref<string | number | null>(null);
@@ -293,9 +308,7 @@ const editEntryModalData = ref({
 
 // dev flag removed from this component (use BudgetView's test helper)
 
-const entryItems = ref<Array<EntryGroup>>([
-  { amount: 0, accountId: null },
-]);
+const entryItems = ref<Array<EntryGroup>>([{ amount: 0, accountId: null }]);
 
 const entryFormState = reactive({
   name: '',
@@ -329,7 +342,9 @@ const isFormValid = computed(() => {
     editEntryModalData.value.name.trim().length > 0 &&
     editEntryModalData.value.entryType &&
     entryItems.value.length > 0 &&
-    entryItems.value.every(item => Number(item.amount) > 0 && item.accountId != null)
+    entryItems.value.every(
+      item => Number(item.amount) > 0 && item.accountId != null
+    )
   );
 });
 
@@ -351,9 +366,10 @@ const canAddMoreItems = computed(() => {
 function calculateAccountBalance(acc: Account, accountId: string | number) {
   const initialBalance = Number(acc.initialBalance) || 0;
 
-  const entries = isDayClosed.value && frozenSnapshot.value
-    ? frozenSnapshot.value.entries
-    : budgetController.getEntries();
+  const entries =
+    isDayClosed.value && frozenSnapshot.value
+      ? frozenSnapshot.value.entries
+      : budgetController.getEntries();
 
   const entriesForAccount = entries.filter((e: Income) => {
     if (String(e.accountId) === String(accountId)) return true;
@@ -390,28 +406,34 @@ const accountsWithBalance = computed(() => {
 
   const withTransactions = result
     .filter((acc: AccountWithBalance) => acc.hasTransactions)
-    .sort((a: AccountWithBalance, b: AccountWithBalance) => b.balance - a.balance);
+    .sort(
+      (a: AccountWithBalance, b: AccountWithBalance) => b.balance - a.balance
+    );
 
   const withoutTransactions = result
     .filter((acc: AccountWithBalance) => !acc.hasTransactions)
-    .sort((a: AccountWithBalance, b: AccountWithBalance) => a.name.localeCompare(b.name));
+    .sort((a: AccountWithBalance, b: AccountWithBalance) =>
+      a.name.localeCompare(b.name)
+    );
 
   return [...withTransactions, ...withoutTransactions];
 });
 
 const totalIngresos = computed(() => {
-  const entries = isDayClosed.value && frozenSnapshot.value
-    ? frozenSnapshot.value.entries
-    : budgetController.getEntries();
+  const entries =
+    isDayClosed.value && frozenSnapshot.value
+      ? frozenSnapshot.value.entries
+      : budgetController.getEntries();
   return entries
     .filter((e: Income) => e.entryType === 'ingreso')
     .reduce((sum: number, e: Income) => sum + Number(e.amount || 0), 0);
 });
 
 const totalEgresos = computed(() => {
-  const entries = isDayClosed.value && frozenSnapshot.value
-    ? frozenSnapshot.value.entries
-    : budgetController.getEntries();
+  const entries =
+    isDayClosed.value && frozenSnapshot.value
+      ? frozenSnapshot.value.entries
+      : budgetController.getEntries();
   return entries
     .filter((e: Income) => e.entryType === 'egreso')
     .reduce((sum: number, e: Income) => sum + Number(e.amount || 0), 0);
@@ -437,12 +459,12 @@ const totalDifferenceColor = computed(() => {
 const providersToday = computed(() => {
   const sel = String(budgetController.getSelectedDate() || '').slice(0, 10);
   if (!sel) return [];
-  const addedIds = budgetController.getProviderIdsWithEntries();
+  // Allow re-adding providers multiple times - removed !addedIds.has(p.id) filter
   return budgetController
     .getProviders()
     .filter(
       (p: Provider) =>
-        String(p.date || '').slice(0, 10) === sel && !addedIds.has(p.id)
+        String(p.date || '').slice(0, 10) === sel
     );
 });
 
@@ -453,9 +475,10 @@ const providersTodayWithData = computed(() => {
 });
 
 const renderedEntries = computed(() => {
-  const entries = isDayClosed.value && frozenSnapshot.value
-    ? frozenSnapshot.value.entries
-    : budgetController.getEntries();
+  const entries =
+    isDayClosed.value && frozenSnapshot.value
+      ? frozenSnapshot.value.entries
+      : budgetController.getEntries();
   return entries.map((item: Income) => ({ type: 'item', item }));
 });
 
@@ -615,9 +638,10 @@ function getAccountRemaining(
 
   const initialBalance = Number(account.initialBalance) || 0;
 
-  const entries = isDayClosed.value && frozenSnapshot.value
-    ? frozenSnapshot.value.entries
-    : budgetController.getEntries();
+  const entries =
+    isDayClosed.value && frozenSnapshot.value
+      ? frozenSnapshot.value.entries
+      : budgetController.getEntries();
 
   const entriesForAccount = entries.filter((e: Income) => {
     if (String(e.accountId) === String(accountId)) return true;
@@ -631,7 +655,9 @@ function getAccountRemaining(
 
   let cutoffTime = Infinity;
   if (entryId) {
-    const currentEntry = entriesForAccount.find((e: Income) => e.id === entryId);
+    const currentEntry = entriesForAccount.find(
+      (e: Income) => e.id === entryId
+    );
     if (currentEntry) {
       cutoffTime = Number(currentEntry.createdAt) || Infinity;
     }
@@ -640,7 +666,9 @@ function getAccountRemaining(
   const filteredEntries =
     cutoffTime === Infinity
       ? entriesForAccount
-      : entriesForAccount.filter((e: Income) => Number(e.createdAt) <= cutoffTime);
+      : entriesForAccount.filter(
+          (e: Income) => Number(e.createdAt) <= cutoffTime
+        );
 
   const ingresos = filteredEntries
     .filter((e: Income) => e.entryType === 'ingreso')
@@ -692,6 +720,19 @@ async function openEditProviderModal(item: Income) {
     );
   }
 
+  // If this is an entry (editing an existing provider entry) populate entry-data for the modal
+  const groups = (item.groups && Array.isArray(item.groups) && item.groups.length > 0)
+    ? item.groups.map((g: EntryGroup) => ({ amount: Number(g.amount) || 0, accountId: g.accountId ?? null }))
+    : [{ amount: Number(item.amount) || 0, accountId: item.accountId ?? null }];
+
+  editProviderEntryData.value = {
+    name: providerName,
+    entryId: item.id,
+    items: groups,
+    date: item.date || budgetController.getSelectedDate(),
+  };
+
+  // keep provider metadata too (useful when switching modes)
   editProviderData.value = {
     id: item.id,
     name: providerName,
@@ -759,6 +800,7 @@ function handleProviderEntryDeleted(entryId: string | number) {
   editProviderModalOpen.value = false;
   editProviderData.value = null;
   editingProviderEntryId.value = null;
+  editProviderEntryData.value = null;
 }
 
 function openEditEntryModal(item: Income) {
@@ -801,7 +843,9 @@ async function reassignEntryFromModal(newDate: string | null) {
       restoreSelectedDate: true,
       verbose: false,
     });
-    try { console.log('InicioViewComponent.reassignEntryFromModal - result', res); } catch (e) {}
+    try {
+      console.log('InicioViewComponent.reassignEntryFromModal - result', res);
+    } catch (e) {}
   } catch (err) {
     console.error('InicioViewComponent.reassignEntryFromModal error', err);
   }
@@ -810,6 +854,91 @@ async function reassignEntryFromModal(newDate: string | null) {
   editEntryModalOpen.value = false;
   editEntryModalData.value = { id: null, entryType: 'ingreso', name: '' };
   entryItems.value = [{ amount: 0, accountId: getDefaultAccountId() }];
+  try {
+    const sel =
+      budgetController.getSelectedDate && budgetController.getSelectedDate();
+    if (sel) await budgetController.loadDataForDate({ date: sel });
+  } catch (_e) {}
+}
+
+// Handler for reassign-date emitted by EditProviderModal (when editing a provider entry)
+async function reassignProviderFromModal(newDate: string | null) {
+  if (!newDate || !editingProviderEntryId.value) return;
+  try {
+    const originalDate = (editProviderEntryData.value && (editProviderEntryData.value as any).date)
+      ? (editProviderEntryData.value as any).date
+      : (editProviderData.value as any)?.date;
+
+    console.log('InicioViewComponent.reassignProviderFromModal called', {
+      editingProviderEntryId: editingProviderEntryId.value,
+      newDate,
+      originalDateResolved: originalDate,
+      editProviderEntryData: editProviderEntryData.value,
+      editProviderData: editProviderData.value,
+    });
+
+    const res = await reassignEntry({
+      entryId: editingProviderEntryId.value,
+      newDate: String(newDate).slice(0, 10),
+      originalDate: originalDate || undefined,
+      restoreSelectedDate: true,
+      verbose: true,
+    });
+
+    console.log('InicioViewComponent.reassignProviderFromModal - result', res);
+    if (!res || !res.moved) {
+      console.warn('InicioViewComponent.reassignProviderFromModal - move did not occur, performing fallback remove+create', res && res.error ? res.error : res);
+      // Fallback: perform explicit remove + create to ensure the entry moves buckets
+      try {
+        const srcDate = originalDate ? String(originalDate).slice(0,10) : (budgetController.getSelectedDate && budgetController.getSelectedDate()) || String(new Date()).slice(0,10);
+        const destDate = String(newDate).slice(0,10);
+
+        // load source bucket
+        try { budgetController.setDate({ date: srcDate }); } catch (err) {}
+        await budgetController.loadDataForDate({ date: srcDate });
+
+        const srcEntries = budgetController.getEntries();
+        const srcEntry = srcEntries.find((en: any) => String(en.id) === String(editingProviderEntryId.value));
+        if (srcEntry) {
+          const payload: any = {
+            name: srcEntry.name,
+            amount: srcEntry.amount,
+            paymentType: srcEntry.paymentType,
+            accountId: srcEntry.accountId ?? null,
+            groups: srcEntry.groups ?? [],
+            // preserve provider metadata
+            _providerName: srcEntry._providerName,
+            _fromProviderGroupId: srcEntry._fromProviderGroupId,
+          };
+
+          // remove from source
+          budgetController.removeIngreso({ id: srcEntry.id });
+          await budgetController.saveData();
+
+          // add to dest
+          try { budgetController.setDate({ date: destDate }); } catch (err) {}
+          await budgetController.loadDataForDate({ date: destDate });
+          if ((srcEntry as any).entryType === 'ingreso') budgetController.addIngreso(payload);
+          else budgetController.addEgreso(payload);
+          await budgetController.saveData();
+
+          console.log('InicioViewComponent.reassignProviderFromModal - fallback move completed');
+        } else {
+          console.warn('InicioViewComponent.reassignProviderFromModal - fallback: source entry not found');
+        }
+      } catch (err) {
+        console.error('InicioViewComponent.reassignProviderFromModal - fallback error', err);
+      }
+    }
+  } catch (err) {
+    console.error('InicioViewComponent.reassignProviderFromModal error', err);
+  }
+
+  // close modal and refresh current bucket
+  editProviderModalOpen.value = false;
+  editProviderEntryData.value = null;
+  editingProviderEntryId.value = null;
+  editProviderData.value = null;
   try {
     const sel = budgetController.getSelectedDate && budgetController.getSelectedDate();
     if (sel) await budgetController.loadDataForDate({ date: sel });
@@ -830,7 +959,6 @@ function saveEntryChanges(data: {
   groups: Array<EntryGroup>;
 }) {
   try {
-    // eslint-disable-next-line no-console
     console.log('InicioViewComponent.saveEntryChanges called with:', data);
   } catch (e) {}
   const { entryType, name, amount, accountId, groups } = data;

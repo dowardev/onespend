@@ -30,6 +30,10 @@
           >
             <ion-icon :icon="saveOutline"></ion-icon>
           </ion-button>
+          <!-- Ellipsis button opens a popover with the date picker (entry mode) -->
+          <ion-button v-if="isEntryMode" fill="clear" title="Más" @click="openReassignPopover($event)">
+            <ion-icon :icon="ellipsisHorizontalOutline"></ion-icon>
+          </ion-button>
         </ion-buttons>
       </ion-toolbar>
     </ion-header>
@@ -206,6 +210,36 @@
         </div>
       </div>
     </ion-content>
+
+    <!-- Popover with date picker (opened from header ellipsis) -->
+    <ion-popover
+      :is-open="popoverState.open"
+      :event="popoverState.event"
+      @did-dismiss="popoverState.open = false"
+    >
+      <ion-content class="ion-padding">
+        <div style="min-width:220px; max-width:320px">
+          <ion-item lines="none">
+            <ion-label position="stacked">Seleccionar fecha</ion-label>
+            <ion-datetime
+              v-if="showPicker"
+              ref="reassignPicker"
+              :value="reassignDateISO"
+              :key="reassignDateISO"
+              v-model="reassignDateISO"
+              presentation="date"
+              style="background: transparent; width: 100%"
+              @ionChange="onReassignDatetimeChange"
+            ></ion-datetime>
+          </ion-item>
+
+          <ion-item lines="full" style="margin-top:8px">
+            <ion-button slot="start" fill="clear" size="small" @click="popoverState.open = false">Cancelar</ion-button>
+            <ion-button slot="end" size="small" color="primary" :disabled="!(reassignDate || reassignDateISO)" @click="applyPopoverReassign">Aplicar</ion-button>
+          </ion-item>
+        </div>
+      </ion-content>
+    </ion-popover>
   </ion-modal>
 </template>
 
@@ -239,8 +273,10 @@ import {
   warningOutline,
   saveOutline,
   swapHorizontalOutline,
+  ellipsisHorizontalOutline,
 } from 'ionicons/icons';
-import { ref, computed, watch, toRefs } from 'vue';
+import { ref, computed, watch, toRefs, reactive, nextTick } from 'vue';
+import { format } from 'date-fns';
 // End Imports
 
 // Components
@@ -339,6 +375,7 @@ const emit = defineEmits<{
     }
   ): void;
   (e: 'deleted', id: string | number): void;
+  (e: 'reassign-date', date: string): void;
 }>();
 
 const { isOpen, provider, entryData, suppliers, accounts, mode } =
@@ -350,6 +387,13 @@ const selectedSegment = ref('inicio');
 const providerProducts = ref<ProviderProduct[]>([]);
 const productQuantities = ref<Record<string, number>>({});
 const items = ref<ProviderItem[]>([{ amount: 0, accountId: null }]);
+// Reassign date popover state (entry mode only)
+const popoverState = reactive({ open: false, event: null as Event | null });
+const reassignDate = ref<string | null>(null);
+const reassignDateISO = ref<string | null>(null);
+const reassignPicker = ref<any>(null);
+const showPicker = ref(true);
+const reassignInitialShort = ref<string | null>(null);
 // End Vars
 
 // Functions
@@ -407,15 +451,34 @@ function changeProvider() {
 }
 
 function compareAccounts(params: { o1: Account | string | number; o2: Account | string | number }) {
-  const { o1, o2 } = params;
-  if (o1 === o2) return true;
-  if (o1 && o2) {
-    if (typeof o1 === 'object' && typeof o2 === 'object') {
-      return o1.id === o2.id;
+  // Support both call styles: (params) or (o1, o2)
+  try {
+    if (params == null) return false;
+    // If called as (o1, o2) Vue/Ionic may pass the first arg as o1 and second as o2
+    if ((params as any).o1 === undefined && (arguments.length === 2)) {
+      const o1 = params as any;
+      const o2 = arguments[1] as any;
+      if (o1 === o2) return true;
+      if (o1 && o2) {
+        if (typeof o1 === 'object' && typeof o2 === 'object') return o1.id === o2.id;
+        return String(o1) === String(o2);
+      }
+      return false;
     }
-    return String(o1) === String(o2);
+
+    const { o1, o2 } = params as any;
+    if (o1 === o2) return true;
+    if (o1 && o2) {
+      if (typeof o1 === 'object' && typeof o2 === 'object') {
+        return o1.id === o2.id;
+      }
+      return String(o1) === String(o2);
+    }
+    return false;
+  } catch (err) {
+    // Fail safe
+    return false;
   }
-  return false;
 }
 
 function formatPrice(params: { price: number }) {
@@ -521,6 +584,116 @@ function handleDelete() {
     emit('deleted', provider.value.id);
   }
 }
+// Reassign popover functions
+async function openReassignPopover(e: Event) {
+  // prepare ISO value
+  try {
+    if (!reassignDateISO.value) {
+      // prefer entryData date if available
+      if (entryData.value && (entryData.value as any).date) {
+        const raw = (entryData.value as any).date as any;
+        if (typeof raw === 'string' && raw.includes('T')) reassignDateISO.value = raw.length >= 19 ? raw.slice(0,19) : raw + 'T00:00:00';
+        else if (typeof raw === 'string') reassignDateISO.value = `${raw.slice(0,10)}T00:00:00`;
+        else if (typeof raw === 'number') reassignDateISO.value = format(new Date(raw), 'yyyy-MM-dd') + 'T00:00:00';
+      } else {
+        reassignDateISO.value = format(new Date(), 'yyyy-MM-dd') + 'T00:00:00';
+      }
+    }
+  } catch (err) {
+    reassignDateISO.value = format(new Date(), 'yyyy-MM-dd') + 'T00:00:00';
+  }
+
+  try {
+    reassignInitialShort.value = reassignDateISO.value ? String(reassignDateISO.value).slice(0,10) : (reassignDate.value ?? null);
+  } catch (err) {}
+
+  // force remount of picker
+  try {
+    showPicker.value = false;
+    await nextTick();
+    showPicker.value = true;
+    await new Promise(res => setTimeout(res, 30));
+  } catch (err) {}
+
+  // initialize short date so Apply button can enable immediately
+  try {
+    reassignDate.value = reassignDateISO.value ? String(reassignDateISO.value).slice(0,10) : reassignDate.value;
+  } catch (err) {}
+
+  // debug: show date values at open
+  try { console.debug('EditProviderModal.openReassignPopover - reassignDateISO:', reassignDateISO.value, 'reassignDate:', reassignDate.value); } catch (e) {}
+
+  popoverState.event = e;
+  popoverState.open = true;
+}
+
+// Watch ISO value to keep short date in sync and help debugging
+watch(() => reassignDateISO.value, ns => {
+  try {
+    if (ns) {
+      const short = String(ns).slice(0,10);
+      reassignDate.value = short;
+    }
+    console.debug('EditProviderModal.watch reassignDateISO ->', ns, 'short ->', reassignDate.value);
+  } catch (e) {}
+});
+
+function onReassignDatetimeChange(e: any) {
+  try {
+    const val = e?.detail?.value ?? e;
+    console.log('EditProviderModal.onReassignDatetimeChange - raw val:', val);
+    if (!val) return;
+    let iso: string | null = null;
+    if (typeof val === 'string') {
+      iso = val.length >= 10 && val.includes('T') ? val : `${String(val).slice(0,10)}T00:00:00`;
+    } else if (val instanceof Date) {
+      iso = format(val, 'yyyy-MM-dd') + 'T00:00:00';
+    } else {
+      iso = String(val).slice(0, 10) + 'T00:00:00';
+    }
+    reassignDateISO.value = iso;
+    reassignDate.value = iso.slice(0, 10);
+  } catch (err) {
+    console.error('EditProviderModal.onReassignDatetimeChange error', err);
+  }
+}
+
+function applyPopoverReassign() {
+  popoverState.open = false;
+  // Normalize final date
+  let finalDate: string | null = null;
+  // Debug: prefer picker raw value if available (some Ionic versions don't sync v-model)
+  try {
+    const picker = reassignPicker && (reassignPicker as any).value;
+    const pickerRaw = picker ? (picker.value ?? (picker.getValue ? picker.getValue() : undefined)) : undefined;
+    console.log('EditProviderModal.applyPopoverReassign - debug values', {
+      reassignDateISO: reassignDateISO.value,
+      reassignDate: reassignDate.value,
+      pickerRaw,
+    });
+    if (pickerRaw) {
+      finalDate = String(pickerRaw).slice(0,10);
+    } else {
+      finalDate = reassignDate.value ?? (reassignDateISO.value ? String(reassignDateISO.value).slice(0,10) : null);
+    }
+  } catch (err) {
+    console.error('EditProviderModal.applyPopoverReassign - debug read error', err);
+    try {
+      finalDate = reassignDate.value ?? (reassignDateISO.value ? String(reassignDateISO.value).slice(0,10) : null);
+    } catch (err2) {
+      finalDate = null;
+    }
+  }
+  if (!finalDate) return;
+  // Emit to parent and close popover. Parent (InicioViewComponent) should perform the reassign.
+  try {
+    console.log('EditProviderModal.applyPopoverReassign - emitting reassign-date', { finalDate, entryData: entryData.value });
+    emit('reassign-date', finalDate);
+  } catch (err) {
+    console.error('EditProviderModal.applyPopoverReassign - emit error', err);
+  }
+  popoverState.open = false;
+}
 // End Functions
 
 // Life cycle
@@ -606,6 +779,24 @@ const isFormValid = computed(() => {
     return isItemsValid.value;
   }
   return selectedProvider.value != null && isItemsValid.value;
+});
+
+// Enable Apply when we have a resolved short date (yyyy-MM-dd)
+const canApplyReassign = computed(() => {
+  try {
+    // prefer resolved short date
+    if (reassignDate.value) return String(reassignDate.value).slice(0,10).length === 10;
+    if (reassignDateISO.value) return String(reassignDateISO.value).slice(0,10).length === 10;
+
+    // fallback: try to read underlying picker raw value (some Ionic versions don't update v-model immediately)
+    const picker = reassignPicker && (reassignPicker as any).value;
+    const pickerRaw = picker ? (picker.value ?? (picker.getValue ? picker.getValue() : undefined)) : undefined;
+    if (pickerRaw) {
+      const short = String(pickerRaw).slice(0,10);
+      return Boolean(short && short.length === 10);
+    }
+  } catch (e) {}
+  return false;
 });
 // End Computed
 

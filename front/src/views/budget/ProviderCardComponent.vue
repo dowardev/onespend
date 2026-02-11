@@ -4,7 +4,7 @@
     lines="full"
     button
     :disabled="isClosed"
-    @click="!isClosed && $emit('open-edit-modal', { provider: props.provider })"
+    @click="!isClosed && handleItemClick($event)"
   >
     <ion-label>
       {{ props.provider._supplierName || props.provider.name || 'Sin nombre' }}
@@ -295,6 +295,16 @@ function openDeleteConfirm(e: Event) {
     deleteConfirm.event = e;
   } catch (err) {
     console.error('openDeleteConfirm error', err);
+  }
+}
+
+function handleItemClick(e?: Event) {
+  try {
+    console.debug('ProviderCardComponent.handleItemClick - provider:', props.provider);
+    // Emit the provider directly for simplicity
+    emit('open-edit-modal', props.provider);
+  } catch (err) {
+    console.error('handleItemClick error', err);
   }
 }
 
