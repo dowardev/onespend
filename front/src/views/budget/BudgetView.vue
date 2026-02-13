@@ -17,135 +17,53 @@
     </ion-header>
 
     <ion-content>
-      <section class="ion-padding-top">
-        <ion-item lines="none" class="transparent">
-          <ion-buttons>
-            <ion-segment v-model="activeView" scrollable>
-              <ion-segment-button value="inicio">Inicio</ion-segment-button>
-
-              <ion-segment-button value="proveedores"
-                >Proveedores</ion-segment-button
-              >
-              <!-- Resumen ahora solo se muestra en el modal -->
-            </ion-segment>
-          </ion-buttons>
-
-          <ion-buttons slot="end">
-            <ion-button title="Retroceder" @click="goBack">
-              <ion-icon :icon="chevronBackOutline"></ion-icon>
-            </ion-button>
-
-            <ion-button
-              title="Seleccionar fecha"
-              @click="openDatePicker({ event: $event })"
-            >
-              {{ formattedSelectedDate }}
-            </ion-button>
-
-            <ion-button title="Avanzar" @click="goForward">
-              <ion-icon :icon="chevronForwardOutline"></ion-icon>
-            </ion-button>
-          </ion-buttons>
-        </ion-item>
-      </section>
-
       <section>
-        <ion-grid v-if="activeView === 'inicio'">
-          <ion-row>
-            <ion-col size="12">
-              <InicioViewComponent v-if="isDataLoaded" />
-            </ion-col>
-          </ion-row>
-        </ion-grid>
-
-        <ion-grid v-if="activeView === 'proveedores'">
-          <ion-row>
-            <ion-col size="12">
-              <ProvidersComponent />
-            </ion-col>
-          </ion-row>
-        </ion-grid>
-
-
-
-        <ion-grid v-if="activeView === 'resumen'">
+        <ion-grid>
           <ion-row class="ion-justify-content-center">
-            <ion-col size="12" size-md="8" size-lg="6">
-              <ion-card class="shadow1">
-                <ion-card-header>
-                  <ion-card-title>Resumen del Día</ion-card-title>
-                  <ion-card-subtitle>{{
-                    formattedSelectedDate
-                  }}</ion-card-subtitle>
-                </ion-card-header>
-                <ion-card-content>
-                  <ion-list>
-                    <ion-item>
-                      <ion-label>
-                        <h3>Proveedores</h3>
-                        <p>{{ daySummary.providersCount }} proveedores</p>
-                      </ion-label>
-                      <ion-note slot="end" color="primary">
-                        {{
-                          formatCurrency({ value: daySummary.totalEstimated })
-                        }}
-                      </ion-note>
-                    </ion-item>
-                    <ion-item>
-                      <ion-label>
-                        <h3>Ingresos</h3>
-                        <p>{{ daySummary.incomeCount }} registros</p>
-                      </ion-label>
-                      <ion-note slot="end" color="success">
-                        {{ formatCurrency({ value: daySummary.totalIncome }) }}
-                      </ion-note>
-                    </ion-item>
-                    <ion-item>
-                      <ion-label>
-                        <h3>Gastos</h3>
-                        <p>{{ daySummary.expenseCount }} registros</p>
-                      </ion-label>
-                      <ion-note slot="end" color="danger">
-                        {{ formatCurrency({ value: daySummary.totalExpense }) }}
-                      </ion-note>
-                    </ion-item>
-                    <ion-item>
-                      <ion-label>
-                        <h3>Balance</h3>
-                        <p>Total del día</p>
-                      </ion-label>
-                      <ion-note
-                        slot="end"
-                        :color="daySummary.balance >= 0 ? 'success' : 'danger'"
+            <ion-col size="8">
+              <section class="ion-padding-top">
+                <ion-item lines="none" class="transparent">
+                  <ion-buttons>
+                    <ion-segment v-model="activeView" scrollable>
+                      <ion-segment-button value="inicio"
+                        >Inicio</ion-segment-button
                       >
-                        {{ formatCurrency({ value: daySummary.balance }) }}
-                      </ion-note>
-                    </ion-item>
-                  </ion-list>
-                  <ion-item lines="none" class="ion-margin-top">
-                    <ion-icon
-                      slot="start"
-                      :icon="timeOutline"
-                      color="medium"
-                    ></ion-icon>
-                    <ion-label>
-                      <p>Inicio del día</p>
-                      <h3>{{ daySummary.startTime }}</h3>
-                    </ion-label>
-                  </ion-item>
-                  <ion-item lines="none">
-                    <ion-icon
-                      slot="start"
-                      :icon="timeOutline"
-                      color="medium"
-                    ></ion-icon>
-                    <ion-label>
-                      <p>Final del día</p>
-                      <h3>{{ daySummary.endTime }}</h3>
-                    </ion-label>
-                  </ion-item>
-                </ion-card-content>
-              </ion-card>
+
+                      <ion-segment-button value="proveedores"
+                        >Proveedores</ion-segment-button
+                      >
+                      <!-- Resumen ahora solo se muestra en el modal -->
+                    </ion-segment>
+                  </ion-buttons>
+
+                  <ion-buttons slot="end">
+                    <ion-button title="Retroceder" @click="goBack">
+                      <ion-icon :icon="chevronBackOutline"></ion-icon>
+                    </ion-button>
+
+                    <ion-button
+                      title="Seleccionar fecha"
+                      @click="openDatePicker({ event: $event })"
+                    >
+                      {{ formattedSelectedDate }}
+                    </ion-button>
+
+                    <ion-button title="Avanzar" @click="goForward">
+                      <ion-icon :icon="chevronForwardOutline"></ion-icon>
+                    </ion-button>
+                  </ion-buttons>
+                </ion-item>
+              </section>
+
+              <section>
+                <template v-if="activeView === 'inicio' && isDataLoaded">
+                  <InicioViewComponent />
+                </template>
+
+                <template v-if="activeView === 'proveedores'">
+                  <ProvidersComponent />
+                </template>
+              </section>
             </ion-col>
           </ion-row>
         </ion-grid>
@@ -184,32 +102,33 @@
         @did-dismiss="showMoreOptions = false"
       >
         <ion-content>
-            <ion-item button @click="openDaySummaryModal">
-              <ion-icon slot="start" :icon="timeOutline" color="primary"></ion-icon>
-              <ion-label>Resumen del día</ion-label>
-            </ion-item>
-            <ion-item button @click="confirmClearDay">
-              <ion-icon
-                slot="start"
-                :icon="trashOutline"
-                color="danger"
-              ></ion-icon>
-              <ion-label>Vaciar día</ion-label>
-            </ion-item>
-            <ion-item v-if="isDev" button @click="insertTestData">
-              <ion-icon
-                slot="start"
-                :icon="addOutline"
-                color="success"
-              ></ion-icon>
-              <ion-label color="success">Insertar datos prueba</ion-label>
-            </ion-item>
-          </ion-content>
-        </ion-popover>
-        
-        <ion-modal :is-open="showDaySummaryModal" @did-dismiss="showDaySummaryModal=false">
-          <day-summary-modal @close="showDaySummaryModal=false" />
-        </ion-modal>
+          <ion-item button @click="openDaySummaryModal">
+            <ion-icon
+              slot="start"
+              :icon="timeOutline"
+              color="primary"
+            ></ion-icon>
+            <ion-label>Resumen del día</ion-label>
+          </ion-item>
+          <ion-item button @click="confirmClearDay">
+            <ion-icon
+              slot="start"
+              :icon="trashOutline"
+              color="danger"
+            ></ion-icon>
+            <ion-label>Vaciar día</ion-label>
+          </ion-item>
+          <ion-item v-if="isDev" button @click="insertTestData">
+            <ion-icon
+              slot="start"
+              :icon="addOutline"
+              color="success"
+            ></ion-icon>
+            <ion-label color="success">Insertar datos prueba</ion-label>
+          </ion-item>
+        </ion-content>
+      </ion-popover>
+
       <!-- end popovers -->
 
       <!-- alerts -->
@@ -228,6 +147,15 @@
         @did-dismiss="showClearConfirm = false"
       ></ion-alert>
       <!-- end alerts -->
+
+      <!-- modals -->
+      <ion-modal
+        :is-open="showDaySummaryModal"
+        @did-dismiss="showDaySummaryModal = false"
+      >
+        <day-summary-modal @close="showDaySummaryModal = false" />
+      </ion-modal>
+      <!-- end modals -->
     </ion-content>
   </ion-page>
 </template>
@@ -253,7 +181,7 @@ import {
   IonRow,
   IonTitle,
   IonToolbar,
-    IonAlert,
+  IonAlert,
   IonCard,
   IonCardHeader,
   IonCardTitle,
@@ -298,10 +226,10 @@ import DaySummaryModal from './components/DaySummaryModal.vue';
 // End Components
 
 // Vars
-const activeView = ref<'inicio' | 'proveedores' | 'resumen'>('inicio');
-  const showDatePicker = ref(false);
-  const showMoreOptions = ref(false);
-  const showDaySummaryModal = ref(false);
+const activeView = ref<'inicio' | 'proveedores'>('inicio');
+const showDatePicker = ref(false);
+const showMoreOptions = ref(false);
+const showDaySummaryModal = ref(false);
 const showClearConfirm = ref(false);
 const datePickerEvent = ref<Event | null>(null);
 const moreOptionsEvent = ref<Event | null>(null);
@@ -337,285 +265,218 @@ function openDatePicker(params: { event: Event }) {
   showDatePicker.value = true;
 }
 
-  function openMoreOptions(params: { event: Event }) {
-    const { event } = params;
-    moreOptionsEvent.value = event;
-    showMoreOptions.value = true;
-  }
+function openMoreOptions(params: { event: Event }) {
+  const { event } = params;
+  moreOptionsEvent.value = event;
+  showMoreOptions.value = true;
+}
 
-  function openDaySummaryModal() {
-    showMoreOptions.value = false;
-    showDaySummaryModal.value = true;
-  }
+function openDaySummaryModal() {
+  showMoreOptions.value = false;
+  showDaySummaryModal.value = true;
+}
 
-  function onDateSelected(e: CustomEvent) {
-    const value = e.detail?.value;
-    if (value) {
-      const d = new Date(value);
-      const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      budgetController.setDate({ date: `${y}-${m}-${day}` });
-      showDatePicker.value = false;
-    }
-  }
-
-  function goBack() {
-    const current = budgetController.getSelectedDate();
-    const d = parseLocalDate({ d: current });
-    d.setDate(d.getDate() - 1);
-    budgetController.setDate({ date: formatLocalDate({ d }) });
-  }
-
-  function goForward() {
-    const current = budgetController.getSelectedDate();
-    const d = parseLocalDate({ d: current });
-    d.setDate(d.getDate() + 1);
-    budgetController.setDate({ date: formatLocalDate({ d }) });
-  }
-
-  function goToToday() {
-    const d = new Date();
+function onDateSelected(e: CustomEvent) {
+  const value = e.detail?.value;
+  if (value) {
+    const d = new Date(value);
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
     budgetController.setDate({ date: `${y}-${m}-${day}` });
     showDatePicker.value = false;
   }
+}
 
-  function confirmClearDay() {
-    showMoreOptions.value = false;
-    showClearConfirm.value = true;
+function goBack() {
+  const current = budgetController.getSelectedDate();
+  const d = parseLocalDate({ d: current });
+  d.setDate(d.getDate() - 1);
+  budgetController.setDate({ date: formatLocalDate({ d }) });
+}
+
+function goForward() {
+  const current = budgetController.getSelectedDate();
+  const d = parseLocalDate({ d: current });
+  d.setDate(d.getDate() + 1);
+  budgetController.setDate({ date: formatLocalDate({ d }) });
+}
+
+function goToToday() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  budgetController.setDate({ date: `${y}-${m}-${day}` });
+  showDatePicker.value = false;
+}
+
+function confirmClearDay() {
+  showMoreOptions.value = false;
+  showClearConfirm.value = true;
+}
+
+function performClearDay() {
+  budgetController.clearDay();
+  budgetController.saveData();
+  showClearConfirm.value = false;
+}
+
+async function insertTestData() {
+  const accountsCtrl = new AccountsController();
+
+  try {
+    await accountsCtrl.loadAll();
+  } catch {}
+
+  let accounts = accountsCtrl.getAccounts();
+
+  if (accounts.length === 0) {
+    const now = Date.now();
+    const acc1: Account = {
+      id: Date.now() + 1,
+      name: 'Caja Principal',
+      initialBalance: 0,
+      createdAt: now,
+      updatedAt: now,
+    };
+    const acc2: Account = {
+      id: Date.now() + 2,
+      name: 'Banco',
+      initialBalance: 0,
+      createdAt: now,
+      updatedAt: now,
+    };
+    await accountsCtrl.addAccount({
+      account: { name: 'Caja Principal', initialBalance: 0 },
+    });
+    await accountsCtrl.addAccount({
+      account: { name: 'Banco', initialBalance: 0 },
+    });
+    accounts = [acc1, acc2];
   }
 
-  function performClearDay() {
-    budgetController.clearDay();
-    budgetController.saveData();
-    showClearConfirm.value = false;
-  }
+  const accountId1 = accounts[0].id;
+  const accountId2 = accounts.length > 1 ? accounts[1].id : accountId1;
 
-    async function insertTestData() {
-    const accountsCtrl = new AccountsController();
-
-    try {
-      await accountsCtrl.loadAll();
-    } catch {}
-
-    let accounts = accountsCtrl.getAccounts();
-
-    if (accounts.length === 0) {
-      const now = Date.now();
-      const acc1: Account = {
-        id: Date.now() + 1,
-        name: 'Caja Principal',
-        initialBalance: 0,
-        createdAt: now,
-        updatedAt: now,
-      };
-      const acc2: Account = {
-        id: Date.now() + 2,
-        name: 'Banco',
-        initialBalance: 0,
-        createdAt: now,
-        updatedAt: now,
-      };
-      await accountsCtrl.addAccount({
-        account: { name: 'Caja Principal', initialBalance: 0 },
-      });
-      await accountsCtrl.addAccount({
-        account: { name: 'Banco', initialBalance: 0 },
-      });
-      accounts = [acc1, acc2];
-    }
-
-    const accountId1 = accounts[0].id;
-    const accountId2 = accounts.length > 1 ? accounts[1].id : accountId1;
-
-    budgetController.addIngreso({
-      name: 'Venta mostrador 1',
-      amount: 1500,
-      paymentType: 'cash',
-      accountId: accountId1,
-    });
-    budgetController.addIngreso({
-      name: 'Venta mostrador 2',
-      amount: 2300,
-      paymentType: 'digital',
-      accountId: accountId2,
-    });
-    budgetController.addIngreso({
-      name: 'Venta online',
-      amount: 4500,
-      paymentType: 'cash',
-      accountId: accountId1,
-    });
-    budgetController.addIngreso({
-      name: 'Pedido mayorista',
-      amount: 12000,
-      paymentType: 'digital',
-      accountId: accountId2,
-    });
-    budgetController.addIngreso({
-      name: 'Venta telefónica',
-      amount: 3500,
-      paymentType: 'cash',
-      accountId: accountId1,
-    });
-
-    budgetController.addEgreso({
-      name: 'Compra inventario',
-      amount: 8000,
-      paymentType: 'cash',
-      accountId: accountId1,
-    });
-    budgetController.addEgreso({
-      name: 'Pago servicios',
-      amount: 2500,
-      paymentType: 'digital',
-      accountId: accountId2,
-    });
-    budgetController.addEgreso({
-      name: 'Transporte',
-      amount: 800,
-      paymentType: 'cash',
-      accountId: accountId1,
-    });
-
-    budgetController.addProvider({
-      name: 'Proveedor A',
-      estimated: 500,
-      accountId: accountId1,
-    });
-    budgetController.addProvider({
-      name: 'Proveedor B',
-      estimated: 800,
-      accountId: accountId2,
-    });
-    budgetController.addProvider({
-      name: 'Proveedor C',
-      estimated: 1200,
-      accountId: accountId1,
-    });
-    budgetController.addProvider({
-      name: 'Proveedor D',
-      estimated: 600,
-      accountId: accountId2,
-    });
-    budgetController.addProvider({
-      name: 'Proveedor E',
-      estimated: 950,
-      accountId: accountId1,
-    });
-    budgetController.addProvider({
-      name: 'Proveedor F',
-      estimated: 1500,
-      accountId: accountId2,
-    });
-    budgetController.addProvider({
-      name: 'Proveedor G',
-      estimated: 450,
-      accountId: accountId1,
-    });
-
-    budgetController.saveData();
-    showMoreOptions.value = false;
-    }
-
-  // End Functions
-
-  // Life cycle
-  onMounted(async () => {
-    try {
-      await accountsController.loadAll();
-      await budgetController.loadDataForCurrentDate();
-      isDataLoaded.value = true;
-    } catch (error) {
-      console.error('Failed to load budget data:', error);
-      isDataLoaded.value = true; // Still set to true to allow component to render
-    }
+  budgetController.addIngreso({
+    name: 'Venta mostrador 1',
+    amount: 1500,
+    paymentType: 'cash',
+    accountId: accountId1,
+  });
+  budgetController.addIngreso({
+    name: 'Venta mostrador 2',
+    amount: 2300,
+    paymentType: 'digital',
+    accountId: accountId2,
+  });
+  budgetController.addIngreso({
+    name: 'Venta online',
+    amount: 4500,
+    paymentType: 'cash',
+    accountId: accountId1,
+  });
+  budgetController.addIngreso({
+    name: 'Pedido mayorista',
+    amount: 12000,
+    paymentType: 'digital',
+    accountId: accountId2,
+  });
+  budgetController.addIngreso({
+    name: 'Venta telefónica',
+    amount: 3500,
+    paymentType: 'cash',
+    accountId: accountId1,
   });
 
-  // End Life cycle
+  budgetController.addEgreso({
+    name: 'Compra inventario',
+    amount: 8000,
+    paymentType: 'cash',
+    accountId: accountId1,
+  });
+  budgetController.addEgreso({
+    name: 'Pago servicios',
+    amount: 2500,
+    paymentType: 'digital',
+    accountId: accountId2,
+  });
+  budgetController.addEgreso({
+    name: 'Transporte',
+    amount: 800,
+    paymentType: 'cash',
+    accountId: accountId1,
+  });
 
-  // Computed
+  budgetController.addProvider({
+    name: 'Proveedor A',
+    estimated: 500,
+    accountId: accountId1,
+  });
+  budgetController.addProvider({
+    name: 'Proveedor B',
+    estimated: 800,
+    accountId: accountId2,
+  });
+  budgetController.addProvider({
+    name: 'Proveedor C',
+    estimated: 1200,
+    accountId: accountId1,
+  });
+  budgetController.addProvider({
+    name: 'Proveedor D',
+    estimated: 600,
+    accountId: accountId2,
+  });
+  budgetController.addProvider({
+    name: 'Proveedor E',
+    estimated: 950,
+    accountId: accountId1,
+  });
+  budgetController.addProvider({
+    name: 'Proveedor F',
+    estimated: 1500,
+    accountId: accountId2,
+  });
+  budgetController.addProvider({
+    name: 'Proveedor G',
+    estimated: 450,
+    accountId: accountId1,
+  });
+
+  budgetController.saveData();
+  showMoreOptions.value = false;
+}
+
+// End Functions
+
+// Life cycle
+onMounted(async () => {
+  try {
+    await accountsController.loadAll();
+    await budgetController.loadDataForCurrentDate();
+    isDataLoaded.value = true;
+  } catch (error) {
+    console.error('Failed to load budget data:', error);
+    isDataLoaded.value = true; // Still set to true to allow component to render
+  }
+});
+
+// End Life cycle
+
+// Computed
 // finish-day related computed values removed
 
-  // Optimized daySummary with single-pass calculations
-  const daySummary = computed(() => {
-    const entries = budgetController.getEntries();
-    const providers = budgetController.getProviders();
+const formattedSelectedDate = computed(() => {
+  try {
+    const d = parseLocalDate({ d: budgetController.getSelectedDate() });
+    if (isNaN(d.getTime())) return budgetController.getSelectedDate();
+    return format(d, "d 'de' MMMM 'de' yyyy", { locale: esLocale });
+  } catch {
+    return budgetController.getSelectedDate();
+  }
+});
 
-    // Single-pass calculations for better performance
-    let totalIncome = 0;
-    let totalExpense = 0;
-    let totalEstimated = 0;
-    const ingresos: Income[] = [];
-    const egresos: Income[] = [];
-    const validTimestamps: number[] = [];
-
-    // Process entries in single loop
-    for (const entry of entries) {
-      const amount = Number(entry.amount || 0);
-      
-      if (entry.entryType === 'ingreso') {
-        ingresos.push(entry);
-        totalIncome += amount;
-      } else {
-        egresos.push(entry);
-        totalExpense += amount;
-      }
-
-      // Collect valid timestamps
-      const timestamp = Number(entry.createdAt);
-      if (timestamp > 0) {
-        validTimestamps.push(timestamp);
-      }
-    }
-
-    // Process providers in single loop
-    for (const provider of providers) {
-      totalEstimated += Number(provider.estimated || 0);
-    }
-
-    // Sort timestamps only if we have valid ones
-    const allTimestamps = validTimestamps.length > 0 
-      ? validTimestamps.sort((a, b) => a - b)
-      : [];
-
-    const startTime =
-      allTimestamps.length > 0
-        ? formatTime({ timestamp: allTimestamps[0] })
-        : '--:--';
-    const endTime =
-      allTimestamps.length > 0
-        ? formatTime({ timestamp: allTimestamps[allTimestamps.length - 1] })
-        : '--:--';
-
-    return {
-      providersCount: providers.length,
-      providers,
-      incomeCount: ingresos.length,
-      incomes: ingresos,
-      expenseCount: egresos.length,
-      expenses: egresos,
-      totalIncome,
-      totalExpense,
-      totalEstimated,
-      balance: totalIncome - totalExpense,
-      startTime,
-      endTime,
-    };
-  });
-
-  const formattedSelectedDate = computed(() => {
-    try {
-      const d = parseLocalDate({ d: budgetController.getSelectedDate() });
-      if (isNaN(d.getTime())) return budgetController.getSelectedDate();
-      return format(d, "d 'de' MMMM 'de' yyyy", { locale: esLocale });
-    } catch {
-      return budgetController.getSelectedDate();
-    }
-  });
-
-  // End Computed
+// End Computed
 </script>

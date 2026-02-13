@@ -31,8 +31,13 @@
             <ion-icon :icon="saveOutline"></ion-icon>
           </ion-button>
           <!-- Ellipsis button opens a popover with the date picker (entry mode) -->
-          <ion-button v-if="isEntryMode" fill="clear" title="Más" @click="openReassignPopover($event)">
-            <ion-icon :icon="ellipsisHorizontalOutline"></ion-icon>
+          <ion-button
+            v-if="isEntryMode"
+            fill="clear"
+            title="Más"
+            @click="openReassignPopover($event)"
+          >
+            <ion-icon :icon="ellipsisVerticalOutline"></ion-icon>
           </ion-button>
         </ion-buttons>
       </ion-toolbar>
@@ -51,14 +56,14 @@
         </ion-item>
 
         <ion-list class="transparent">
-<ion-item
-              v-for="p in filteredProviders"
-              :key="p.id"
-              lines="full"
-              button
-              class="transparent"
-              @click="selectProvider({ p })"
-            >
+          <ion-item
+            v-for="p in filteredProviders"
+            :key="p.id"
+            lines="full"
+            button
+            class="transparent"
+            @click="selectProvider({ p })"
+          >
             <ion-label>{{ p.name }}</ion-label>
           </ion-item>
         </ion-list>
@@ -194,7 +199,14 @@
                       placeholder="0"
                       :value="getProductQuantity({ product })"
                       style="width: 80px; text-align: end"
-                      @ion-input="e => setProductQuantity({ product, productPrice: product.price, quantity: Number(e.detail.value) })"
+                      @ion-input="
+                        e =>
+                          setProductQuantity({
+                            product,
+                            productPrice: product.price,
+                            quantity: Number(e.detail.value),
+                          })
+                      "
                     ></ion-input>
                   </ion-item>
                 </div>
@@ -218,24 +230,37 @@
       @did-dismiss="popoverState.open = false"
     >
       <ion-content class="ion-padding">
-        <div style="min-width:220px; max-width:320px">
+        <div style="min-width: 220px; max-width: 320px">
           <ion-item lines="none">
             <ion-label position="stacked">Seleccionar fecha</ion-label>
             <ion-datetime
               v-if="showPicker"
               ref="reassignPicker"
-              :value="reassignDateISO"
               :key="reassignDateISO"
               v-model="reassignDateISO"
+              :value="reassignDateISO"
               presentation="date"
               style="background: transparent; width: 100%"
-              @ionChange="onReassignDatetimeChange"
+              @ion-change="onReassignDatetimeChange"
             ></ion-datetime>
           </ion-item>
 
-          <ion-item lines="full" style="margin-top:8px">
-            <ion-button slot="start" fill="clear" size="small" @click="popoverState.open = false">Cancelar</ion-button>
-            <ion-button slot="end" size="small" color="primary" :disabled="!(reassignDate || reassignDateISO)" @click="applyPopoverReassign">Aplicar</ion-button>
+          <ion-item lines="full" style="margin-top: 8px">
+            <ion-button
+              slot="start"
+              fill="clear"
+              size="small"
+              @click="popoverState.open = false"
+              >Cancelar</ion-button
+            >
+            <ion-button
+              slot="end"
+              size="small"
+              color="primary"
+              :disabled="!(reassignDate || reassignDateISO)"
+              @click="applyPopoverReassign"
+              >Aplicar</ion-button
+            >
           </ion-item>
         </div>
       </ion-content>
@@ -274,6 +299,7 @@ import {
   saveOutline,
   swapHorizontalOutline,
   ellipsisHorizontalOutline,
+  ellipsisVerticalOutline,
 } from 'ionicons/icons';
 import { ref, computed, watch, toRefs, reactive, nextTick } from 'vue';
 import { format } from 'date-fns';
@@ -420,28 +446,35 @@ const availableAccountsForItem = (currentIndex: number) => {
 
 function selectProvider(params: { p: Supplier }) {
   const { p } = params;
-  console.log('selectProvider - supplier:', JSON.stringify({
-    id: p.id,
-    sync_id: p.sync_id,
-    name: p.name,
-    products: p.products?.map((prod: Product) => ({
-      id: prod.id,
-      sync_id: prod.sync_id,
-      name: prod.name,
-      price: prod.price
-    }))
-  }));
-  
+  console.log(
+    'selectProvider - supplier:',
+    JSON.stringify({
+      id: p.id,
+      sync_id: p.sync_id,
+      name: p.name,
+      products: p.products?.map((prod: Product) => ({
+        id: prod.id,
+        sync_id: prod.sync_id,
+        name: prod.name,
+        price: prod.price,
+      })),
+    })
+  );
+
   selectedProvider.value = p;
-  
-  providerProducts.value = p.products?.map((prod: Product) => ({
-    supplierProductId: prod.sync_id ?? prod.id,
-    productName: prod.name,
-    productPrice: prod.price,
-    quantity: 0,
-  })) || [];
-  
-  console.log('selectProvider - providerProducts reset:', JSON.stringify(providerProducts.value));
+
+  providerProducts.value =
+    p.products?.map((prod: Product) => ({
+      supplierProductId: prod.sync_id ?? prod.id,
+      productName: prod.name,
+      productPrice: prod.price,
+      quantity: 0,
+    })) || [];
+
+  console.log(
+    'selectProvider - providerProducts reset:',
+    JSON.stringify(providerProducts.value)
+  );
 }
 
 function changeProvider() {
@@ -450,17 +483,21 @@ function changeProvider() {
   productQuantities.value = {};
 }
 
-function compareAccounts(params: { o1: Account | string | number; o2: Account | string | number }) {
+function compareAccounts(params: {
+  o1: Account | string | number;
+  o2: Account | string | number;
+}) {
   // Support both call styles: (params) or (o1, o2)
   try {
     if (params == null) return false;
     // If called as (o1, o2) Vue/Ionic may pass the first arg as o1 and second as o2
-    if ((params as any).o1 === undefined && (arguments.length === 2)) {
+    if ((params as any).o1 === undefined && arguments.length === 2) {
       const o1 = params as any;
       const o2 = arguments[1] as any;
       if (o1 === o2) return true;
       if (o1 && o2) {
-        if (typeof o1 === 'object' && typeof o2 === 'object') return o1.id === o2.id;
+        if (typeof o1 === 'object' && typeof o2 === 'object')
+          return o1.id === o2.id;
         return String(o1) === String(o2);
       }
       return false;
@@ -517,31 +554,45 @@ function getProductQuantity(params: { product: Product }): number {
   return found ? found.quantity : 0;
 }
 
-function setProductQuantity(params: { product: Product; productPrice: number; quantity: number }) {
+function setProductQuantity(params: {
+  product: Product;
+  productPrice: number;
+  quantity: number;
+}) {
   const { product, productPrice, quantity } = params;
-  const productId = product?.sync_id ?? product?.id ?? product?.supplierProductId;
+  const productId =
+    product?.sync_id ?? product?.id ?? product?.supplierProductId;
   const productName = product?.name;
-  console.log('setProductQuantity - product:', JSON.stringify({
-    id: product?.id,
-    sync_id: product?.sync_id,
-    supplierProductId: product?.supplierProductId,
-    name: product?.name,
-    price: product?.price
-  }), 'productName:', productName, 'productId:', productId, 'quantity:', quantity);
+  console.log(
+    'setProductQuantity - product:',
+    JSON.stringify({
+      id: product?.id,
+      sync_id: product?.sync_id,
+      supplierProductId: product?.supplierProductId,
+      name: product?.name,
+      price: product?.price,
+    }),
+    'productName:',
+    productName,
+    'productId:',
+    productId,
+    'quantity:',
+    quantity
+  );
   const existing = providerProducts.value.find(p => {
     if (productId) {
       return String(p.supplierProductId) === String(productId);
     }
     return p.productName === productName && p.productPrice === productPrice;
   });
-  
+
   if (existing) {
     existing.quantity = quantity;
   } else {
-    const fallbackId = productId 
-      ? productId 
+    const fallbackId = productId
+      ? productId
       : `manual_${String(productName).toLowerCase().replace(/\s+/g, '_')}_${productPrice}`;
-    
+
     providerProducts.value.push({
       supplierProductId: fallbackId,
       productName,
@@ -558,8 +609,11 @@ function handleSave() {
   );
 
   const products = providerProducts.value.filter(p => (p.quantity || 0) > 0);
-  
-  console.log('EditProviderModal.handleSave - providerProducts.value:', providerProducts.value);
+
+  console.log(
+    'EditProviderModal.handleSave - providerProducts.value:',
+    providerProducts.value
+  );
   console.log('EditProviderModal.handleSave - filtered products:', products);
 
   emit('saved', {
@@ -592,9 +646,14 @@ async function openReassignPopover(e: Event) {
       // prefer entryData date if available
       if (entryData.value && (entryData.value as any).date) {
         const raw = (entryData.value as any).date as any;
-        if (typeof raw === 'string' && raw.includes('T')) reassignDateISO.value = raw.length >= 19 ? raw.slice(0,19) : raw + 'T00:00:00';
-        else if (typeof raw === 'string') reassignDateISO.value = `${raw.slice(0,10)}T00:00:00`;
-        else if (typeof raw === 'number') reassignDateISO.value = format(new Date(raw), 'yyyy-MM-dd') + 'T00:00:00';
+        if (typeof raw === 'string' && raw.includes('T'))
+          reassignDateISO.value =
+            raw.length >= 19 ? raw.slice(0, 19) : raw + 'T00:00:00';
+        else if (typeof raw === 'string')
+          reassignDateISO.value = `${raw.slice(0, 10)}T00:00:00`;
+        else if (typeof raw === 'number')
+          reassignDateISO.value =
+            format(new Date(raw), 'yyyy-MM-dd') + 'T00:00:00';
       } else {
         reassignDateISO.value = format(new Date(), 'yyyy-MM-dd') + 'T00:00:00';
       }
@@ -604,7 +663,9 @@ async function openReassignPopover(e: Event) {
   }
 
   try {
-    reassignInitialShort.value = reassignDateISO.value ? String(reassignDateISO.value).slice(0,10) : (reassignDate.value ?? null);
+    reassignInitialShort.value = reassignDateISO.value
+      ? String(reassignDateISO.value).slice(0, 10)
+      : (reassignDate.value ?? null);
   } catch (err) {}
 
   // force remount of picker
@@ -617,26 +678,43 @@ async function openReassignPopover(e: Event) {
 
   // initialize short date so Apply button can enable immediately
   try {
-    reassignDate.value = reassignDateISO.value ? String(reassignDateISO.value).slice(0,10) : reassignDate.value;
+    reassignDate.value = reassignDateISO.value
+      ? String(reassignDateISO.value).slice(0, 10)
+      : reassignDate.value;
   } catch (err) {}
 
   // debug: show date values at open
-  try { console.debug('EditProviderModal.openReassignPopover - reassignDateISO:', reassignDateISO.value, 'reassignDate:', reassignDate.value); } catch (e) {}
+  try {
+    console.debug(
+      'EditProviderModal.openReassignPopover - reassignDateISO:',
+      reassignDateISO.value,
+      'reassignDate:',
+      reassignDate.value
+    );
+  } catch (e) {}
 
   popoverState.event = e;
   popoverState.open = true;
 }
 
 // Watch ISO value to keep short date in sync and help debugging
-watch(() => reassignDateISO.value, ns => {
-  try {
-    if (ns) {
-      const short = String(ns).slice(0,10);
-      reassignDate.value = short;
-    }
-    console.debug('EditProviderModal.watch reassignDateISO ->', ns, 'short ->', reassignDate.value);
-  } catch (e) {}
-});
+watch(
+  () => reassignDateISO.value,
+  ns => {
+    try {
+      if (ns) {
+        const short = String(ns).slice(0, 10);
+        reassignDate.value = short;
+      }
+      console.debug(
+        'EditProviderModal.watch reassignDateISO ->',
+        ns,
+        'short ->',
+        reassignDate.value
+      );
+    } catch (e) {}
+  }
+);
 
 function onReassignDatetimeChange(e: any) {
   try {
@@ -645,7 +723,10 @@ function onReassignDatetimeChange(e: any) {
     if (!val) return;
     let iso: string | null = null;
     if (typeof val === 'string') {
-      iso = val.length >= 10 && val.includes('T') ? val : `${String(val).slice(0,10)}T00:00:00`;
+      iso =
+        val.length >= 10 && val.includes('T')
+          ? val
+          : `${String(val).slice(0, 10)}T00:00:00`;
     } else if (val instanceof Date) {
       iso = format(val, 'yyyy-MM-dd') + 'T00:00:00';
     } else {
@@ -664,22 +745,35 @@ function applyPopoverReassign() {
   let finalDate: string | null = null;
   // Debug: prefer picker raw value if available (some Ionic versions don't sync v-model)
   try {
-    const picker = reassignPicker && (reassignPicker as any).value;
-    const pickerRaw = picker ? (picker.value ?? (picker.getValue ? picker.getValue() : undefined)) : undefined;
+    const picker = reassignPicker.value && (reassignPicker as any).value;
+    const pickerRaw = picker
+      ? (picker.value ?? (picker.getValue ? picker.getValue() : undefined))
+      : undefined;
     console.log('EditProviderModal.applyPopoverReassign - debug values', {
       reassignDateISO: reassignDateISO.value,
       reassignDate: reassignDate.value,
       pickerRaw,
     });
     if (pickerRaw) {
-      finalDate = String(pickerRaw).slice(0,10);
+      finalDate = String(pickerRaw).slice(0, 10);
     } else {
-      finalDate = reassignDate.value ?? (reassignDateISO.value ? String(reassignDateISO.value).slice(0,10) : null);
+      finalDate =
+        reassignDate.value ??
+        (reassignDateISO.value
+          ? String(reassignDateISO.value).slice(0, 10)
+          : null);
     }
   } catch (err) {
-    console.error('EditProviderModal.applyPopoverReassign - debug read error', err);
+    console.error(
+      'EditProviderModal.applyPopoverReassign - debug read error',
+      err
+    );
     try {
-      finalDate = reassignDate.value ?? (reassignDateISO.value ? String(reassignDateISO.value).slice(0,10) : null);
+      finalDate =
+        reassignDate.value ??
+        (reassignDateISO.value
+          ? String(reassignDateISO.value).slice(0, 10)
+          : null);
     } catch (err2) {
       finalDate = null;
     }
@@ -687,7 +781,10 @@ function applyPopoverReassign() {
   if (!finalDate) return;
   // Emit to parent and close popover. Parent (InicioViewComponent) should perform the reassign.
   try {
-    console.log('EditProviderModal.applyPopoverReassign - emitting reassign-date', { finalDate, entryData: entryData.value });
+    console.log(
+      'EditProviderModal.applyPopoverReassign - emitting reassign-date',
+      { finalDate, entryData: entryData.value }
+    );
     emit('reassign-date', finalDate);
   } catch (err) {
     console.error('EditProviderModal.applyPopoverReassign - emit error', err);
@@ -740,11 +837,16 @@ const filteredProviders = computed(() => {
 
 const productsTotal = computed(() => {
   if (!selectedProvider.value?.products) return 0;
-  return selectedProvider.value.products.reduce((sum: number, product: Product) => {
-    const providerProduct = providerProducts.value.find(p => p.supplierProductId === product.id);
-    const qty = providerProduct?.quantity || 0;
-    return sum + qty * (product.price || 0);
-  }, 0);
+  return selectedProvider.value.products.reduce(
+    (sum: number, product: Product) => {
+      const providerProduct = providerProducts.value.find(
+        p => p.supplierProductId === product.id
+      );
+      const qty = providerProduct?.quantity || 0;
+      return sum + qty * (product.price || 0);
+    },
+    0
+  );
 });
 
 const hasProductsWithQuantity = computed(() => {
@@ -785,14 +887,18 @@ const isFormValid = computed(() => {
 const canApplyReassign = computed(() => {
   try {
     // prefer resolved short date
-    if (reassignDate.value) return String(reassignDate.value).slice(0,10).length === 10;
-    if (reassignDateISO.value) return String(reassignDateISO.value).slice(0,10).length === 10;
+    if (reassignDate.value)
+      return String(reassignDate.value).slice(0, 10).length === 10;
+    if (reassignDateISO.value)
+      return String(reassignDateISO.value).slice(0, 10).length === 10;
 
     // fallback: try to read underlying picker raw value (some Ionic versions don't update v-model immediately)
-    const picker = reassignPicker && (reassignPicker as any).value;
-    const pickerRaw = picker ? (picker.value ?? (picker.getValue ? picker.getValue() : undefined)) : undefined;
+    const picker = reassignPicker.value && (reassignPicker as any).value;
+    const pickerRaw = picker
+      ? (picker.value ?? (picker.getValue ? picker.getValue() : undefined))
+      : undefined;
     if (pickerRaw) {
-      const short = String(pickerRaw).slice(0,10);
+      const short = String(pickerRaw).slice(0, 10);
       return Boolean(short && short.length === 10);
     }
   } catch (e) {}
@@ -849,13 +955,25 @@ watch(isOpen, async newVal => {
           productPrice: p.price,
           quantity: 0,
         }));
-      } else if (provider.value.products && Array.isArray(provider.value.products)) {
-        providerProducts.value = provider.value.products.map((p: PendingProduct) => ({
-          supplierProductId: p.supplierProductId || p.supplier_product_id || p.sync_id || p.id || `manual_${String(p.productName || p.name).toLowerCase().replace(/\s+/g, '_')}_${p.productPrice || p.price}`,
-          productName: p.productName || p.product_name || p.name || '',
-          productPrice: p.productPrice || p.product_price || p.price || 0,
-          quantity: p.quantity || 0,
-        }));
+      } else if (
+        provider.value.products &&
+        Array.isArray(provider.value.products)
+      ) {
+        providerProducts.value = provider.value.products.map(
+          (p: PendingProduct) => ({
+            supplierProductId:
+              p.supplierProductId ||
+              p.supplier_product_id ||
+              p.sync_id ||
+              p.id ||
+              `manual_${String(p.productName || p.name)
+                .toLowerCase()
+                .replace(/\s+/g, '_')}_${p.productPrice || p.price}`,
+            productName: p.productName || p.product_name || p.name || '',
+            productPrice: p.productPrice || p.product_price || p.price || 0,
+            quantity: p.quantity || 0,
+          })
+        );
       } else {
         providerProducts.value = [];
       }
@@ -904,12 +1022,18 @@ watch(
         },
       ];
       if (newProvider.products && Array.isArray(newProvider.products)) {
-        providerProducts.value = newProvider.products.map((p: PendingProduct) => ({
-          supplierProductId: p.supplierProductId || p.sync_id || p.id || `${p.name}-${p.price}`,
-          productName: p.productName || p.name || '',
-          productPrice: p.productPrice || p.price || 0,
-          quantity: p.quantity || 0,
-        }));
+        providerProducts.value = newProvider.products.map(
+          (p: PendingProduct) => ({
+            supplierProductId:
+              p.supplierProductId ||
+              p.sync_id ||
+              p.id ||
+              `${p.name}-${p.price}`,
+            productName: p.productName || p.name || '',
+            productPrice: p.productPrice || p.price || 0,
+            quantity: p.quantity || 0,
+          })
+        );
       } else {
         providerProducts.value = [];
       }

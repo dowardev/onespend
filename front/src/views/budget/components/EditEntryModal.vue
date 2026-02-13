@@ -6,11 +6,11 @@
   >
     <ion-header class="ion-no-border" mode="ios">
       <ion-toolbar>
-      <ion-buttons>
-        <ion-button @click="$emit('dismiss')">
-          <ion-icon :icon="closeOutline"></ion-icon>
-        </ion-button>
-      </ion-buttons>
+        <ion-buttons>
+          <ion-button @click="$emit('dismiss')">
+            <ion-icon :icon="closeOutline"></ion-icon>
+          </ion-button>
+        </ion-buttons>
 
         <ion-title>{{
           entryData.id ? 'Editar Entrada' : 'Nueva Entrada'
@@ -34,8 +34,12 @@
             <ion-icon :icon="saveOutline"></ion-icon>
           </ion-button>
           <!-- Ellipsis button opens a popover with the date picker -->
-          <ion-button fill="clear" title="Más" @click="openReassignPopover($event)">
-            <ion-icon :icon="ellipsisHorizontalOutline"></ion-icon>
+          <ion-button
+            fill="clear"
+            title="Más"
+            @click="openReassignPopover($event)"
+          >
+            <ion-icon :icon="ellipsisVerticalOutline"></ion-icon>
           </ion-button>
         </ion-buttons>
       </ion-toolbar>
@@ -167,7 +171,10 @@
               lines="full"
               :button="!!p.accountId && !isDayClosed"
               :disabled="!p.accountId || isDayClosed"
-              @click="() => p.accountId && !isDayClosed && selectProvider({ provider: p })"
+              @click="
+                () =>
+                  p.accountId && !isDayClosed && selectProvider({ provider: p })
+              "
             >
               <ion-label>
                 {{ p.name }}
@@ -302,7 +309,7 @@
       @did-dismiss="popoverState.open = false"
     >
       <ion-content class="ion-padding">
-        <div style="min-width:220px; max-width:320px">
+        <div style="min-width: 220px; max-width: 320px">
           <ion-item lines="none">
             <ion-label position="stacked">Seleccionar fecha</ion-label>
             <ion-datetime
@@ -317,14 +324,27 @@
             ></ion-datetime>
           </ion-item>
 
-          <ion-item lines="full" style="margin-top:8px">
-            <ion-button slot="start" fill="clear" size="small" @click="popoverState.open = false">Cancelar</ion-button>
-            <ion-button slot="end" size="small" color="primary" :disabled="!reassignDate" @click="applyPopoverReassign">Aplicar</ion-button>
+          <ion-item lines="full" style="margin-top: 8px">
+            <ion-button
+              slot="start"
+              fill="clear"
+              size="small"
+              @click="popoverState.open = false"
+              >Cancelar</ion-button
+            >
+            <ion-button
+              slot="end"
+              size="small"
+              color="primary"
+              :disabled="!reassignDate"
+              @click="applyPopoverReassign"
+              >Aplicar</ion-button
+            >
           </ion-item>
         </div>
       </ion-content>
     </ion-popover>
-    </ion-modal>
+  </ion-modal>
 </template>
 
 <script setup lang="ts">
@@ -363,6 +383,7 @@ import {
   trashOutline,
   calendarOutline,
   ellipsisHorizontalOutline,
+  ellipsisVerticalOutline,
 } from 'ionicons/icons';
 import { computed, ref, watch, onMounted, reactive, nextTick } from 'vue';
 import budgetController from '@/controllers/budgetController';
@@ -415,9 +436,9 @@ const emit = defineEmits([
 ]);
 
 const addEntrySegment = ref('entry');
-const entryItems = ref<Array<{ amount: number; accountId: string | number | null }>>([
-  { amount: 0, accountId: null },
-]);
+const entryItems = ref<
+  Array<{ amount: number; accountId: string | number | null }>
+>([{ amount: 0, accountId: null }]);
 // reassignDate holds the short date (yyyy-MM-dd) used for persistence
 const reassignDate = ref<string | null>(null);
 // reassignDateISO holds full ISO value bound to ion-datetime (some Ionic versions need full ISO)
@@ -435,19 +456,31 @@ const reassignInitialShort = ref<string | null>(null);
 async function openReassignPopover(e: Event) {
   try {
     // eslint-disable-next-line no-console
-    console.log('EditEntryModal.openReassignPopover - reassignDateISO:', reassignDateISO.value, 'reassignDate:', reassignDate.value, 'showPicker:', showPicker.value);
+    console.log(
+      'EditEntryModal.openReassignPopover - reassignDateISO:',
+      reassignDateISO.value,
+      'reassignDate:',
+      reassignDate.value,
+      'showPicker:',
+      showPicker.value
+    );
   } catch (err) {}
   // prepare ISO value for the picker before opening the popover
   try {
     // prefer already-normalized ISO, else build from short date
     if (!reassignDateISO.value) {
       if (reassignDate.value) {
-        reassignDateISO.value = `${String(reassignDate.value).slice(0,10)}T00:00:00`;
+        reassignDateISO.value = `${String(reassignDate.value).slice(0, 10)}T00:00:00`;
       } else if ((props.entryData as any)?.date) {
         const raw = (props.entryData as any).date;
-        if (typeof raw === 'string' && raw.includes('T')) reassignDateISO.value = raw.length >= 19 ? raw.slice(0,19) : raw + 'T00:00:00';
-        else if (typeof raw === 'string') reassignDateISO.value = `${raw.slice(0,10)}T00:00:00`;
-        else if (typeof raw === 'number') reassignDateISO.value = format(new Date(raw), 'yyyy-MM-dd') + 'T00:00:00';
+        if (typeof raw === 'string' && raw.includes('T'))
+          reassignDateISO.value =
+            raw.length >= 19 ? raw.slice(0, 19) : raw + 'T00:00:00';
+        else if (typeof raw === 'string')
+          reassignDateISO.value = `${raw.slice(0, 10)}T00:00:00`;
+        else if (typeof raw === 'number')
+          reassignDateISO.value =
+            format(new Date(raw), 'yyyy-MM-dd') + 'T00:00:00';
       } else {
         reassignDateISO.value = format(new Date(), 'yyyy-MM-dd') + 'T00:00:00';
       }
@@ -456,14 +489,16 @@ async function openReassignPopover(e: Event) {
     reassignDateISO.value = format(new Date(), 'yyyy-MM-dd') + 'T00:00:00';
   }
 
-    // capture initial short date for comparison
-    try {
-      reassignInitialShort.value = reassignDateISO.value ? String(reassignDateISO.value).slice(0,10) : (reassignDate.value ?? null);
-    } catch (err) {}
+  // capture initial short date for comparison
+  try {
+    reassignInitialShort.value = reassignDateISO.value
+      ? String(reassignDateISO.value).slice(0, 10)
+      : (reassignDate.value ?? null);
+  } catch (err) {}
 
-    // force remount of the picker so it reads the v-model
-    try {
-      showPicker.value = false;
+  // force remount of the picker so it reads the v-model
+  try {
+    showPicker.value = false;
     await nextTick();
     showPicker.value = true;
     // small delay to let component mount
@@ -493,9 +528,12 @@ function onReassignDatetimeChange(e: any) {
     let iso: string | null = null;
     if (typeof val === 'string') {
       // val may be 'yyyy-MM-dd' or full ISO
-      iso = val.length >= 10 && val.includes('T') ? val : `${String(val).slice(0,10)}T00:00:00`;
+      iso =
+        val.length >= 10 && val.includes('T')
+          ? val
+          : `${String(val).slice(0, 10)}T00:00:00`;
     } else if (val instanceof Date) {
-      iso = format(val, "yyyy-MM-dd") + 'T00:00:00';
+      iso = format(val, 'yyyy-MM-dd') + 'T00:00:00';
     } else {
       iso = String(val).slice(0, 10) + 'T00:00:00';
     }
@@ -512,7 +550,9 @@ async function handleApplyReassign() {
   let finalDate: string | null = null;
   try {
     const picker = reassignPicker && (reassignPicker as any).value;
-    const pickerRaw = picker ? (picker.value ?? (picker.getValue ? picker.getValue() : undefined)) : undefined;
+    const pickerRaw = picker
+      ? (picker.value ?? (picker.getValue ? picker.getValue() : undefined))
+      : undefined;
     if (pickerRaw) {
       // normalize pickerRaw to short yyyy-MM-dd
       const p = String(pickerRaw);
@@ -526,48 +566,81 @@ async function handleApplyReassign() {
   }
 
   // Fallback to existing reactive values if picker raw not available
-  if (!finalDate) finalDate = reassignDate.value ?? (reassignDateISO.value ? String(reassignDateISO.value).slice(0, 10) : null);
+  if (!finalDate)
+    finalDate =
+      reassignDate.value ??
+      (reassignDateISO.value
+        ? String(reassignDateISO.value).slice(0, 10)
+        : null);
   if (!finalDate) return;
 
   // Debug: indicate handler invoked and show picker/raw values
   try {
     const picker = reassignPicker && (reassignPicker as any).value;
-    const pickerRaw = picker ? (picker.value ?? (picker.getValue ? picker.getValue() : undefined)) : undefined;
+    const pickerRaw = picker
+      ? (picker.value ?? (picker.getValue ? picker.getValue() : undefined))
+      : undefined;
     // eslint-disable-next-line no-console
-    console.log('EditEntryModal.handleApplyReassign invoked - finalDate:', finalDate, 'reassignDate:', reassignDate.value, 'reassignDateISO:', reassignDateISO.value, 'pickerRaw:', pickerRaw, 'initialShort:', reassignInitialShort.value);
+    console.log(
+      'EditEntryModal.handleApplyReassign invoked - finalDate:',
+      finalDate,
+      'reassignDate:',
+      reassignDate.value,
+      'reassignDateISO:',
+      reassignDateISO.value,
+      'pickerRaw:',
+      pickerRaw,
+      'initialShort:',
+      reassignInitialShort.value
+    );
   } catch (err) {
     // ignore
   }
 
   // First, emit to parent so parent can react if it listens
-  try { emit('reassign-date', finalDate); } catch (err) {}
+  try {
+    emit('reassign-date', finalDate);
+  } catch (err) {}
 
   // Then attempt to perform the move locally as a reliable fallback so the button always works
   try {
-    const prevSelected = budgetController.getSelectedDate && budgetController.getSelectedDate();
+    const prevSelected =
+      budgetController.getSelectedDate && budgetController.getSelectedDate();
 
     // Resolve original date for the entry
     let originalDate: string | null = (props.entryData as any).date || null;
     if (!originalDate) {
       // try to find in controller or via other means
       try {
-        const found = budgetController.getEntries().find((en: any) => String(en.id) === String((props.entryData as any).id));
+        const found = budgetController
+          .getEntries()
+          .find(
+            (en: any) => String(en.id) === String((props.entryData as any).id)
+          );
         if (found && found.date) originalDate = found.date;
       } catch (err) {}
     }
-    if (!originalDate) originalDate = prevSelected || format(new Date(), 'yyyy-MM-dd');
+    if (!originalDate)
+      originalDate = prevSelected || format(new Date(), 'yyyy-MM-dd');
     originalDate = String(originalDate).slice(0, 10);
 
     // Ensure we have the original bucket loaded
-    try { budgetController.setDate({ date: originalDate }); } catch (err) {}
+    try {
+      budgetController.setDate({ date: originalDate });
+    } catch (err) {}
     await budgetController.loadDataForDate({ date: originalDate });
 
     // Resolve id in store
-    const storeEntry = budgetController.getEntries().find((en: any) => String(en.id) === String((props.entryData as any).id));
+    const storeEntry = budgetController
+      .getEntries()
+      .find((en: any) => String(en.id) === String((props.entryData as any).id));
     const idToUse = storeEntry ? storeEntry.id : (props.entryData as any).id;
 
     // Update and persist
-    budgetController.updateIngreso({ id: idToUse, changes: { date: finalDate } });
+    budgetController.updateIngreso({
+      id: idToUse,
+      changes: { date: finalDate },
+    });
     await budgetController.saveData();
 
     // Verify move
@@ -585,7 +658,9 @@ async function handleApplyReassign() {
       try {
         await budgetController.loadDataForDate({ date: originalDate });
         const srcEntries = budgetController.getEntries();
-        const srcEntry = srcEntries.find((en: any) => String(en.id) === String(idToUse));
+        const srcEntry = srcEntries.find(
+          (en: any) => String(en.id) === String(idToUse)
+        );
         if (srcEntry) {
           const payload: any = {
             name: srcEntry.name,
@@ -598,21 +673,31 @@ async function handleApplyReassign() {
           budgetController.removeIngreso({ id: idToUse });
           await budgetController.saveData();
 
-          try { budgetController.setDate({ date: finalDate }); } catch (err) {}
+          try {
+            budgetController.setDate({ date: finalDate });
+          } catch (err) {}
           await budgetController.loadDataForDate({ date: finalDate });
-          if ((srcEntry as any).entryType === 'ingreso') budgetController.addIngreso(payload);
+          if ((srcEntry as any).entryType === 'ingreso')
+            budgetController.addIngreso(payload);
           else budgetController.addEgreso(payload);
           await budgetController.saveData();
         }
       } catch (err) {
-        try { console.error('EditEntryModal.handleApplyReassign fallback error', err); } catch (e) {}
+        try {
+          console.error(
+            'EditEntryModal.handleApplyReassign fallback error',
+            err
+          );
+        } catch (e) {}
       }
     }
 
     // Restore prev selected view
     try {
       if (prevSelected && prevSelected !== originalDate) {
-        try { budgetController.setDate({ date: prevSelected }); } catch (err) {}
+        try {
+          budgetController.setDate({ date: prevSelected });
+        } catch (err) {}
         await budgetController.loadDataForDate({ date: prevSelected });
       }
     } catch (err) {}
@@ -630,7 +715,9 @@ async function handleApplyReassign() {
     emit('dismiss');
     popoverState.open = false;
   } catch (err) {
-    try { console.error('EditEntryModal.handleApplyReassign - error', err); } catch (e) {}
+    try {
+      console.error('EditEntryModal.handleApplyReassign - error', err);
+    } catch (e) {}
     toastMessage.value = 'Error reasignando entrada';
     toastColor.value = 'danger';
     showToast.value = true;
@@ -646,7 +733,9 @@ function getDefaultAccountId() {
 const availableAccountsForItem = (currentIndex: number) => {
   const usedAccountIds = entryItems.value
     .filter((_: unknown, idx: number) => idx !== currentIndex)
-    .map((item: { accountId: string | number | null }) => String(item.accountId))
+    .map((item: { accountId: string | number | null }) =>
+      String(item.accountId)
+    )
     .filter((id: string) => id !== 'null' && id !== 'undefined' && id !== '');
   return props.accountsList.filter(
     (acc: { id: string | number }) => !usedAccountIds.includes(String(acc.id))
@@ -703,7 +792,8 @@ onMounted(() => {
   try {
     if (
       entryItems.value.length > 0 &&
-      (entryItems.value[0].accountId === null || entryItems.value[0].accountId === undefined) &&
+      (entryItems.value[0].accountId === null ||
+        entryItems.value[0].accountId === undefined) &&
       props.accountsList &&
       props.accountsList.length > 0
     ) {
@@ -746,7 +836,12 @@ watch(
         try {
           // quick debug to confirm modal received entryData
           // eslint-disable-next-line no-console
-          console.log('EditEntryModal.watch - opening modal for id:', newData.id, 'raw date:', (newData as any).date);
+          console.log(
+            'EditEntryModal.watch - opening modal for id:',
+            newData.id,
+            'raw date:',
+            (newData as any).date
+          );
         } catch (e) {}
         if (
           newData.groups &&
@@ -772,7 +867,9 @@ watch(
           // If raw is missing try to find the entry in the controller store
           if (!raw) {
             try {
-              const fromStore = budgetController.getEntries().find((en: any) => String(en.id) === String(newData.id));
+              const fromStore = budgetController
+                .getEntries()
+                .find((en: any) => String(en.id) === String(newData.id));
               if (fromStore && fromStore.date) resolved = fromStore.date;
             } catch (err) {
               // ignore
@@ -784,12 +881,17 @@ watch(
           if (!resolved) {
             // try to use the controller's selected date as last resort
             try {
-              const sel = budgetController.getSelectedDate && budgetController.getSelectedDate();
+              const sel =
+                budgetController.getSelectedDate &&
+                budgetController.getSelectedDate();
               if (sel) resolved = sel;
             } catch (err) {}
-            reassignDate.value = resolved ? (String(resolved).slice(0,10)) : format(new Date(), 'yyyy-MM-dd');
+            reassignDate.value = resolved
+              ? String(resolved).slice(0, 10)
+              : format(new Date(), 'yyyy-MM-dd');
           } else if (typeof resolved === 'string') {
-            reassignDate.value = resolved.length >= 10 ? resolved.slice(0, 10) : resolved;
+            reassignDate.value =
+              resolved.length >= 10 ? resolved.slice(0, 10) : resolved;
           } else if (typeof resolved === 'number') {
             reassignDate.value = format(new Date(resolved), 'yyyy-MM-dd');
           } else if (resolved instanceof Date) {
@@ -802,19 +904,22 @@ watch(
         }
         // Debug: log the initialized reassignDate and ensure ISO value is set for the picker
         try {
-        // debug log removed
+          // debug log removed
         } catch (e) {}
 
         try {
           const rawVal = (newData as any).date;
           if (rawVal && typeof rawVal === 'string' && rawVal.includes('T')) {
-            reassignDateISO.value = rawVal.length >= 19 ? rawVal.slice(0, 19) : rawVal + 'T00:00:00';
+            reassignDateISO.value =
+              rawVal.length >= 19 ? rawVal.slice(0, 19) : rawVal + 'T00:00:00';
           } else if (typeof rawVal === 'number') {
-            reassignDateISO.value = format(new Date(rawVal), "yyyy-MM-dd") + 'T00:00:00';
+            reassignDateISO.value =
+              format(new Date(rawVal), 'yyyy-MM-dd') + 'T00:00:00';
           } else if (reassignDate.value) {
             reassignDateISO.value = `${reassignDate.value}T00:00:00`;
           } else {
-            reassignDateISO.value = format(new Date(), "yyyy-MM-dd") + 'T00:00:00';
+            reassignDateISO.value =
+              format(new Date(), 'yyyy-MM-dd') + 'T00:00:00';
           }
 
           // Force remount of the ion-datetime so it reliably reads the ISO value
@@ -831,24 +936,34 @@ watch(
             // debug log removed
             try {
               const el = picker.el ?? picker.$el ?? picker;
-              const input = el && (el.shadowRoot ? el.shadowRoot.querySelector('input') : el.querySelector && el.querySelector('input'));
+              const input =
+                el &&
+                (el.shadowRoot
+                  ? el.shadowRoot.querySelector('input')
+                  : el.querySelector && el.querySelector('input'));
               // if we found an input element in the shadow DOM, set its value and dispatch events
               if (input) {
                 try {
-                  const short = reassignDateISO.value ? String(reassignDateISO.value).slice(0, 10) : '';
+                  const short = reassignDateISO.value
+                    ? String(reassignDateISO.value).slice(0, 10)
+                    : '';
                   input.value = short;
                   input.dispatchEvent(new Event('input', { bubbles: true }));
                   input.dispatchEvent(new Event('change', { bubbles: true }));
                   // debug log removed
                 } catch (err) {
                   // eslint-disable-next-line no-console
-                  console.warn('EditEntryModal - could not set underlying input value', err);
+                  console.warn(
+                    'EditEntryModal - could not set underlying input value',
+                    err
+                  );
                 }
               }
               // also try to set picker.value directly
               try {
                 if (picker) {
-                  if (typeof picker.setValue === 'function') picker.setValue(reassignDateISO.value);
+                  if (typeof picker.setValue === 'function')
+                    picker.setValue(reassignDateISO.value);
                   else picker.value = reassignDateISO.value;
                 }
               } catch (err) {
@@ -862,8 +977,10 @@ watch(
         } catch (e) {
           // ignore
         }
-      } else if (entryItems.value.length === 0 || 
-                 (entryItems.value.length === 1 && entryItems.value[0].amount === 0)) {
+      } else if (
+        entryItems.value.length === 0 ||
+        (entryItems.value.length === 1 && entryItems.value[0].amount === 0)
+      ) {
         entryItems.value = [{ amount: 0, accountId: getDefaultAccountId() }];
         addEntrySegment.value = 'entry';
       }

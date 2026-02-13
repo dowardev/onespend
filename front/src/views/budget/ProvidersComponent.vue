@@ -1,7 +1,7 @@
 <template>
   <ion-grid>
-    <ion-row class="ion-justify-content-center">
-      <ion-col size="4" size-lg="6" size-xl="4">
+    <ion-row >
+      <ion-col size="6">
         <ion-list class="transparent">
           <ion-list-header>
             <ion-label>Proveedores</ion-label>
@@ -45,7 +45,7 @@
         </ion-list>
       </ion-col>
 
-      <ion-col size="3" size-lg="6" size-xl="4">
+      <ion-col size="6">
         <ProvidersSummary />
       </ion-col>
     </ion-row>
