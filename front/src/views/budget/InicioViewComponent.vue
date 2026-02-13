@@ -1,7 +1,7 @@
 <template>
   <ion-grid>
-    <ion-row class="ion-justify-content-center">
-      <ion-col size="12" size-md="4" size-lg="6" size-xl="4">
+    <ion-row>
+      <ion-col size="6">
         <ion-list class="transparent">
           <ion-list-header>
             <ion-label>Registro</ion-label>
@@ -85,7 +85,7 @@
         </ion-list>
       </ion-col>
 
-      <ion-col size="12" size-md="4" size-lg="6" size-xl="4">
+      <ion-col size="6" >
         <AccountCards :accounts="accountsWithBalance" />
 
         <!-- Resultado Total Card -->
@@ -462,10 +462,7 @@ const providersToday = computed(() => {
   // Allow re-adding providers multiple times - removed !addedIds.has(p.id) filter
   return budgetController
     .getProviders()
-    .filter(
-      (p: Provider) =>
-        String(p.date || '').slice(0, 10) === sel
-    );
+    .filter((p: Provider) => String(p.date || '').slice(0, 10) === sel);
 });
 
 const providersTodayWithData = computed(() => {
@@ -721,9 +718,18 @@ async function openEditProviderModal(item: Income) {
   }
 
   // If this is an entry (editing an existing provider entry) populate entry-data for the modal
-  const groups = (item.groups && Array.isArray(item.groups) && item.groups.length > 0)
-    ? item.groups.map((g: EntryGroup) => ({ amount: Number(g.amount) || 0, accountId: g.accountId ?? null }))
-    : [{ amount: Number(item.amount) || 0, accountId: item.accountId ?? null }];
+  const groups =
+    item.groups && Array.isArray(item.groups) && item.groups.length > 0
+      ? item.groups.map((g: EntryGroup) => ({
+          amount: Number(g.amount) || 0,
+          accountId: g.accountId ?? null,
+        }))
+      : [
+          {
+            amount: Number(item.amount) || 0,
+            accountId: item.accountId ?? null,
+          },
+        ];
 
   editProviderEntryData.value = {
     name: providerName,
@@ -865,9 +871,10 @@ async function reassignEntryFromModal(newDate: string | null) {
 async function reassignProviderFromModal(newDate: string | null) {
   if (!newDate || !editingProviderEntryId.value) return;
   try {
-    const originalDate = (editProviderEntryData.value && (editProviderEntryData.value as any).date)
-      ? (editProviderEntryData.value as any).date
-      : (editProviderData.value as any)?.date;
+    const originalDate =
+      editProviderEntryData.value && (editProviderEntryData.value as any).date
+        ? (editProviderEntryData.value as any).date
+        : (editProviderData.value as any)?.date;
 
     console.log('InicioViewComponent.reassignProviderFromModal called', {
       editingProviderEntryId: editingProviderEntryId.value,
@@ -887,18 +894,29 @@ async function reassignProviderFromModal(newDate: string | null) {
 
     console.log('InicioViewComponent.reassignProviderFromModal - result', res);
     if (!res || !res.moved) {
-      console.warn('InicioViewComponent.reassignProviderFromModal - move did not occur, performing fallback remove+create', res && res.error ? res.error : res);
+      console.warn(
+        'InicioViewComponent.reassignProviderFromModal - move did not occur, performing fallback remove+create',
+        res && res.error ? res.error : res
+      );
       // Fallback: perform explicit remove + create to ensure the entry moves buckets
       try {
-        const srcDate = originalDate ? String(originalDate).slice(0,10) : (budgetController.getSelectedDate && budgetController.getSelectedDate()) || String(new Date()).slice(0,10);
-        const destDate = String(newDate).slice(0,10);
+        const srcDate = originalDate
+          ? String(originalDate).slice(0, 10)
+          : (budgetController.getSelectedDate &&
+              budgetController.getSelectedDate()) ||
+            String(new Date()).slice(0, 10);
+        const destDate = String(newDate).slice(0, 10);
 
         // load source bucket
-        try { budgetController.setDate({ date: srcDate }); } catch (err) {}
+        try {
+          budgetController.setDate({ date: srcDate });
+        } catch (err) {}
         await budgetController.loadDataForDate({ date: srcDate });
 
         const srcEntries = budgetController.getEntries();
-        const srcEntry = srcEntries.find((en: any) => String(en.id) === String(editingProviderEntryId.value));
+        const srcEntry = srcEntries.find(
+          (en: any) => String(en.id) === String(editingProviderEntryId.value)
+        );
         if (srcEntry) {
           const payload: any = {
             name: srcEntry.name,
@@ -916,18 +934,28 @@ async function reassignProviderFromModal(newDate: string | null) {
           await budgetController.saveData();
 
           // add to dest
-          try { budgetController.setDate({ date: destDate }); } catch (err) {}
+          try {
+            budgetController.setDate({ date: destDate });
+          } catch (err) {}
           await budgetController.loadDataForDate({ date: destDate });
-          if ((srcEntry as any).entryType === 'ingreso') budgetController.addIngreso(payload);
+          if ((srcEntry as any).entryType === 'ingreso')
+            budgetController.addIngreso(payload);
           else budgetController.addEgreso(payload);
           await budgetController.saveData();
 
-          console.log('InicioViewComponent.reassignProviderFromModal - fallback move completed');
+          console.log(
+            'InicioViewComponent.reassignProviderFromModal - fallback move completed'
+          );
         } else {
-          console.warn('InicioViewComponent.reassignProviderFromModal - fallback: source entry not found');
+          console.warn(
+            'InicioViewComponent.reassignProviderFromModal - fallback: source entry not found'
+          );
         }
       } catch (err) {
-        console.error('InicioViewComponent.reassignProviderFromModal - fallback error', err);
+        console.error(
+          'InicioViewComponent.reassignProviderFromModal - fallback error',
+          err
+        );
       }
     }
   } catch (err) {
@@ -940,7 +968,8 @@ async function reassignProviderFromModal(newDate: string | null) {
   editingProviderEntryId.value = null;
   editProviderData.value = null;
   try {
-    const sel = budgetController.getSelectedDate && budgetController.getSelectedDate();
+    const sel =
+      budgetController.getSelectedDate && budgetController.getSelectedDate();
     if (sel) await budgetController.loadDataForDate({ date: sel });
   } catch (_e) {}
 }

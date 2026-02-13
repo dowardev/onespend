@@ -1,42 +1,39 @@
-## [v0.51.0] - 2026-02-11
+## [v0.52.0] - 2026-02-12
 
 ### Features
 
-- **Provider Entry Date Reassignment**: Add ability to move provider entries between dates directly from the EditProviderModal
-  - New date picker popover accessible via ellipsis button in modal header (entry mode only)
-  - Seamless entry reassignment with `reassign-date` event emitted to parent components
-  - Real-time date synchronization with ion-datetime picker component
+- Move Day Summary to modal and improve day overview UX
+  - Day summary is now available in a dedicated modal with improved layout and accessibility
 
 ### Improvements
 
-- **Entry Reassignment Reliability**: Enhanced `useReassignEntry` composable with improved fallback logic
-  - Capture created entry IDs directly from `addIngreso`/`addEgreso` return values
-  - More reliable entry verification after move operations
+- Provider reassignment reliability and edit flow
+  - Improve fallback logic when moving provider entries between dates to prefer move.Verify and perform remove+create only when needed
+  - Add defensive date handling and clearer debug logging in `InicioViewComponent`
 
-- **Budget Controller API**: Modified `addIngreso` and `addEgreso` methods to return created entry objects
-  - Enables better tracking of newly created entries for reassignment workflows
+- UI and template refactors in Budget views
+  - Restructure `BudgetView.vue` template to simplify segments and centralize date navigation buttons
+  - Consistent spacing, import formatting, and template class usage across components
+  - Adjust grid column sizes for `InicioViewComponent` and `ProvidersComponent` for better responsiveness
 
-- **Provider Editing Flow**: Enhanced InicioViewComponent with dedicated provider entry editing support
-  - New `editProviderEntryData` ref for tracking entry-specific data
-  - Added `reassignProviderFromModal` handler with comprehensive fallback logic
-  - Improved error handling and debug logging throughout reassignment process
+- Day summary component polish
+  - `DaySummaryModal.vue` revamped: clearer list sections (Totals, Top Providers, Top Accounts, Details) and improved formatting
+  - Computed and helper utilities cleaned up for stable formatting and edge-case handling
 
-### Code Quality
+### Fixes
 
-- **Component Refactoring**: Improved code formatting and consistency across budget views
-  - Better error handling in ProvidersComponent modal opening logic
-  - Simplified ProviderCardComponent click handler
-  - Enhanced type safety and defensive programming patterns
+- Minor bug and defensive fixes across budget components
+  - Normalize timestamp and date parsing in reassignment flows and datetime pickers
+  - Prevent unsafe array operations and coercions; improve string/number comparisons
 
-### Files Changed
+### Files Changed (staged)
 
-- `front/src/composables/useReassignEntry.ts` — Improved fallback logic to capture created entry IDs
-- `front/src/controllers/budgetController.ts` — Modified addIngreso/addEgreso to return created entries
-- `front/src/views/budget/InicioViewComponent.vue` — Added provider entry editing and reassignment handlers
-- `front/src/views/budget/ProviderCardComponent.vue` — Simplified click handler implementation
-- `front/src/views/budget/ProvidersComponent.vue` — Enhanced error handling and formatting
-- `front/src/views/budget/components/EditProviderModal.vue` — Added date reassignment popover and datetime picker
-- `front/package.json` — Bump version to 0.51.0
+- `front/src/views/budget/BudgetView.vue`
+- `front/src/views/budget/InicioViewComponent.vue`
+- `front/src/views/budget/ProvidersComponent.vue`
+- `front/src/views/budget/components/DaySummaryModal.vue`
+- `front/src/views/budget/components/EditEntryModal.vue`
+- `front/package.json` — bump version to 0.52.0
 
 ---
 
