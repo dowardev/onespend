@@ -1,3 +1,37 @@
+## [v0.53.0] - 2026-02-15
+
+### Features
+
+- **Entry Date Selection**: Add date picker for new income/expense entries
+  - Users can now select a custom date when creating new entries via EditEntryModal
+  - Date picker popover with "Today" shortcut and apply/cancel actions
+  - Entries are saved to the selected date bucket, not just the currently selected date
+  - Date displayed in format DD/MM/YY in the entry form
+
+### Improvements
+
+- **Multi-Date Entry Support**: Save entries to any date from the entry creation modal
+  - `addIngreso()` and `addEgreso()` methods in budgetController now accept optional `date` parameter
+  - New `saveEntryToDate()` private method handles saving entries to non-current date buckets
+  - Automatically serializes entries to plain objects to avoid Proxy serialization issues
+  - Console logging for debugging date assignments and bucket saves
+
+### Refactor
+
+- **Template Organization**: Clean up section comments in TemplateView.vue
+  - Consolidated and standardized section comment structure
+  - Fixed typo: "ansd" → "and" in comments
+
+### Files Changed (staged)
+
+- `front/src/controllers/budgetController.ts` — Add date parameter support and cross-date entry saving
+- `front/src/views/TemplateView.vue` — Refactor section comments
+- `front/src/views/budget/InicioViewComponent.vue` — Pass date through entry save flow
+- `front/src/views/budget/components/EditEntryModal.vue` — Add date picker UI and entry date state management
+- `front/package.json` — Bump version to 0.53.0
+
+---
+
 ## [v0.52.0] - 2026-02-12
 
 ### Features

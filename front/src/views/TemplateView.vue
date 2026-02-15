@@ -23,15 +23,10 @@
 </template>
 
 <script lang="ts" setup>
-// ionic components imports
-// end ionic components imports
+// imports
+// Ejemplo: ionic,vue,ionicons
+// end 
 
-// ionic icons
-// end ionic icons
-
-// other imports
-// vue,etc
-// end other imports
 
 // controllers
 // end controllers
@@ -39,8 +34,8 @@
 // components
 // end components
 
-// interface ansd types imports
-// end interface ansd types imports
+// interface and types imports
+// end interface and types imports
 
 // main
 // this section will contain elements that are necessary for the component such as props, emits, etc.

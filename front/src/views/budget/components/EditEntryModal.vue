@@ -35,6 +35,7 @@
           </ion-button>
           <!-- Ellipsis button opens a popover with the date picker -->
           <ion-button
+            v-if="entryData.id"
             fill="clear"
             title="Más"
             @click="openReassignPopover($event)"
@@ -88,6 +89,19 @@
                 placeholder="Nombre"
                 autofocus
               ></ion-input>
+            </ion-item>
+
+            <ion-item
+              lines="full"
+              class="transparent"
+              button
+              @click="openEntryDatePopover"
+            >
+              <ion-label>Fecha</ion-label>
+
+              <ion-label slot="end">{{
+                formatShortDate(entryDateISO)
+              }}</ion-label>
             </ion-item>
           </div>
         </ion-list>
@@ -302,6 +316,7 @@
       </template>
     </ion-content>
 
+    <!-- popovers -->
     <!-- Popover with date picker (opened from header ellipsis) -->
     <ion-popover
       :is-open="popoverState.open"
@@ -315,12 +330,12 @@
             <ion-datetime
               v-if="showPicker"
               ref="reassignPicker"
-              :value="reassignDateISO"
               :key="reassignDateISO"
               v-model="reassignDateISO"
+              :value="reassignDateISO"
               presentation="date"
               style="background: transparent; width: 100%"
-              @ionChange="onReassignDatetimeChange"
+              @ion-change="onReassignDatetimeChange"
             ></ion-datetime>
           </ion-item>
 
@@ -344,6 +359,33 @@
         </div>
       </ion-content>
     </ion-popover>
+
+    <!-- Popover for entry date picker (form) -->
+    <ion-popover
+      :is-open="entryDatePopoverState.open"
+      :event="entryDatePopoverState.event"
+      @did-dismiss="entryDatePopoverState.open = false"
+    >
+      <ion-content>
+        <ion-datetime
+          :key="pickerDateKey"
+          ref="pickerDateRef"
+          v-model="pickerDateISO"
+          presentation="date"
+          style="background: transparent; width: 100%"
+          @ion-change="onPickerDateChange"
+        >
+          <ion-buttons slot="buttons">
+            <ion-button color="primary" @click="goToToday"> Hoy </ion-button>
+
+            <ion-button color="primary" @click="confirmPicker">
+              Aplicar
+            </ion-button>
+          </ion-buttons>
+        </ion-datetime>
+      </ion-content>
+    </ion-popover>
+    <!-- end popovers -->
   </ion-modal>
 </template>
 
@@ -353,27 +395,27 @@ import {
   IonModal,
   IonHeader,
   IonToolbar,
-  IonButtons,
-  IonButton,
-  IonIcon,
   IonTitle,
+  IonButton,
+  IonButtons,
+  IonIcon,
   IonContent,
   IonGrid,
   IonRow,
   IonCol,
   IonSegment,
   IonSegmentButton,
-  IonLabel,
   IonList,
   IonItem,
+  IonInput,
   IonSelect,
   IonSelectOption,
-  IonInput,
-  IonCard,
+  IonLabel,
   IonNote,
-  IonListHeader,
-  IonToast,
+  IonAlert,
+  IonDatetime,
   IonPopover,
+  IonPopoverController,
 } from '@ionic/vue';
 
 import {
@@ -443,6 +485,17 @@ const entryItems = ref<
 const reassignDate = ref<string | null>(null);
 // reassignDateISO holds full ISO value bound to ion-datetime (some Ionic versions need full ISO)
 const reassignDateISO = ref<string | null>(null);
+// entryDateISO holds the date for new entries created via the modal
+const entryDateISO = ref<string | null>(null);
+// State for entry date picker popover in form
+const entryDatePopoverState = reactive({
+  open: false,
+  event: null as Event | null,
+});
+const showEntryDatePicker = ref(true);
+const pickerDateISO = ref<string | null>(null);
+const pickerDateRef = ref<any>(null);
+const pickerDateKey = ref(0);
 const popoverState = reactive({ open: false, event: null as Event | null });
 const reassignPicker = ref<any>(null);
 const showToast = ref(false);
@@ -455,7 +508,6 @@ const reassignInitialShort = ref<string | null>(null);
 
 async function openReassignPopover(e: Event) {
   try {
-    // eslint-disable-next-line no-console
     console.log(
       'EditEntryModal.openReassignPopover - reassignDateISO:',
       reassignDateISO.value,
@@ -541,7 +593,6 @@ function onReassignDatetimeChange(e: any) {
     reassignDate.value = iso.slice(0, 10);
     // debug log removed
   } catch (err) {
-    // eslint-disable-next-line no-console
     console.error('EditEntryModal.onReassignDatetimeChange error', err);
   }
 }
@@ -549,7 +600,7 @@ async function handleApplyReassign() {
   // Attempt to read the picker's raw/current value first — sometimes v-model is not updated yet
   let finalDate: string | null = null;
   try {
-    const picker = reassignPicker && (reassignPicker as any).value;
+    const picker = reassignPicker.value && (reassignPicker as any).value;
     const pickerRaw = picker
       ? (picker.value ?? (picker.getValue ? picker.getValue() : undefined))
       : undefined;
@@ -576,11 +627,11 @@ async function handleApplyReassign() {
 
   // Debug: indicate handler invoked and show picker/raw values
   try {
-    const picker = reassignPicker && (reassignPicker as any).value;
+    const picker = reassignPicker.value && (reassignPicker as any).value;
     const pickerRaw = picker
       ? (picker.value ?? (picker.getValue ? picker.getValue() : undefined))
       : undefined;
-    // eslint-disable-next-line no-console
+
     console.log(
       'EditEntryModal.handleApplyReassign invoked - finalDate:',
       finalDate,
@@ -723,6 +774,58 @@ async function handleApplyReassign() {
     showToast.value = true;
   }
 }
+
+// Entry date picker functions for form
+function formatShortDate(isoDate: string | null): string {
+  if (!isoDate) return '';
+  try {
+    const date = new Date(isoDate);
+    return date.toLocaleDateString('es-MX', {
+      day: '2-digit',
+      month: '2-digit',
+      year: '2-digit',
+    });
+  } catch (e) {
+    return isoDate.slice(0, 10);
+  }
+}
+
+async function openEntryDatePopover(e: Event) {
+  // Initialize picker with current entry date
+  pickerDateISO.value = entryDateISO.value;
+  showEntryDatePicker.value = false;
+  await nextTick();
+  showEntryDatePicker.value = true;
+  entryDatePopoverState.event = e;
+  entryDatePopoverState.open = true;
+}
+
+function cancelPicker() {
+  pickerDateRef.value?.$el.cancel();
+  entryDatePopoverState.open = false;
+}
+
+function onPickerDateChange(event: CustomEvent) {
+  // Actualizar pickerDateISO cuando el usuario selecciona una fecha manualmente
+  pickerDateISO.value = event.detail.value;
+}
+
+function confirmPicker() {
+  pickerDateRef.value?.$el.confirm();
+  entryDateISO.value = pickerDateISO.value;
+  entryDatePopoverState.open = false;
+  console.log(
+    '✅ Fecha aplicada:',
+    format(new Date(entryDateISO.value), 'dd/MM/yy')
+  );
+}
+
+function goToToday() {
+  // Establecer la fecha de hoy y forzar re-renderizado
+  const today = new Date();
+  pickerDateISO.value = format(today, 'yyyy-MM-dd') + 'T00:00:00';
+  pickerDateKey.value++;
+}
 // End Vars
 
 // Functions
@@ -769,7 +872,7 @@ function handleSave() {
     0
   );
 
-  const payload = {
+  const payload: any = {
     entryType: entryData.value.entryType,
     name: entryData.value.name,
     amount: totalAmount,
@@ -777,9 +880,18 @@ function handleSave() {
     groups: entryItems.value,
   };
 
-  // Debug log to help trace save events from the modal
+  // Include date for new entries
+  if (!entryData.value.id && entryDateISO.value) {
+    payload.date = entryDateISO.value.slice(0, 10);
+  }
+
+  // Debug log to trace date in payload
   try {
-    // debug log removed
+    console.log('📝 EditEntryModal.handleSave - payload:', {
+      id: entryData.value.id,
+      date: payload.date,
+      entryDateISO: entryDateISO.value
+    });
   } catch (e) {}
 
   emit('save', payload);
@@ -828,14 +940,20 @@ const canAddMoreItems = computed(() => {
 
 // Watch
 watch(
-  () => props.entryData.id,
-  async (newId, oldId) => {
-    if (newId !== oldId) {
+  () => props.entryData,
+  async (newData, oldData) => {
+    const newId = newData?.id;
+    const oldId = oldData?.id;
+    const isNewEntry = !newId;
+    const dateChanged = newData?.date !== oldData?.date;
+
+    // Trigger on id change, or when creating new entry and date changes
+    if (newId !== oldId || (isNewEntry && dateChanged)) {
       if (newId) {
         const newData = props.entryData;
         try {
           // quick debug to confirm modal received entryData
-          // eslint-disable-next-line no-console
+
           console.log(
             'EditEntryModal.watch - opening modal for id:',
             newData.id,
@@ -932,7 +1050,8 @@ watch(
 
           // try to log underlying picker state and force underlying input value
           try {
-            const picker = reassignPicker && (reassignPicker as any).value;
+            const picker =
+              reassignPicker.value && (reassignPicker as any).value;
             // debug log removed
             try {
               const el = picker.el ?? picker.$el ?? picker;
@@ -952,7 +1071,6 @@ watch(
                   input.dispatchEvent(new Event('change', { bubbles: true }));
                   // debug log removed
                 } catch (err) {
-                  // eslint-disable-next-line no-console
                   console.warn(
                     'EditEntryModal - could not set underlying input value',
                     err
@@ -977,12 +1095,30 @@ watch(
         } catch (e) {
           // ignore
         }
-      } else if (
-        entryItems.value.length === 0 ||
-        (entryItems.value.length === 1 && entryItems.value[0].amount === 0)
-      ) {
+      } else {
+        // Always reset entryItems for new entries
         entryItems.value = [{ amount: 0, accountId: getDefaultAccountId() }];
         addEntrySegment.value = 'entry';
+        // Always initialize entryDateISO for new entries from props or current date
+        try {
+          const raw = (props.entryData as any)?.date;
+          if (raw && typeof raw === 'string' && raw.includes('T')) {
+            entryDateISO.value =
+              raw.length >= 19 ? raw.slice(0, 19) : raw + 'T00:00:00';
+          } else if (raw && typeof raw === 'string') {
+            entryDateISO.value = `${raw.slice(0, 10)}T00:00:00`;
+          } else if (raw && typeof raw === 'number') {
+            entryDateISO.value =
+              format(new Date(raw), 'yyyy-MM-dd') + 'T00:00:00';
+          } else {
+            entryDateISO.value = format(new Date(), 'yyyy-MM-dd') + 'T00:00:00';
+          }
+          // Also initialize pickerDateISO to match entryDateISO
+          pickerDateISO.value = entryDateISO.value;
+        } catch (e) {
+          entryDateISO.value = format(new Date(), 'yyyy-MM-dd') + 'T00:00:00';
+          pickerDateISO.value = entryDateISO.value;
+        }
       }
     }
   },
