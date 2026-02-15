@@ -1,3 +1,24 @@
+## [v0.53.3] - 2026-02-15
+
+### Refactor
+
+- **EditProviderModal Rework**: Heavy refactor and UI adjustment to provider edit modal
+  - Move date reassignment UI into the modal form for entry mode (removed header ellipsis trigger)
+  - Reorganize script sections (imports → controllers → components → interfaces → main → vars → watch → computed → functions)
+  - Improve types and interfaces (ProviderItem, Account, Supplier, Product, PendingProduct, ProviderData)
+  - Add robust date parsing/normalization helpers and sync between ISO/short date values
+  - Replace fragile v-model/picker handling with remount strategy and computed `canApplyReassign` for reliable Apply enablement
+  - Remove debug console/log statements and other noisy code paths
+  - Small API emission cleanup: emit('reassign-date', date) used consistently for parent handling
+  - Net changes in modal: ~412 insertions, ~499 deletions (restructure + bug fixes)
+
+### Files Changed (staged)
+
+- `front/src/views/budget/components/EditProviderModal.vue` — Rework modal: inline date selector for entry mode, types, helpers and cleanup
+- `front/package.json` — Bump version to 0.53.3
+
+---
+
 ## [v0.53.2] - 2026-02-15
 
 ### Refactor
