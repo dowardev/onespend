@@ -4,6 +4,7 @@
     :keep-contents-mounted="true"
     @did-dismiss="$emit('dismiss')"
   >
+    <!-- header -->
     <ion-header class="ion-no-border" mode="ios">
       <ion-toolbar>
         <ion-buttons>
@@ -35,11 +36,12 @@
           </ion-button>
         </ion-buttons>
       </ion-toolbar>
-      <!-- Reassign toolbar removed — only the Ionic picker remains in content -->
     </ion-header>
+    <!-- end header -->
 
+    <!-- content -->
     <ion-content class="ion-padding-end">
-      <!-- Reasignar fecha (Ionic picker) - only one instance remains further down in the content -->
+      <!-- New entry segment selector -->
       <ion-grid v-if="!entryData.id">
         <ion-row class="ion-justify-content-center">
           <ion-col size="6">
@@ -56,6 +58,7 @@
         </ion-row>
       </ion-grid>
 
+      <!-- New entry - Entry form -->
       <template v-if="!entryData.id && addEntrySegment === 'entry'">
         <ion-list class="transparent">
           <div class="list-content">
@@ -67,14 +70,12 @@
                 label-placement="stacked"
               >
                 <ion-select-option value="ingreso">Ingreso</ion-select-option>
-
                 <ion-select-option value="egreso">Egreso</ion-select-option>
               </ion-select>
             </ion-item>
 
             <ion-item class="transparent" lines="none">
               <ion-label position="stacked">Nombre</ion-label>
-
               <ion-input
                 v-model="entryData.name"
                 placeholder="Nombre"
@@ -89,7 +90,6 @@
               @click="openEntryDatePopover"
             >
               <ion-label>Fecha</ion-label>
-
               <ion-label slot="end">{{
                 formatShortDate(entryDateISO)
               }}</ion-label>
@@ -100,7 +100,6 @@
         <ion-list class="transparent">
           <ion-list-header>
             <ion-label>Detalles</ion-label>
-
             <ion-button
               :disabled="!canAddMoreItems || isDayClosed"
               @click="addEntryItem"
@@ -118,7 +117,6 @@
             >
               <ion-item lines="full" class="transparent">
                 <ion-label position="stacked">Cantidad</ion-label>
-
                 <ion-input
                   v-model.number="item.amount"
                   type="number"
@@ -167,6 +165,7 @@
         </ion-list>
       </template>
 
+      <!-- New entry - Provider selection -->
       <template v-if="!entryData.id && addEntrySegment === 'provider'">
         <ion-list>
           <div v-if="providersTodayWithData.length" class="list-content">
@@ -201,6 +200,7 @@
         </ion-list>
       </template>
 
+      <!-- Edit existing entry -->
       <template v-if="entryData.id">
         <ion-list class="transparent">
           <div class="list-content">
@@ -211,14 +211,12 @@
                 label-placement="stacked"
               >
                 <ion-select-option value="ingreso">Ingreso</ion-select-option>
-
                 <ion-select-option value="egreso">Egreso</ion-select-option>
               </ion-select>
             </ion-item>
 
             <ion-item class="transparent" lines="none">
               <ion-label position="stacked">Nombre</ion-label>
-
               <ion-input
                 v-model="entryData.name"
                 placeholder="Nombre"
@@ -233,7 +231,6 @@
               @click="openEntryDatePopover"
             >
               <ion-label>Fecha</ion-label>
-
               <ion-label slot="end">{{
                 formatShortDate(entryDateISO)
               }}</ion-label>
@@ -244,7 +241,6 @@
         <ion-list class="transparent">
           <ion-list-header>
             <ion-label>Detalles</ion-label>
-
             <ion-button
               :disabled="!canAddMoreItems || isDayClosed"
               @click="addEntryItem"
@@ -262,7 +258,6 @@
             >
               <ion-item class="transparent">
                 <ion-label position="stacked">Cantidad</ion-label>
-
                 <ion-input
                   v-model.number="item.amount"
                   type="number"
@@ -296,6 +291,7 @@
                   <ion-icon :icon="addOutline"></ion-icon>
                 </ion-button>
               </ion-item>
+
               <ion-note
                 v-if="accountsList.length === 0"
                 color="warning"
@@ -314,14 +310,14 @@
                 >
               </ion-item>
             </ion-card>
-            <!-- Reassign control moved into popover (opened via ellipsis) -->
           </div>
         </ion-list>
       </template>
     </ion-content>
+    <!-- end content -->
 
     <!-- popovers -->
-    <!-- Popover with date picker (opened from header ellipsis) -->
+    <!-- Reassign date popover -->
     <ion-popover
       :is-open="popoverState.open"
       :event="popoverState.event"
@@ -364,7 +360,7 @@
       </ion-content>
     </ion-popover>
 
-    <!-- Popover for entry date picker (form) -->
+    <!-- Entry date picker popover -->
     <ion-popover
       :is-open="entryDatePopoverState.open"
       :event="entryDatePopoverState.event"
@@ -381,7 +377,6 @@
         >
           <ion-buttons slot="buttons">
             <ion-button color="primary" @click="goToToday"> Hoy </ion-button>
-
             <ion-button color="primary" @click="confirmPicker">
               Aplicar
             </ion-button>
@@ -390,11 +385,14 @@
       </ion-content>
     </ion-popover>
     <!-- end popovers -->
+
+    <!-- alerts -->
+    <!-- end alerts -->
   </ion-modal>
 </template>
 
 <script setup lang="ts">
-// Imports
+// imports
 import {
   IonModal,
   IonHeader,
@@ -410,31 +408,35 @@ import {
   IonSegment,
   IonSegmentButton,
   IonList,
+  IonListHeader,
   IonItem,
   IonInput,
   IonSelect,
   IonSelectOption,
   IonLabel,
   IonNote,
-  IonAlert,
+  IonCard,
   IonDatetime,
   IonPopover,
-  IonPopoverController,
 } from '@ionic/vue';
-
 import {
   addOutline,
   closeOutline,
   saveOutline,
   trashOutline,
-  calendarOutline,
-  ellipsisHorizontalOutline,
-  ellipsisVerticalOutline,
 } from 'ionicons/icons';
 import { computed, ref, watch, onMounted, reactive, nextTick } from 'vue';
-import budgetController from '@/controllers/budgetController';
 import { format } from 'date-fns';
+// end imports
 
+// controllers
+import budgetController from '@/controllers/budgetController';
+// end controllers
+
+// components
+// end components
+
+// interface and types imports
 interface EntryGroup {
   amount: number;
   accountId: string | number | null;
@@ -446,13 +448,9 @@ interface ProviderSummary {
   estimated: number;
   accountId: string | number | null;
 }
-// End Imports
+// end interface and types imports
 
-// Components
-
-// End Components
-
-// Vars
+// main
 const props = defineProps<{
   isOpen: boolean;
   entryData: {
@@ -479,8 +477,11 @@ const emit = defineEmits([
   'quick-account',
   'select-provider',
   'reassign-date',
+  'reassigned',
 ]);
+// end main
 
+// vars and const
 const addEntrySegment = ref('entry');
 const entryItems = ref<
   Array<{ amount: number; accountId: string | number | null }>
@@ -509,18 +510,265 @@ const toastColor = ref<'success' | 'danger' | 'primary'>('success');
 const showPicker = ref(true);
 // store the initial date shown in the picker to detect no-op applies
 const reassignInitialShort = ref<string | null>(null);
+// end vars and const
 
-async function openReassignPopover(e: Event) {
+// watch
+watch(
+  () => props.entryData,
+  async (newData, oldData) => {
+    const newId = newData?.id;
+    const oldId = oldData?.id;
+    const isNewEntry = !newId;
+    const dateChanged = newData?.date !== oldData?.date;
+
+    // Trigger on id change, or when creating new entry and date changes
+    if (newId !== oldId || (isNewEntry && dateChanged)) {
+      const defaultAccountId = getDefaultAccountId();
+
+      if (newId) {
+        // Editing existing entry
+        entryItems.value = initEntryItems(newData, defaultAccountId);
+
+        const resolvedDate = resolveEntryDate(newData);
+        reassignDate.value = resolvedDate;
+        reassignDateISO.value = toISODateTime(resolvedDate);
+        entryDateISO.value = reassignDateISO.value;
+        pickerDateISO.value = reassignDateISO.value;
+
+        // Force remount of ion-datetime to ensure it reads the new value
+        showPicker.value = false;
+        await nextTick();
+        showPicker.value = true;
+      } else {
+        // Creating new entry
+        entryItems.value = [{ amount: 0, accountId: defaultAccountId }];
+        addEntrySegment.value = 'entry';
+
+        const date = newData?.date
+          ? parseEntryDate(newData.date)
+          : format(new Date(), 'yyyy-MM-dd');
+        const isoDate = toISODateTime(date);
+        entryDateISO.value = isoDate;
+        pickerDateISO.value = isoDate;
+      }
+    }
+  },
+  { immediate: true }
+);
+// end watch
+
+// computed
+const isFormValid = computed(() => {
+  return (
+    entryData.value.name.trim().length > 0 &&
+    entryData.value.entryType &&
+    entryItems.value.length > 0 &&
+    entryItems.value.every(
+      item => Number(item.amount) > 0 && item.accountId != null
+    )
+  );
+});
+
+const entryData = computed(() => props.entryData);
+
+const canAddMoreItems = computed(() => {
+  return entryItems.value.length < props.accountsList.length + 2;
+});
+// end computed
+
+// onmounted
+onMounted(() => {
+  // Ensure entryItems have a default accountId if accounts are available
   try {
-    console.log(
-      'EditEntryModal.openReassignPopover - reassignDateISO:',
-      reassignDateISO.value,
-      'reassignDate:',
-      reassignDate.value,
-      'showPicker:',
-      showPicker.value
-    );
-  } catch (err) {}
+    if (
+      entryItems.value.length > 0 &&
+      (entryItems.value[0].accountId === null ||
+        entryItems.value[0].accountId === undefined) &&
+      props.accountsList &&
+      props.accountsList.length > 0
+    ) {
+      entryItems.value = entryItems.value.map(item => ({
+        amount: Number(item.amount) || 0,
+        accountId: item.accountId ?? props.accountsList[0].id,
+      }));
+    }
+  } catch (e) {}
+});
+// end onmounted
+
+// functions
+// Date helpers
+function parseEntryDate(dateValue: unknown): string {
+  if (!dateValue) return format(new Date(), 'yyyy-MM-dd');
+
+  if (typeof dateValue === 'string') {
+    return dateValue.length >= 10 ? dateValue.slice(0, 10) : dateValue;
+  }
+
+  if (typeof dateValue === 'number') {
+    return format(new Date(dateValue), 'yyyy-MM-dd');
+  }
+
+  if (dateValue instanceof Date) {
+    return format(dateValue, 'yyyy-MM-dd');
+  }
+
+  return String(dateValue).slice(0, 10);
+}
+
+function toISODateTime(dateStr: string): string {
+  if (dateStr.includes('T')) {
+    return dateStr.length >= 19 ? dateStr.slice(0, 19) : dateStr + 'T00:00:00';
+  }
+  return `${dateStr}T00:00:00`;
+}
+
+function resolveEntryDate(entry: any): string {
+  if (entry?.date) {
+    return parseEntryDate(entry.date);
+  }
+
+  // Try to find date from store
+  if (entry?.id) {
+    const fromStore = budgetController
+      .getEntries()
+      .find((e: any) => String(e.id) === String(entry.id));
+    if (fromStore?.date) return parseEntryDate(fromStore.date);
+  }
+
+  // Fallback to controller's selected date
+  const selectedDate = budgetController.getSelectedDate?.();
+  if (selectedDate) return parseEntryDate(selectedDate);
+
+  return format(new Date(), 'yyyy-MM-dd');
+}
+
+function initEntryItems(entry: any, defaultAccountId: string | number | null) {
+  if (entry?.groups?.length > 0) {
+    return entry.groups.map((g: EntryGroup) => ({
+      amount: Number(g.amount) || 0,
+      accountId: g.accountId ?? defaultAccountId,
+    }));
+  }
+
+  return [
+    {
+      amount: Number(entry?.amount) || 0,
+      accountId: entry?.accountId || defaultAccountId,
+    },
+  ];
+}
+// end Date helpers
+
+function getDefaultAccountId() {
+  return props.accountsList.length > 0 ? props.accountsList[0].id : null;
+}
+
+const availableAccountsForItem = (currentIndex: number) => {
+  const usedAccountIds = entryItems.value
+    .filter((_: unknown, idx: number) => idx !== currentIndex)
+    .map((item: { accountId: string | number | null }) =>
+      String(item.accountId)
+    )
+    .filter((id: string) => id !== 'null' && id !== 'undefined' && id !== '');
+  return props.accountsList.filter(
+    (acc: { id: string | number }) => !usedAccountIds.includes(String(acc.id))
+  );
+};
+
+function formatProviderAmount(params: { provider: ProviderSummary }) {
+  const { provider } = params;
+  return new Intl.NumberFormat('es-MX', {
+    style: 'currency',
+    currency: 'MXN',
+  }).format(Number(provider?.estimated) || 0);
+}
+
+function selectProvider(params: { provider: ProviderSummary }) {
+  const { provider } = params;
+  emit('select-provider', provider);
+}
+
+function addEntryItem() {
+  if (canAddMoreItems.value) {
+    entryItems.value.push({ amount: 0, accountId: getDefaultAccountId() });
+  }
+}
+
+function handleSave() {
+  if (!isFormValid.value) return;
+
+  const totalAmount = entryItems.value.reduce(
+    (sum, item) => sum + (Number(item.amount) || 0),
+    0
+  );
+
+  const payload: any = {
+    entryType: entryData.value.entryType,
+    name: entryData.value.name,
+    amount: totalAmount,
+    accountId: entryItems.value[0]?.accountId ?? null,
+    groups: entryItems.value,
+  };
+
+  // Include date for both new entries and updates
+  if (entryDateISO.value) {
+    payload.date = entryDateISO.value.slice(0, 10);
+  }
+
+  emit('save', payload);
+}
+
+// Entry date picker functions for form
+function formatShortDate(isoDate: string | null): string {
+  if (!isoDate) return '';
+  try {
+    const date = new Date(isoDate);
+    return date.toLocaleDateString('es-MX', {
+      day: '2-digit',
+      month: '2-digit',
+      year: '2-digit',
+    });
+  } catch (e) {
+    return isoDate.slice(0, 10);
+  }
+}
+
+async function openEntryDatePopover(e: Event) {
+  // Initialize picker with current entry date
+  pickerDateISO.value = entryDateISO.value;
+  showEntryDatePicker.value = false;
+  await nextTick();
+  showEntryDatePicker.value = true;
+  entryDatePopoverState.event = e;
+  entryDatePopoverState.open = true;
+}
+
+function cancelPicker() {
+  pickerDateRef.value?.$el.cancel();
+  entryDatePopoverState.open = false;
+}
+
+function onPickerDateChange(event: CustomEvent) {
+  // Actualizar pickerDateISO cuando el usuario selecciona una fecha manualmente
+  pickerDateISO.value = event.detail.value;
+}
+
+function confirmPicker() {
+  pickerDateRef.value?.$el.confirm();
+  entryDateISO.value = pickerDateISO.value;
+  entryDatePopoverState.open = false;
+}
+
+function goToToday() {
+  // Establecer la fecha de hoy y forzar re-renderizado
+  const today = new Date();
+  pickerDateISO.value = format(today, 'yyyy-MM-dd') + 'T00:00:00';
+  pickerDateKey.value++;
+}
+
+// Reassign date functions
+async function openReassignPopover(e: Event) {
   // prepare ISO value for the picker before opening the popover
   try {
     // prefer already-normalized ISO, else build from short date
@@ -576,6 +824,7 @@ function applyReassignFromPopover() {
   emit('reassign-date', reassignDate.value);
   popoverState.open = false;
 }
+
 // IonDatetime change handler — normalize value and keep v-model in sync
 function onReassignDatetimeChange(e: any) {
   try {
@@ -595,11 +844,11 @@ function onReassignDatetimeChange(e: any) {
     }
     reassignDateISO.value = iso;
     reassignDate.value = iso.slice(0, 10);
-    // debug log removed
   } catch (err) {
     console.error('EditEntryModal.onReassignDatetimeChange error', err);
   }
 }
+
 async function handleApplyReassign() {
   // Attempt to read the picker's raw/current value first — sometimes v-model is not updated yet
   let finalDate: string | null = null;
@@ -628,29 +877,6 @@ async function handleApplyReassign() {
         ? String(reassignDateISO.value).slice(0, 10)
         : null);
   if (!finalDate) return;
-
-  // Debug: indicate handler invoked and show picker/raw values
-  try {
-    const picker = reassignPicker.value && (reassignPicker as any).value;
-    const pickerRaw = picker
-      ? (picker.value ?? (picker.getValue ? picker.getValue() : undefined))
-      : undefined;
-
-    console.log(
-      'EditEntryModal.handleApplyReassign invoked - finalDate:',
-      finalDate,
-      'reassignDate:',
-      reassignDate.value,
-      'reassignDateISO:',
-      reassignDateISO.value,
-      'pickerRaw:',
-      pickerRaw,
-      'initialShort:',
-      reassignInitialShort.value
-    );
-  } catch (err) {
-    // ignore
-  }
 
   // First, emit to parent so parent can react if it listens
   try {
@@ -738,12 +964,7 @@ async function handleApplyReassign() {
           await budgetController.saveData();
         }
       } catch (err) {
-        try {
-          console.error(
-            'EditEntryModal.handleApplyReassign fallback error',
-            err
-          );
-        } catch (e) {}
+        console.error('EditEntryModal.handleApplyReassign fallback error', err);
       }
     }
 
@@ -770,371 +991,11 @@ async function handleApplyReassign() {
     emit('dismiss');
     popoverState.open = false;
   } catch (err) {
-    try {
-      console.error('EditEntryModal.handleApplyReassign - error', err);
-    } catch (e) {}
+    console.error('EditEntryModal.handleApplyReassign - error', err);
     toastMessage.value = 'Error reasignando entrada';
     toastColor.value = 'danger';
     showToast.value = true;
   }
 }
-
-// Entry date picker functions for form
-function formatShortDate(isoDate: string | null): string {
-  if (!isoDate) return '';
-  try {
-    const date = new Date(isoDate);
-    return date.toLocaleDateString('es-MX', {
-      day: '2-digit',
-      month: '2-digit',
-      year: '2-digit',
-    });
-  } catch (e) {
-    return isoDate.slice(0, 10);
-  }
-}
-
-async function openEntryDatePopover(e: Event) {
-  // Initialize picker with current entry date
-  pickerDateISO.value = entryDateISO.value;
-  showEntryDatePicker.value = false;
-  await nextTick();
-  showEntryDatePicker.value = true;
-  entryDatePopoverState.event = e;
-  entryDatePopoverState.open = true;
-}
-
-function cancelPicker() {
-  pickerDateRef.value?.$el.cancel();
-  entryDatePopoverState.open = false;
-}
-
-function onPickerDateChange(event: CustomEvent) {
-  // Actualizar pickerDateISO cuando el usuario selecciona una fecha manualmente
-  pickerDateISO.value = event.detail.value;
-}
-
-function confirmPicker() {
-  pickerDateRef.value?.$el.confirm();
-  entryDateISO.value = pickerDateISO.value;
-  entryDatePopoverState.open = false;
-  console.log(
-    '✅ Fecha aplicada:',
-    format(new Date(entryDateISO.value), 'dd/MM/yy')
-  );
-}
-
-function goToToday() {
-  // Establecer la fecha de hoy y forzar re-renderizado
-  const today = new Date();
-  pickerDateISO.value = format(today, 'yyyy-MM-dd') + 'T00:00:00';
-  pickerDateKey.value++;
-}
-// End Vars
-
-// Functions
-function getDefaultAccountId() {
-  return props.accountsList.length > 0 ? props.accountsList[0].id : null;
-}
-
-const availableAccountsForItem = (currentIndex: number) => {
-  const usedAccountIds = entryItems.value
-    .filter((_: unknown, idx: number) => idx !== currentIndex)
-    .map((item: { accountId: string | number | null }) =>
-      String(item.accountId)
-    )
-    .filter((id: string) => id !== 'null' && id !== 'undefined' && id !== '');
-  return props.accountsList.filter(
-    (acc: { id: string | number }) => !usedAccountIds.includes(String(acc.id))
-  );
-};
-
-function formatProviderAmount(params: { provider: ProviderSummary }) {
-  const { provider } = params;
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-  }).format(Number(provider?.estimated) || 0);
-}
-
-function selectProvider(params: { provider: ProviderSummary }) {
-  const { provider } = params;
-  emit('select-provider', provider);
-}
-
-function addEntryItem() {
-  if (canAddMoreItems.value) {
-    entryItems.value.push({ amount: 0, accountId: getDefaultAccountId() });
-  }
-}
-
-function handleSave() {
-  if (!isFormValid.value) return;
-
-  const totalAmount = entryItems.value.reduce(
-    (sum, item) => sum + (Number(item.amount) || 0),
-    0
-  );
-
-  const payload: any = {
-    entryType: entryData.value.entryType,
-    name: entryData.value.name,
-    amount: totalAmount,
-    accountId: entryItems.value[0]?.accountId ?? null,
-    groups: entryItems.value,
-  };
-
-  // Include date for both new entries and updates
-  if (entryDateISO.value) {
-    payload.date = entryDateISO.value.slice(0, 10);
-  }
-
-  // Debug log to trace date in payload
-  try {
-    console.log('📝 EditEntryModal.handleSave - payload:', {
-      id: entryData.value.id,
-      date: payload.date,
-      entryDateISO: entryDateISO.value
-    });
-  } catch (e) {}
-
-  emit('save', payload);
-}
-// End Functions
-
-// Life cycle
-onMounted(() => {
-  // Ensure entryItems have a default accountId if accounts are available
-  try {
-    if (
-      entryItems.value.length > 0 &&
-      (entryItems.value[0].accountId === null ||
-        entryItems.value[0].accountId === undefined) &&
-      props.accountsList &&
-      props.accountsList.length > 0
-    ) {
-      entryItems.value = entryItems.value.map(item => ({
-        amount: Number(item.amount) || 0,
-        accountId: item.accountId ?? props.accountsList[0].id,
-      }));
-    }
-  } catch (e) {}
-});
-
-// End Life cycle
-
-// Computed
-const isFormValid = computed(() => {
-  return (
-    entryData.value.name.trim().length > 0 &&
-    entryData.value.entryType &&
-    entryItems.value.length > 0 &&
-    entryItems.value.every(
-      item => Number(item.amount) > 0 && item.accountId != null
-    )
-  );
-});
-
-const entryData = computed(() => props.entryData);
-
-const canAddMoreItems = computed(() => {
-  return entryItems.value.length < props.accountsList.length + 2;
-});
-// End Computed
-
-// Watch
-watch(
-  () => props.entryData,
-  async (newData, oldData) => {
-    const newId = newData?.id;
-    const oldId = oldData?.id;
-    const isNewEntry = !newId;
-    const dateChanged = newData?.date !== oldData?.date;
-
-    // Trigger on id change, or when creating new entry and date changes
-    if (newId !== oldId || (isNewEntry && dateChanged)) {
-      if (newId) {
-        const newData = props.entryData;
-        try {
-          // quick debug to confirm modal received entryData
-
-          console.log(
-            'EditEntryModal.watch - opening modal for id:',
-            newData.id,
-            'raw date:',
-            (newData as any).date
-          );
-        } catch (e) {}
-        if (
-          newData.groups &&
-          Array.isArray(newData.groups) &&
-          newData.groups.length > 0
-        ) {
-          entryItems.value = newData.groups.map((g: EntryGroup) => ({
-            amount: Number(g.amount) || 0,
-            accountId: g.accountId ?? getDefaultAccountId(),
-          }));
-        } else {
-          entryItems.value = [
-            {
-              amount: Number(newData.amount) || 0,
-              accountId: newData.accountId || getDefaultAccountId(),
-            },
-          ];
-        }
-        // initialize reassign date when editing an existing entry
-        try {
-          const raw = (newData as any).date;
-          let resolved: string | null = null;
-          // If raw is missing try to find the entry in the controller store
-          if (!raw) {
-            try {
-              const fromStore = budgetController
-                .getEntries()
-                .find((en: any) => String(en.id) === String(newData.id));
-              if (fromStore && fromStore.date) resolved = fromStore.date;
-            } catch (err) {
-              // ignore
-            }
-          } else {
-            resolved = raw as any;
-          }
-
-          if (!resolved) {
-            // try to use the controller's selected date as last resort
-            try {
-              const sel =
-                budgetController.getSelectedDate &&
-                budgetController.getSelectedDate();
-              if (sel) resolved = sel;
-            } catch (err) {}
-            reassignDate.value = resolved
-              ? String(resolved).slice(0, 10)
-              : format(new Date(), 'yyyy-MM-dd');
-          } else if (typeof resolved === 'string') {
-            reassignDate.value =
-              resolved.length >= 10 ? resolved.slice(0, 10) : resolved;
-          } else if (typeof resolved === 'number') {
-            reassignDate.value = format(new Date(resolved), 'yyyy-MM-dd');
-          } else if (resolved instanceof Date) {
-            reassignDate.value = format(resolved, 'yyyy-MM-dd');
-          } else {
-            reassignDate.value = String(resolved).slice(0, 10);
-          }
-        } catch (e) {
-          reassignDate.value = format(new Date(), 'yyyy-MM-dd');
-        }
-        // Debug: log the initialized reassignDate and ensure ISO value is set for the picker
-        try {
-          // debug log removed
-        } catch (e) {}
-
-        try {
-          const rawVal = (newData as any).date;
-          if (rawVal && typeof rawVal === 'string' && rawVal.includes('T')) {
-            reassignDateISO.value =
-              rawVal.length >= 19 ? rawVal.slice(0, 19) : rawVal + 'T00:00:00';
-          } else if (typeof rawVal === 'number') {
-            reassignDateISO.value =
-              format(new Date(rawVal), 'yyyy-MM-dd') + 'T00:00:00';
-          } else if (reassignDate.value) {
-            reassignDateISO.value = `${reassignDate.value}T00:00:00`;
-          } else {
-            reassignDateISO.value =
-              format(new Date(), 'yyyy-MM-dd') + 'T00:00:00';
-          }
-
-          // Initialize entryDateISO for the form date picker
-          entryDateISO.value = reassignDateISO.value;
-          pickerDateISO.value = reassignDateISO.value;
-
-          // Force remount of the ion-datetime so it reliably reads the ISO value
-          showPicker.value = false;
-          await nextTick();
-          showPicker.value = true;
-
-          // small delay to allow component to mount and reflect value
-          await new Promise(res => setTimeout(res, 80));
-
-          // try to log underlying picker state and force underlying input value
-          try {
-            const picker =
-              reassignPicker.value && (reassignPicker as any).value;
-            // debug log removed
-            try {
-              const el = picker.el ?? picker.$el ?? picker;
-              const input =
-                el &&
-                (el.shadowRoot
-                  ? el.shadowRoot.querySelector('input')
-                  : el.querySelector && el.querySelector('input'));
-              // if we found an input element in the shadow DOM, set its value and dispatch events
-              if (input) {
-                try {
-                  const short = reassignDateISO.value
-                    ? String(reassignDateISO.value).slice(0, 10)
-                    : '';
-                  input.value = short;
-                  input.dispatchEvent(new Event('input', { bubbles: true }));
-                  input.dispatchEvent(new Event('change', { bubbles: true }));
-                  // debug log removed
-                } catch (err) {
-                  console.warn(
-                    'EditEntryModal - could not set underlying input value',
-                    err
-                  );
-                }
-              }
-              // also try to set picker.value directly
-              try {
-                if (picker) {
-                  if (typeof picker.setValue === 'function')
-                    picker.setValue(reassignDateISO.value);
-                  else picker.value = reassignDateISO.value;
-                }
-              } catch (err) {
-                // ignore
-              }
-              // debug log removed
-            } catch (err) {}
-          } catch (err) {}
-
-          // debug log removed
-        } catch (e) {
-          // ignore
-        }
-      } else {
-        // Always reset entryItems for new entries
-        entryItems.value = [{ amount: 0, accountId: getDefaultAccountId() }];
-        addEntrySegment.value = 'entry';
-        // Always initialize entryDateISO for new entries from props or current date
-        try {
-          const raw = (props.entryData as any)?.date;
-          if (raw && typeof raw === 'string' && raw.includes('T')) {
-            entryDateISO.value =
-              raw.length >= 19 ? raw.slice(0, 19) : raw + 'T00:00:00';
-          } else if (raw && typeof raw === 'string') {
-            entryDateISO.value = `${raw.slice(0, 10)}T00:00:00`;
-          } else if (raw && typeof raw === 'number') {
-            entryDateISO.value =
-              format(new Date(raw), 'yyyy-MM-dd') + 'T00:00:00';
-          } else {
-            entryDateISO.value = format(new Date(), 'yyyy-MM-dd') + 'T00:00:00';
-          }
-          // Also initialize pickerDateISO to match entryDateISO
-          pickerDateISO.value = entryDateISO.value;
-        } catch (e) {
-          entryDateISO.value = format(new Date(), 'yyyy-MM-dd') + 'T00:00:00';
-          pickerDateISO.value = entryDateISO.value;
-        }
-      }
-    }
-  },
-  { immediate: true }
-);
-// End Watch
-</script>
-
-<script lang="ts">
-// This extra script block is intentionally empty; template-level logic is handled above.
+// end functions
 </script>
