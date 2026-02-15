@@ -183,6 +183,7 @@ class BudgetController {
     paymentType?: 'cash' | 'digital';
     accountId?: string | number | null;
     groups?: Array<{ amount: number; accountId: string | number | null }>;
+    date?: string;
   }) {
     const {
       name = '',
@@ -190,14 +191,18 @@ class BudgetController {
       paymentType = 'cash',
       accountId = null,
       groups = [],
+      date,
     } = params;
+
+    const finalDate = date || this.store.selectedDate;
+    console.log('💰 budgetController.addIngreso - date received:', date, 'selectedDate:', this.store.selectedDate, 'finalDate:', finalDate);
 
     const newIngreso: Income = {
       id: Date.now() + Math.random(),
       sync_id: `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       name,
       amount: Number(amount) || 0,
-      date: this.store.selectedDate,
+      date: finalDate,
       paymentType,
       entryType: 'ingreso',
       accountId,
@@ -205,11 +210,17 @@ class BudgetController {
       createdAt: Date.now(),
     };
 
-    this.store.addEntry(newIngreso);
+    // If date is different from selectedDate, save to the correct bucket
+    if (date && date !== this.store.selectedDate) {
+      console.log('💾 Saving entry to different date bucket:', date);
+      this.saveEntryToDate(newIngreso, date);
+    } else {
+      this.store.addEntry(newIngreso);
+      this.saveData();
+    }
     
     const { syncEntry } = useSync();
     syncEntry({ entry: newIngreso, operation: 'create' });
-    this.saveData();
 
     return newIngreso;
   }
@@ -220,6 +231,7 @@ class BudgetController {
     paymentType?: 'cash' | 'digital';
     accountId?: string | number | null;
     groups?: Array<{ amount: number; accountId: string | number | null }>;
+    date?: string;
   }) {
     const {
       name = '',
@@ -227,6 +239,7 @@ class BudgetController {
       paymentType = 'cash',
       accountId = null,
       groups = [],
+      date,
     } = params;
 
     const newEgreso: Income = {
@@ -234,7 +247,7 @@ class BudgetController {
       sync_id: `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       name,
       amount: Number(amount) || 0,
-      date: this.store.selectedDate,
+      date: date || this.store.selectedDate,
       paymentType,
       entryType: 'egreso',
       accountId,
@@ -242,11 +255,17 @@ class BudgetController {
       createdAt: Date.now(),
     };
 
-    this.store.addEntry(newEgreso);
+    // If date is different from selectedDate, save to the correct bucket
+    if (date && date !== this.store.selectedDate) {
+      console.log('💾 Saving entry to different date bucket:', date);
+      this.saveEntryToDate(newEgreso, date);
+    } else {
+      this.store.addEntry(newEgreso);
+      this.saveData();
+    }
     
     const { syncEntry } = useSync();
     syncEntry({ entry: newEgreso, operation: 'create' });
-    this.saveData();
 
     return newEgreso;
   }
@@ -462,6 +481,45 @@ class BudgetController {
       console.log('[BudgetController.saveData] Proceso completado');
     } catch (e) {
       console.error('[BudgetController.saveData] Error:', e);
+    }
+  }
+
+  // Save an entry to a specific date bucket (different from current selected date)
+  private async saveEntryToDate(entry: Income, targetDate: string) {
+    try {
+      const dateKey = `budget:${targetDate}`;
+      console.log('[BudgetController.saveEntryToDate] Saving to:', dateKey);
+      
+      // Convert entry to plain object to avoid Proxy serialization issues
+      const plainEntry = JSON.parse(JSON.stringify(entry));
+      
+      // Load existing data for target date
+      const existing = await dixieController.getEntry(dateKey);
+      // Convert to plain objects to avoid Proxy issues
+      const entries = existing?.data?.entries ? JSON.parse(JSON.stringify(existing.data.entries)) : [];
+      const providers = existing?.data?.proveedores ? JSON.parse(JSON.stringify(existing.data.proveedores)) : [];
+      const isDayClosed = existing?.data?.isDayClosed || false;
+      const finishDayData = existing?.data?.finishDayData || {};
+      
+      // Add new entry
+      entries.push(plainEntry);
+      
+      // Save updated data
+      await dixieController.putEntry({
+        entry: {
+          id: dateKey,
+          data: {
+            entries,
+            proveedores: providers,
+            isDayClosed,
+            finishDayData,
+          },
+        },
+      });
+      
+      console.log('[BudgetController.saveEntryToDate] Entry saved to:', dateKey);
+    } catch (e) {
+      console.error('[BudgetController.saveEntryToDate] Error:', e);
     }
   }
 

@@ -566,6 +566,7 @@ function openAddEntryModal() {
     id: null,
     entryType: 'ingreso',
     name: '',
+    date: budgetController.getSelectedDate(),
   };
   entryFormState.name = '';
   entryFormState.entryType = 'ingreso';
@@ -986,11 +987,12 @@ function saveEntryChanges(data: {
   amount: number;
   accountId: string | number | null;
   groups: Array<EntryGroup>;
+  date?: string;
 }) {
   try {
     console.log('InicioViewComponent.saveEntryChanges called with:', data);
   } catch (e) {}
-  const { entryType, name, amount, accountId, groups } = data;
+  const { entryType, name, amount, accountId, groups, date } = data;
 
   if (editEntryModalData.value.id) {
     budgetController.updateIngreso({
@@ -1005,20 +1007,20 @@ function saveEntryChanges(data: {
     });
   } else {
     if (amount > 0) {
+      const entryData: any = {
+        name,
+        amount,
+        accountId,
+        groups,
+      };
+      if (date) {
+        entryData.date = date;
+      }
+      console.log('🔄 InicioViewComponent.saveEntryChanges - entryData:', entryData, 'date received:', date);
       if (entryType === 'ingreso') {
-        budgetController.addIngreso({
-          name,
-          amount,
-          accountId,
-          groups,
-        });
+        budgetController.addIngreso(entryData);
       } else {
-        budgetController.addEgreso({
-          name,
-          amount,
-          accountId,
-          groups,
-        });
+        budgetController.addEgreso(entryData);
       }
     }
   }
