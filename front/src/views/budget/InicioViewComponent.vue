@@ -995,16 +995,31 @@ function saveEntryChanges(data: {
   const { entryType, name, amount, accountId, groups, date } = data;
 
   if (editEntryModalData.value.id) {
-    budgetController.updateIngreso({
-      id: editEntryModalData.value.id,
-      changes: {
-        entryType,
-        name,
-        amount,
-        accountId,
-        groups,
-      },
-    });
+    const originalDate = editEntryModalData.value.date;
+    const hasDateChanged = date && date !== originalDate;
+    
+    if (hasDateChanged) {
+      // If date changed, reassign entry to new date bucket
+      reassignEntry({
+        entryId: editEntryModalData.value.id,
+        newDate: date,
+        originalDate: originalDate,
+        restoreSelectedDate: true,
+        verbose: false,
+      });
+    } else {
+      // Update entry in place
+      budgetController.updateIngreso({
+        id: editEntryModalData.value.id,
+        changes: {
+          entryType,
+          name,
+          amount,
+          accountId,
+          groups,
+        },
+      });
+    }
   } else {
     if (amount > 0) {
       const entryData: any = {

@@ -1,3 +1,21 @@
+## [v0.53.1] - 2026-02-15
+
+### Fixes
+
+- **Entry Date Editing**: Enable date change when editing existing entries
+  - Removed redundant ellipsis button that opened a separate reassignment popover
+  - Added date picker directly in the edit form for better UX
+  - Entries now support changing dates during edit operations via `reassignEntry()`
+  - Date changes trigger automatic reassignment to the new date bucket
+  - Fixed payload to include date for both new entries and updates
+
+### Files Changed (staged)
+
+- `front/src/views/budget/InicioViewComponent.vue` — Handle date changes during entry saves with reassignment logic
+- `front/src/views/budget/components/EditEntryModal.vue` — Add date picker to edit form, remove ellipsis button, improve date handling
+
+---
+
 ## [v0.53.0] - 2026-02-15
 
 ### Features

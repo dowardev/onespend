@@ -33,15 +33,6 @@
           >
             <ion-icon :icon="saveOutline"></ion-icon>
           </ion-button>
-          <!-- Ellipsis button opens a popover with the date picker -->
-          <ion-button
-            v-if="entryData.id"
-            fill="clear"
-            title="Más"
-            @click="openReassignPopover($event)"
-          >
-            <ion-icon :icon="ellipsisVerticalOutline"></ion-icon>
-          </ion-button>
         </ion-buttons>
       </ion-toolbar>
       <!-- Reassign toolbar removed — only the Ionic picker remains in content -->
@@ -233,6 +224,19 @@
                 placeholder="Nombre"
                 autofocus
               ></ion-input>
+            </ion-item>
+
+            <ion-item
+              lines="full"
+              class="transparent"
+              button
+              @click="openEntryDatePopover"
+            >
+              <ion-label>Fecha</ion-label>
+
+              <ion-label slot="end">{{
+                formatShortDate(entryDateISO)
+              }}</ion-label>
             </ion-item>
           </div>
         </ion-list>
@@ -880,8 +884,8 @@ function handleSave() {
     groups: entryItems.value,
   };
 
-  // Include date for new entries
-  if (!entryData.value.id && entryDateISO.value) {
+  // Include date for both new entries and updates
+  if (entryDateISO.value) {
     payload.date = entryDateISO.value.slice(0, 10);
   }
 
@@ -1039,6 +1043,10 @@ watch(
             reassignDateISO.value =
               format(new Date(), 'yyyy-MM-dd') + 'T00:00:00';
           }
+
+          // Initialize entryDateISO for the form date picker
+          entryDateISO.value = reassignDateISO.value;
+          pickerDateISO.value = reassignDateISO.value;
 
           // Force remount of the ion-datetime so it reliably reads the ISO value
           showPicker.value = false;
