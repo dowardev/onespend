@@ -4,6 +4,7 @@
     :keep-contents-mounted="true"
     @did-dismiss="$emit('dismiss')"
   >
+    <!-- header -->
     <ion-header class="ion-no-border" mode="ios">
       <ion-toolbar>
         <ion-buttons>
@@ -30,19 +31,14 @@
           >
             <ion-icon :icon="saveOutline"></ion-icon>
           </ion-button>
-          <!-- Ellipsis button opens a popover with the date picker (entry mode) -->
-          <ion-button
-            v-if="isEntryMode"
-            fill="clear"
-            title="Más"
-            @click="openReassignPopover($event)"
-          >
-            <ion-icon :icon="ellipsisVerticalOutline"></ion-icon>
-          </ion-button>
+          
+          <!-- Reassign date moved into the form for entry mode -->
         </ion-buttons>
       </ion-toolbar>
     </ion-header>
+    <!-- end header -->
 
+    <!-- content -->
     <ion-content>
       <!-- Provider search (only in full mode when no provider selected) -->
       <template v-if="!isEntryMode && !selectedProvider">
@@ -91,6 +87,17 @@
 
           <!-- Amounts by account section -->
           <div v-if="selectedSegment === 'inicio'" class="ion-margin-top">
+            <!-- Date selector (entry mode) - moved into the form like EditEntryModal -->
+            <ion-item
+              v-if="isEntryMode"
+              lines="full"
+              class="transparent"
+              button
+              @click="openReassignPopover($event)"
+            >
+              <ion-label>Fecha</ion-label>
+              <ion-label slot="end">{{ formatShortDate(reassignDateISO) }}</ion-label>
+            </ion-item>
             <ion-list class="transparent">
               <ion-list-header>
                 <ion-label>Cantidades por Cuenta</ion-label>
@@ -222,8 +229,9 @@
         </div>
       </div>
     </ion-content>
+    <!-- end content -->
 
-    <!-- Popover with date picker (opened from header ellipsis) -->
+    <!-- popovers -->
     <ion-popover
       :is-open="popoverState.open"
       :event="popoverState.event"
@@ -238,7 +246,6 @@
               ref="reassignPicker"
               :key="reassignDateISO"
               v-model="reassignDateISO"
-              :value="reassignDateISO"
               presentation="date"
               style="background: transparent; width: 100%"
               @ion-change="onReassignDatetimeChange"
@@ -257,7 +264,7 @@
               slot="end"
               size="small"
               color="primary"
-              :disabled="!(reassignDate || reassignDateISO)"
+              :disabled="!canApplyReassign"
               @click="applyPopoverReassign"
               >Aplicar</ion-button
             >
@@ -265,11 +272,15 @@
         </div>
       </ion-content>
     </ion-popover>
+    <!-- end popovers -->
+
+    <!-- alerts -->
+    <!-- end alerts -->
   </ion-modal>
 </template>
 
 <script setup lang="ts">
-// Imports
+// imports
 import {
   IonModal,
   IonHeader,
@@ -290,6 +301,8 @@ import {
   IonSegment,
   IonSegmentButton,
   IonCard,
+  IonPopover,
+  IonDatetime,
 } from '@ionic/vue';
 import {
   closeOutline,
@@ -297,52 +310,53 @@ import {
   addOutline,
   warningOutline,
   saveOutline,
-  swapHorizontalOutline,
-  ellipsisHorizontalOutline,
   ellipsisVerticalOutline,
 } from 'ionicons/icons';
 import { ref, computed, watch, toRefs, reactive, nextTick } from 'vue';
 import { format } from 'date-fns';
-// End Imports
+// end imports
 
-// Components
+// controllers
+// end controllers
 
-// End Components
+// components
+// end components
 
-// Vars
-interface ProviderItem {
+// interface and types imports
+export interface ProviderItem {
   amount: number;
-  accountId: string | number | null;
+  accountId: string | number | Account | null;
 }
 
-interface Account {
+export interface Account {
   id: string | number;
   name: string;
   type?: string;
 }
 
-interface Supplier {
+export interface Supplier {
   id?: string | number;
-  sync_id?: string;
+  sync_id?: string | number;
   name: string;
   products?: Array<Product>;
 }
 
-interface Product {
+export interface Product {
   id?: string | number;
   sync_id?: string;
+  supplierProductId?: string | number;
   name: string;
   price: number;
 }
 
-interface ProviderProduct {
+export interface ProviderProduct {
   supplierProductId: string | number;
   productName: string;
   productPrice: number;
   quantity: number;
 }
 
-interface PendingProduct {
+export interface PendingProduct {
   supplierProductId?: string | number;
   supplier_product_id?: string | number;
   sync_id?: string | number;
@@ -356,7 +370,7 @@ interface PendingProduct {
   quantity?: number;
 }
 
-interface ProviderData {
+export interface ProviderData {
   id?: string | number;
   _supplierId?: string | number;
   _supplierName?: string;
@@ -367,6 +381,13 @@ interface ProviderData {
   products?: Array<PendingProduct>;
 }
 
+// Type aliases for external usage
+export type AccountWithBalance = Account & { balance?: number };
+export type EntryGroup = ProviderItem;
+export type ProviderEditData = ProviderData;
+// end interface and types imports
+
+// main
 interface Props {
   isOpen: boolean;
   provider?: ProviderData;
@@ -406,398 +427,86 @@ const emit = defineEmits<{
 
 const { isOpen, provider, entryData, suppliers, accounts, mode } =
   toRefs(props);
+// end main
 
+// vars and const
 const searchQuery = ref('');
 const selectedProvider = ref<Supplier | null>(null);
 const selectedSegment = ref('inicio');
 const providerProducts = ref<ProviderProduct[]>([]);
 const productQuantities = ref<Record<string, number>>({});
-const items = ref<ProviderItem[]>([{ amount: 0, accountId: null }]);
-// Reassign date popover state (entry mode only)
+const items = ref<Array<{ amount: number; accountId: string | number | Account | { id: string | number } | null }>>([{ amount: 0, accountId: null }]);
 const popoverState = reactive({ open: false, event: null as Event | null });
 const reassignDate = ref<string | null>(null);
 const reassignDateISO = ref<string | null>(null);
 const reassignPicker = ref<any>(null);
 const showPicker = ref(true);
 const reassignInitialShort = ref<string | null>(null);
-// End Vars
+// end vars and const
 
-// Functions
-const getDefaultAccountId = () => {
-  if (accounts.value.length === 0) return null;
-  return isEntryMode.value ? accounts.value[0].id : accounts.value[0];
-};
+// watch
+watch(isOpen, async newVal => {
+  if (!newVal) return;
 
-const availableAccountsForItem = (currentIndex: number) => {
-  const usedAccountIds = items.value
-    .filter((_: unknown, idx: number) => idx !== currentIndex)
-    .map((item: ProviderItem) => {
-      if (isEntryMode.value) {
-        return String(item.accountId);
-      }
-      return String((item.accountId as Account)?.id ?? item.accountId);
-    })
-    .filter((id: string) => id !== 'null' && id !== 'undefined' && id !== '');
-
-  return accounts.value.filter(
-    (acc: Account) => !usedAccountIds.includes(String(acc.id))
-  );
-};
-
-function selectProvider(params: { p: Supplier }) {
-  const { p } = params;
-  console.log(
-    'selectProvider - supplier:',
-    JSON.stringify({
-      id: p.id,
-      sync_id: p.sync_id,
-      name: p.name,
-      products: p.products?.map((prod: Product) => ({
-        id: prod.id,
-        sync_id: prod.sync_id,
-        name: prod.name,
-        price: prod.price,
-      })),
-    })
-  );
-
-  selectedProvider.value = p;
-
-  providerProducts.value =
-    p.products?.map((prod: Product) => ({
-      supplierProductId: prod.sync_id ?? prod.id,
-      productName: prod.name,
-      productPrice: prod.price,
-      quantity: 0,
-    })) || [];
-
-  console.log(
-    'selectProvider - providerProducts reset:',
-    JSON.stringify(providerProducts.value)
-  );
-}
-
-function changeProvider() {
-  selectedProvider.value = null;
-  selectedSegment.value = 'inicio';
-  productQuantities.value = {};
-}
-
-function compareAccounts(params: {
-  o1: Account | string | number;
-  o2: Account | string | number;
-}) {
-  // Support both call styles: (params) or (o1, o2)
-  try {
-    if (params == null) return false;
-    // If called as (o1, o2) Vue/Ionic may pass the first arg as o1 and second as o2
-    if ((params as any).o1 === undefined && arguments.length === 2) {
-      const o1 = params as any;
-      const o2 = arguments[1] as any;
-      if (o1 === o2) return true;
-      if (o1 && o2) {
-        if (typeof o1 === 'object' && typeof o2 === 'object')
-          return o1.id === o2.id;
-        return String(o1) === String(o2);
-      }
-      return false;
-    }
-
-    const { o1, o2 } = params as any;
-    if (o1 === o2) return true;
-    if (o1 && o2) {
-      if (typeof o1 === 'object' && typeof o2 === 'object') {
-        return o1.id === o2.id;
-      }
-      return String(o1) === String(o2);
-    }
-    return false;
-  } catch (err) {
-    // Fail safe
-    return false;
-  }
-}
-
-function formatPrice(params: { price: number }) {
-  const { price } = params;
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-  }).format(price || 0);
-}
-
-function addItem() {
-  if (canAddMoreItems.value) {
-    items.value.push({ amount: 0, accountId: getDefaultAccountId() });
-  }
-}
-
-function removeItem(params: { index: number }) {
-  const { index } = params;
-  if (items.value.length > 1) {
-    items.value.splice(index, 1);
-  }
-}
-
-function getProductQuantity(params: { product: Product }): number {
-  const { product } = params;
-  const productId = product?.id ?? product?.sync_id;
-  const productName = product?.name;
-  const productPrice = product?.price;
-  const found = providerProducts.value.find(p => {
-    if (productId) {
-      return String(p.supplierProductId) === String(productId);
-    }
-    return p.productName === productName && p.productPrice === productPrice;
-  });
-
-  return found ? found.quantity : 0;
-}
-
-function setProductQuantity(params: {
-  product: Product;
-  productPrice: number;
-  quantity: number;
-}) {
-  const { product, productPrice, quantity } = params;
-  const productId =
-    product?.sync_id ?? product?.id ?? product?.supplierProductId;
-  const productName = product?.name;
-  console.log(
-    'setProductQuantity - product:',
-    JSON.stringify({
-      id: product?.id,
-      sync_id: product?.sync_id,
-      supplierProductId: product?.supplierProductId,
-      name: product?.name,
-      price: product?.price,
-    }),
-    'productName:',
-    productName,
-    'productId:',
-    productId,
-    'quantity:',
-    quantity
-  );
-  const existing = providerProducts.value.find(p => {
-    if (productId) {
-      return String(p.supplierProductId) === String(productId);
-    }
-    return p.productName === productName && p.productPrice === productPrice;
-  });
-
-  if (existing) {
-    existing.quantity = quantity;
-  } else {
-    const fallbackId = productId
-      ? productId
-      : `manual_${String(productName).toLowerCase().replace(/\s+/g, '_')}_${productPrice}`;
-
-    providerProducts.value.push({
-      supplierProductId: fallbackId,
-      productName,
-      productPrice,
-      quantity,
-    });
-  }
-}
-
-function handleSave() {
-  const totalAmount = items.value.reduce(
-    (sum, item) => sum + (Number(item.amount) || 0),
-    0
-  );
-
-  const products = providerProducts.value.filter(p => (p.quantity || 0) > 0);
-
-  console.log(
-    'EditProviderModal.handleSave - providerProducts.value:',
-    providerProducts.value
-  );
-  console.log('EditProviderModal.handleSave - filtered products:', products);
-
-  emit('saved', {
-    providerId: selectedProvider.value?.sync_id || selectedProvider.value?.id,
-    providerName: selectedProvider.value?.name,
-    entryId: entryData.value?.entryId,
-    items: items.value.map(item => ({
+  // Modal opened - initialize state
+  if (isEntryMode.value && entryData.value) {
+    // Entry mode - use provided entry data
+    items.value = entryData.value.items.map(item => ({
       amount: Number(item.amount) || 0,
-      accountId: isEntryMode.value
-        ? item.accountId
-        : (item.accountId?.id ?? item.accountId),
-    })),
-    totalAmount,
-    products: products.length > 0 ? products : undefined,
-  });
-}
-
-function handleDelete() {
-  if (isEntryMode.value && entryData.value?.entryId) {
-    emit('deleted', entryData.value.entryId);
-  } else if (provider.value?.id) {
-    emit('deleted', provider.value.id);
-  }
-}
-// Reassign popover functions
-async function openReassignPopover(e: Event) {
-  // prepare ISO value
-  try {
-    if (!reassignDateISO.value) {
-      // prefer entryData date if available
-      if (entryData.value && (entryData.value as any).date) {
-        const raw = (entryData.value as any).date as any;
-        if (typeof raw === 'string' && raw.includes('T'))
-          reassignDateISO.value =
-            raw.length >= 19 ? raw.slice(0, 19) : raw + 'T00:00:00';
-        else if (typeof raw === 'string')
-          reassignDateISO.value = `${raw.slice(0, 10)}T00:00:00`;
-        else if (typeof raw === 'number')
-          reassignDateISO.value =
-            format(new Date(raw), 'yyyy-MM-dd') + 'T00:00:00';
-      } else {
-        reassignDateISO.value = format(new Date(), 'yyyy-MM-dd') + 'T00:00:00';
-      }
-    }
-  } catch (err) {
-    reassignDateISO.value = format(new Date(), 'yyyy-MM-dd') + 'T00:00:00';
-  }
-
-  try {
-    reassignInitialShort.value = reassignDateISO.value
-      ? String(reassignDateISO.value).slice(0, 10)
-      : (reassignDate.value ?? null);
-  } catch (err) {}
-
-  // force remount of picker
-  try {
-    showPicker.value = false;
-    await nextTick();
-    showPicker.value = true;
-    await new Promise(res => setTimeout(res, 30));
-  } catch (err) {}
-
-  // initialize short date so Apply button can enable immediately
-  try {
-    reassignDate.value = reassignDateISO.value
-      ? String(reassignDateISO.value).slice(0, 10)
-      : reassignDate.value;
-  } catch (err) {}
-
-  // debug: show date values at open
-  try {
-    console.debug(
-      'EditProviderModal.openReassignPopover - reassignDateISO:',
-      reassignDateISO.value,
-      'reassignDate:',
-      reassignDate.value
-    );
-  } catch (e) {}
-
-  popoverState.event = e;
-  popoverState.open = true;
-}
-
-// Watch ISO value to keep short date in sync and help debugging
-watch(
-  () => reassignDateISO.value,
-  ns => {
+      accountId: item.accountId,
+    }));
+    providerProducts.value = [];
+    // Initialize reassign date so the form shows it immediately (no click required)
     try {
-      if (ns) {
-        const short = String(ns).slice(0, 10);
-        reassignDate.value = short;
+      const raw = (entryData.value as any).date;
+      if (raw) {
+        reassignDateISO.value = parseDateValue(raw);
+        reassignDate.value = String(reassignDateISO.value).slice(0, 10);
+      } else {
+        // fallback to today
+        reassignDateISO.value = format(new Date(), 'yyyy-MM-dd') + 'T00:00:00';
+        reassignDate.value = String(reassignDateISO.value).slice(0, 10);
       }
-      console.debug(
-        'EditProviderModal.watch reassignDateISO ->',
-        ns,
-        'short ->',
-        reassignDate.value
-      );
-    } catch (e) {}
+    } catch (err) {
+      reassignDateISO.value = format(new Date(), 'yyyy-MM-dd') + 'T00:00:00';
+      reassignDate.value = String(reassignDateISO.value).slice(0, 10);
+    }
+  } else if (provider.value) {
+    // Provider mode with existing provider - load data
+    initializeProviderMode();
+  } else {
+    // Provider mode - new provider
+    selectedProvider.value = null;
+    providerProducts.value = [];
+    items.value = [{ amount: 0, accountId: getDefaultAccountId() }];
   }
+  selectedSegment.value = 'inicio';
+  searchQuery.value = '';
+});
+
+// Watch for external provider data updates
+watch(
+  () => props.provider,
+  newProvider => {
+    if (isOpen.value && newProvider && !isEntryMode.value) {
+      updateProviderFromProps(newProvider);
+    }
+  },
+  { deep: true }
 );
 
-function onReassignDatetimeChange(e: any) {
-  try {
-    const val = e?.detail?.value ?? e;
-    console.log('EditProviderModal.onReassignDatetimeChange - raw val:', val);
-    if (!val) return;
-    let iso: string | null = null;
-    if (typeof val === 'string') {
-      iso =
-        val.length >= 10 && val.includes('T')
-          ? val
-          : `${String(val).slice(0, 10)}T00:00:00`;
-    } else if (val instanceof Date) {
-      iso = format(val, 'yyyy-MM-dd') + 'T00:00:00';
-    } else {
-      iso = String(val).slice(0, 10) + 'T00:00:00';
-    }
-    reassignDateISO.value = iso;
-    reassignDate.value = iso.slice(0, 10);
-  } catch (err) {
-    console.error('EditProviderModal.onReassignDatetimeChange error', err);
-  }
-}
-
-function applyPopoverReassign() {
-  popoverState.open = false;
-  // Normalize final date
-  let finalDate: string | null = null;
-  // Debug: prefer picker raw value if available (some Ionic versions don't sync v-model)
-  try {
-    const picker = reassignPicker.value && (reassignPicker as any).value;
-    const pickerRaw = picker
-      ? (picker.value ?? (picker.getValue ? picker.getValue() : undefined))
-      : undefined;
-    console.log('EditProviderModal.applyPopoverReassign - debug values', {
-      reassignDateISO: reassignDateISO.value,
-      reassignDate: reassignDate.value,
-      pickerRaw,
-    });
-    if (pickerRaw) {
-      finalDate = String(pickerRaw).slice(0, 10);
-    } else {
-      finalDate =
-        reassignDate.value ??
-        (reassignDateISO.value
-          ? String(reassignDateISO.value).slice(0, 10)
-          : null);
-    }
-  } catch (err) {
-    console.error(
-      'EditProviderModal.applyPopoverReassign - debug read error',
-      err
-    );
-    try {
-      finalDate =
-        reassignDate.value ??
-        (reassignDateISO.value
-          ? String(reassignDateISO.value).slice(0, 10)
-          : null);
-    } catch (err2) {
-      finalDate = null;
+// Sync short date when ISO changes
+watch(
+  () => reassignDateISO.value,
+  newValue => {
+    if (newValue) {
+      reassignDate.value = String(newValue).slice(0, 10);
     }
   }
-  if (!finalDate) return;
-  // Emit to parent and close popover. Parent (InicioViewComponent) should perform the reassign.
-  try {
-    console.log(
-      'EditProviderModal.applyPopoverReassign - emitting reassign-date',
-      { finalDate, entryData: entryData.value }
-    );
-    emit('reassign-date', finalDate);
-  } catch (err) {
-    console.error('EditProviderModal.applyPopoverReassign - emit error', err);
-  }
-  popoverState.open = false;
-}
-// End Functions
+);
+// end watch
 
-// Life cycle
-
-// End Life cycle
-
-// Computed
+// computed
 const isEntryMode = computed(() => mode.value === 'entry');
 
 const modalTitle = computed(() => {
@@ -883,165 +592,369 @@ const isFormValid = computed(() => {
   return selectedProvider.value != null && isItemsValid.value;
 });
 
-// Enable Apply when we have a resolved short date (yyyy-MM-dd)
 const canApplyReassign = computed(() => {
-  try {
-    // prefer resolved short date
-    if (reassignDate.value)
-      return String(reassignDate.value).slice(0, 10).length === 10;
-    if (reassignDateISO.value)
-      return String(reassignDateISO.value).slice(0, 10).length === 10;
-
-    // fallback: try to read underlying picker raw value (some Ionic versions don't update v-model immediately)
-    const picker = reassignPicker.value && (reassignPicker as any).value;
-    const pickerRaw = picker
-      ? (picker.value ?? (picker.getValue ? picker.getValue() : undefined))
-      : undefined;
-    if (pickerRaw) {
-      const short = String(pickerRaw).slice(0, 10);
-      return Boolean(short && short.length === 10);
-    }
-  } catch (e) {}
-  return false;
+  const short = reassignDate.value || reassignDateISO.value?.slice(0, 10);
+  return short?.length === 10;
 });
-// End Computed
+// end computed
 
-// Watch
-watch(isOpen, async newVal => {
-  if (newVal) {
-    // Modal opened - initialize state
-    if (isEntryMode.value && entryData.value) {
-      // Entry mode - use provided entry data
-      items.value = entryData.value.items.map(item => ({
-        amount: Number(item.amount) || 0,
-        accountId: item.accountId,
-      }));
-      providerProducts.value = [];
-    } else if (provider.value) {
-      // Provider mode with existing provider - load data
-      // _supplierId ahora contiene el sync_id del supplier (ID de MySQL)
-      const supplierSyncId = provider.value._supplierId || provider.value.id;
-      const fullSupplier =
-        suppliers.value.find(
-          (s: Supplier) => String(s.sync_id) === String(supplierSyncId)
-        ) ||
-        suppliers.value.find(
-          (s: Supplier) => String(s.id) === String(supplierSyncId)
-        ) ||
-        suppliers.value.find(
-          (s: Supplier) =>
-            s.name?.toLowerCase() === provider.value?.name?.toLowerCase()
-        );
+// onmounted
+// end onmounted
 
-      selectedProvider.value = {
-        id: fullSupplier?.id || supplierSyncId,
-        sync_id: fullSupplier?.sync_id || supplierSyncId,
-        name: provider.value._supplierName || provider.value.name,
-        products: fullSupplier?.products || [],
-      };
-      items.value = [
-        {
-          amount: provider.value.estimated || 0,
-          accountId: provider.value.accountId
-            ? { id: provider.value.accountId }
-            : getDefaultAccountId(),
-        },
-      ];
-      // Load existing products
-      if (fullSupplier?.products && Array.isArray(fullSupplier.products)) {
-        providerProducts.value = fullSupplier.products.map((p: Product) => ({
-          supplierProductId: p.sync_id ?? p.id,
-          productName: p.name,
-          productPrice: p.price,
-          quantity: 0,
-        }));
-      } else if (
-        provider.value.products &&
-        Array.isArray(provider.value.products)
-      ) {
-        providerProducts.value = provider.value.products.map(
-          (p: PendingProduct) => ({
-            supplierProductId:
-              p.supplierProductId ||
-              p.supplier_product_id ||
-              p.sync_id ||
-              p.id ||
-              `manual_${String(p.productName || p.name)
-                .toLowerCase()
-                .replace(/\s+/g, '_')}_${p.productPrice || p.price}`,
-            productName: p.productName || p.product_name || p.name || '',
-            productPrice: p.productPrice || p.product_price || p.price || 0,
-            quantity: p.quantity || 0,
-          })
-        );
-      } else {
-        providerProducts.value = [];
-      }
-    } else {
-      // Provider mode - new provider
-      selectedProvider.value = null;
-      providerProducts.value = [];
-      items.value = [{ amount: 0, accountId: getDefaultAccountId() }];
-    }
-    selectedSegment.value = 'inicio';
-    searchQuery.value = '';
+// functions
+// Helper functions
+function getDefaultAccountId() {
+  if (accounts.value.length === 0) return null;
+  return isEntryMode.value ? accounts.value[0].id : accounts.value[0];
+}
+
+function initializeProviderMode() {
+  const supplierSyncId = provider.value!._supplierId || provider.value!.id;
+  const fullSupplier =
+    suppliers.value.find(
+      (s: Supplier) => String(s.sync_id) === String(supplierSyncId)
+    ) ||
+    suppliers.value.find(
+      (s: Supplier) => String(s.id) === String(supplierSyncId)
+    ) ||
+    suppliers.value.find(
+      (s: Supplier) =>
+        s.name?.toLowerCase() === provider.value?.name?.toLowerCase()
+    );
+
+  selectedProvider.value = {
+    id: fullSupplier?.id || supplierSyncId,
+    sync_id: fullSupplier?.sync_id || supplierSyncId,
+    name: provider.value!._supplierName || provider.value!.name,
+    products: fullSupplier?.products || [],
+  };
+  
+  items.value = [
+    {
+      amount: provider.value!.estimated || 0,
+      accountId: provider.value!.accountId
+        ? { id: provider.value!.accountId }
+        : getDefaultAccountId(),
+    },
+  ];
+  
+  // Load existing products
+  if (fullSupplier?.products && Array.isArray(fullSupplier.products)) {
+    providerProducts.value = fullSupplier.products.map((p: Product) => ({
+      supplierProductId: p.sync_id ?? p.id,
+      productName: p.name,
+      productPrice: p.price,
+      quantity: 0,
+    }));
+  } else if (
+    provider.value!.products &&
+    Array.isArray(provider.value!.products)
+  ) {
+    providerProducts.value = provider.value!.products.map(
+      (p: PendingProduct) => ({
+        supplierProductId:
+          p.supplierProductId ||
+          p.supplier_product_id ||
+          p.sync_id ||
+          p.id ||
+          `manual_${String(p.productName || p.name)
+            .toLowerCase()
+            .replace(/\s+/g, '_')}_${p.productPrice || p.price}`,
+        productName: p.productName || p.product_name || p.name || '',
+        productPrice: p.productPrice || p.product_price || p.price || 0,
+        quantity: p.quantity || 0,
+      })
+    );
+  } else {
+    providerProducts.value = [];
   }
-});
+}
 
-// Watch for external provider data updates
-watch(
-  () => props.provider,
-  newProvider => {
-    if (isOpen.value && newProvider && !isEntryMode.value) {
-      // _supplierId ahora contiene el sync_id del supplier (ID de MySQL)
-      const supplierSyncId = newProvider._supplierId || newProvider.id;
-      const fullSupplier =
-        suppliers.value.find(
-          (s: Supplier) => String(s.sync_id) === String(supplierSyncId)
-        ) ||
-        suppliers.value.find(
-          (s: Supplier) => String(s.id) === String(supplierSyncId)
-        ) ||
-        suppliers.value.find(
-          (s: Supplier) =>
-            s.name?.toLowerCase() === newProvider?.name?.toLowerCase()
-        );
+function updateProviderFromProps(newProvider: ProviderData) {
+  const supplierSyncId = newProvider._supplierId || newProvider.id;
+  const fullSupplier =
+    suppliers.value.find(
+      (s: Supplier) => String(s.sync_id) === String(supplierSyncId)
+    ) ||
+    suppliers.value.find(
+      (s: Supplier) => String(s.id) === String(supplierSyncId)
+    ) ||
+    suppliers.value.find(
+      (s: Supplier) =>
+        s.name?.toLowerCase() === newProvider?.name?.toLowerCase()
+    );
 
-      selectedProvider.value = {
-        id: fullSupplier?.id || supplierSyncId,
-        sync_id: fullSupplier?.sync_id || supplierSyncId,
-        name: newProvider._supplierName || newProvider.name,
-        products: fullSupplier?.products || newProvider.products || [],
-      };
-      items.value = [
-        {
-          amount: newProvider.estimated || 0,
-          accountId: newProvider.accountId
-            ? { id: newProvider.accountId }
-            : getDefaultAccountId(),
-        },
-      ];
-      if (newProvider.products && Array.isArray(newProvider.products)) {
-        providerProducts.value = newProvider.products.map(
-          (p: PendingProduct) => ({
-            supplierProductId:
-              p.supplierProductId ||
-              p.sync_id ||
-              p.id ||
-              `${p.name}-${p.price}`,
-            productName: p.productName || p.name || '',
-            productPrice: p.productPrice || p.price || 0,
-            quantity: p.quantity || 0,
-          })
-        );
-      } else {
-        providerProducts.value = [];
-      }
+  selectedProvider.value = {
+    id: fullSupplier?.id || supplierSyncId,
+    sync_id: String(fullSupplier?.sync_id || supplierSyncId),
+    name: newProvider._supplierName || newProvider.name,
+    products: (fullSupplier?.products || newProvider.products || []) as Product[],
+  };
+  
+  items.value = [
+    {
+      amount: newProvider.estimated || 0,
+      accountId: newProvider.accountId
+        ? { id: newProvider.accountId }
+        : getDefaultAccountId(),
+    },
+  ];
+  
+  if (newProvider.products && Array.isArray(newProvider.products)) {
+    providerProducts.value = newProvider.products.map(
+      (p: PendingProduct) => ({
+        supplierProductId:
+          p.supplierProductId ||
+          p.sync_id ||
+          p.id ||
+          `${p.name}-${p.price}`,
+        productName: p.productName || p.name || '',
+        productPrice: p.productPrice || p.price || 0,
+        quantity: p.quantity || 0,
+      })
+    );
+  } else {
+    providerProducts.value = [];
+  }
+}
+
+function parseDateValue(raw: unknown): string {
+  if (!raw) return format(new Date(), 'yyyy-MM-dd') + 'T00:00:00';
+  
+  if (typeof raw === 'string') {
+    if (raw.includes('T')) {
+      return raw.length >= 19 ? raw.slice(0, 19) : raw + 'T00:00:00';
     }
-  },
-  { deep: true }
-);
-// End Watch
+    return `${raw.slice(0, 10)}T00:00:00`;
+  }
+  
+  if (typeof raw === 'number') {
+    return format(new Date(raw), 'yyyy-MM-dd') + 'T00:00:00';
+  }
+  
+  return format(new Date(), 'yyyy-MM-dd') + 'T00:00:00';
+}
+// end Helper functions
+
+// Format ISO date to short localized string (dd/MM/yy)
+function formatShortDate(isoDate: string | null): string {
+  if (!isoDate) return '';
+  try {
+    const date = new Date(isoDate);
+    return date.toLocaleDateString('es-MX', {
+      day: '2-digit',
+      month: '2-digit',
+      year: '2-digit',
+    });
+  } catch (e) {
+    return String(isoDate).slice(0, 10);
+  }
+}
+
+const availableAccountsForItem = (currentIndex: number) => {
+  const usedAccountIds = items.value
+    .filter((_: unknown, idx: number) => idx !== currentIndex)
+    .map((item: ProviderItem) => {
+      if (isEntryMode.value) {
+        return String(item.accountId);
+      }
+      return String((item.accountId as Account)?.id ?? item.accountId);
+    })
+    .filter((id: string) => id !== 'null' && id !== 'undefined' && id !== '');
+
+  return accounts.value.filter(
+    (acc: Account) => !usedAccountIds.includes(String(acc.id))
+  );
+};
+
+function selectProvider(params: { p: Supplier }) {
+  const { p } = params;
+  selectedProvider.value = p;
+
+  providerProducts.value =
+    p.products?.map((prod: Product) => ({
+      supplierProductId: prod.sync_id ?? prod.id,
+      productName: prod.name,
+      productPrice: prod.price,
+      quantity: 0,
+    })) || [];
+}
+
+function changeProvider() {
+  selectedProvider.value = null;
+  selectedSegment.value = 'inicio';
+  productQuantities.value = {};
+}
+
+function compareAccounts(
+  o1: Account | string | number | null | undefined,
+  o2: Account | string | number | null | undefined
+) {
+  // Handle cases where ion-select passes arguments directly or a single object
+  // Normalize if a single object param was provided
+  if (arguments.length === 1 && typeof o1 === 'object' && o1 != null) {
+    const obj = o1 as any;
+    o1 = obj.o1 ?? obj.o1;
+    o2 = obj.o2 ?? obj.o2;
+  }
+
+  if (o1 === o2) return true;
+  if (o1 != null && o2 != null) {
+    if (typeof o1 === 'object' && typeof o2 === 'object') {
+      return (o1 as any).id === (o2 as any).id;
+    }
+    return String(o1) === String(o2);
+  }
+  return false;
+}
+
+function formatPrice(price: number | { price: number }): string {
+  const value = typeof price === 'object' ? price.price : price;
+  return new Intl.NumberFormat('es-MX', {
+    style: 'currency',
+    currency: 'MXN',
+  }).format(value || 0);
+}
+
+function addItem() {
+  if (canAddMoreItems.value) {
+    items.value.push({ amount: 0, accountId: getDefaultAccountId() });
+  }
+}
+
+function removeItem(params: { index: number }) {
+  const { index } = params;
+  if (items.value.length > 1) {
+    items.value.splice(index, 1);
+  }
+}
+
+function getProductQuantity(params: { product: Product }): number {
+  const { product } = params;
+  const productId = product?.id ?? product?.sync_id;
+  const productName = product?.name;
+  const productPrice = product?.price;
+  const found = providerProducts.value.find(p => {
+    if (productId) {
+      return String(p.supplierProductId) === String(productId);
+    }
+    return p.productName === productName && p.productPrice === productPrice;
+  });
+
+  return found ? found.quantity : 0;
+}
+
+function setProductQuantity(params: {
+  product: Product;
+  productPrice: number;
+  quantity: number;
+}) {
+  const { product, productPrice, quantity } = params;
+  const productId =
+    product?.sync_id ?? product?.id ?? product?.supplierProductId;
+  const productName = product?.name;
+  const existing = providerProducts.value.find(p => {
+    if (productId) {
+      return String(p.supplierProductId) === String(productId);
+    }
+    return p.productName === productName && p.productPrice === productPrice;
+  });
+
+  if (existing) {
+    existing.quantity = quantity;
+  } else {
+    const fallbackId = productId
+      ? productId
+      : `manual_${String(productName).toLowerCase().replace(/\s+/g, '_')}_${productPrice}`;
+
+    providerProducts.value.push({
+      supplierProductId: fallbackId,
+      productName: productName || '',
+      productPrice,
+      quantity,
+    });
+  }
+}
+
+function handleSave() {
+  const totalAmount = items.value.reduce(
+    (sum, item) => sum + (Number(item.amount) || 0),
+    0
+  );
+
+  const products = providerProducts.value.filter(p => (p.quantity || 0) > 0);
+
+  emit('saved', {
+    providerId: selectedProvider.value?.sync_id || selectedProvider.value?.id,
+    providerName: selectedProvider.value?.name,
+    entryId: entryData.value?.entryId,
+    items: items.value.map(item => ({
+      amount: Number(item.amount) || 0,
+      accountId: isEntryMode.value
+        ? item.accountId as (string | number | null)
+        : ((item.accountId as Account)?.id ?? item.accountId) as (string | number | null),
+    })) as ProviderItem[],
+    totalAmount,
+    products: products.length > 0 ? products : undefined,
+  });
+}
+
+function handleDelete() {
+  if (isEntryMode.value && entryData.value?.entryId) {
+    emit('deleted', entryData.value.entryId);
+  } else if (provider.value?.id) {
+    emit('deleted', provider.value.id);
+  }
+}
+
+// Reassign date functions
+async function openReassignPopover(e: Event) {
+  // Prepare ISO value for the picker
+  if (!reassignDateISO.value) {
+    if (entryData.value && (entryData.value as any).date) {
+      reassignDateISO.value = parseDateValue((entryData.value as any).date);
+    } else {
+      reassignDateISO.value = format(new Date(), 'yyyy-MM-dd') + 'T00:00:00';
+    }
+  }
+
+  reassignInitialShort.value = reassignDateISO.value?.slice(0, 10) || null;
+  reassignDate.value = reassignInitialShort.value;
+
+  // Force remount of picker
+  showPicker.value = false;
+  await nextTick();
+  showPicker.value = true;
+
+  popoverState.event = e;
+  popoverState.open = true;
+}
+
+function onReassignDatetimeChange(e: any) {
+  const val = e?.detail?.value ?? e;
+  if (!val) return;
+  
+  let iso: string;
+  if (typeof val === 'string') {
+    iso = val.includes('T') ? val : `${val.slice(0, 10)}T00:00:00`;
+  } else if (val instanceof Date) {
+    iso = format(val, 'yyyy-MM-dd') + 'T00:00:00';
+  } else {
+    iso = String(val).slice(0, 10) + 'T00:00:00';
+  }
+  
+  reassignDateISO.value = iso;
+  reassignDate.value = iso.slice(0, 10);
+}
+
+function applyPopoverReassign() {
+  const finalDate = reassignDate.value || reassignDateISO.value?.slice(0, 10);
+  if (!finalDate) return;
+  
+  emit('reassign-date', finalDate);
+  popoverState.open = false;
+}
+// end functions
 </script>
 
 <style scoped>
