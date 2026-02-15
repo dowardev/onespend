@@ -1,3 +1,23 @@
+## [v0.53.2] - 2026-02-15
+
+### Refactor
+
+- **EditEntryModal Code Organization**: Major refactoring of EditEntryModal.vue for improved maintainability
+  - Added structured section comments (header, content, popovers, alerts, imports, vars, watch, computed, functions)
+  - Removed unused imports (IonAlert, calendarOutline, ellipsis icons) and added necessary ones (IonListHeader, IonCard)
+  - Introduced helper functions for better date handling: parseEntryDate, toISODateTime, resolveEntryDate, initEntryItems
+  - Reorganized script sections following codebase conventions (imports → controllers → components → interfaces → main → vars → watch → computed → onMounted → functions)
+  - Removed debug console.log statements for cleaner production code
+  - Added 'reassigned' emit event for better parent component communication
+  - Net code reduction: 139 lines (293 insertions, 432 deletions)
+
+### Files Changed (staged)
+
+- `front/src/views/budget/components/EditEntryModal.vue` — Major code organization refactor with section markers and helper functions
+- `front/package.json` — Bump version to 0.53.2
+
+---
+
 ## [v0.53.1] - 2026-02-15
 
 ### Fixes
