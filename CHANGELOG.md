@@ -1,3 +1,33 @@
+## [v0.53.4] - 2026-02-15
+
+### Fixes
+
+- **Provider Data Source**: Fix provider list to use `budgetController.getProviders()` instead of `suppliersController.getSuppliers()`
+  - The `allSuppliers` computed property in InicioViewComponent was referencing wrong data source
+  - Providers now correctly loaded from budget data instead of standalone suppliers
+
+### Improvements
+
+- **Provider Selection UX**: Enhanced provider selection flow in EditProviderModal
+  - Added `isSelectingProvider` state for clearer selection flow
+  - Display estimated price in provider list items
+  - Better state reset when opening modal for new providers
+
+### Refactor
+
+- **Provider Data Loading**: Improved provider mode initialization and data handling
+  - Added `handleProviderClick` function for provider change flow
+  - Enhanced `selectProvider` with defensive checks and fallback logic
+  - Better loading of provider products and items with estimated amounts support
+
+### Files Changed (staged)
+
+- `front/src/views/budget/InicioViewComponent.vue` — Fix allSuppliers to use budgetController.getProviders()
+- `front/src/views/budget/components/EditProviderModal.vue` — Improve provider selection flow and data loading
+- `front/package.json` — Bump version to 0.53.4
+
+---
+
 ## [v0.53.3] - 2026-02-15
 
 ### Refactor
