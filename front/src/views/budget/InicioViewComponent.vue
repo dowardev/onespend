@@ -295,7 +295,7 @@ const editProviderEntryData = ref<{
   entryId: string | number | null;
   items: Array<{ amount: number; accountId: string | number | null }>;
 } | null>(null);
-const allSuppliers = computed(() => suppliersController.getSuppliers());
+const allSuppliers = computed(() => budgetController.getProviders());
 
 const editingProviderEntryId = ref<string | number | null>(null);
 

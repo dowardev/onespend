@@ -40,8 +40,8 @@
 
     <!-- content -->
     <ion-content>
-      <!-- Provider search (only in full mode when no provider selected) -->
-      <template v-if="!isEntryMode && !selectedProvider">
+      <!-- Provider search (only when selecting a provider) -->
+      <template v-if="isSelectingProvider">
         <ion-item lines="none">
           <ion-searchbar
             v-model="searchQuery"
@@ -61,13 +61,14 @@
             @click="selectProvider({ p })"
           >
             <ion-label>{{ p.name }}</ion-label>
+            <ion-label slot="end">{{ formatPrice({ price: p.estimated || 0 }) }}</ion-label>
           </ion-item>
         </ion-list>
       </template>
 
       <!-- Provider form (when provider is selected or in entry mode) -->
       <div v-else>
-        <ion-item button lines="full" @click="changeProvider">
+        <ion-item button lines="full" @click="handleProviderClick">
           <ion-label>
             {{ providerName }}
           </ion-label>
@@ -432,6 +433,7 @@ const { isOpen, provider, entryData, suppliers, accounts, mode } =
 // vars and const
 const searchQuery = ref('');
 const selectedProvider = ref<Supplier | null>(null);
+const isSelectingProvider = ref(false);
 const selectedSegment = ref('inicio');
 const providerProducts = ref<ProviderProduct[]>([]);
 const productQuantities = ref<Record<string, number>>({});
@@ -447,6 +449,9 @@ const reassignInitialShort = ref<string | null>(null);
 // watch
 watch(isOpen, async newVal => {
   if (!newVal) return;
+
+  isSelectingProvider.value = false;
+  selectedProvider.value = null;
 
   // Modal opened - initialize state
   if (isEntryMode.value && entryData.value) {
@@ -475,8 +480,9 @@ watch(isOpen, async newVal => {
     // Provider mode with existing provider - load data
     initializeProviderMode();
   } else {
-    // Provider mode - new provider
+    // Provider mode - new provider - show provider list initially
     selectedProvider.value = null;
+    isSelectingProvider.value = true;
     providerProducts.value = [];
     items.value = [{ amount: 0, accountId: getDefaultAccountId() }];
   }
@@ -524,6 +530,9 @@ const canDelete = computed(() => {
 });
 
 const providerName = computed(() => {
+  if (selectedProvider.value?.name) {
+    return selectedProvider.value.name;
+  }
   if (isEntryMode.value) {
     return entryData.value?.name || '';
   }
@@ -767,23 +776,44 @@ const availableAccountsForItem = (currentIndex: number) => {
   );
 };
 
-function selectProvider(params: { p: Supplier }) {
+function selectProvider(params: { p: Supplier | any }) {
   const { p } = params;
   selectedProvider.value = p;
+  isSelectingProvider.value = false;
 
+  // Load products
   providerProducts.value =
-    p.products?.map((prod: Product) => ({
-      supplierProductId: prod.sync_id ?? prod.id,
+    p.products?.map((prod: any) => ({
+      supplierProductId: prod.sync_id ?? prod.id ?? prod.supplierProductId,
       productName: prod.name,
-      productPrice: prod.price,
-      quantity: 0,
+      productPrice: prod.price ?? prod.productPrice,
+      quantity: prod.quantity || 0,
     })) || [];
+
+  // Load items (quantities by account) if available
+  if (p.items && Array.isArray(p.items) && p.items.length > 0) {
+    items.value = p.items.map((item: any) => ({
+      amount: Number(item.amount) || 0,
+      accountId: item.accountId || getDefaultAccountId(),
+    }));
+  } else if (p.estimated && Number(p.estimated) > 0) {
+    // If provider has estimated amount, create one item
+    items.value = [{
+      amount: Number(p.estimated) || 0,
+      accountId: p.accountId || getDefaultAccountId(),
+    }];
+  }
 }
 
 function changeProvider() {
+  isSelectingProvider.value = true;
   selectedProvider.value = null;
   selectedSegment.value = 'inicio';
   productQuantities.value = {};
+}
+
+function handleProviderClick() {
+  changeProvider();
 }
 
 function compareAccounts(
