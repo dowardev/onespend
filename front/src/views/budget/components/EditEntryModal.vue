@@ -70,15 +70,17 @@
                 label-placement="stacked"
               >
                 <ion-select-option value="ingreso">Ingreso</ion-select-option>
+
                 <ion-select-option value="egreso">Egreso</ion-select-option>
               </ion-select>
             </ion-item>
 
-            <ion-item class="transparent" lines="none">
-              <ion-label position="stacked">Nombre</ion-label>
+            <ion-item class="transparent" lines="full">
               <ion-input
                 v-model="entryData.name"
-                placeholder="Nombre"
+                label="Nombre"
+                label-placement="floating"
+                placeholder="Pepito"
                 autofocus
               ></ion-input>
             </ion-item>
@@ -90,6 +92,7 @@
               @click="openEntryDatePopover"
             >
               <ion-label>Fecha</ion-label>
+
               <ion-label slot="end">{{
                 formatShortDate(entryDateISO)
               }}</ion-label>
@@ -100,6 +103,7 @@
         <ion-list class="transparent">
           <ion-list-header>
             <ion-label>Detalles</ion-label>
+
             <ion-button
               :disabled="!canAddMoreItems || isDayClosed"
               @click="addEntryItem"
@@ -110,57 +114,59 @@
           </ion-list-header>
 
           <div class="list-content">
-            <ion-card
+            <div
               v-for="(item, index) in entryItems"
               :key="index"
               class="shadow1"
             >
-              <ion-item lines="full" class="transparent">
-                <ion-label position="stacked">Cantidad</ion-label>
-                <ion-input
-                  v-model.number="item.amount"
-                  type="number"
-                  placeholder="0"
-                ></ion-input>
-              </ion-item>
+              <div
+                :class="{
+                  'ion-padding':
+                    index === entryItems.length - 1 && entryItems.length > 1,
+                }"
+              >
+                <ion-item lines="full" class="transparent">
+                  <ion-input
+                    v-model.number="item.amount"
+                    label="Cantidad"
+                    label-placement="floating"
+                    type="number"
+                    placeholder="0"
+                  ></ion-input>
+                </ion-item>
 
-              <ion-item class="transparent" lines="none">
-                <ion-select
-                  v-model="item.accountId"
-                  interface="popover"
-                  style="--border-width: 0px"
-                  label="Cuenta"
-                  label-placement="stacked"
-                  :validate="true"
-                  error-text="Selecciona una cuenta"
-                >
-                  <ion-select-option
-                    v-for="acc in availableAccountsForItem(index)"
-                    :key="acc.id"
-                    :value="acc.id"
+                <ion-item class="transparent" lines="none">
+                  <ion-select
+                    v-model="item.accountId"
+                    interface="popover"
+                    style="--border-width: 0px"
+                    label="Cuenta"
+                    label-placement="stacked"
+                    :validate="true"
+                    error-text="Selecciona una cuenta"
+                    :disabled="accountsList.length === 0"
                   >
-                    {{ acc.name }}
-                  </ion-select-option>
-                </ion-select>
-                <ion-button
-                  slot="end"
-                  fill="clear"
-                  size="small"
-                  :disabled="isDayClosed"
-                  @click="$emit('quick-account', index)"
-                >
-                  <ion-icon :icon="addOutline"></ion-icon>
-                </ion-button>
-              </ion-item>
-            </ion-card>
+                    <ion-select-option
+                      v-for="acc in availableAccountsForItem(index)"
+                      :key="acc.id"
+                      :value="acc.id"
+                    >
+                      {{ acc.name }}
+                    </ion-select-option>
+                  </ion-select>
 
-            <ion-note
-              v-if="accountsList.length === 0"
-              color="warning"
-              class="ion-padding-start"
-            >
-              No hay cuentas. Crea una para continuar.
-            </ion-note>
+                  <ion-button
+                    slot="end"
+                    fill="clear"
+                    size="small"
+                    :disabled="isDayClosed"
+                    @click="$emit('quick-account', index)"
+                  >
+                    <ion-icon :icon="addOutline"></ion-icon>
+                  </ion-button>
+                </ion-item>
+              </div>
+            </div>
           </div>
         </ion-list>
       </template>
@@ -186,6 +192,7 @@
                   Sin cuenta asignada
                 </p>
               </ion-label>
+
               <ion-note slot="end" :color="p.accountId ? 'primary' : 'medium'">
                 {{ formatProviderAmount({ provider: p }) }}
               </ion-note>
@@ -241,6 +248,7 @@
         <ion-list class="transparent">
           <ion-list-header>
             <ion-label>Detalles</ion-label>
+
             <ion-button
               :disabled="!canAddMoreItems || isDayClosed"
               @click="addEntryItem"
@@ -251,65 +259,65 @@
           </ion-list-header>
 
           <div class="list-content">
-            <ion-card
+            <div
               v-for="(item, index) in entryItems"
               :key="index"
               class="shadow2"
             >
-              <ion-item class="transparent">
-                <ion-label position="stacked">Cantidad</ion-label>
-                <ion-input
-                  v-model.number="item.amount"
-                  type="number"
-                  placeholder="0"
-                ></ion-input>
-              </ion-item>
-
-              <ion-item class="transparent">
-                <ion-select
-                  v-model="item.accountId"
-                  label="Cuenta"
-                  label-placement="stacked"
-                  :validate="true"
-                  error-text="Selecciona una cuenta"
-                >
-                  <ion-select-option
-                    v-for="acc in availableAccountsForItem(index)"
-                    :key="acc.id"
-                    :value="acc.id"
-                  >
-                    {{ acc.name }}
-                  </ion-select-option>
-                </ion-select>
-                <ion-button
-                  slot="end"
-                  fill="clear"
-                  size="small"
-                  :disabled="isDayClosed"
-                  @click="$emit('quick-account', index)"
-                >
-                  <ion-icon :icon="addOutline"></ion-icon>
-                </ion-button>
-              </ion-item>
-
-              <ion-note
-                v-if="accountsList.length === 0"
-                color="warning"
-                class="ion-padding-horizontal"
+              <div
+                clsas="ion-padding"
+                :class="{
+                  'ion-padding-bottom': index === entryItems.length - 1,
+                }"
               >
-                No hay cuentas. Crea una para continuar.
-              </ion-note>
+                <ion-item class="transparent">
+                  <ion-input
+                    v-model.number="item.amount"
+                    label="Cantidad"
+                    label-placement="floating"
+                    type="number"
+                    placeholder="0"
+                  ></ion-input>
+                </ion-item>
 
-              <ion-item class="transparent" lines="none">
-                <ion-button
-                  slot="end"
-                  color="danger"
-                  fill="clear"
-                  :disabled="isDayClosed"
-                  >Eliminar</ion-button
-                >
-              </ion-item>
-            </ion-card>
+                <ion-item class="transparent">
+                  <ion-select
+                    v-model="item.accountId"
+                    label="Cuenta"
+                    label-placement="stacked"
+                    :validate="true"
+                    error-text="Selecciona una cuenta"
+                  >
+                    <ion-select-option
+                      v-for="acc in availableAccountsForItem(index)"
+                      :key="acc.id"
+                      :value="acc.id"
+                    >
+                      {{ acc.name }}
+                    </ion-select-option>
+                  </ion-select>
+                  <ion-button
+                    slot="end"
+                    fill="clear"
+                    size="small"
+                    :disabled="isDayClosed"
+                    @click="$emit('quick-account', index)"
+                  >
+                    <ion-icon :icon="addOutline"></ion-icon>
+                  </ion-button>
+                </ion-item>
+
+                <ion-item class="transparent" lines="none">
+                  <ion-button
+                    slot="end"
+                    color="danger"
+                    fill="clear"
+                    :disabled="isDayClosed"
+                    >Eliminar</ion-button
+                  >
+                </ion-item>
+              </div>
+            </div>
           </div>
         </ion-list>
       </template>

@@ -1,3 +1,22 @@
+## [v0.53.6] - 2026-02-16
+
+### Refactor (UI)
+
+- **Budget Entry Modals UI Refactoring**: Update EditEntryModal and EditProviderModal for improved layout and modern Ionic patterns
+  - Replace `ion-card` elements with `div` for better layout control and styling
+  - Update form inputs from `ion-label position="stacked"` to modern `label-placement="floating"` pattern
+  - Simplify EditProviderModal by removing segment control (inicio/productos) and restructuring layout
+  - Improve spacing with conditional padding based on item position in lists
+  - Enhanced account selector with disabled state when no accounts available
+
+### Files Changed (staged)
+
+- `front/src/views/budget/components/EditEntryModal.vue` — UI refactor: div-based layout, floating labels, improved spacing
+- `front/src/views/budget/components/EditProviderModal.vue` — UI refactor: remove segments, div layout, floating labels
+- `front/package.json` — Bump version to 0.53.6
+
+---
+
 ## [v0.53.5] - 2026-02-15
 
 ### Refactor

@@ -76,161 +76,151 @@
           </ion-label>
         </ion-item>
 
-        <div class="ion-padding-start ion-padding-end">
-          <!-- Segment for full mode (always show when provider is selected) -->
-          <ion-segment v-if="!isEntryMode" v-model="selectedSegment">
-            <ion-segment-button value="inicio">
-              <ion-label>Inicio</ion-label>
-            </ion-segment-button>
+        <!-- Amounts by account section -->
+        <!-- Date selector (entry mode) - moved into the form like EditEntryModal -->
+        <ion-item
+          v-if="isEntryMode"
+          lines="full"
+          class="transparent"
+          button
+          @click="openReassignPopover($event)"
+        >
+          <ion-label>Fecha</ion-label>
 
-            <ion-segment-button value="productos">
-              <ion-label>Productos</ion-label>
-            </ion-segment-button>
-          </ion-segment>
+          <ion-label slot="end">{{
+            formatShortDate(reassignDateISO)
+          }}</ion-label>
+        </ion-item>
 
-          <!-- Amounts by account section -->
-          <div v-if="selectedSegment === 'inicio'" class="ion-margin-top">
-            <!-- Date selector (entry mode) - moved into the form like EditEntryModal -->
-            <ion-item
-              v-if="isEntryMode"
-              lines="full"
-              class="transparent"
-              button
-              @click="openReassignPopover($event)"
-            >
-              <ion-label>Fecha</ion-label>
-              <ion-label slot="end">{{
-                formatShortDate(reassignDateISO)
-              }}</ion-label>
-            </ion-item>
-            <ion-list class="transparent">
-              <ion-list-header>
-                <ion-label>Cantidades por Cuenta</ion-label>
+        <ion-list class="transparent">
+          <ion-list-header>
+            <ion-label>Cantidades por Cuenta</ion-label>
 
-                <ion-button :disabled="!canAddMoreItems" @click="addItem">
-                  <ion-icon :icon="addOutline"></ion-icon>
-                  Agregar
-                </ion-button>
-              </ion-list-header>
+            <ion-button :disabled="!canAddMoreItems" @click="addItem">
+              <ion-icon :icon="addOutline"></ion-icon>
+              Agregar
+            </ion-button>
+          </ion-list-header>
 
-              <div class="list-content">
-                <ion-card
-                  v-for="(item, index) in items"
-                  :key="index"
-                  class="shadow2"
-                >
-                  <ion-item lines="full" class="transparent">
-                    <ion-label position="stacked">Cantidad</ion-label>
+          <div class="list-content">
+            <div v-for="(item, index) in items" :key="index" class="shadow2">
+              <div
+                :class="{
+                  'ion-padding-bottom':
+                    index === items.length - 1 && items.length > 1,
+                }"
+              >
+                <ion-item lines="full" class="transparent">
+                  <ion-input
+                    v-model.number="item.amount"
+                    label="Cantidad"
+                    label-placement="floating"
+                    type="number"
+                    placeholder="0"
+                  ></ion-input>
+                </ion-item>
 
-                    <ion-input
-                      v-model.number="item.amount"
-                      type="number"
-                      placeholder="0"
-                    ></ion-input>
-                  </ion-item>
-
-                  <ion-item lines="full" class="transparent">
-                    <ion-select
-                      v-model="item.accountId"
-                      label="Cuenta"
-                      label-placement="stacked"
-                      interface="popover"
-                      :compare-with="compareAccounts"
-                    >
-                      <ion-select-option
-                        v-for="acc in availableAccountsForItem(index)"
-                        :key="acc.id"
-                        :value="isEntryMode ? acc.id : acc"
-                      >
-                        {{ acc.name }} {{ acc.type ? `(${acc.type})` : '' }}
-                      </ion-select-option>
-                    </ion-select>
-                  </ion-item>
-
-                  <ion-item
-                    v-if="items.length > 1"
-                    class="transparent"
-                    lines="none"
+                <ion-item lines="full" class="transparent">
+                  <ion-select
+                    v-model="item.accountId"
+                    label="Cuenta"
+                    label-placement="stacked"
+                    interface="popover"
+                    :compare-with="compareAccounts"
                   >
-                    <ion-button
-                      slot="end"
-                      fill="clear"
-                      color="danger"
-                      @click="removeItem({ index })"
+                    <ion-select-option
+                      v-for="acc in availableAccountsForItem(index)"
+                      :key="acc.id"
+                      :value="isEntryMode ? acc.id : acc"
                     >
-                      <ion-icon :icon="trashOutline"></ion-icon>
-                    </ion-button>
-                  </ion-item>
-                </ion-card>
+                      {{ acc.name }} {{ acc.type ? `(${acc.type})` : '' }}
+                    </ion-select-option>
+                  </ion-select>
+                </ion-item>
+
+                <ion-item
+                  v-if="items.length > 1"
+                  class="transparent"
+                  lines="none"
+                >
+                  <ion-button
+                    slot="end"
+                    fill="clear"
+                    color="danger"
+                    @click="removeItem({ index })"
+                  >
+                    <ion-icon :icon="trashOutline"></ion-icon>
+                  </ion-button>
+                </ion-item>
+              </div>
+            </div>
+          </div>
+        </ion-list>
+
+        <!-- Products coverage warning (only in full mode) -->
+        <ion-item
+          v-if="!isEntryMode && hasProductsWithQuantity"
+          lines="none"
+          class="warning-item"
+        >
+          <ion-icon
+            slot="start"
+            :icon="warningOutline"
+            color="warning"
+          ></ion-icon>
+          <ion-label color="warning">
+            <h3>Productos: {{ formatPrice(productsTotal) }}</h3>
+            <p v-if="productsCoverage.falta > 0">
+              Faltante: {{ formatPrice(productsCoverage.falta) }}
+            </p>
+            <p v-else>Cubierto</p>
+          </ion-label>
+        </ion-item>
+
+        <!-- Products section (only in full mode) -->
+        <div
+          v-if="!isEntryMode && selectedSegment === 'productos'"
+          class="ion-margin-top"
+        >
+          <template v-if="selectedProvider?.products?.length">
+            <ion-list>
+              <div class="list-content">
+                <ion-item
+                  v-for="product in selectedProvider.products"
+                  :key="product.name"
+                  lines="full"
+                  class="transparent"
+                >
+                  <ion-label>
+                    {{ product.name }}
+                    <p>{{ formatPrice({ price: product.price }) }}</p>
+                  </ion-label>
+
+                  <ion-input
+                    slot="end"
+                    type="number"
+                    placeholder="0"
+                    :value="getProductQuantity({ product })"
+                    style="width: 80px; text-align: end"
+                    @ion-input="
+                      e =>
+                        setProductQuantity({
+                          product,
+                          productPrice: product.price,
+                          quantity: Number(e.detail.value),
+                        })
+                    "
+                  ></ion-input>
+                </ion-item>
               </div>
             </ion-list>
+          </template>
 
-            <!-- Products coverage warning (only in full mode) -->
-            <ion-item
-              v-if="!isEntryMode && hasProductsWithQuantity"
-              lines="none"
-              class="warning-item"
-            >
-              <ion-icon
-                slot="start"
-                :icon="warningOutline"
-                color="warning"
-              ></ion-icon>
-              <ion-label color="warning">
-                <h3>Productos: {{ formatPrice(productsTotal) }}</h3>
-                <p v-if="productsCoverage.falta > 0">
-                  Faltante: {{ formatPrice(productsCoverage.falta) }}
-                </p>
-                <p v-else>Cubierto</p>
-              </ion-label>
+          <template v-else>
+            <ion-item lines="none">
+              <ion-label>Este proveedor no tiene productos</ion-label>
             </ion-item>
-          </div>
-
-          <!-- Products section (only in full mode) -->
-          <div
-            v-if="!isEntryMode && selectedSegment === 'productos'"
-            class="ion-margin-top"
-          >
-            <template v-if="selectedProvider?.products?.length">
-              <ion-list>
-                <div class="list-content">
-                  <ion-item
-                    v-for="product in selectedProvider.products"
-                    :key="product.name"
-                    lines="full"
-                    class="transparent"
-                  >
-                    <ion-label>
-                      {{ product.name }}
-                      <p>{{ formatPrice({ price: product.price }) }}</p>
-                    </ion-label>
-
-                    <ion-input
-                      slot="end"
-                      type="number"
-                      placeholder="0"
-                      :value="getProductQuantity({ product })"
-                      style="width: 80px; text-align: end"
-                      @ion-input="
-                        e =>
-                          setProductQuantity({
-                            product,
-                            productPrice: product.price,
-                            quantity: Number(e.detail.value),
-                          })
-                      "
-                    ></ion-input>
-                  </ion-item>
-                </div>
-              </ion-list>
-            </template>
-
-            <template v-else>
-              <ion-item lines="none">
-                <ion-label>Este proveedor no tiene productos</ion-label>
-              </ion-item>
-            </template>
-          </div>
+          </template>
         </div>
       </div>
     </ion-content>
