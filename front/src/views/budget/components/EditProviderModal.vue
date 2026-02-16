@@ -31,7 +31,7 @@
           >
             <ion-icon :icon="saveOutline"></ion-icon>
           </ion-button>
-          
+
           <!-- Reassign date moved into the form for entry mode -->
         </ion-buttons>
       </ion-toolbar>
@@ -61,7 +61,9 @@
             @click="selectProvider({ p })"
           >
             <ion-label>{{ p.name }}</ion-label>
-            <ion-label slot="end">{{ formatPrice({ price: p.estimated || 0 }) }}</ion-label>
+            <ion-label slot="end">{{
+              formatPrice({ price: p.estimated || 0 })
+            }}</ion-label>
           </ion-item>
         </ion-list>
       </template>
@@ -97,7 +99,9 @@
               @click="openReassignPopover($event)"
             >
               <ion-label>Fecha</ion-label>
-              <ion-label slot="end">{{ formatShortDate(reassignDateISO) }}</ion-label>
+              <ion-label slot="end">{{
+                formatShortDate(reassignDateISO)
+              }}</ion-label>
             </ion-item>
             <ion-list class="transparent">
               <ion-list-header>
@@ -437,7 +441,12 @@ const isSelectingProvider = ref(false);
 const selectedSegment = ref('inicio');
 const providerProducts = ref<ProviderProduct[]>([]);
 const productQuantities = ref<Record<string, number>>({});
-const items = ref<Array<{ amount: number; accountId: string | number | Account | { id: string | number } | null }>>([{ amount: 0, accountId: null }]);
+const items = ref<
+  Array<{
+    amount: number;
+    accountId: string | number | Account | { id: string | number } | null;
+  }>
+>([{ amount: 0, accountId: null }]);
 const popoverState = reactive({ open: false, event: null as Event | null });
 const reassignDate = ref<string | null>(null);
 const reassignDateISO = ref<string | null>(null);
@@ -449,45 +458,15 @@ const reassignInitialShort = ref<string | null>(null);
 // watch
 watch(isOpen, async newVal => {
   if (!newVal) return;
+  resetModalState();
 
-  isSelectingProvider.value = false;
-  selectedProvider.value = null;
-
-  // Modal opened - initialize state
   if (isEntryMode.value && entryData.value) {
-    // Entry mode - use provided entry data
-    items.value = entryData.value.items.map(item => ({
-      amount: Number(item.amount) || 0,
-      accountId: item.accountId,
-    }));
-    providerProducts.value = [];
-    // Initialize reassign date so the form shows it immediately (no click required)
-    try {
-      const raw = (entryData.value as any).date;
-      if (raw) {
-        reassignDateISO.value = parseDateValue(raw);
-        reassignDate.value = String(reassignDateISO.value).slice(0, 10);
-      } else {
-        // fallback to today
-        reassignDateISO.value = format(new Date(), 'yyyy-MM-dd') + 'T00:00:00';
-        reassignDate.value = String(reassignDateISO.value).slice(0, 10);
-      }
-    } catch (err) {
-      reassignDateISO.value = format(new Date(), 'yyyy-MM-dd') + 'T00:00:00';
-      reassignDate.value = String(reassignDateISO.value).slice(0, 10);
-    }
+    initializeEntryMode();
   } else if (provider.value) {
-    // Provider mode with existing provider - load data
     initializeProviderMode();
   } else {
-    // Provider mode - new provider - show provider list initially
-    selectedProvider.value = null;
-    isSelectingProvider.value = true;
-    providerProducts.value = [];
-    items.value = [{ amount: 0, accountId: getDefaultAccountId() }];
+    initializeNewProviderMode();
   }
-  selectedSegment.value = 'inicio';
-  searchQuery.value = '';
 });
 
 // Watch for external provider data updates
@@ -617,6 +596,44 @@ function getDefaultAccountId() {
   return isEntryMode.value ? accounts.value[0].id : accounts.value[0];
 }
 
+function resetModalState() {
+  isSelectingProvider.value = false;
+  selectedProvider.value = null;
+  selectedSegment.value = 'inicio';
+  searchQuery.value = '';
+}
+
+function initializeEntryMode() {
+  items.value = entryData.value!.items.map(item => ({
+    amount: Number(item.amount) || 0,
+    accountId: item.accountId,
+  }));
+  providerProducts.value = [];
+  initReassignDate();
+}
+
+function initReassignDate() {
+  const raw = (entryData.value as any)?.date;
+  if (raw) {
+    reassignDateISO.value = parseDateValue(raw);
+    reassignDate.value = String(reassignDateISO.value).slice(0, 10);
+  } else {
+    setTodayDate();
+  }
+}
+
+function setTodayDate() {
+  reassignDateISO.value = format(new Date(), 'yyyy-MM-dd') + 'T00:00:00';
+  reassignDate.value = String(reassignDateISO.value).slice(0, 10);
+}
+
+function initializeNewProviderMode() {
+  selectedProvider.value = null;
+  isSelectingProvider.value = true;
+  providerProducts.value = [];
+  items.value = [{ amount: 0, accountId: getDefaultAccountId() }];
+}
+
 function initializeProviderMode() {
   const supplierSyncId = provider.value!._supplierId || provider.value!.id;
   const fullSupplier =
@@ -637,7 +654,7 @@ function initializeProviderMode() {
     name: provider.value!._supplierName || provider.value!.name,
     products: fullSupplier?.products || [],
   };
-  
+
   items.value = [
     {
       amount: provider.value!.estimated || 0,
@@ -646,7 +663,7 @@ function initializeProviderMode() {
         : getDefaultAccountId(),
     },
   ];
-  
+
   // Load existing products
   if (fullSupplier?.products && Array.isArray(fullSupplier.products)) {
     providerProducts.value = fullSupplier.products.map((p: Product) => ({
@@ -697,9 +714,11 @@ function updateProviderFromProps(newProvider: ProviderData) {
     id: fullSupplier?.id || supplierSyncId,
     sync_id: String(fullSupplier?.sync_id || supplierSyncId),
     name: newProvider._supplierName || newProvider.name,
-    products: (fullSupplier?.products || newProvider.products || []) as Product[],
+    products: (fullSupplier?.products ||
+      newProvider.products ||
+      []) as Product[],
   };
-  
+
   items.value = [
     {
       amount: newProvider.estimated || 0,
@@ -708,20 +727,15 @@ function updateProviderFromProps(newProvider: ProviderData) {
         : getDefaultAccountId(),
     },
   ];
-  
+
   if (newProvider.products && Array.isArray(newProvider.products)) {
-    providerProducts.value = newProvider.products.map(
-      (p: PendingProduct) => ({
-        supplierProductId:
-          p.supplierProductId ||
-          p.sync_id ||
-          p.id ||
-          `${p.name}-${p.price}`,
-        productName: p.productName || p.name || '',
-        productPrice: p.productPrice || p.price || 0,
-        quantity: p.quantity || 0,
-      })
-    );
+    providerProducts.value = newProvider.products.map((p: PendingProduct) => ({
+      supplierProductId:
+        p.supplierProductId || p.sync_id || p.id || `${p.name}-${p.price}`,
+      productName: p.productName || p.name || '',
+      productPrice: p.productPrice || p.price || 0,
+      quantity: p.quantity || 0,
+    }));
   } else {
     providerProducts.value = [];
   }
@@ -729,18 +743,18 @@ function updateProviderFromProps(newProvider: ProviderData) {
 
 function parseDateValue(raw: unknown): string {
   if (!raw) return format(new Date(), 'yyyy-MM-dd') + 'T00:00:00';
-  
+
   if (typeof raw === 'string') {
     if (raw.includes('T')) {
       return raw.length >= 19 ? raw.slice(0, 19) : raw + 'T00:00:00';
     }
     return `${raw.slice(0, 10)}T00:00:00`;
   }
-  
+
   if (typeof raw === 'number') {
     return format(new Date(raw), 'yyyy-MM-dd') + 'T00:00:00';
   }
-  
+
   return format(new Date(), 'yyyy-MM-dd') + 'T00:00:00';
 }
 // end Helper functions
@@ -798,10 +812,12 @@ function selectProvider(params: { p: Supplier | any }) {
     }));
   } else if (p.estimated && Number(p.estimated) > 0) {
     // If provider has estimated amount, create one item
-    items.value = [{
-      amount: Number(p.estimated) || 0,
-      accountId: p.accountId || getDefaultAccountId(),
-    }];
+    items.value = [
+      {
+        amount: Number(p.estimated) || 0,
+        accountId: p.accountId || getDefaultAccountId(),
+      },
+    ];
   }
 }
 
@@ -921,8 +937,11 @@ function handleSave() {
     items: items.value.map(item => ({
       amount: Number(item.amount) || 0,
       accountId: isEntryMode.value
-        ? item.accountId as (string | number | null)
-        : ((item.accountId as Account)?.id ?? item.accountId) as (string | number | null),
+        ? (item.accountId as string | number | null)
+        : (((item.accountId as Account)?.id ?? item.accountId) as
+            | string
+            | number
+            | null),
     })) as ProviderItem[],
     totalAmount,
     products: products.length > 0 ? products : undefined,
@@ -963,7 +982,7 @@ async function openReassignPopover(e: Event) {
 function onReassignDatetimeChange(e: any) {
   const val = e?.detail?.value ?? e;
   if (!val) return;
-  
+
   let iso: string;
   if (typeof val === 'string') {
     iso = val.includes('T') ? val : `${val.slice(0, 10)}T00:00:00`;
@@ -972,7 +991,7 @@ function onReassignDatetimeChange(e: any) {
   } else {
     iso = String(val).slice(0, 10) + 'T00:00:00';
   }
-  
+
   reassignDateISO.value = iso;
   reassignDate.value = iso.slice(0, 10);
 }
@@ -980,7 +999,7 @@ function onReassignDatetimeChange(e: any) {
 function applyPopoverReassign() {
   const finalDate = reassignDate.value || reassignDateISO.value?.slice(0, 10);
   if (!finalDate) return;
-  
+
   emit('reassign-date', finalDate);
   popoverState.open = false;
 }

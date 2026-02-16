@@ -1,3 +1,22 @@
+## [v0.53.5] - 2026-02-15
+
+### Refactor
+
+- **EditProviderModal Initialization**: Extract modal initialization logic into dedicated functions
+  - Added `resetModalState()` to reset modal state on open
+  - Added `initializeEntryMode()` for entry mode initialization
+  - Added `initReassignDate()` and `setTodayDate()` for date handling
+  - Added `initializeNewProviderMode()` for new provider flow
+  - Improved type definition for `items` ref with better TypeScript support
+  - Reorganized watch on `isOpen` to use the new initialization functions
+
+### Files Changed (staged)
+
+- `front/src/views/budget/components/EditProviderModal.vue` — Extract initialization logic into separate functions
+- `front/package.json` — Bump version to 0.53.5
+
+---
+
 ## [v0.53.4] - 2026-02-15
 
 ### Fixes
