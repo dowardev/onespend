@@ -79,6 +79,7 @@
     @dismiss="showAddProviderModal = false"
     @saved="handleProviderSaved"
     @deleted="handleProviderDeleted"
+    @quick-account="openQuickAccountAlert"
   />
 
   <!-- alerts -->
@@ -128,6 +129,14 @@
         deleteConfirm.providerName = '';
       }
     "
+  ></ion-alert>
+
+  <ion-alert
+    :is-open="showQuickAccountAlert"
+    header="Crear cuenta rápida"
+    :inputs="quickAccountInputs"
+    :buttons="quickAccountButtons"
+    @did-dismiss="showQuickAccountAlert = false"
   ></ion-alert>
   <!-- end alerts -->
 </template>
@@ -212,6 +221,35 @@ const deleteConfirm = reactive({
   providerId: null as string | number | null,
   providerName: '' as string,
 });
+
+// Quick account alert
+const showQuickAccountAlert = ref(false);
+const quickAccountTargetIndex = ref<number | null>(null);
+const quickAccountInputs = [
+  {
+    name: 'name',
+    type: 'text',
+    placeholder: 'Nombre de la cuenta',
+  },
+  {
+    name: 'initialBalance',
+    type: 'number',
+    placeholder: 'Saldo inicial (opcional)',
+    value: 0,
+  },
+];
+const quickAccountButtons = [
+  {
+    text: 'Cancelar',
+    role: 'cancel',
+  },
+  {
+    text: 'Crear',
+    handler: (data: { name: string; initialBalance: string }) => {
+      createQuickAccount(data.name, parseFloat(data.initialBalance) || 0);
+    },
+  },
+];
 
 // End Vars
 
@@ -524,6 +562,28 @@ function handleOverwrite() {
   pendingTemplate.value = null;
   pendingProviders.value = [];
   showTemplatesModal.value = false;
+}
+
+function openQuickAccountAlert(itemIndex: number) {
+  quickAccountTargetIndex.value = itemIndex;
+  showQuickAccountAlert.value = true;
+}
+
+async function createQuickAccount(name: string, initialBalance: number) {
+  if (!name || name.trim() === '') return;
+  
+  const newAccount = await accountsCtrl.addAccount({
+    name: name.trim(),
+    initialBalance: initialBalance || 0,
+  });
+  
+  if (newAccount) {
+    // Reload accounts to include the new one
+    loadAccounts();
+  }
+  
+  showQuickAccountAlert.value = false;
+  quickAccountTargetIndex.value = null;
 }
 // End Functions
 </script>

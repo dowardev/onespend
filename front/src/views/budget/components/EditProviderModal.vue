@@ -76,86 +76,109 @@
           </ion-label>
         </ion-item>
 
-        <!-- Amounts by account section -->
-        <!-- Date selector (entry mode) - moved into the form like EditEntryModal -->
-        <ion-item
-          v-if="isEntryMode"
-          lines="full"
-          class="transparent"
-          button
-          @click="openReassignPopover($event)"
-        >
-          <ion-label>Fecha</ion-label>
+        <!-- Segment for full mode -->
+        <div v-if="!isEntryMode" class="ion-padding-start ion-padding-end">
+          <ion-segment v-model="selectedSegment">
+            <ion-segment-button value="inicio">
+              <ion-label>Inicio</ion-label>
+            </ion-segment-button>
 
-          <ion-label slot="end">{{
-            formatShortDate(reassignDateISO)
-          }}</ion-label>
-        </ion-item>
+            <ion-segment-button value="productos">
+              <ion-label>Productos</ion-label>
+            </ion-segment-button>
+          </ion-segment>
+        </div>
 
-        <ion-list class="transparent">
-          <ion-list-header>
-            <ion-label>Cantidades por Cuenta</ion-label>
+        <!-- Amounts by account section (inicio segment) -->
+        <template v-if="!isEntryMode && selectedSegment === 'inicio'">
+          <!-- Date selector (entry mode) - moved into the form like EditEntryModal -->
+          <ion-item
+            v-if="isEntryMode"
+            lines="full"
+            class="transparent"
+            button
+            @click="openReassignPopover($event)"
+          >
+            <ion-label>Fecha</ion-label>
 
-            <ion-button :disabled="!canAddMoreItems" @click="addItem">
-              <ion-icon :icon="addOutline"></ion-icon>
-              Agregar
-            </ion-button>
-          </ion-list-header>
+            <ion-label slot="end">{{
+              formatShortDate(reassignDateISO)
+            }}</ion-label>
+          </ion-item>
 
-          <div class="list-content">
-            <div v-for="(item, index) in items" :key="index" class="shadow2">
-              <div
-                :class="{
-                  'ion-padding-bottom':
-                    index === items.length - 1 && items.length > 1,
-                }"
-              >
-                <ion-item lines="full" class="transparent">
-                  <ion-input
-                    v-model.number="item.amount"
-                    label="Cantidad"
-                    label-placement="floating"
-                    type="number"
-                    placeholder="0"
-                  ></ion-input>
-                </ion-item>
+          <ion-list class="transparent">
+            <ion-list-header>
+              <ion-label>Cantidades por Cuenta</ion-label>
 
-                <ion-item lines="full" class="transparent">
-                  <ion-select
-                    v-model="item.accountId"
-                    label="Cuenta"
-                    label-placement="stacked"
-                    interface="popover"
-                    :compare-with="compareAccounts"
-                  >
-                    <ion-select-option
-                      v-for="acc in availableAccountsForItem(index)"
-                      :key="acc.id"
-                      :value="isEntryMode ? acc.id : acc"
-                    >
-                      {{ acc.name }} {{ acc.type ? `(${acc.type})` : '' }}
-                    </ion-select-option>
-                  </ion-select>
-                </ion-item>
+              <ion-button :disabled="!canAddMoreItems" @click="addItem">
+                <ion-icon :icon="addOutline"></ion-icon>
+                Agregar
+              </ion-button>
+            </ion-list-header>
 
-                <ion-item
-                  v-if="items.length > 1"
-                  class="transparent"
-                  lines="none"
+            <div class="list-content">
+              <div v-for="(item, index) in items" :key="index" class="shadow2">
+                <div
+                  :class="{
+                    'ion-padding-bottom':
+                      index === items.length - 1 && items.length > 1,
+                  }"
                 >
-                  <ion-button
-                    slot="end"
-                    fill="clear"
-                    color="danger"
-                    @click="removeItem({ index })"
+                  <ion-item lines="full" class="transparent">
+                    <ion-input
+                      v-model.number="item.amount"
+                      label="Cantidad"
+                      label-placement="floating"
+                      type="number"
+                      placeholder="0"
+                    ></ion-input>
+                  </ion-item>
+
+                  <ion-item lines="full" class="transparent">
+                    <ion-select
+                      v-model="item.accountId"
+                      label="Cuenta"
+                      label-placement="stacked"
+                      interface="popover"
+                      :compare-with="compareAccounts"
+                    >
+                      <ion-select-option
+                        v-for="acc in availableAccountsForItem(index)"
+                        :key="acc.id"
+                        :value="isEntryMode ? acc.id : acc"
+                      >
+                        {{ acc.name }} {{ acc.type ? `(${acc.type})` : '' }}
+                      </ion-select-option>
+                    </ion-select>
+
+                    <ion-button
+                      slot="end"
+                      fill="clear"
+                      @click="$emit('quick-account', index)"
+                    >
+                      <ion-icon :icon="addOutline"></ion-icon>
+                    </ion-button>
+                  </ion-item>
+
+                  <ion-item
+                    v-if="items.length > 1"
+                    class="transparent"
+                    lines="none"
                   >
-                    <ion-icon :icon="trashOutline"></ion-icon>
-                  </ion-button>
-                </ion-item>
+                    <ion-button
+                      slot="end"
+                      fill="clear"
+                      color="danger"
+                      @click="removeItem({ index })"
+                    >
+                      <ion-icon :icon="trashOutline"></ion-icon>
+                    </ion-button>
+                  </ion-item>
+                </div>
               </div>
             </div>
-          </div>
-        </ion-list>
+          </ion-list>
+        </template>
 
         <!-- Products coverage warning (only in full mode) -->
         <ion-item
@@ -306,6 +329,7 @@ import {
   warningOutline,
   saveOutline,
   ellipsisVerticalOutline,
+  createOutline,
 } from 'ionicons/icons';
 import { ref, computed, watch, toRefs, reactive, nextTick } from 'vue';
 import { format } from 'date-fns';
@@ -418,6 +442,7 @@ const emit = defineEmits<{
   ): void;
   (e: 'deleted', id: string | number): void;
   (e: 'reassign-date', date: string): void;
+  (e: 'quick-account', index: number): void;
 }>();
 
 const { isOpen, provider, entryData, suppliers, accounts, mode } =
