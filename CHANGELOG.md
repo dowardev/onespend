@@ -1,3 +1,46 @@
+## [v0.54.0] - 2026-02-17
+
+### Features
+
+- **Quick Account Creation**: Add ability to create accounts directly from provider modals
+  - New `quick-account` event emitted from EditProviderModal when clicking the add icon next to account selector
+  - ProvidersComponent and InicioViewComponent now handle `@quick-account` event with an alert dialog
+  - Alert provides inputs for account name and optional initial balance
+  - New accounts are created via `accountsCtrl.addAccount()` and accounts are reloaded after creation
+
+### Refactor
+
+- **EditProviderModal Segment Tabs**: Restructure modal with segment navigation in full mode
+  - Add `ion-segment` with "Inicio" and "Productos" tabs for better organization
+  - Account amounts section now lives in "Inicio" segment
+  - Products section moved to "Productos" segment
+  - Add icon button next to account selector to trigger quick account creation
+
+### Fixes
+
+- **SuppliersPage Edit Parameter**: Fix incorrect parameter name in edit handler
+  - Changed `@click="edit({ s })"` to `@click="edit({ supplier: s })"` to match expected parameter name
+
+### Improvements
+
+- **AddSupliersComponent Form Handling**: Multiple improvements to supplier form
+  - Replace `ion-card` with `ion-item` for form input layout
+  - Add `toRaw` import from Vue for proper reactive handling
+  - Improve image compression with better dimension reduction (max 1024px)
+  - Fix product watching with `toRaw` to prevent reactive proxy issues
+  - Add comprehensive console logging for debugging product add/submit operations
+
+### Files Changed (staged)
+
+- `front/src/views/budget/InicioViewComponent.vue` — Add `@quick-account` event handler
+- `front/src/views/budget/ProvidersComponent.vue` — Add quick account alert functionality
+- `front/src/views/budget/components/EditProviderModal.vue` — Add segment tabs and quick-account event
+- `front/src/views/suppliers/SuppliersPage.vue` — Fix edit parameter name
+- `front/src/views/suppliers/modals/AddSupliersComponent.vue` — Improve form handling and image compression
+- `front/package.json` — Bump version to 0.54.0
+
+---
+
 ## [v0.53.6] - 2026-02-16
 
 ### Refactor (UI)

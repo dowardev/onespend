@@ -43,7 +43,7 @@
                   :key="s.id"
                   button
                   class="transparent"
-                  @click="edit({ s })"
+                  @click="edit({ supplier: s })"
                 >
                   <ion-label>
                     <h3>{{ s.name }}</h3>

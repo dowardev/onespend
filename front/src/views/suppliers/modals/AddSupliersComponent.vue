@@ -22,14 +22,14 @@
 
     <ion-content class="ion-padding-top ion-padding-bottom">
       <ion-card class="shadow1">
-        <ion-card-content>
+        <ion-item lines="full" class="transparent">
           <ion-input
             v-model="form.name"
             label="Nombre"
             label-placement="floating"
             required
           ></ion-input>
-        </ion-card-content>
+        </ion-item>
       </ion-card>
 
       <ion-list
@@ -222,7 +222,7 @@ import {
   IonSearchbar,
   IonThumbnail,
 } from '@ionic/vue';
-import { reactive, ref, computed, watch } from 'vue';
+import { reactive, ref, computed, watch, toRaw } from 'vue';
 import {
   addOutline,
   closeOutline,
@@ -278,11 +278,11 @@ async function compressImage(file: File, quality = 0.6): Promise<string> {
     img.onload = () => {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d')!;
-      
+
       // Reduce dimensions for better compression
       const maxSize = 1024;
       let { width, height } = img;
-      
+
       if (width > height && width > maxSize) {
         height = (height * maxSize) / width;
         width = maxSize;
@@ -290,7 +290,7 @@ async function compressImage(file: File, quality = 0.6): Promise<string> {
         width = (width * maxSize) / height;
         height = maxSize;
       }
-      
+
       canvas.width = width;
       canvas.height = height;
       ctx.drawImage(img, 0, 0, width, height);
@@ -317,7 +317,7 @@ async function fileToBase64(file: File): Promise<string> {
       });
     }
   }
-  
+
   // For non-image files, use original method
   return await new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -355,7 +355,11 @@ watch(
   s => {
     if (s) {
       form.name = s.name || '';
-      form.products = s.products ? (structuredClone ? structuredClone(s.products) : JSON.parse(JSON.stringify(s.products))) : [];
+      form.products = s.products
+        ? structuredClone
+          ? structuredClone(toRaw(s.products))
+          : JSON.parse(JSON.stringify(toRaw(s.products)))
+        : [];
       showNewProductFields.value = !form.products || form.products.length === 0;
     } else {
       form.name = '';
@@ -400,43 +404,61 @@ function toggleProductSearch() {
 
 function addProduct() {
   console.log('[AddSupliersComponent] 🔵 addProduct llamado');
-  
+
   // Get the native input values to ensure we have the latest value
-  const inputElements = document.querySelectorAll('input[placeholder="Nombre del producto"]');
-  const inputElement = inputElements.length > 1 ? inputElements[1] : inputElements[0];
-  const priceElements = document.querySelectorAll('input[placeholder="Precio"]');
-  const priceInputElement = priceElements.length > 1 ? priceElements[1] : priceElements[0];
-  
+  const inputElements = document.querySelectorAll(
+    'input[placeholder="Nombre del producto"]'
+  );
+  const inputElement =
+    inputElements.length > 1 ? inputElements[1] : inputElements[0];
+  const priceElements = document.querySelectorAll(
+    'input[placeholder="Precio"]'
+  );
+  const priceInputElement =
+    priceElements.length > 1 ? priceElements[1] : priceElements[0];
+
   const productName = (inputElement?.value || newProduct.name || '').trim();
-  const productPrice = priceInputElement ? parseFloat(priceInputElement.value) : Number(newProduct.price);
-  
+  const productPrice = priceInputElement
+    ? parseFloat(priceInputElement.value)
+    : Number(newProduct.price);
+
   console.log('[AddSupliersComponent] productName from input:', productName);
   console.log('[AddSupliersComponent] inputElement:', inputElement?.value);
   console.log('[AddSupliersComponent] newProduct.name:', newProduct.name);
-  
+
   if (!productName) {
     console.log('[AddSupliersComponent] ⚠️ productName está vacío');
     return;
   }
-  
+
   const productData = {
     name: productName,
     price: isNaN(productPrice) ? 0 : productPrice,
     imageBase64: newProduct.imageBase64 || null,
   };
-  
-  console.log('[AddSupliersComponent] Product data:', JSON.stringify(productData, null, 2));
-  
+
+  console.log(
+    '[AddSupliersComponent] Product data:',
+    JSON.stringify(productData, null, 2)
+  );
+
   if (editingIndex.value != null && form.products[editingIndex.value]) {
-    console.log('[AddSupliersComponent] Editando producto en índice:', editingIndex.value);
+    console.log(
+      '[AddSupliersComponent] Editando producto en índice:',
+      editingIndex.value
+    );
     form.products.splice(editingIndex.value, 1, productData);
   } else {
     console.log('[AddSupliersComponent] Agregando nuevo producto');
     form.products.push(productData);
   }
-  
-  console.log('[AddSupliersComponent] ✅ form.products ahora tiene:', form.products.length, 'productos');
-  
+
+  console.log(
+    '[AddSupliersComponent] ✅ form.products ahora tiene:',
+    form.products.length,
+    'productos'
+  );
+
   // Clear the inputs
   editingIndex.value = null;
   newProduct.name = '';
@@ -477,20 +499,26 @@ function editProduct(params: { idx: number }) {
 function onSubmit() {
   console.log('[AddSupliersComponent] 🔵 onSubmit llamado');
   console.log('[AddSupliersComponent] form.name:', form.name);
-  console.log('[AddSupliersComponent] form.products.length:', form.products.length);
-  
+  console.log(
+    '[AddSupliersComponent] form.products.length:',
+    form.products.length
+  );
+
   if (!form.name) {
     console.log('[AddSupliersComponent] ⚠️ form.name está vacío');
     return;
   }
-  
+
   const payload: SavedPayload = {
     name: form.name,
     products: form.products && form.products.length ? form.products : undefined,
   };
-  
-  console.log('[AddSupliersComponent] Payload a emitir:', JSON.stringify(payload, null, 2));
-  
+
+  console.log(
+    '[AddSupliersComponent] Payload a emitir:',
+    JSON.stringify(payload, null, 2)
+  );
+
   if (selectedId.value != null) payload.id = selectedId.value;
   if (props.supplier?.sync_id) payload.sync_id = props.supplier.sync_id;
 
