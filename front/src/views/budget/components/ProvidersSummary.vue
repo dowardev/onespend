@@ -146,9 +146,17 @@ function formatCurrency(v: number | string) {
 const accountsSummary = computed(() => {
   const accountMap = new Map<string, { total: number; ingreso: number }>();
 
+  // First, add all existing accounts with zero values
+  for (const account of accountsStore.accounts) {
+    if (account.name && !accountMap.has(account.name)) {
+      accountMap.set(account.name, { total: 0, ingreso: 0 });
+    }
+  }
+
   // Sum providers totals by account using 'estimated' and 'accountId'
   for (const provider of budgetStore.providers) {
     const accountName = getAccountNameById(provider.accountId);
+    if (!accountName) continue; // Skip if no valid account
     const providerTotal = Number(provider.estimated || 0);
 
     if (!accountMap.has(accountName)) {
@@ -163,6 +171,7 @@ const accountsSummary = computed(() => {
     if (entry.groups && entry.groups.length > 0) {
       for (const group of entry.groups) {
         const accountName = getAccountNameById(group.accountId);
+        if (!accountName) continue; // Skip if no valid account
         if (!accountMap.has(accountName)) {
           accountMap.set(accountName, { total: 0, ingreso: 0 });
         }
@@ -176,6 +185,7 @@ const accountsSummary = computed(() => {
     } else {
       // Use entry.accountId directly
       const accountName = getAccountNameById(entry.accountId);
+      if (!accountName) continue; // Skip if no valid account
       if (!accountMap.has(accountName)) {
         accountMap.set(accountName, { total: 0, ingreso: 0 });
       }
@@ -188,18 +198,20 @@ const accountsSummary = computed(() => {
     }
   }
 
-  return Array.from(accountMap.entries()).map(([name, data]) => {
-    const diff = data.ingreso - data.total;
-    return {
-      name,
-      total: data.total,
-      ingreso: data.ingreso,
-      diff,
-      diffLabel:
-        diff === 0 ? '$0' : `${diff > 0 ? '+' : ''}${formatCurrency(diff)}`,
-      diffColor: diff === 0 ? undefined : diff > 0 ? 'success' : 'danger',
-    };
-  });
+  return Array.from(accountMap.entries())
+    .filter(([name]) => name && name.trim() !== '') // Filter out empty names
+    .map(([name, data]) => {
+      const diff = data.ingreso - data.total;
+      return {
+        name,
+        total: data.total,
+        ingreso: data.ingreso,
+        diff,
+        diffLabel:
+          diff === 0 ? '$0' : `${diff > 0 ? '+' : ''}${formatCurrency(diff)}`,
+        diffColor: diff === 0 ? undefined : diff > 0 ? 'success' : 'danger',
+      };
+    });
 });
 
 // total required by providers
