@@ -154,6 +154,7 @@
                     <ion-button
                       slot="end"
                       fill="clear"
+                      size="small"
                       @click="$emit('quick-account', index)"
                     >
                       <ion-icon :icon="addOutline"></ion-icon>

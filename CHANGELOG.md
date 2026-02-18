@@ -1,3 +1,40 @@
+## [v0.54.1] - 2026-02-18
+
+### Fixes
+
+- **Quick Account Creation**: Fix quick account form handling in ProvidersComponent
+  - Rename input field from `name` to `accountName` for clarity
+  - Add validation to prevent creating accounts with empty names
+  - Fix `createQuickAccount` to use correct API structure with nested `a` parameter
+  - Update alert header from "Crear cuenta rápida" to "Nueva Cuenta"
+
+- **Accounts Summary**: Improve ProvidersSummary accounts calculation reliability
+  - Initialize all existing accounts with zero values before aggregation
+  - Skip entries with invalid or missing account references
+  - Filter out accounts with empty names from the final summary
+
+### Refactor
+
+- **Quick Account Event Handling**: Remove redundant `@quick-account` event from InicioViewComponent
+  - Quick account creation is now handled exclusively in ProvidersComponent
+
+- **Day Close Concept**: Remove `isDayClosed` functionality from ProvidersComponent
+  - Day close state now always returns false (feature deprecated)
+
+### UI
+
+- **EditProviderModal**: Reduce quick account button size with `size="small"` for better visual balance
+
+### Files Changed
+
+- `front/src/views/budget/InicioViewComponent.vue` — Remove quick-account event handler
+- `front/src/views/budget/ProvidersComponent.vue` — Fix quick account form, remove day-close concept
+- `front/src/views/budget/components/EditProviderModal.vue` — Add size="small" to quick account button
+- `front/src/views/budget/components/ProvidersSummary.vue` — Improve accounts aggregation logic
+- `front/package.json` — Bump version to 0.54.1
+
+---
+
 ## [v0.54.0] - 2026-02-17
 
 ### Features

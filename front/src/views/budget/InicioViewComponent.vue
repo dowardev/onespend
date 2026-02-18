@@ -137,7 +137,6 @@
     @saved="handleProviderEntrySaved"
     @deleted="handleProviderEntryDeleted"
     @reassign-date="reassignProviderFromModal"
-    @quick-account="openQuickAccountAlert"
   />
 
   <EditEntryModal

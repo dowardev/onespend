@@ -133,7 +133,7 @@
 
   <ion-alert
     :is-open="showQuickAccountAlert"
-    header="Crear cuenta rápida"
+    header="Nueva Cuenta"
     :inputs="quickAccountInputs"
     :buttons="quickAccountButtons"
     @did-dismiss="showQuickAccountAlert = false"
@@ -222,22 +222,23 @@ const deleteConfirm = reactive({
   providerName: '' as string,
 });
 
-// Quick account alert
 const showQuickAccountAlert = ref(false);
 const quickAccountTargetIndex = ref<number | null>(null);
+
 const quickAccountInputs = [
   {
-    name: 'name',
+    name: 'accountName',
     type: 'text',
     placeholder: 'Nombre de la cuenta',
   },
   {
     name: 'initialBalance',
     type: 'number',
-    placeholder: 'Saldo inicial (opcional)',
+    placeholder: 'Balance inicial (opcional)',
     value: 0,
   },
 ];
+
 const quickAccountButtons = [
   {
     text: 'Cancelar',
@@ -245,8 +246,15 @@ const quickAccountButtons = [
   },
   {
     text: 'Crear',
-    handler: (data: { name: string; initialBalance: string }) => {
-      createQuickAccount(data.name, parseFloat(data.initialBalance) || 0);
+    handler: (data: { accountName: string; initialBalance: string }) => {
+      if (!data.accountName || data.accountName.trim() === '') {
+        return false;
+      }
+      createQuickAccount(
+        data.accountName.trim(),
+        Number(data.initialBalance) || 0
+      );
+      return true;
     },
   },
 ];
@@ -258,6 +266,8 @@ const providers = computed(() => budgetCtrl.getProviders());
 const providerIdsWithEntries = computed(() =>
   budgetCtrl.getProviderIdsWithEntries()
 );
+// Day-close concept removed; always treat as open
+const isDayClosed = computed(() => false);
 
 // End Computed
 
@@ -570,19 +580,18 @@ function openQuickAccountAlert(itemIndex: number) {
 }
 
 async function createQuickAccount(name: string, initialBalance: number) {
-  if (!name || name.trim() === '') return;
-  
   const newAccount = await accountsCtrl.addAccount({
-    name: name.trim(),
-    initialBalance: initialBalance || 0,
+    a: {
+      name,
+      initialBalance,
+    },
   });
-  
+
   if (newAccount) {
-    // Reload accounts to include the new one
+    // Refresh accounts list
     loadAccounts();
   }
-  
-  showQuickAccountAlert.value = false;
+
   quickAccountTargetIndex.value = null;
 }
 // End Functions
