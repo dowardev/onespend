@@ -8,10 +8,10 @@ import { useTemplatesStore } from '@/stores/templatesStore';
 export interface SyncEntryParams {
   name?: string | number | null;
   amount?: number | string | null;
-  date?: string | number | null;
+  date?: string | null;
   paymentType?: string | null;
   entryType?: string | null;
-  accountId?: number | string | null;
+  accountId?: number | null;
   groups?: string[];
   _fromProviderGroupId?: number | string | null;
   _providerName?: string | null;
@@ -20,9 +20,9 @@ export interface SyncEntryParams {
 
 export interface SyncProviderParams {
   name?: string | null;
-  date?: string | number | null;
+  date?: string | null;
   estimated?: number | string | null;
-  accountId?: number | string | null;
+  accountId?: number | null;
   efectivo?: number | string | null;
   tarjeta?: number | string | null;
   credito?: number | string | null;
@@ -56,17 +56,17 @@ export interface SyncSupplierProductParams {
 }
 
 export interface SyncBudgetParams {
-  date?: string | number | null;
+  date?: string | null;
   isDayClosed?: boolean | null;
   finishDayData?: unknown;
   [key: string]: unknown;
 }
 
 export interface SyncBudgetProviderParams {
-  date?: string | number | null;
+  date?: string | null;
   name?: string | null;
   estimated?: number | string | null;
-  accountId?: number | string | null;
+  accountId?: number | null;
   efectivo?: number | string | null;
   tarjeta?: number | string | null;
   credito?: number | string | null;
@@ -78,12 +78,11 @@ export interface SyncBudgetProviderParams {
 }
 
 export interface SyncBudgetProviderProductParams {
-  budgetProviderId?: number | string | null;
-  supplierProductId?: number | string | null;
+  budgetProviderId?: number | null;
+  supplierProductId?: number | null;
   productName?: string | null;
-  productPrice?: number | string | null;
+  productPrice?: number | null;
   quantity?: number | null;
-  [key: string]: unknown;
 }
 
 export function useSync() {
@@ -119,7 +118,7 @@ export function useSync() {
       data: {
         name: entry.name as string,
         amount: entry.amount,
-        date: entry.date as number,
+        date: entry.date,
         payment_type: entry.paymentType as string,
         entry_type: entry.entryType as string,
         account_id: entry.accountId as string,
@@ -185,7 +184,7 @@ export function useSync() {
       operation,
       data: {
         name: prov?.name as string || null,
-        date: prov?.date as number || null,
+        date: prov?.date || null,
         estimated: prov?.estimated as number || null,
         account_id: prov?.accountId as string || null,
         efectivo: prov?.efectivo as number || null,
@@ -399,7 +398,7 @@ export function useSync() {
       entityType: 'budget_provider',
       operation,
       data: {
-        date: provider.date as number,
+        date: provider.date,
         name: provider.name as string,
         estimated: provider.estimated as number,
         account_id: provider.accountId as string,
@@ -412,11 +411,11 @@ export function useSync() {
         _supplier_name: provider._supplierName as string,
         products: products ? products.map((p: SyncBudgetProviderProductParams) => ({
           sync_id: p.sync_id,
-          supplier_product_id: p.supplierProductId || p.supplier_product_id,
-          product_name: p.productName || p.product_name,
-          product_price: p.productPrice || p.product_price,
+          supplier_product_id: p.supplierProductId,
+          product_name: p.productName,
+          product_price: p.productPrice,
           quantity: p.quantity,
-          updated_at: p.updated_at || Date.now(),
+          updated_at: Date.now(),
         })) : [],
         updated_at: Date.now(),
       },
@@ -428,8 +427,8 @@ export function useSync() {
       operation: syncItem.operation,
       data: syncItem.data,
       productsDetails: (syncItem.data as any).products?.map((p: SyncBudgetProviderProductParams) => ({
-        supplier_product_id: p.supplier_product_id,
-        product_name: p.product_name,
+        supplierProductId: p.supplierProductId,
+        productName: p.productName,
         quantity: p.quantity
       }))
     }, null, 2));
@@ -451,10 +450,10 @@ export function useSync() {
       entityType: 'budget_provider_product',
       operation,
       data: {
-        budget_provider_id: product.budgetProviderId || product.budget_provider_id,
-        supplier_product_id: product.supplierProductId || product.supplier_product_id,
-        product_name: product.productName || product.product_name,
-        product_price: product.productPrice || product.product_price,
+        budget_provider_id: product.budgetProviderId,
+        supplier_product_id: product.supplierProductId,
+        product_name: product.productName,
+        product_price: product.productPrice,
         quantity: product.quantity,
         updated_at: Date.now(),
       },
@@ -536,10 +535,10 @@ export function useSync() {
             budgetStore.updateEntry(entry.id, {
               name: entry.name as string,
               amount: entry.amount,
-              date: entry.date as number,
+              date: entry.date,
               paymentType: entry.payment_type,
               entryType: entry.entry_type,
-              accountId: entry.account_id,
+              accountId: entry.account_id ? parseInt(entry.account_id, 10) : null,
               groups: entry.groups as string[],
             });
           } else {
@@ -547,10 +546,10 @@ export function useSync() {
               id: entry.id,
               name: entry.name as string,
               amount: entry.amount,
-              date: entry.date as number,
+              date: entry.date,
               paymentType: entry.payment_type,
               entryType: entry.entry_type,
-              accountId: entry.account_id,
+              accountId: entry.account_id ? parseInt(entry.account_id, 10) : null,
               groups: entry.groups as string[],
               createdAt: Date.now(),
             });
@@ -571,9 +570,9 @@ export function useSync() {
           if (existing) {
             budgetStore.updateProvider(supplier.id, {
               name: s.name as string,
-              date: s.date as number,
+              date: s.date,
               estimated: s.estimated as number,
-              accountId: s.account_id as string,
+              accountId: s.account_id ? parseInt(s.account_id, 10) : null,
               efectivo: s.efectivo as number,
               tarjeta: s.tarjeta as number,
               credito: s.credito as number,
@@ -584,9 +583,9 @@ export function useSync() {
             budgetStore.addProvider({
               id: supplier.id,
               name: s.name as string,
-              date: s.date as number,
+              date: s.date,
               estimated: s.estimated as number,
-              accountId: s.account_id as string,
+              accountId: s.account_id ? parseInt(s.account_id, 10) : null,
               efectivo: s.efectivo as number,
               tarjeta: s.tarjeta as number,
               credito: s.credito as number,
@@ -657,9 +656,9 @@ export function useSync() {
           if (existing) {
             budgetStore.updateProvider(provider.id, {
               name: provider.name as string,
-              date: provider.date as number,
+              date: provider.date,
               estimated: provider.estimated as number,
-              accountId: provider.account_id,
+              accountId: provider.account_id ? parseInt(provider.account_id, 10) : null,
               efectivo: provider.efectivo as number,
               tarjeta: provider.tarjeta as number,
               credito: provider.credito as number,
@@ -670,9 +669,9 @@ export function useSync() {
             budgetStore.addProvider({
               id: provider.id,
               name: provider.name as string,
-              date: provider.date as number,
+              date: provider.date,
               estimated: provider.estimated as number,
-              accountId: provider.account_id,
+              accountId: provider.account_id ? parseInt(provider.account_id, 10) : null,
               efectivo: provider.efectivo as number,
               tarjeta: provider.tarjeta as number,
               credito: provider.credito as number,
@@ -714,14 +713,7 @@ export function useSync() {
     }
   }
 
-  interface BudgetProviderProduct {
-    id: number | string;
-    sync_id: number | string;
-    supplierProductId?: number | string;
-    productName?: string;
-    productPrice?: number | string;
-    quantity?: number;
-  }
+  // Usa BudgetProviderProduct del store (budgetStore.ts)
 
   function startAutoSync(intervalMs: number = 30000) {
     const interval = setInterval(() => {

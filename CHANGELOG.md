@@ -1,3 +1,33 @@
+## [v0.54.2] - 2026-02-19
+
+### Fixes
+
+- **BudgetProvider Schema**: Remove redundant `product_quantities` JSON column and establish proper relationship
+  - Add migration to drop `product_quantities` column from `budget_providers` table
+  - Add `products()` HasMany relationship to `BudgetProvider` model linking to `BudgetProviderProduct`
+  - Remove `product_quantities` from `$fillable` and `$casts` arrays in model
+  - Products are now properly stored and accessed via the `budget_provider_products` table relationship
+
+### Refactor
+
+- **useSync Composable**: Improve type safety and data consistency
+  - Standardize date field types from `string | number | null` to `string | null` across all sync interfaces
+  - Standardize ID fields from `number | string | null` to `number | null` for better type consistency
+  - Remove redundant index signature `[key: string]: unknown` from `SyncBudgetProviderProductParams`
+  - Fix product mapping in `syncBudgetProvider` to use camelCase field names directly
+  - Update `Date.now()` usage for `updated_at` timestamps instead of preserving stale values
+  - Add defensive parsing for `accountId` fields using `parseInt()` when processing incoming data
+  - Simplify data mapping by removing fallback patterns (e.g., `p.supplierProductId || p.supplier_product_id`)
+
+### Files Changed
+
+- `back/app/Models/BudgetProvider.php` — Add products() relationship, remove product_quantities field
+- `back/database/migrations/2026_02_19_120355_remove_product_quantities_from_budget_providers_table.php` — New migration to drop column
+- `front/src/composables/useSync.ts` — Type safety improvements, field naming consistency
+- `front/package.json` — Bump version to 0.54.2
+
+---
+
 ## [v0.54.1] - 2026-02-18
 
 ### Fixes
