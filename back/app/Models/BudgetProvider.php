@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class BudgetProvider extends Model
@@ -22,7 +23,6 @@ class BudgetProvider extends Model
         'efectivo',
         'tarjeta',
         'credito',
-        'product_quantities',
         'notes',
         'visited',
         '_supplier_id',
@@ -37,7 +37,6 @@ class BudgetProvider extends Model
         'efectivo' => 'decimal:2',
         'tarjeta' => 'decimal:2',
         'credito' => 'decimal:2',
-        'product_quantities' => 'array',
         'visited' => 'boolean',
         'deleted_at' => 'datetime',
     ];
@@ -52,6 +51,11 @@ class BudgetProvider extends Model
     public function account(): BelongsTo
     {
         return $this->belongsTo(Account::class);
+    }
+
+    public function products(): HasMany
+    {
+        return $this->hasMany(BudgetProviderProduct::class, 'budget_provider_id');
     }
 
     public function scopeActive($query)
