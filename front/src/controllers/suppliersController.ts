@@ -19,9 +19,6 @@ export type Supplier = {
   sync_id?: string;
   serverId?: number | null;
   name: string;
-  contact?: string;
-  phone?: string;
-  email?: string;
   products?: Product[];
   createdAt?: number;
   updatedAt?: number;

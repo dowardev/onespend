@@ -1,3 +1,50 @@
+## [v0.55.0] - 2026-02-20
+
+### Breaking Changes
+
+- **Supplier Schema Simplification**: Removed unused fields from suppliers table and related models
+  - Dropped `contact`, `phone`, `email`, and `status` columns from suppliers database table
+  - Removed corresponding fields from Supplier model `$fillable` array
+  - Removed `scopeActive` method from Supplier model
+  - Updated TypeScript Supplier type to remove `contact`, `phone`, `email` fields
+  - Migration included to safely drop columns with rollback support
+
+### Features
+
+- **Sync Controller Improvements**: Enhanced entity processing order and validation
+  - Accounts are now processed FIRST in merge operations (before suppliers and other entities)
+  - Added validation to ensure `account_id` exists before processing budget_provider items
+  - Budget providers with non-existent accounts are now skipped with conflict reporting
+  - Improved error logging for account validation failures
+
+### Refactor
+
+- **Field Filtering in Bulk Operations**: SyncController now filters only valid fields during bulk operations
+  - `bulkCreateSuppliers()` and `bulkUpdateSuppliers()` filter incoming data against valid field lists
+  - Prevents invalid or unexpected fields from being inserted/updated
+  - Improves data integrity and reduces sync errors
+
+- **useSync Composable**: Simplified supplier sync data structure
+  - Removed unused fields from supplier sync payload: `date`, `estimated`, `account_id`, `efectivo`, `tarjeta`, `credito`, `notes`, `visited`
+  - Now only syncs essential supplier fields: `name` and `products`
+
+### Database
+
+- **Migration**: Added `2026_02_19_081809_remove_unused_columns_from_suppliers_table`
+  - Removes unused columns: contact, phone, email, status
+  - Includes rollback method to restore columns if needed
+
+### Files Changed
+
+- `back/app/Http/Controllers/SyncController.php` — Process accounts first, add validation, filter valid fields
+- `back/app/Models/Supplier.php` — Remove unused fields from fillable and drop scopeActive
+- `back/database/migrations/2026_02_19_081809_remove_unused_columns_from_suppliers_table.php` — New migration
+- `front/src/composables/useSync.ts` — Simplify supplier sync payload
+- `front/src/controllers/suppliersController.ts` — Remove unused fields from Supplier type
+- `front/package.json` — Bump version to 0.55.0
+
+---
+
 ## [v0.54.2] - 2026-02-19
 
 ### Fixes

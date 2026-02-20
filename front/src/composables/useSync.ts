@@ -184,14 +184,7 @@ export function useSync() {
       operation,
       data: {
         name: prov?.name as string || null,
-        date: prov?.date || null,
-        estimated: prov?.estimated as number || null,
-        account_id: prov?.accountId as string || null,
-        efectivo: prov?.efectivo as number || null,
-        tarjeta: prov?.tarjeta as number || null,
-        credito: prov?.credito as number || null,
-        notes: prov?.notes as string || null,
-        visited: prov?.visited as boolean || null,
+        products: (prov as any)?.products || null,
         updated_at: Date.now(),
       },
     };
