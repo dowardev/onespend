@@ -124,11 +124,14 @@ class SyncController extends Controller
         $insertData = [];
         $now = now();
         
+        $validFields = ['name', 'products', 'user_id', 'sync_id', 'created_at', 'updated_at', 'deleted_at'];
+        
         foreach ($items as $item) {
             $syncId = $item['id'] ?? null;
             if (!$syncId) continue;
             
-            $data = $item;
+            // Filter only valid fields
+            $data = array_intersect_key($item, array_flip($validFields));
             $data['user_id'] = $userId;
             $data['sync_id'] = $syncId;
             $data['created_at'] = $now;
@@ -143,7 +146,6 @@ class SyncController extends Controller
                 $data['updated_at'] = date('Y-m-d H:i:s', $timestamp);
             }
             
-            unset($data['id']);
             $insertData[] = $data;
         }
         
@@ -173,12 +175,14 @@ class SyncController extends Controller
             return $results;
         }
         
+        $validFields = ['name', 'products', 'updated_at', 'deleted_at'];
+        
         foreach ($items as $itemData) {
             $item = $itemData['item'];
             $syncId = $itemData['sync_id'];
             
-            $updateFields = $item;
-            unset($updateFields['id'], $updateFields['sync_id']);
+            // Filter only valid fields
+            $updateFields = array_intersect_key($item, array_flip($validFields));
             
             // Convert timestamp fields
             foreach ($updateFields as $key => $value) {
@@ -317,7 +321,27 @@ class SyncController extends Controller
         DB::beginTransaction();
 
         try {
-            // Process suppliers first (for dependency) - using bulk operations
+            // Process accounts FIRST (before any dependent entities)
+            if (isset($data['account'])) {
+                $items = $data['account'];
+                Log::info("SyncController::merge - Processing entityType: account", ['items_count' => count($items)]);
+
+                foreach ($items as $item) {
+                    $result = $this->processItem('account', $item, $user->id);
+
+                    if ($result['status'] === 'created') {
+                        $results['created']['account'][] = ['sync_id' => $result['sync_id'], 'id' => $result['id']];
+                    } elseif ($result['status'] === 'updated') {
+                        $results['updated']['account'][] = ['sync_id' => $result['sync_id'], 'id' => $result['id'] ?? null];
+                    } elseif ($result['status'] === 'deleted') {
+                        $results['deleted']['account'][] = $result['sync_id'];
+                    } elseif ($result['status'] === 'conflict') {
+                        $results['conflicts']['account'][] = $result;
+                    }
+                }
+            }
+
+            // Process suppliers (for dependency) - using bulk operations
             if (isset($data['supplier'])) {
                 $items = $data['supplier'];
                 Log::info("SyncController::merge - Bulk processing entityType: supplier", ['items_count' => count($items)]);
@@ -386,8 +410,23 @@ class SyncController extends Controller
             if (isset($data['budget_provider'])) {
                 $items = $data['budget_provider'];
                 Log::info("SyncController::merge - Processing entityType: budget_provider", ['items_count' => count($items)]);
-                
+
                 foreach ($items as $item) {
+                    // Validate account_id exists before processing
+                    $accountId = $item['account_id'] ?? null;
+                    if ($accountId && !isset($item['_deleted'])) {
+                        $accountExists = Account::where('id', $accountId)->exists();
+                        if (!$accountExists) {
+                            Log::warning("SyncController::merge - Skipping budget_provider: account_id {$accountId} does not exist", ['sync_id' => $item['id'] ?? 'unknown']);
+                            $results['conflicts']['budget_provider'][] = [
+                                'sync_id' => $item['id'] ?? 'unknown',
+                                'message' => "Account with ID {$accountId} does not exist. Please sync accounts first.",
+                                'client_data' => $item,
+                            ];
+                            continue;
+                        }
+                    }
+
                     $result = $this->processItem('budget_provider', $item, $user->id);
                     $syncId = $result['sync_id'];
                     
@@ -493,7 +532,7 @@ class SyncController extends Controller
 
             // Process remaining entity types
             foreach ($data as $entityType => $items) {
-                if ($entityType === 'supplier' || $entityType === 'supplier_product' || 
+                if ($entityType === 'account' || $entityType === 'supplier' || $entityType === 'supplier_product' || 
                     $entityType === 'budget_provider' || $entityType === 'budget_provider_product') {
                     continue;
                 }

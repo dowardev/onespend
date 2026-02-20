@@ -15,11 +15,7 @@ class Supplier extends Model
         'user_id',
         'sync_id',
         'name',
-        'contact',
-        'phone',
-        'email',
         'products',
-        'status',
         'deleted_at',
     ];
 
@@ -38,11 +34,6 @@ class Supplier extends Model
     public function supplierProducts(): HasMany
     {
         return $this->hasMany(SupplierProduct::class, 'supplier_id', 'sync_id');
-    }
-
-    public function scopeActive($query)
-    {
-        return $query->where('status', 'active');
     }
 
     public function scopeForUser($query, $userId)
