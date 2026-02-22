@@ -1,3 +1,28 @@
+## [v0.56.1] - 2026-02-22
+
+### Fixes
+
+- **Sync ID Generation**: Replace deprecated `substr()` with `substring()` in useSync composable
+  - Updated from `Math.random().toString(36).substr(2, 9)` to `Math.random().toString(36).substring(2, 11)`
+  - Modern JavaScript API usage for better compatibility
+
+### Refactor
+
+- **Centralized Sync ID Helper**: Extract sync ID generation into reusable `generateSyncId()` function
+  - Added helper function in `budgetController.ts` for income, expense, and provider sync IDs
+  - Added helper function in `suppliersController.ts` for supplier and product sync IDs
+  - Standardized format: `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`
+  - Removed duplicate inline sync ID generation code
+
+### Files Changed
+
+- `front/src/composables/useSync.ts` — Replace substr with substring
+- `front/src/controllers/budgetController.ts` — Add generateSyncId helper, use in all sync_id assignments
+- `front/src/controllers/suppliersController.ts` — Add generateSyncId helper, use in all sync_id assignments
+- `front/package.json` — Bump version to 0.56.1
+
+---
+
 ## [v0.56.0] - 2026-02-22
 
 ### Breaking Changes

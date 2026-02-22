@@ -334,7 +334,7 @@ export function useSync() {
       const baseId = product.supplierId
         ? `${product.supplierId}-${product.name}-${product.price}`
         : `${product.name}-${product.price}-${Date.now()}`;
-      syncId = product.sync_id = `sp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      syncId = product.sync_id = `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
       console.log('[useSync] syncId generado para producto:', syncId);
     }
     
