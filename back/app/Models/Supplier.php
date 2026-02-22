@@ -15,12 +15,10 @@ class Supplier extends Model
         'user_id',
         'sync_id',
         'name',
-        'products',
         'deleted_at',
     ];
 
     protected $casts = [
-        'products' => 'array',
         'deleted_at' => 'datetime',
     ];
 

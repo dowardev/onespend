@@ -18,8 +18,8 @@ export interface Income {
   groups?: Array<{ amount: number; accountId: string | number | null }>;
   createdAt: number;
   synced_at?: number;
-  _fromProviderGroupId?: string;
-  _providerName?: string;
+  supplierId?: string;
+  supplierName?: string;
 }
 
 export interface BudgetProviderProduct {
@@ -190,15 +190,17 @@ export const useBudgetStore = defineStore('budget', () => {
 
   const providerIdsWithEntries = computed(() => {
     const ids = new Set<string | number>();
+    // Obtener todos los supplierIds de las entries
+    const entrySupplierIds = new Set<string | number>();
     for (const entry of entries) {
-      if (entry._fromProviderGroupId) {
-        const match = String(entry._fromProviderGroupId).match(
-          /^prov-([^ -]+)/
-        );
-        if (match) {
-          const pid = match[1];
-          ids.add(isNaN(Number(pid)) ? pid : Number(pid));
-        }
+      if (entry.supplierId) {
+        entrySupplierIds.add(entry.supplierId);
+      }
+    }
+    // Buscar providers que tengan ese _supplierId
+    for (const provider of providers) {
+      if (provider._supplierId && entrySupplierIds.has(provider._supplierId)) {
+        ids.add(provider.id);
       }
     }
     return ids;
@@ -258,10 +260,10 @@ export const useBudgetStore = defineStore('budget', () => {
     if (idx >= 0) entries.splice(idx, 1);
   }
 
-  function removeEgresosGroup(groupId: string | number) {
+  function removeEgresosGroup(supplierId: string | number) {
     for (let i = entries.length - 1; i >= 0; i--) {
       const it = entries[i];
-      if (it._fromProviderGroupId === groupId) {
+      if (it.supplierId === supplierId) {
         entries.splice(i, 1);
       }
     }

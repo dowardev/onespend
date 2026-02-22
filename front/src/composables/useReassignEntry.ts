@@ -77,8 +77,8 @@ export async function reassignEntry(params: {
           accountId: srcEntry.accountId ?? null,
           groups: srcEntry.groups ?? [],
           // keep other useful metadata if present
-          _providerName: srcEntry._providerName,
-          _fromProviderGroupId: srcEntry._fromProviderGroupId,
+          supplierId: srcEntry.supplierId,
+          supplierName: srcEntry.supplierName,
         };
 
         budgetController.removeIngreso({ id: idToUse });
