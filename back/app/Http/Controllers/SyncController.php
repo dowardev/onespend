@@ -6,6 +6,7 @@ use App\Models\Account;
 use App\Models\BudgetProvider;
 use App\Models\BudgetProviderProduct;
 use App\Models\BudgetEntry;
+use App\Models\BudgetEntryGroup;
 use App\Models\Supplier;
 use App\Models\SupplierProduct;
 use App\Models\Template;
@@ -74,9 +75,9 @@ class SyncController extends Controller
 
             // Optimize based on entity type relationships
             switch ($entityType) {
-                case 'budget_entry':
-                    $query->with(['account:id,name']);
-                    break;
+case 'budget_entry':
+    $query->with(['account:id,name', 'groups.account:id,name']);
+    break;
                 case 'budget_provider':
                     $query->with(['account:id,name', 'supplier:id,name']);
                     break;
@@ -330,8 +331,8 @@ class SyncController extends Controller
             return $results;
         }
         
-        // Prepare data for bulk insert
         $insertData = [];
+        $groupsToCreate = [];
         $now = now();
         
         foreach ($items as $item) {
@@ -346,7 +347,6 @@ class SyncController extends Controller
             $data['created_at'] = $now;
             $data['updated_at'] = $now;
             
-            // Convert timestamp fields
             if (isset($data['updated_at']) && is_numeric($data['updated_at'])) {
                 $timestamp = $data['updated_at'];
                 if ($timestamp > 10000000000) {
@@ -355,7 +355,6 @@ class SyncController extends Controller
                 $data['updated_at'] = date('Y-m-d H:i:s', $timestamp);
             }
             
-            // Handle special cases
             if ($entityType === 'budget_provider_product' && isset($data['supplier_product_id'])) {
                 $spId = $data['supplier_product_id'];
                 if (!is_numeric($spId)) {
@@ -376,30 +375,52 @@ class SyncController extends Controller
                 }
             }
             
-            // Handle JSON fields (casts don't work with insert)
-            if ($entityType === 'budget_entry' && isset($data['groups']) && is_array($data['groups'])) {
-                $data['groups'] = json_encode($data['groups']);
+            if ($entityType === 'budget_entry') {
+                $groups = $data['groups'] ?? null;
+                unset($data['groups']);
+                if (!empty($groups)) {
+                    $groupsToCreate[$syncId] = $groups;
+                }
             }
             
             unset($data['id']);
             $insertData[] = $data;
         }
         
-        // Perform bulk insert
         if (!empty($insertData)) {
-            $inserted = $modelClass::insert($insertData);
+            $modelClass::insert($insertData);
             
-            // Get inserted records to return their IDs
             $syncIds = array_column($insertData, 'sync_id');
             $createdRecords = $modelClass::whereIn('sync_id', $syncIds)->get(['id', 'sync_id']);
             
             foreach ($createdRecords as $record) {
                 $results[] = ['sync_id' => $record->sync_id, 'id' => $record->id];
                 $this->updateSyncMetadata($entityType, $record->sync_id, 'synced', $userId);
+                
+                if ($entityType === 'budget_entry' && isset($groupsToCreate[$record->sync_id])) {
+                    $this->createBudgetEntryGroups($record->id, $groupsToCreate[$record->sync_id]);
+                }
             }
         }
         
         return $results;
+    }
+    
+    private function createBudgetEntryGroups(int $entryId, array $groups): void
+    {
+        foreach ($groups as $group) {
+            $accountId = $group['account_id'] ?? $group['accountId'] ?? null;
+            if (!is_numeric($accountId)) {
+                $account = \App\Models\Account::where('sync_id', $accountId)->first();
+                $accountId = $account ? $account->id : null;
+            }
+            
+            BudgetEntryGroup::create([
+                'budget_entry_id' => $entryId,
+                'account_id' => $accountId ? (int)$accountId : null,
+                'amount' => $group['amount'] ?? 0,
+            ]);
+        }
     }
 
     public function merge(Request $request): JsonResponse
@@ -710,9 +731,9 @@ class SyncController extends Controller
                 'budget_provider_products' => BudgetProviderProduct::forUser($userId)->active()
                     ->with(['budgetProvider:id,name', 'supplierProduct:id,name,price'])
                     ->get(['id', 'sync_id', 'user_id', 'budget_provider_id', 'supplier_product_id', 'product_name', 'product_price', 'quantity', 'status', 'updated_at']),
-                'budget_entries' => BudgetEntry::forUser($userId)->active()
-                    ->with(['account:id,name'])
-                    ->get(['id', 'sync_id', 'user_id', 'account_id', 'date', 'amount', 'name', 'payment_type', 'entry_type', 'supplier_id', 'supplier_name', 'status', 'updated_at']),
+'budget_entries' => BudgetEntry::forUser($userId)->active()
+    ->with(['account:id,name', 'groups.account:id,name'])
+    ->get(['id', 'sync_id', 'user_id', 'account_id', 'date', 'amount', 'name', 'payment_type', 'entry_type', 'supplier_id', 'supplier_name', 'status', 'updated_at']),
                 'suppliers' => $suppliers,
                 'supplier_products' => SupplierProduct::forUser($userId)->active()
                     ->get(['id', 'sync_id', 'user_id', 'supplier_id', 'name', 'price', 'status', 'updated_at']),
@@ -772,18 +793,21 @@ class SyncController extends Controller
         Log::info("formatItem - entityType: " . $entityType);
         $data = $item->toArray();
         $data['id'] = $item->sync_id;
-        $data['id_server'] = $item->id; // Include server's primary key ID
+        $data['id_server'] = $item->id;
         unset($data['sync_id'], $data['user_id'], $data['deleted_at']);
 
-        // Include supplier products with their IDs for supplier entity
+        if ($entityType === 'budget_entry' || $entityType === 'budget_entries') {
+            $data['groups'] = $item->groups->map(fn($g) => [
+                'id' => $g->id,
+                'account_id' => $g->account_id,
+                'amount' => (float)$g->amount,
+            ])->toArray();
+            unset($data['groups_relation']);
+        }
+
         if ($entityType === 'suppliers') {
-            // Use cached supplier products to avoid N+1 query
-            Log::info("formatItem - supplier sync_id: " . $item->sync_id);
             $supplierProducts = $supplierProductsCache[$item->sync_id] ?? [];
 
-            Log::info("formatItem - supplier products count: " . count($supplierProducts));
-
-            // Map products to include 'sync_id' field (use supplier_product's id if no sync_id)
             $data['products'] = array_map(function($product) {
                 return [
                     'sync_id' => $product->sync_id ?? $product->id,
@@ -823,7 +847,6 @@ class SyncController extends Controller
             $item['user_id'] = $userId;
             $item['sync_id'] = $syncId;
             
-            // Convert timestamp fields to datetime format (timestamps come in milliseconds)
             if (isset($item['updated_at']) && is_numeric($item['updated_at'])) {
                 $timestamp = $item['updated_at'];
                 if ($timestamp > 10000000000) {
@@ -832,30 +855,32 @@ class SyncController extends Controller
                 $item['updated_at'] = date('Y-m-d H:i:s', $timestamp);
             }
             
-            // Exclude 'id' from create - it's auto-generated
             $createData = $item;
             unset($createData['id']);
-
-            // If creating a budget_provider_product, ensure supplier_product_id is the
-            // real MySQL PK from supplier_products table. The client may send a
-            // sync_id (string) or the real id; normalize to the real id here.
+            
             if ($entityType === 'budget_provider_product' && isset($createData['supplier_product_id'])) {
                 $spId = $createData['supplier_product_id'];
-                // If it's not numeric, try to resolve by sync_id
                 if (!is_numeric($spId)) {
                     $sp = SupplierProduct::where('sync_id', $spId)->first();
                     if ($sp) {
                         $createData['supplier_product_id'] = $sp->id;
                     } else {
-                        // As a fallback, try by id (in case client sent stringified numeric)
                         $createData['supplier_product_id'] = is_numeric($spId) ? (int)$spId : null;
                     }
                 } else {
                     $createData['supplier_product_id'] = (int)$spId;
                 }
             }
+            
+            $groups = $createData['groups'] ?? null;
+            unset($createData['groups']);
 
             $created = $modelClass::create($createData);
+            
+            if ($entityType === 'budget_entry' && !empty($groups)) {
+                $this->createBudgetEntryGroups($created->id, $groups);
+            }
+            
             $this->updateSyncMetadata($entityType, $syncId, 'synced', $userId);
             return ['status' => 'created', 'sync_id' => $syncId, 'id' => $created->id];
         }
@@ -864,7 +889,7 @@ class SyncController extends Controller
         $clientUpdatedAt = $item['updated_at'] ?? 0;
 
         if ($clientUpdatedAt > $localUpdatedAt) {
-            $this->updateEntity($entityType, $syncId, $item, $userId);
+            $this->updateEntity($entityType, $syncId, $item, $userId, $existing);
             $this->updateSyncMetadata($entityType, $syncId, 'synced', $userId);
             return ['status' => 'updated', 'sync_id' => $syncId];
         }
@@ -881,23 +906,30 @@ class SyncController extends Controller
         return ['status' => 'skipped', 'sync_id' => $syncId];
     }
 
-    private function updateEntity(string $entityType, string $syncId, array $data, int $userId): void
+    private function updateEntity(string $entityType, string $syncId, array $data, int $userId, $existing = null): void
     {
         $modelClass = self::ENTITY_TYPES[$entityType];
         
-        // Exclude 'id' and 'sync_id' from update - we only update the actual fields
         $updateData = $data;
         unset($updateData['id'], $updateData['sync_id']);
         
-        // Convert timestamp fields to datetime format (timestamps come in milliseconds)
         foreach ($updateData as $key => $value) {
             if (in_array($key, ['updated_at']) && is_numeric($value)) {
                 $timestamp = $value;
-                // Check if timestamp is in milliseconds (greater than 10 billion)
                 if ($timestamp > 10000000000) {
                     $timestamp = $timestamp / 1000;
                 }
                 $updateData[$key] = date('Y-m-d H:i:s', $timestamp);
+            }
+        }
+        
+        if ($entityType === 'budget_entry') {
+            $groups = $updateData['groups'] ?? null;
+            unset($updateData['groups']);
+            
+            if ($existing && !empty($groups)) {
+                $existing->groups()->delete();
+                $this->createBudgetEntryGroups($existing->id, $groups);
             }
         }
         

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class BudgetEntry extends Model
@@ -21,7 +22,6 @@ class BudgetEntry extends Model
         'payment_type',
         'entry_type',
         'account_id',
-        'groups',
         'supplier_id',
         'supplier_name',
         'status',
@@ -31,7 +31,6 @@ class BudgetEntry extends Model
     protected $casts = [
         'amount' => 'decimal:2',
         'date' => 'date',
-        'groups' => 'array',
         'deleted_at' => 'datetime',
     ];
 
@@ -45,6 +44,11 @@ class BudgetEntry extends Model
     public function account(): BelongsTo
     {
         return $this->belongsTo(Account::class);
+    }
+
+    public function groups(): HasMany
+    {
+        return $this->hasMany(BudgetEntryGroup::class);
     }
 
     public function scopeActive($query)
