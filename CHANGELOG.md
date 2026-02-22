@@ -1,3 +1,29 @@
+## [v0.57.0] - 2026-02-22
+
+### Refactor
+
+- **Budget Entry Groups Data Model**: Migrate groups from JSON column to relational table
+  - New `BudgetEntryGroup` model with proper Eloquent relationships (BelongsTo BudgetEntry, BelongsTo Account)
+  - New migration to create `budget_entry_groups` table with foreign keys
+  - Migration to copy existing JSON groups data to new table
+  - Migration to drop old `groups` JSON column from `budget_entries`
+  - Updated `BudgetEntry` model with HasMany relationship to groups
+  - Updated `SyncController` to handle groups as related entities in create/update/bulk operations
+  - Updated `useSync.ts` to map groups from server response properly
+
+### Files Changed
+
+- `back/app/Models/BudgetEntryGroup.php` — New model for budget entry groups
+- `back/app/Models/BudgetEntry.php` — Add groups() HasMany relationship, remove groups from fillable/casts
+- `back/app/Http/Controllers/SyncController.php` — Handle groups as related entities
+- `back/database/migrations/2026_02_22_000001_create_budget_entry_groups_table.php` — Create groups table
+- `back/database/migrations/2026_02_22_000002_migrate_groups_json_to_table.php` — Migrate JSON data
+- `back/database/migrations/2026_02_22_000003_drop_groups_column_from_budget_entries.php` — Drop old column
+- `front/src/composables/useSync.ts` — Map groups from server response
+- `front/package.json` — Bump version to 0.57.0
+
+---
+
 ## [v0.56.1] - 2026-02-22
 
 ### Fixes

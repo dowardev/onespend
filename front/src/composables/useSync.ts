@@ -500,6 +500,11 @@ export function useSync() {
           const localId = entry.id;
           budgetStore.removeEntry(localId);
         } else {
+          const mappedGroups = (entry.groups as Array<{ id?: number; account_id?: number | null; amount: number }> | undefined)?.map(g => ({
+            amount: g.amount,
+            accountId: g.account_id,
+          }));
+          
           const existing = budgetStore.entries.find(e => String(e.id) === String(entry.id));
           if (existing) {
             budgetStore.updateEntry(entry.id, {
@@ -509,7 +514,7 @@ export function useSync() {
               paymentType: entry.payment_type,
               entryType: entry.entry_type,
               accountId: entry.account_id ? parseInt(entry.account_id, 10) : null,
-              groups: entry.groups,
+              groups: mappedGroups,
               supplierId: entry.supplier_id,
               supplierName: entry.supplier_name,
             });
@@ -522,7 +527,7 @@ export function useSync() {
               paymentType: entry.payment_type,
               entryType: entry.entry_type,
               accountId: entry.account_id ? parseInt(entry.account_id, 10) : null,
-              groups: entry.groups,
+              groups: mappedGroups,
               supplierId: entry.supplier_id,
               supplierName: entry.supplier_name,
               createdAt: Date.now(),

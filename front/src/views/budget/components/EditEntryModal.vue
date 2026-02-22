@@ -40,7 +40,7 @@
     <!-- end header -->
 
     <!-- content -->
-    <ion-content class="ion-padding-end">
+    <ion-content>
       <!-- New entry segment selector -->
       <ion-grid v-if="!entryData.id">
         <ion-row class="ion-justify-content-center">
@@ -113,18 +113,185 @@
             </ion-button>
           </ion-list-header>
 
-          <div class="list-content">
-            <div
-              v-for="(item, index) in entryItems"
-              :key="index"
-              class="shadow1"
-            >
+          <template v-for="(item, index) in entryItems" :key="index">
+            <ion-card class="shadow1">
               <div
-                :class="{
-                  'ion-padding':
-                    index === entryItems.length - 1 && entryItems.length > 1,
-                }"
+                v-if="entryItems.length > 1"
+                style="display: flex; justify-content: flex-end"
               >
+                <ion-button
+                  :disabled="isDayClosed"
+                  fill="clear"
+                  size="small"
+                  @click="removeEntryItem(index)"
+                >
+                  <ion-icon :icon="closeOutline" color="danger"></ion-icon>
+                </ion-button>
+              </div>
+
+              <ion-item lines="full" class="transparent">
+                <ion-input
+                  v-model.number="item.amount"
+                  label="Cantidad"
+                  label-placement="floating"
+                  type="number"
+                  placeholder="0"
+                ></ion-input>
+              </ion-item>
+
+              <ion-item class="transparent" lines="none">
+                <ion-select
+                  v-model="item.accountId"
+                  interface="popover"
+                  style="--border-width: 0px"
+                  label="Cuenta"
+                  label-placement="stacked"
+                  :validate="true"
+                  error-text="Selecciona una cuenta"
+                  :disabled="accountsList.length === 0"
+                >
+                  <ion-select-option
+                    v-for="acc in availableAccountsForItem(index)"
+                    :key="acc.id"
+                    :value="acc.id"
+                  >
+                    {{ acc.name }}
+                  </ion-select-option>
+                </ion-select>
+
+                <ion-button
+                  slot="end"
+                  fill="clear"
+                  size="small"
+                  :disabled="isDayClosed"
+                  @click="$emit('quick-account', index)"
+                >
+                  <ion-icon :icon="addOutline"></ion-icon>
+                </ion-button>
+              </ion-item>
+            </ion-card>
+          </template>
+        </ion-list>
+      </template>
+
+      <!-- New entry - Provider selection -->
+      <section class="ion-padding-start ion-padding-end">
+        <template v-if="!entryData.id && addEntrySegment === 'provider'">
+          <ion-list>
+            <div v-if="providersTodayWithData.length" class="list-content">
+              <ion-item
+                v-for="p in providersTodayWithData"
+                :key="p.id"
+                lines="full"
+                :button="!!p.accountId && !isDayClosed"
+                :disabled="!p.accountId || isDayClosed"
+                @click="
+                  () =>
+                    p.accountId &&
+                    !isDayClosed &&
+                    selectProvider({ provider: p })
+                "
+              >
+                <ion-label>
+                  {{ p.name }}
+                  <p
+                    v-if="!p.accountId"
+                    style="color: var(--ion-color-warning)"
+                  >
+                    Sin cuenta asignada
+                  </p>
+                </ion-label>
+
+                <ion-note
+                  slot="end"
+                  :color="p.accountId ? 'primary' : 'medium'"
+                >
+                  {{ formatProviderAmount({ provider: p }) }}
+                </ion-note>
+              </ion-item>
+            </div>
+
+            <template v-else>
+              <div class="ion-padding ion-text-center">
+                <ion-label
+                  >No hay proveedores con datos para este día</ion-label
+                >
+              </div>
+            </template>
+          </ion-list>
+        </template>
+      </section>
+
+      <!-- Edit existing entry -->
+      <section class="ion-padding">
+        <template v-if="entryData.id">
+          <ion-list class="transparent">
+            <div class="list-content">
+              <ion-item class="transparent" lines="full">
+                <ion-select
+                  v-model="entryData.entryType"
+                  label="Tipo"
+                  label-placement="stacked"
+                >
+                  <ion-select-option value="ingreso">Ingreso</ion-select-option>
+
+                  <ion-select-option value="egreso">Egreso</ion-select-option>
+                </ion-select>
+              </ion-item>
+
+              <ion-item class="transparent" lines="full">
+                <ion-input
+                  v-model="entryData.name"
+                  label="Nombre"
+                  label-placement="floating"
+                  placeholder="Pepito"
+                  autofocus
+                ></ion-input>
+              </ion-item>
+
+              <ion-item
+                lines="full"
+                class="transparent"
+                button
+                @click="openEntryDatePopover"
+              >
+                <ion-label>Fecha</ion-label>
+                <ion-label slot="end">{{
+                  formatShortDate(entryDateISO)
+                }}</ion-label>
+              </ion-item>
+            </div>
+          </ion-list>
+
+          <ion-list class="transparent">
+            <ion-list-header>
+              <ion-label>Detalles</ion-label>
+
+              <ion-button
+                :disabled="!canAddMoreItems || isDayClosed"
+                @click="addEntryItem"
+              >
+                <ion-icon :icon="addOutline"></ion-icon>
+                Agregar
+              </ion-button>
+            </ion-list-header>
+
+            <template v-for="(item, index) in entryItems" :key="index">
+              <ion-card class="shadow1">
+                <div
+                  v-if="entryItems.length > 1"
+                  style="display: flex; justify-content: flex-end"
+                >
+                  <ion-button
+                    :disabled="isDayClosed"
+                    fill="clear"
+                    size="small"
+                    @click="removeEntryItem(index)"
+                  >
+                    <ion-icon :icon="closeOutline" color="danger"></ion-icon>
+                  </ion-button>
+                </div>
+
                 <ion-item lines="full" class="transparent">
                   <ion-input
                     v-model.number="item.amount"
@@ -135,16 +302,11 @@
                   ></ion-input>
                 </ion-item>
 
-                <ion-item class="transparent" lines="none">
+                <ion-item lines="full" class="transparent">
                   <ion-select
                     v-model="item.accountId"
-                    interface="popover"
-                    style="--border-width: 0px"
                     label="Cuenta"
                     label-placement="stacked"
-                    :validate="true"
-                    error-text="Selecciona una cuenta"
-                    :disabled="accountsList.length === 0"
                   >
                     <ion-select-option
                       v-for="acc in availableAccountsForItem(index)"
@@ -165,162 +327,11 @@
                     <ion-icon :icon="addOutline"></ion-icon>
                   </ion-button>
                 </ion-item>
-              </div>
-            </div>
-          </div>
-        </ion-list>
-      </template>
-
-      <!-- New entry - Provider selection -->
-      <template v-if="!entryData.id && addEntrySegment === 'provider'">
-        <ion-list>
-          <div v-if="providersTodayWithData.length" class="list-content">
-            <ion-item
-              v-for="p in providersTodayWithData"
-              :key="p.id"
-              lines="full"
-              :button="!!p.accountId && !isDayClosed"
-              :disabled="!p.accountId || isDayClosed"
-              @click="
-                () =>
-                  p.accountId && !isDayClosed && selectProvider({ provider: p })
-              "
-            >
-              <ion-label>
-                {{ p.name }}
-                <p v-if="!p.accountId" style="color: var(--ion-color-warning)">
-                  Sin cuenta asignada
-                </p>
-              </ion-label>
-
-              <ion-note slot="end" :color="p.accountId ? 'primary' : 'medium'">
-                {{ formatProviderAmount({ provider: p }) }}
-              </ion-note>
-            </ion-item>
-          </div>
-
-          <template v-else>
-            <div class="ion-padding ion-text-center">
-              <ion-label>No hay proveedores con datos para este día</ion-label>
-            </div>
-          </template>
-        </ion-list>
-      </template>
-
-      <!-- Edit existing entry -->
-      <template v-if="entryData.id">
-        <ion-list class="transparent">
-          <div class="list-content">
-            <ion-item class="transparent" lines="none">
-              <ion-select
-                v-model="entryData.entryType"
-                label="Tipo"
-                label-placement="stacked"
-              >
-                <ion-select-option value="ingreso">Ingreso</ion-select-option>
-                <ion-select-option value="egreso">Egreso</ion-select-option>
-              </ion-select>
-            </ion-item>
-
-            <ion-item class="transparent" lines="none">
-              <ion-label position="stacked">Nombre</ion-label>
-              <ion-input
-                v-model="entryData.name"
-                placeholder="Nombre"
-                autofocus
-              ></ion-input>
-            </ion-item>
-
-            <ion-item
-              lines="full"
-              class="transparent"
-              button
-              @click="openEntryDatePopover"
-            >
-              <ion-label>Fecha</ion-label>
-              <ion-label slot="end">{{
-                formatShortDate(entryDateISO)
-              }}</ion-label>
-            </ion-item>
-          </div>
-        </ion-list>
-
-        <ion-list class="transparent">
-          <ion-list-header>
-            <ion-label>Detalles</ion-label>
-
-            <ion-button
-              :disabled="!canAddMoreItems || isDayClosed"
-              @click="addEntryItem"
-            >
-              <ion-icon :icon="addOutline"></ion-icon>
-              Agregar
-            </ion-button>
-          </ion-list-header>
-
-          <div class="list-content">
-            <div
-              v-for="(item, index) in entryItems"
-              :key="index"
-              class="shadow2"
-            >
-              <div
-                clsas="ion-padding"
-                :class="{
-                  'ion-padding-bottom': index === entryItems.length - 1,
-                }"
-              >
-                <ion-item class="transparent">
-                  <ion-input
-                    v-model.number="item.amount"
-                    label="Cantidad"
-                    label-placement="floating"
-                    type="number"
-                    placeholder="0"
-                  ></ion-input>
-                </ion-item>
-
-                <ion-item class="transparent">
-                  <ion-select
-                    v-model="item.accountId"
-                    label="Cuenta"
-                    label-placement="stacked"
-                    :validate="true"
-                    error-text="Selecciona una cuenta"
-                  >
-                    <ion-select-option
-                      v-for="acc in availableAccountsForItem(index)"
-                      :key="acc.id"
-                      :value="acc.id"
-                    >
-                      {{ acc.name }}
-                    </ion-select-option>
-                  </ion-select>
-                  <ion-button
-                    slot="end"
-                    fill="clear"
-                    size="small"
-                    :disabled="isDayClosed"
-                    @click="$emit('quick-account', index)"
-                  >
-                    <ion-icon :icon="addOutline"></ion-icon>
-                  </ion-button>
-                </ion-item>
-
-                <ion-item class="transparent" lines="none">
-                  <ion-button
-                    slot="end"
-                    color="danger"
-                    fill="clear"
-                    :disabled="isDayClosed"
-                    >Eliminar</ion-button
-                  >
-                </ion-item>
-              </div>
-            </div>
-          </div>
-        </ion-list>
-      </template>
+              </ion-card>
+            </template>
+          </ion-list>
+        </template>
+      </section>
     </ion-content>
     <!-- end content -->
 
@@ -580,7 +591,7 @@ const isFormValid = computed(() => {
 const entryData = computed(() => props.entryData);
 
 const canAddMoreItems = computed(() => {
-  return entryItems.value.length < props.accountsList.length + 2;
+  return entryItems.value.length < props.accountsList.length;
 });
 // end computed
 
@@ -700,6 +711,12 @@ function selectProvider(params: { provider: ProviderSummary }) {
 function addEntryItem() {
   if (canAddMoreItems.value) {
     entryItems.value.push({ amount: 0, accountId: getDefaultAccountId() });
+  }
+}
+
+function removeEntryItem(index: number) {
+  if (entryItems.value.length > 1) {
+    entryItems.value.splice(index, 1);
   }
 }
 
