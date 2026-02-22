@@ -1,3 +1,64 @@
+## [v0.56.0] - 2026-02-22
+
+### Breaking Changes
+
+- **Data Model Restructuring**: Removed Budget model and restructured Entry model
+  - Dropped `budgets` table entirely (Budget model deleted)
+  - Renamed `Entry` model to `BudgetEntry` with table rename from `entries` to `budget_entries`
+  - Replaced `_from_provider_group_id` and `_provider_name` fields with `supplier_id` and `supplier_name` in budget_entries
+  - Removed `products` JSON column from suppliers table (products now stored in `supplier_products` table)
+
+### Refactor
+
+- **SyncController**: Updated entity processing for new data model
+  - Changed `entry` entity type to `budget_entry`
+  - Removed budget entity handling from fullSync
+  - Added supplier products bulk create/update operations
+  - Fixed JSON encoding for `groups` field in budget_entries
+
+- **Frontend Sync**: Updated sync layer for new data structure
+  - Removed `syncBudget` function (budget table no longer exists)
+  - Updated entry sync to use `budget_entry` entity type
+  - Changed field mappings: `supplierId`/`supplierName` replace `_fromProviderGroupId`/`_providerName`
+  - Removed `products` from supplier sync payload (handled via separate operations)
+
+- **Budget Store**: Updated entry interface and computed properties
+  - Income interface now uses `supplierId` and `supplierName` fields
+  - `providerIdsWithEntries` computed now properly links entries to providers via `supplierId`
+  - `removeEgresosGroup` function updated to use `supplierId` parameter
+
+### Fixes
+
+- **Provider Deletion**: Fix entry removal when deleting providers
+  - Provider deletion now correctly uses `_supplierId` to find and remove associated entries
+  - Deep copy accounts list to prevent reactivity issues in ProvidersComponent
+
+### Database
+
+- **Migrations**:
+  - `2026_02_20_025510_drop_budgets_table.php` — Drop budgets table
+  - `2026_02_20_025511_rename_entries_to_budget_entries.php` — Rename entries table
+  - `2026_02_20_025512_update_budget_entries_structure.php` — Add supplier_id/supplier_name, remove legacy fields
+  - `2026_02_20_051233_remove_products_from_suppliers.php` — Remove products column from suppliers
+
+### Files Changed
+
+- `back/app/Http/Controllers/SyncController.php` — Update entity types, add supplier products handling
+- `back/app/Models/Budget.php` — Deleted
+- `back/app/Models/Entry.php` — Renamed to BudgetEntry.php
+- `back/app/Models/BudgetEntry.php` — New model with updated fillable fields
+- `back/app/Models/Supplier.php` — Remove products from fillable
+- `back/database/migrations/*` — New migrations for schema changes
+- `front/src/composables/useReassignEntry.ts` — Update field names
+- `front/src/composables/useSync.ts` — Remove syncBudget, update entry sync
+- `front/src/controllers/budgetController.ts` — Remove syncBudget call
+- `front/src/services/syncService.ts` — Update entity types
+- `front/src/stores/budgetStore.ts` — Update Income interface and computed properties
+- `front/src/views/budget/ProvidersComponent.vue` — Fix provider deletion and accounts handling
+- `front/package.json` — Bump version to 0.56.0
+
+---
+
 ## [v0.55.0] - 2026-02-20
 
 ### Breaking Changes

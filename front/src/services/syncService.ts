@@ -45,7 +45,7 @@ export interface SyncItemData {
 
 export interface SyncItem {
   id: string;
-  entityType: 'account' | 'budget' | 'budget_provider' | 'budget_provider_product' | 'entry' | 'supplier' | 'supplier_product' | 'template';
+  entityType: 'account' | 'budget_provider' | 'budget_provider_product' | 'budget_entry' | 'supplier' | 'supplier_product' | 'template';
   operation: 'create' | 'update' | 'delete';
   data: SyncItemData;
   timestamp: number;
@@ -251,10 +251,9 @@ class SyncService {
       const headers = await this.getAuthHeaders();
       const data: Record<string, SyncItemData[]> = {
         account: [],
-        budget: [],
         budget_provider: [],
         budget_provider_product: [],
-        entry: [],
+        budget_entry: [],
         supplier: [],
         supplier_product: [],
         template: [],
@@ -377,10 +376,9 @@ class SyncService {
 
     const entityTypeToStore: Record<string, string> = {
       'account': 'accounts',
-      'budget': 'budget',
       'budget_provider': 'budget_providers',
       'budget_provider_product': 'budget_provider_products',
-      'entry': 'entries',
+      'budget_entry': 'entries',
       'supplier': 'suppliers',
       'supplier_product': 'supplier_products',
       'template': 'templates',
@@ -561,10 +559,9 @@ class SyncService {
     
     const entityTypeToStore: Record<string, string> = {
       'account': 'accounts',
-      'budget': 'budget',
       'budget_provider': 'budget_providers',
       'budget_provider_product': 'budget_provider_products',
-      'entry': 'entries',
+      'budget_entry': 'entries',
       'supplier': 'suppliers',
       'supplier_product': 'supplier_products',
       'template': 'templates',

@@ -315,7 +315,8 @@ async function forceSyncSuppliers() {
 
 async function loadAccounts() {
   const list = accountsCtrl.getAccounts();
-  allAccounts.value = list || [];
+  // Crear una copia profunda para evitar problemas de reactividad circular
+  allAccounts.value = list ? JSON.parse(JSON.stringify(list)) : [];
 }
 
 function openAddProviderModal() {
@@ -436,9 +437,10 @@ function handleProviderSaved(payload: {
   editingProvider.value = null;
 }
 
-function handleProviderDeleted(params: { id: string | number }) {
-  const { id } = params;
-  budgetController.removeEgresosGroup({ groupId: id });
+function handleProviderDeleted(params: { id: string | number; _supplierId?: string | number }) {
+  const { id, _supplierId } = params;
+  // Usar _supplierId para eliminar entradas asociadas, o el id si no hay _supplierId
+  budgetController.removeEgresosGroup({ groupId: _supplierId || id });
   budgetController.removeProvider({ id });
   budgetController.saveData();
   showAddProviderModal.value = false;
@@ -475,7 +477,10 @@ function removeProveedorConfirmed() {
   const pid = deleteConfirm.providerId;
   deleteConfirm.open = false;
   if (pid != null) {
-    budgetController.removeEgresosGroup({ groupId: pid });
+    // Buscar el provider para obtener su _supplierId
+    const provider = providers.value.find((p: any) => String(p.id) === String(pid));
+    const supplierId = provider?._supplierId || pid;
+    budgetController.removeEgresosGroup({ groupId: supplierId });
     budgetController.removeProvider({ id: pid });
     budgetController.saveData();
   }

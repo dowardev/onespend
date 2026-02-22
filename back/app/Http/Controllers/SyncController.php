@@ -3,10 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Account;
-use App\Models\Budget;
 use App\Models\BudgetProvider;
 use App\Models\BudgetProviderProduct;
-use App\Models\Entry;
+use App\Models\BudgetEntry;
 use App\Models\Supplier;
 use App\Models\SupplierProduct;
 use App\Models\Template;
@@ -21,10 +20,9 @@ class SyncController extends Controller
 {
     private const ENTITY_TYPES = [
         'account' => Account::class,
-        'budget' => Budget::class,
         'budget_provider' => BudgetProvider::class,
         'budget_provider_product' => BudgetProviderProduct::class,
-        'entry' => Entry::class,
+        'budget_entry' => BudgetEntry::class,
         'supplier' => Supplier::class,
         'supplier_product' => SupplierProduct::class,
         'template' => Template::class,
@@ -76,7 +74,7 @@ class SyncController extends Controller
 
             // Optimize based on entity type relationships
             switch ($entityType) {
-                case 'entry':
+                case 'budget_entry':
                     $query->with(['account:id,name']);
                     break;
                 case 'budget_provider':
@@ -122,16 +120,21 @@ class SyncController extends Controller
         }
         
         $insertData = [];
+        $productsToCreate = []; // Store products to create after suppliers
         $now = now();
         
-        $validFields = ['name', 'products', 'user_id', 'sync_id', 'created_at', 'updated_at', 'deleted_at'];
+        $validFields = ['name', 'user_id', 'sync_id', 'created_at', 'updated_at', 'deleted_at'];
         
         foreach ($items as $item) {
             $syncId = $item['id'] ?? null;
             if (!$syncId) continue;
             
+            // Extract products before filtering
+            $products = $item['products'] ?? [];
+            
             // Filter only valid fields
             $data = array_intersect_key($item, array_flip($validFields));
+            
             $data['user_id'] = $userId;
             $data['sync_id'] = $syncId;
             $data['created_at'] = $now;
@@ -147,6 +150,11 @@ class SyncController extends Controller
             }
             
             $insertData[] = $data;
+            
+            // Store products for later creation
+            if (!empty($products)) {
+                $productsToCreate[$syncId] = $products;
+            }
         }
         
         if (!empty($insertData)) {
@@ -159,10 +167,44 @@ class SyncController extends Controller
             foreach ($createdRecords as $record) {
                 $results[] = ['sync_id' => $record->sync_id, 'id' => $record->id];
                 $this->updateSyncMetadata('supplier', $record->sync_id, 'synced', $userId);
+                
+                // Create supplier_products for this supplier
+                if (isset($productsToCreate[$record->sync_id])) {
+                    $this->createSupplierProducts($record->sync_id, $record->id, $productsToCreate[$record->sync_id], $userId);
+                }
             }
         }
         
         return $results;
+    }
+    
+    /**
+     * Create supplier products for a supplier
+     */
+    private function createSupplierProducts(string $supplierSyncId, int $supplierId, array $products, int $userId): void
+    {
+        $now = now();
+        $insertData = [];
+        
+        foreach ($products as $product) {
+            $productSyncId = $product['sync_id'] ?? $product['id'] ?? uniqid('sp_', true);
+            
+            $insertData[] = [
+                'user_id' => $userId,
+                'supplier_id' => $supplierSyncId,
+                'sync_id' => $productSyncId,
+                'name' => $product['name'] ?? '',
+                'price' => $product['price'] ?? 0,
+                'image_base64' => $product['imageBase64'] ?? null,
+                'status' => 'active',
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+        }
+        
+        if (!empty($insertData)) {
+            SupplierProduct::insert($insertData);
+        }
     }
     
     /**
@@ -175,11 +217,15 @@ class SyncController extends Controller
             return $results;
         }
         
-        $validFields = ['name', 'products', 'updated_at', 'deleted_at'];
+        $validFields = ['name', 'updated_at', 'deleted_at'];
         
         foreach ($items as $itemData) {
             $item = $itemData['item'];
             $syncId = $itemData['sync_id'];
+            $existing = $itemData['existing'];
+            
+            // Extract products before filtering
+            $products = $item['products'] ?? [];
             
             // Filter only valid fields
             $updateFields = array_intersect_key($item, array_flip($validFields));
@@ -198,9 +244,56 @@ class SyncController extends Controller
             Supplier::where('sync_id', $syncId)->update($updateFields);
             $this->updateSyncMetadata('supplier', $syncId, 'synced', $userId);
             $results[] = ['sync_id' => $syncId];
+            
+            // Update supplier products if provided
+            if (!empty($products)) {
+                $this->updateSupplierProducts($syncId, $existing->id, $products, $userId);
+            }
         }
         
         return $results;
+    }
+    
+    /**
+     * Update supplier products for a supplier
+     */
+    private function updateSupplierProducts(string $supplierSyncId, int $supplierId, array $products, int $userId): void
+    {
+        $now = now();
+        
+        foreach ($products as $product) {
+            $productSyncId = $product['sync_id'] ?? $product['id'] ?? null;
+            if (!$productSyncId) continue;
+            
+            $productData = [
+                'name' => $product['name'] ?? '',
+                'price' => $product['price'] ?? 0,
+                'image_base64' => $product['imageBase64'] ?? null,
+                'updated_at' => $now,
+            ];
+            
+            // Check if product exists
+            $existing = SupplierProduct::where('sync_id', $productSyncId)
+                ->where('supplier_id', $supplierSyncId)
+                ->first();
+            
+            if ($existing) {
+                $existing->update($productData);
+            } else {
+                // Create new product
+                SupplierProduct::create([
+                    'user_id' => $userId,
+                    'supplier_id' => $supplierSyncId,
+                    'sync_id' => $productSyncId,
+                    'name' => $productData['name'],
+                    'price' => $productData['price'],
+                    'image_base64' => $productData['image_base64'],
+                    'status' => 'active',
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ]);
+            }
+        }
     }
     
     /**
@@ -281,6 +374,11 @@ class SyncController extends Controller
                 } else {
                     $data['_supplier_id'] = (int)$supplierId;
                 }
+            }
+            
+            // Handle JSON fields (casts don't work with insert)
+            if ($entityType === 'budget_entry' && isset($data['groups']) && is_array($data['groups'])) {
+                $data['groups'] = json_encode($data['groups']);
             }
             
             unset($data['id']);
@@ -606,17 +704,15 @@ class SyncController extends Controller
             $data = [
                 'accounts' => Account::forUser($userId)->active()
                     ->get(['id', 'sync_id', 'user_id', 'name', 'status', 'updated_at']),
-                'budgets' => Budget::forUser($userId)->active()
-                    ->get(['id', 'sync_id', 'user_id', 'date', 'status', 'updated_at']),
                 'budget_providers' => BudgetProvider::forUser($userId)->active()
                     ->with(['account:id,name'])
                     ->get(['id', 'sync_id', 'user_id', 'account_id', '_supplier_id', '_supplier_name', 'name', 'status', 'updated_at']),
                 'budget_provider_products' => BudgetProviderProduct::forUser($userId)->active()
                     ->with(['budgetProvider:id,name', 'supplierProduct:id,name,price'])
                     ->get(['id', 'sync_id', 'user_id', 'budget_provider_id', 'supplier_product_id', 'product_name', 'product_price', 'quantity', 'status', 'updated_at']),
-                'entries' => Entry::forUser($userId)->active()
+                'budget_entries' => BudgetEntry::forUser($userId)->active()
                     ->with(['account:id,name'])
-                    ->get(['id', 'sync_id', 'user_id', 'account_id', 'date', 'amount', 'name', 'payment_type', 'entry_type', 'status', 'updated_at']),
+                    ->get(['id', 'sync_id', 'user_id', 'account_id', 'date', 'amount', 'name', 'payment_type', 'entry_type', 'supplier_id', 'supplier_name', 'status', 'updated_at']),
                 'suppliers' => $suppliers,
                 'supplier_products' => SupplierProduct::forUser($userId)->active()
                     ->get(['id', 'sync_id', 'user_id', 'supplier_id', 'name', 'price', 'status', 'updated_at']),

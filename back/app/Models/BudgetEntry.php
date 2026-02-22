@@ -6,24 +6,32 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Budget extends Model
+class BudgetEntry extends Model
 {
     use SoftDeletes;
+
+    protected $table = 'budget_entries';
 
     protected $fillable = [
         'user_id',
         'sync_id',
+        'name',
+        'amount',
         'date',
-        'is_day_closed',
-        'finish_day_data',
+        'payment_type',
+        'entry_type',
+        'account_id',
+        'groups',
+        'supplier_id',
+        'supplier_name',
         'status',
         'deleted_at',
     ];
 
     protected $casts = [
+        'amount' => 'decimal:2',
         'date' => 'date',
-        'is_day_closed' => 'boolean',
-        'finish_day_data' => 'array',
+        'groups' => 'array',
         'deleted_at' => 'datetime',
     ];
 
@@ -32,6 +40,11 @@ class Budget extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function account(): BelongsTo
+    {
+        return $this->belongsTo(Account::class);
     }
 
     public function scopeActive($query)
@@ -44,8 +57,13 @@ class Budget extends Model
         return $query->where('user_id', $userId);
     }
 
-    public function scopeByDate($query, $date)
+    public function scopeByDate($query, $startDate, $endDate)
     {
-        return $query->where('date', $date);
+        return $query->whereBetween('date', [$startDate, $endDate]);
+    }
+
+    public function scopeByType($query, $entryType)
+    {
+        return $query->where('entry_type', $entryType);
     }
 }

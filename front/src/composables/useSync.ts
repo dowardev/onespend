@@ -6,15 +6,17 @@ import { useSuppliersStore } from '@/stores/suppliersStore';
 import { useTemplatesStore } from '@/stores/templatesStore';
 
 export interface SyncEntryParams {
+  id?: string | number;
+  sync_id?: string;
   name?: string | number | null;
   amount?: number | string | null;
   date?: string | null;
   paymentType?: string | null;
   entryType?: string | null;
-  accountId?: number | null;
-  groups?: string[];
-  _fromProviderGroupId?: number | string | null;
-  _providerName?: string | null;
+  accountId?: number | string | null;
+  groups?: Array<{ amount: number; accountId: string | number }>;
+  supplierId?: string | null;
+  supplierName?: string | null;
   [key: string]: unknown;
 }
 
@@ -113,7 +115,7 @@ export function useSync() {
     
     const syncItem: Omit<SyncItem, 'timestamp' | 'retryCount'> = {
       id: syncId,
-      entityType: 'entry',
+      entityType: 'budget_entry',
       operation,
       data: {
         name: entry.name as string,
@@ -122,9 +124,9 @@ export function useSync() {
         payment_type: entry.paymentType as string,
         entry_type: entry.entryType as string,
         account_id: entry.accountId as string,
-        groups: entry.groups as string[],
-        _from_provider_group_id: entry._fromProviderGroupId as string,
-        _provider_name: entry._providerName as string,
+        groups: entry.groups,
+        supplier_id: entry.supplierId,
+        supplier_name: entry.supplierName,
         updated_at: Date.now(),
       },
     };
@@ -184,7 +186,6 @@ export function useSync() {
       operation,
       data: {
         name: prov?.name as string || null,
-        products: (prov as any)?.products || null,
         updated_at: Date.now(),
       },
     };
@@ -354,30 +355,6 @@ export function useSync() {
     pendingChanges.value = syncService.getQueueCount();
   }
 
-  function syncBudget(params: { budgetData: SyncBudgetParams; operation?: 'create' | 'update' | 'delete' }) {
-    const { budgetData, operation = 'create' } = params;
-    let syncId = budgetData.sync_id;
-    
-    if (!syncId) {
-      syncId = budgetData.sync_id = String(budgetData.id || `budget-${budgetData.date}`);
-    }
-    
-    const syncItem: Omit<SyncItem, 'timestamp' | 'retryCount'> = {
-      id: syncId,
-      entityType: 'budget',
-      operation,
-      data: {
-        date: budgetData.date,
-        is_day_closed: budgetData.isDayClosed,
-        finish_day_data: budgetData.finishDayData,
-        updated_at: Date.now(),
-      },
-    };
-
-    syncService.queueOperation(syncItem);
-    pendingChanges.value = syncService.getQueueCount();
-  }
-
   function syncBudgetProvider(params: { provider: SyncBudgetProviderParams; operation?: 'create' | 'update' | 'delete'; products?: SyncBudgetProviderProductParams[]; supplierSyncId?: string }) {
     const { provider, operation = 'create', products, supplierSyncId } = params;
     let syncId = provider.sync_id;
@@ -516,8 +493,8 @@ export function useSync() {
 
     if (!changes) return;
 
-    if (changes.entry) {
-      const entries = Array.isArray(changes.entry) ? changes.entry : [];
+    if (changes.budget_entry) {
+      const entries = Array.isArray(changes.budget_entry) ? changes.budget_entry : [];
       for (const entry of entries) {
         if (entry._deleted) {
           const localId = entry.id;
@@ -532,7 +509,9 @@ export function useSync() {
               paymentType: entry.payment_type,
               entryType: entry.entry_type,
               accountId: entry.account_id ? parseInt(entry.account_id, 10) : null,
-              groups: entry.groups as string[],
+              groups: entry.groups,
+              supplierId: entry.supplier_id,
+              supplierName: entry.supplier_name,
             });
           } else {
             budgetStore.addEntry({
@@ -543,7 +522,9 @@ export function useSync() {
               paymentType: entry.payment_type,
               entryType: entry.entry_type,
               accountId: entry.account_id ? parseInt(entry.account_id, 10) : null,
-              groups: entry.groups as string[],
+              groups: entry.groups,
+              supplierId: entry.supplier_id,
+              supplierName: entry.supplier_name,
               createdAt: Date.now(),
             });
           }
@@ -618,22 +599,6 @@ export function useSync() {
             suppliers: template.suppliers,
             suppliersSnapshot: template.suppliers_snapshot,
           });
-        }
-      }
-    }
-
-    if (changes.budget) {
-      const budgets = Array.isArray(changes.budget) ? changes.budget : [];
-      for (const budget of budgets) {
-        if (budget._deleted) {
-          const localId = budget.id;
-          budgetStore.clearAll();
-        } else {
-          budgetStore.setSelectedDate(budget.date);
-          budgetStore.setIsDayClosed(!!budget.is_day_closed);
-          if (budget.finish_day_data) {
-            budgetStore.setFinishDayData(budget.finish_day_data);
-          }
         }
       }
     }
@@ -746,7 +711,6 @@ export function useSync() {
     syncProvider,
     syncAccount,
     syncTemplate,
-    syncBudget,
     syncBudgetProvider,
     syncBudgetProviderProduct,
     syncSupplierProduct,

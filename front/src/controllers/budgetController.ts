@@ -287,8 +287,8 @@ class BudgetController {
       entryType: 'egreso',
       createdAt: now,
       accountId: provider.accountId,
-      _providerName: provider.name,
-      _fromProviderGroupId: `prov-${provider.id}-${Date.now()}`,
+      supplierId: provider._supplierId || String(provider.id),
+      supplierName: provider.name,
     };
 
     this.store.addEntry(newEntry);
@@ -465,13 +465,7 @@ class BudgetController {
       
       console.log('[BudgetController.saveData] Datos guardados correctamente');
       
-      const { syncBudget } = useSync();
-      syncBudget({ budgetData: {
-        id: dateKey,
-        date: this.store.selectedDate,
-        isDayClosed: this.store.isDayClosed,
-        finishDayData: finishDayDataPlain,
-      }, operation: 'update' });
+      // Note: syncBudget removed - budget table no longer exists
       
       if (this.store.isDayClosed) {
         console.log('[BudgetController.saveData] Creando instantánea congelada...');
