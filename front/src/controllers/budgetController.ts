@@ -16,6 +16,10 @@ interface BudgetData {
   };
 }
 
+function generateSyncId(): string {
+  return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+}
+
 class BudgetController {
   private _store: ReturnType<typeof useBudgetStore> | null = null;
   private pendingTimeouts: Set<NodeJS.Timeout> | null = null;
@@ -199,7 +203,7 @@ class BudgetController {
 
     const newIngreso: Income = {
       id: Date.now() + Math.random(),
-      sync_id: `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      sync_id: generateSyncId(),
       name,
       amount: Number(amount) || 0,
       date: finalDate,
@@ -244,7 +248,7 @@ class BudgetController {
 
     const newEgreso: Income = {
       id: Date.now() + Math.random(),
-      sync_id: `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      sync_id: generateSyncId(),
       name,
       amount: Number(amount) || 0,
       date: date || this.store.selectedDate,
@@ -279,7 +283,7 @@ class BudgetController {
 
     const newEntry: Income = {
       id: Date.now() + Math.random(),
-      sync_id: `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      sync_id: generateSyncId(),
       name: provider.name,
       amount,
       date: this.store.selectedDate,
@@ -353,7 +357,7 @@ class BudgetController {
     
     const newProvider: Provider = {
       id: localId,
-      sync_id: `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      sync_id: generateSyncId(),
       name,
       date: this.store.selectedDate,
       estimated: Number(estimated) || 0,

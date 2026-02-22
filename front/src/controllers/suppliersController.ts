@@ -4,6 +4,10 @@ import { useSuppliersStore } from '../stores/suppliersStore';
 import { useSync } from '@/composables/useSync';
 import { syncService } from '@/services/syncService';
 
+function generateSyncId(): string {
+  return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+}
+
 export type Product = {
   id?: string | number;
   sync_id?: string;
@@ -85,7 +89,7 @@ class SuppliersController {
       console.log('[suppliersController] useSync imported');
       
       if (!entry.sync_id) {
-        entry.sync_id = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        entry.sync_id = generateSyncId();
       }
       
       console.log('[suppliersController] 🔵 Sincronizando proveedor:', entry.sync_id);
@@ -94,7 +98,7 @@ class SuppliersController {
       if (entry.products && entry.products.length > 0) {
         console.log('[suppliersController] 🔵 Sincronizando', entry.products.length, 'productos');
         entry.products = entry.products.map((product: Product) => {
-          const tempProductSyncId = `temp_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+          const tempProductSyncId = generateSyncId();
           console.log('[suppliersController] 🔵 syncSupplierProduct para:', product.name);
           // call syncSupplierProduct with product object and operation
           syncSupplierProduct({
@@ -191,7 +195,7 @@ class SuppliersController {
       // Update products with sync_id before saving to IndexedDB
       if (entry.products && entry.products.length > 0) {
         entry.products = entry.products.map((product: Product) => {
-          const tempProductSyncId = `temp_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+          const tempProductSyncId = generateSyncId();
           syncSupplierProduct({
             product: {
               supplierId: entry.sync_id,
