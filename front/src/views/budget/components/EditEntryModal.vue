@@ -2,7 +2,7 @@
   <ion-modal
     :is-open="isOpen"
     :keep-contents-mounted="true"
-    @did-dismiss="$emit('dismiss')"
+    @did-dismiss="onModalDidDismiss"
   >
     <!-- header -->
     <ion-header class="ion-no-border" mode="ios">
@@ -131,11 +131,16 @@
 
               <ion-item lines="full" class="transparent">
                 <ion-input
-                  v-model.number="item.amount"
+                  v-model="item.amount"
                   label="Cantidad"
                   label-placement="floating"
                   type="number"
                   placeholder="0"
+                  :class="{
+                    'ion-invalid': isAmountInvalid(index),
+                    'ion-touched': isAmountTouched(index),
+                  }"
+                  :error-text="getAmountError(index)"
                 ></ion-input>
               </ion-item>
 
@@ -294,11 +299,16 @@
 
                 <ion-item lines="full" class="transparent">
                   <ion-input
-                    v-model.number="item.amount"
+                    v-model="item.amount"
                     label="Cantidad"
                     label-placement="floating"
                     type="number"
                     placeholder="0"
+                    :class="{
+                      'ion-invalid': isAmountInvalid(index),
+                      'ion-touched': isAmountTouched(index),
+                    }"
+                    :error-text="getAmountError(index)"
                   ></ion-input>
                 </ion-item>
 
@@ -503,8 +513,8 @@ const emit = defineEmits([
 // vars and const
 const addEntrySegment = ref('entry');
 const entryItems = ref<
-  Array<{ amount: number; accountId: string | number | null }>
->([{ amount: 0, accountId: null }]);
+  Array<{ amount: number | string; accountId: string | number | null }>
+>([{ amount: '', accountId: null }]);
 // reassignDate holds the short date (yyyy-MM-dd) used for persistence
 const reassignDate = ref<string | null>(null);
 // reassignDateISO holds full ISO value bound to ion-datetime (some Ionic versions need full ISO)
@@ -529,6 +539,36 @@ const toastColor = ref<'success' | 'danger' | 'primary'>('success');
 const showPicker = ref(true);
 // store the initial date shown in the picker to detect no-op applies
 const reassignInitialShort = ref<string | null>(null);
+
+// Validación simple para amount (sin Vuelidate forEach)
+function isNumericValue(value: unknown): boolean {
+  if (value === null || value === undefined || value === '') return true;
+  return /^-?\d*\.?\d+$/.test(String(value));
+}
+
+function isPositiveValue(value: unknown): boolean {
+  if (value === null || value === undefined || value === '') return true;
+  const num = Number(value);
+  return !isNaN(num) && num > 0;
+}
+
+// Helper para obtener error de amount por índice
+function getAmountError(index: number): string {
+  const amount = entryItems.value[index]?.amount;
+  if (!isNumericValue(amount)) return 'Solo se permiten números';
+  if (!isPositiveValue(amount)) return 'El valor debe ser mayor a 0';
+  return '';
+}
+
+function isAmountInvalid(index: number): boolean {
+  const amount = entryItems.value[index]?.amount;
+  return !isNumericValue(amount) || !isPositiveValue(amount);
+}
+
+function isAmountTouched(index: number): boolean {
+  const amount = entryItems.value[index]?.amount;
+  return amount !== null && amount !== undefined && String(amount) !== '';
+}
 // end vars and const
 
 // watch
@@ -560,7 +600,7 @@ watch(
         showPicker.value = true;
       } else {
         // Creating new entry
-        entryItems.value = [{ amount: 0, accountId: defaultAccountId }];
+        entryItems.value = [{ amount: '', accountId: defaultAccountId }];
         addEntrySegment.value = 'entry';
 
         const date = newData?.date
@@ -582,9 +622,15 @@ const isFormValid = computed(() => {
     entryData.value.name.trim().length > 0 &&
     entryData.value.entryType &&
     entryItems.value.length > 0 &&
-    entryItems.value.every(
-      item => Number(item.amount) > 0 && item.accountId != null
-    )
+    entryItems.value.every(item => {
+      const val = String(item.amount).trim();
+      return (
+        val !== '' &&
+        !isNaN(Number(val)) &&
+        Number(val) > 0 &&
+        item.accountId != null
+      );
+    })
   );
 });
 
@@ -665,14 +711,14 @@ function resolveEntryDate(entry: any): string {
 function initEntryItems(entry: any, defaultAccountId: string | number | null) {
   if (entry?.groups?.length > 0) {
     return entry.groups.map((g: EntryGroup) => ({
-      amount: Number(g.amount) || 0,
+      amount: g.amount ?? '',
       accountId: g.accountId ?? defaultAccountId,
     }));
   }
 
   return [
     {
-      amount: Number(entry?.amount) || 0,
+      amount: entry?.amount ?? '',
       accountId: entry?.accountId || defaultAccountId,
     },
   ];
@@ -710,7 +756,7 @@ function selectProvider(params: { provider: ProviderSummary }) {
 
 function addEntryItem() {
   if (canAddMoreItems.value) {
-    entryItems.value.push({ amount: 0, accountId: getDefaultAccountId() });
+    entryItems.value.push({ amount: '', accountId: getDefaultAccountId() });
   }
 }
 
@@ -1022,5 +1068,44 @@ async function handleApplyReassign() {
     showToast.value = true;
   }
 }
+// Reset modal internals when closed
+function resetForm() {
+  try {
+    addEntrySegment.value = 'entry';
+    entryItems.value = [{ amount: '', accountId: getDefaultAccountId() }];
+    reassignDate.value = null;
+    reassignDateISO.value = null;
+    entryDateISO.value = null;
+    pickerDateISO.value = null;
+    pickerDateKey.value = 0;
+    popoverState.open = false;
+    popoverState.event = null;
+    entryDatePopoverState.open = false;
+    entryDatePopoverState.event = null;
+    showPicker.value = true;
+    reassignInitialShort.value = null;
+    showToast.value = false;
+    toastMessage.value = '';
+    toastColor.value = 'success';
+  } catch (err) {
+    // noop
+  }
+}
+
+// Handler invoked when the ion-modal fires did-dismiss
+function onModalDidDismiss() {
+  emit('dismiss');
+  resetForm();
+}
+
+// Watch isOpen to reset if parent closes the modal programmatically
+watch(
+  () => props.isOpen,
+  opened => {
+    if (!opened) {
+      setTimeout(() => resetForm(), 80);
+    }
+  }
+);
 // end functions
 </script>

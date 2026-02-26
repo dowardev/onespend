@@ -2,7 +2,7 @@
   <ion-modal
     :is-open="isOpen"
     :keep-contents-mounted="true"
-    @did-dismiss="$emit('dismiss')"
+    @did-dismiss="onModalDidDismiss"
   >
     <!-- header -->
     <ion-header class="ion-no-border" mode="ios">
@@ -126,11 +126,16 @@
                 >
                   <ion-item lines="full" class="transparent">
                     <ion-input
-                      v-model.number="item.amount"
+                      v-model="item.amount"
                       label="Cantidad"
                       label-placement="floating"
                       type="number"
                       placeholder="0"
+                      :class="{
+                        'ion-invalid': isAmountInvalid(index),
+                        'ion-touched': isAmountTouched(index),
+                      }"
+                      :error-text="getAmountError(index)"
                     ></ion-input>
                   </ion-item>
 
@@ -194,9 +199,11 @@
           ></ion-icon>
           <ion-label color="warning">
             <h3>Productos: {{ formatPrice(productsTotal) }}</h3>
+
             <p v-if="productsCoverage.falta > 0">
               Faltante: {{ formatPrice(productsCoverage.falta) }}
             </p>
+
             <p v-else>Cubierto</p>
           </ion-label>
         </ion-item>
@@ -226,13 +233,20 @@
                     placeholder="0"
                     :value="getProductQuantity({ product })"
                     style="width: 80px; text-align: end"
+                    :class="{
+                      'ion-invalid': isProductQuantityInvalid(product.id),
+                      'ion-touched': isProductQuantityTouched(product.id),
+                    }"
+                    :error-text="getProductQuantityError(product.id)"
                     @ion-input="
-                      e =>
+                      e => {
+                        setProductRawValue(product.id, e.detail.value || '');
                         setProductQuantity({
                           product,
                           productPrice: product.price,
-                          quantity: Number(e.detail.value),
-                        })
+                          quantity: e.detail.value,
+                        });
+                      }
                     "
                   ></ion-input>
                 </ion-item>
@@ -459,16 +473,74 @@ const providerProducts = ref<ProviderProduct[]>([]);
 const productQuantities = ref<Record<string, number>>({});
 const items = ref<
   Array<{
-    amount: number;
+    amount: number | string;
     accountId: string | number | Account | { id: string | number } | null;
   }>
->([{ amount: 0, accountId: null }]);
+>([{ amount: '', accountId: null }]);
 const popoverState = reactive({ open: false, event: null as Event | null });
 const reassignDate = ref<string | null>(null);
 const reassignDateISO = ref<string | null>(null);
 const reassignPicker = ref<any>(null);
 const showPicker = ref(true);
 const reassignInitialShort = ref<string | null>(null);
+
+// Validación simple para amount
+function isNumericValue(value: unknown): boolean {
+  if (value === null || value === undefined || value === '') return true;
+  return /^-?\d*\.?\d+$/.test(String(value));
+}
+
+function isPositiveValue(value: unknown): boolean {
+  if (value === null || value === undefined || value === '') return true;
+  const num = Number(value);
+  return !isNaN(num) && num > 0;
+}
+
+function getAmountError(index: number): string {
+  const amount = items.value[index]?.amount;
+  if (!isNumericValue(amount)) return 'Solo se permiten números';
+  if (!isPositiveValue(amount)) return 'El valor debe ser mayor a 0';
+  return '';
+}
+
+function isAmountInvalid(index: number): boolean {
+  const amount = items.value[index]?.amount;
+  return !isNumericValue(amount) || !isPositiveValue(amount);
+}
+
+function isAmountTouched(index: number): boolean {
+  const amount = items.value[index]?.amount;
+  return amount !== null && amount !== undefined && String(amount) !== '';
+}
+
+// Validación para cantidad de productos
+const productQuantityRawValues = ref<Map<string | number, string>>(new Map());
+
+function getProductRawValue(productId: string | number): string {
+  return productQuantityRawValues.value.get(productId) ?? '';
+}
+
+function setProductRawValue(productId: string | number, value: string): void {
+  productQuantityRawValues.value.set(productId, value);
+}
+
+function getProductQuantityError(productId: string | number): string {
+  const rawValue = getProductRawValue(productId);
+  if (rawValue === '') return '';
+  if (!isNumericValue(rawValue)) return 'Solo números';
+  return '';
+}
+
+function isProductQuantityInvalid(productId: string | number): boolean {
+  const rawValue = getProductRawValue(productId);
+  if (rawValue === '') return false;
+  return !isNumericValue(rawValue);
+}
+
+function isProductQuantityTouched(productId: string | number): boolean {
+  const rawValue = getProductRawValue(productId);
+  return rawValue !== '';
+}
 // end vars and const
 
 // watch
@@ -584,9 +656,15 @@ const canAddMoreItems = computed(() => {
 });
 
 const isItemsValid = computed(() => {
-  return items.value.every(
-    item => Number(item.amount) > 0 && item.accountId != null
-  );
+  return items.value.every(item => {
+    const val = String(item.amount).trim();
+    return (
+      val !== '' &&
+      !isNaN(Number(val)) &&
+      Number(val) > 0 &&
+      item.accountId != null
+    );
+  });
 });
 
 const isFormValid = computed(() => {
@@ -647,7 +725,7 @@ function initializeNewProviderMode() {
   selectedProvider.value = null;
   isSelectingProvider.value = true;
   providerProducts.value = [];
-  items.value = [{ amount: 0, accountId: getDefaultAccountId() }];
+  items.value = [{ amount: '', accountId: getDefaultAccountId() }];
 }
 
 function initializeProviderMode() {
@@ -673,7 +751,7 @@ function initializeProviderMode() {
 
   items.value = [
     {
-      amount: provider.value!.estimated || 0,
+      amount: provider.value!.estimated ?? '',
       accountId: provider.value!.accountId
         ? { id: provider.value!.accountId }
         : getDefaultAccountId(),
@@ -737,7 +815,7 @@ function updateProviderFromProps(newProvider: ProviderData) {
 
   items.value = [
     {
-      amount: newProvider.estimated || 0,
+      amount: newProvider.estimated ?? '',
       accountId: newProvider.accountId
         ? { id: newProvider.accountId }
         : getDefaultAccountId(),
@@ -880,7 +958,7 @@ function formatPrice(price: number | { price: number }): string {
 
 function addItem() {
   if (canAddMoreItems.value) {
-    items.value.push({ amount: 0, accountId: getDefaultAccountId() });
+    items.value.push({ amount: '', accountId: getDefaultAccountId() });
   }
 }
 
@@ -909,9 +987,10 @@ function getProductQuantity(params: { product: Product }): number {
 function setProductQuantity(params: {
   product: Product;
   productPrice: number;
-  quantity: number;
+  quantity: number | string;
 }) {
   const { product, productPrice, quantity } = params;
+  const numQuantity = Number(quantity) || 0;
   const productId =
     product?.sync_id ?? product?.id ?? product?.supplierProductId;
   const productName = product?.name;
@@ -923,7 +1002,7 @@ function setProductQuantity(params: {
   });
 
   if (existing) {
-    existing.quantity = quantity;
+    existing.quantity = numQuantity;
   } else {
     const fallbackId = productId
       ? productId
@@ -933,7 +1012,7 @@ function setProductQuantity(params: {
       supplierProductId: fallbackId,
       productName: productName || '',
       productPrice,
-      quantity,
+      quantity: numQuantity,
     });
   }
 }
@@ -1019,6 +1098,43 @@ function applyPopoverReassign() {
   emit('reassign-date', finalDate);
   popoverState.open = false;
 }
+
+// Reset modal internals when closed
+function resetFormState() {
+  try {
+    searchQuery.value = '';
+    selectedProvider.value = null;
+    isSelectingProvider.value = false;
+    selectedSegment.value = 'inicio';
+    providerProducts.value = [];
+    productQuantities.value = {};
+    items.value = [{ amount: '', accountId: null }];
+    popoverState.open = false;
+    popoverState.event = null;
+    reassignDate.value = null;
+    reassignDateISO.value = null;
+    showPicker.value = true;
+    reassignInitialShort.value = null;
+  } catch (err) {
+    // noop
+  }
+}
+
+// Handler invoked when the ion-modal fires did-dismiss
+function onModalDidDismiss() {
+  emit('dismiss');
+  resetFormState();
+}
+
+// Watch isOpen to reset if parent closes the modal programmatically
+watch(
+  () => props.isOpen,
+  opened => {
+    if (!opened) {
+      setTimeout(() => resetFormState(), 80);
+    }
+  }
+);
 // end functions
 </script>
 
