@@ -16,10 +16,6 @@
         <ion-title>{{ modalTitle }}</ion-title>
 
         <ion-buttons slot="end">
-          <ion-button v-if="canDelete" color="danger" @click="handleDelete">
-            <ion-icon :icon="trashOutline"></ion-icon>
-          </ion-button>
-
           <ion-button
             :disabled="
               !isFormValid ||
@@ -32,7 +28,9 @@
             <ion-icon :icon="saveOutline"></ion-icon>
           </ion-button>
 
-          <!-- Reassign date moved into the form for entry mode -->
+          <ion-button @click="openHeaderPopover($event)">
+            <ion-icon :icon="ellipsisVerticalOutline"></ion-icon>
+          </ion-button>
         </ion-buttons>
       </ion-toolbar>
     </ion-header>
@@ -51,31 +49,26 @@
           ></ion-searchbar>
         </ion-item>
 
-        <ion-list class="transparent">
-          <ion-item
-            v-for="p in filteredProviders"
-            :key="p.id"
-            lines="full"
-            button
-            class="transparent"
-            @click="selectProvider({ p })"
-          >
-            <ion-label>{{ p.name }}</ion-label>
-            <ion-label slot="end">{{
-              formatPrice({ price: p.estimated || 0 })
-            }}</ion-label>
-          </ion-item>
+        <ion-list class="transparent ion-padding-start ion-padding-end">
+          <ion-card v-for="p in filteredProviders" :key="p.id" class="shadow1">
+            <ion-item
+              lines="full"
+              button
+              class="transparent"
+              @click="selectProvider({ p })"
+            >
+              <ion-label>{{ p.name }}</ion-label>
+
+              <ion-label slot="end">{{
+                formatPrice({ price: p.estimated || 0 })
+              }}</ion-label>
+            </ion-item>
+          </ion-card>
         </ion-list>
       </template>
 
       <!-- Provider form (when provider is selected or in entry mode) -->
       <div v-else>
-        <ion-item button lines="full" @click="handleProviderClick">
-          <ion-label>
-            {{ providerName }}
-          </ion-label>
-        </ion-item>
-
         <!-- Segment for full mode -->
         <div v-if="!isEntryMode" class="ion-padding-start ion-padding-end">
           <ion-segment v-model="selectedSegment">
@@ -91,39 +84,48 @@
 
         <!-- Amounts by account section (inicio segment) -->
         <template v-if="!isEntryMode && selectedSegment === 'inicio'">
-          <!-- Date selector (entry mode) - moved into the form like EditEntryModal -->
-          <ion-item
-            v-if="isEntryMode"
-            lines="full"
-            class="transparent"
-            button
-            @click="openReassignPopover($event)"
-          >
-            <ion-label>Fecha</ion-label>
+          <div class="ion-padding-start ion-padding-end">
+            <!-- Date selector (entry mode) - moved into the form like EditEntryModal -->
+            <!-- TODO: verificar si se sigue usando -->
+            <ion-item
+              v-if="isEntryMode"
+              lines="full"
+              class="transparent"
+              button
+              @click="openReassignPopover($event)"
+            >
+              <ion-label>Fecha</ion-label>
 
-            <ion-label slot="end">{{
-              formatShortDate(reassignDateISO)
-            }}</ion-label>
-          </ion-item>
+              <ion-label slot="end">{{
+                formatShortDate(reassignDateISO)
+              }}</ion-label>
+            </ion-item>
 
-          <ion-list class="transparent">
-            <ion-list-header>
-              <ion-label>Cantidades por Cuenta</ion-label>
+            <ion-list class="transparent">
+              <ion-list-header>
+                <ion-label>Cantidades por Cuenta</ion-label>
 
-              <ion-button :disabled="!canAddMoreItems" @click="addItem">
-                <ion-icon :icon="addOutline"></ion-icon>
-                Agregar
-              </ion-button>
-            </ion-list-header>
+                <ion-button :disabled="!canAddMoreItems" @click="addItem">
+                  <ion-icon :icon="addOutline"></ion-icon>
+                  Agregar
+                </ion-button>
+              </ion-list-header>
 
-            <div class="list-content">
-              <div v-for="(item, index) in items" :key="index" class="shadow2">
-                <div
-                  :class="{
-                    'ion-padding-bottom':
-                      index === items.length - 1 && items.length > 1,
-                  }"
-                >
+              <template v-for="(item, index) in items" :key="index">
+                <ion-card class="shadow1">
+                  <div
+                    v-if="items.length > 1"
+                    style="display: flex; justify-content: flex-end"
+                  >
+                    <ion-button
+                      fill="clear"
+                      size="small"
+                      @click="removeItem({ index })"
+                    >
+                      <ion-icon :icon="closeOutline" color="danger"></ion-icon>
+                    </ion-button>
+                  </div>
+
                   <ion-item lines="full" class="transparent">
                     <ion-input
                       v-model="item.amount"
@@ -146,6 +148,11 @@
                       label-placement="stacked"
                       interface="popover"
                       :compare-with="compareAccounts"
+                      :class="{
+                        'ion-invalid': isAccountInvalid(index),
+                        'ion-touched': isAccountTouched(index),
+                      }"
+                      :error-text="getAccountError(index)"
                     >
                       <ion-select-option
                         v-for="acc in availableAccountsForItem(index)"
@@ -165,25 +172,10 @@
                       <ion-icon :icon="addOutline"></ion-icon>
                     </ion-button>
                   </ion-item>
-
-                  <ion-item
-                    v-if="items.length > 1"
-                    class="transparent"
-                    lines="none"
-                  >
-                    <ion-button
-                      slot="end"
-                      fill="clear"
-                      color="danger"
-                      @click="removeItem({ index })"
-                    >
-                      <ion-icon :icon="trashOutline"></ion-icon>
-                    </ion-button>
-                  </ion-item>
-                </div>
-              </div>
-            </div>
-          </ion-list>
+                </ion-card>
+              </template>
+            </ion-list>
+          </div>
         </template>
 
         <!-- Products coverage warning (only in full mode) -->
@@ -264,11 +256,11 @@
     </ion-content>
     <!-- end content -->
 
-    <!-- popovers -->
+    <!-- popover: reassign date -->
     <ion-popover
-      :is-open="popoverState.open"
-      :event="popoverState.event"
-      @did-dismiss="popoverState.open = false"
+      :is-open="popoverReassign.open"
+      :event="popoverReassign.event"
+      @did-dismiss="closeReassignPopover"
     >
       <ion-content class="ion-padding">
         <div style="min-width: 220px; max-width: 320px">
@@ -290,7 +282,7 @@
               slot="start"
               fill="clear"
               size="small"
-              @click="popoverState.open = false"
+              @click="closeReassignPopover"
               >Cancelar</ion-button
             >
             <ion-button
@@ -303,6 +295,33 @@
             >
           </ion-item>
         </div>
+      </ion-content>
+    </ion-popover>
+
+    <!-- popover: header menu -->
+    <ion-popover
+      :is-open="popoverMenu.open"
+      :event="popoverMenu.event"
+      @did-dismiss="closeMenuPopover"
+    >
+      <ion-content>
+        <ion-item
+          v-if="!isSelectingProvider"
+          button
+          lines="full"
+          @click="handleProviderClick"
+        >
+          <ion-label class="truncate">
+            Provedo seleccionado
+            <p class="truncate">{{ providerName }}</p>
+          </ion-label>
+        </ion-item>
+
+        <ion-item lines="full" button @click="handleDeleteFromPopover">
+          <ion-icon slot="start" color="danger" :icon="trashOutline"></ion-icon>
+
+          <ion-label color="danger">Eliminar proveedor</ion-label>
+        </ion-item>
       </ion-content>
     </ion-popover>
     <!-- end popovers -->
@@ -477,7 +496,8 @@ const items = ref<
     accountId: string | number | Account | { id: string | number } | null;
   }>
 >([{ amount: '', accountId: null }]);
-const popoverState = reactive({ open: false, event: null as Event | null });
+const popoverReassign = reactive({ open: false, event: null as Event | null });
+const popoverMenu = reactive({ open: false, event: null as Event | null });
 const reassignDate = ref<string | null>(null);
 const reassignDateISO = ref<string | null>(null);
 const reassignPicker = ref<any>(null);
@@ -511,6 +531,26 @@ function isAmountInvalid(index: number): boolean {
 function isAmountTouched(index: number): boolean {
   const amount = items.value[index]?.amount;
   return amount !== null && amount !== undefined && String(amount) !== '';
+}
+
+// Validación para cuenta seleccionada
+function isAccountInvalid(index: number): boolean {
+  const accountId = items.value[index]?.accountId;
+  return accountId === null || accountId === undefined;
+}
+
+function isAccountTouched(index: number): boolean {
+  // Consideramos que el campo ha sido "tocado" si el amount ya tiene valor
+  // (el usuario ya empezó a llenar el formulario)
+  const amount = items.value[index]?.amount;
+  return amount !== null && amount !== undefined && String(amount) !== '';
+}
+
+function getAccountError(index: number): string {
+  if (isAccountInvalid(index) && isAccountTouched(index)) {
+    return 'Debe seleccionar una cuenta';
+  }
+  return '';
 }
 
 // Validación para cantidad de productos
@@ -924,6 +964,8 @@ function changeProvider() {
 
 function handleProviderClick() {
   changeProvider();
+  // Close the header popover after selecting the option
+  closeMenuPopover();
 }
 
 function compareAccounts(
@@ -1070,8 +1112,8 @@ async function openReassignPopover(e: Event) {
   await nextTick();
   showPicker.value = true;
 
-  popoverState.event = e;
-  popoverState.open = true;
+  popoverReassign.event = e;
+  popoverReassign.open = true;
 }
 
 function onReassignDatetimeChange(e: any) {
@@ -1096,7 +1138,29 @@ function applyPopoverReassign() {
   if (!finalDate) return;
 
   emit('reassign-date', finalDate);
-  popoverState.open = false;
+  popoverReassign.open = false;
+  popoverReassign.event = null;
+}
+
+function openHeaderPopover(e: Event) {
+  popoverMenu.event = e;
+  popoverMenu.open = true;
+}
+
+function closeReassignPopover() {
+  popoverReassign.open = false;
+  popoverReassign.event = null;
+}
+
+function closeMenuPopover() {
+  popoverMenu.open = false;
+  popoverMenu.event = null;
+}
+
+function handleDeleteFromPopover() {
+  // call the same delete flow and close menu popover
+  handleDelete();
+  closeMenuPopover();
 }
 
 // Reset modal internals when closed
@@ -1143,5 +1207,16 @@ watch(
   margin-top: 8px;
   border: 1px solid var(--ion-color-warning);
   border-radius: 8px;
+}
+
+/* Truncate long provider name inside the header popover */
+.truncate {
+  /* allow the label to shrink in a flex container */
+  flex: 1 1 auto;
+  min-width: 0;
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 </style>
