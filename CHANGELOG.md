@@ -1,26 +1,18 @@
-## [v0.57.1] - 2026-02-25
+## [v0.57.2] - 2026-02-28
 
 ### Fixes
 
-- **Modal Form Validation**: Add real-time validation for amount inputs in budget modals
-  - Display error messages for invalid amounts (non-numeric or non-positive values)
-  - Improved UX with empty initial state instead of 0 (users can now clear the field)
-  - Added validation helper functions: `isNumericValue`, `isPositiveValue`, `isAmountInvalid`, `isAmountTouched`
+- **Budget Modals — Validation & State Reset**: Improve form validation and ensure modals clear transient state when closed
+  - Add real-time validation for amount inputs in `EditEntryModal.vue` (reject non-numeric and non-positive values)
+  - Track raw quantity inputs and show inline error messages in `EditProviderModal.vue`
+  - Reset internal modal form state on dismiss and when `isOpen` prop changes to avoid stale data
+  - Change initial amount representation from `0` to empty string for better UX when clearing fields
 
-- **Modal State Reset**: Fix stale data retention when reopening budget modals
-  - Added `resetForm()` / `resetFormState()` functions to clear all internal state on dismiss
-  - Added `onModalDidDismiss()` handler to properly reset modal when closed
-  - Added watcher on `isOpen` prop to reset state when parent closes modal programmatically
-
-- **Product Quantity Validation**: Add validation for product quantity inputs in EditProviderModal
-  - Track raw input values to properly validate user input
-  - Show inline error messages for invalid quantities
-
-### Files Changed
+### Files Changed (staged)
 
 - `front/src/views/budget/components/EditEntryModal.vue` — Add amount validation, modal reset on dismiss
 - `front/src/views/budget/components/EditProviderModal.vue` — Add amount and product quantity validation, modal reset on dismiss
-- `front/package.json` — Bump version to 0.57.1
+- `front/package.json` — Bump version to 0.57.2
 
 ---
 
