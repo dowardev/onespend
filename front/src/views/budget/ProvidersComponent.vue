@@ -604,11 +604,3 @@ async function createQuickAccount(name: string, initialBalance: number) {
 }
 // End Functions
 </script>
-
-<style scoped>
-.warning-item {
-  margin-top: 8px;
-  border: 1px solid var(--ion-color-warning);
-  border-radius: 8px;
-}
-</style>

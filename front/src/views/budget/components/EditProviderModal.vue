@@ -50,8 +50,14 @@
         </ion-item>
 
         <ion-list class="transparent ion-padding-start ion-padding-end">
-          <ion-card v-for="p in filteredProviders" :key="p.id" class="shadow1">
+          <ion-list-header>
+            <ion-label>Selecciona un provedor</ion-label>
+          </ion-list-header>
+
+          <ion-card class="shadow1">
             <ion-item
+              v-for="p in filteredProviders"
+              :key="p.id"
               lines="full"
               button
               class="transparent"
@@ -107,9 +113,45 @@
 
                 <ion-button :disabled="!canAddMoreItems" @click="addItem">
                   <ion-icon :icon="addOutline"></ion-icon>
-                  Agregar
                 </ion-button>
               </ion-list-header>
+
+              <!-- Products coverage warning (only in full mode) -->
+              <div
+                v-if="!isEntryMode && hasProductsWithQuantity"
+                class="ion-padding-start ion-padding-end ion-margin-bottom"
+              >
+                <ion-item
+                  lines="none"
+                  :class="
+                    productsCoverage.falta > 0
+                      ? 'border-warning'
+                      : 'border-success'
+                  "
+                  style="margin-top: 8px"
+                >
+                  <ion-icon
+                    slot="start"
+                    :icon="
+                      productsCoverage.falta > 0
+                        ? warningOutline
+                        : checkmarkCircleOutline
+                    "
+                    :color="productsCoverage.falta > 0 ? 'warning' : 'success'"
+                  ></ion-icon>
+                  <ion-label
+                    :color="productsCoverage.falta > 0 ? 'warning' : 'success'"
+                  >
+                    <h3>Productos: {{ formatPrice(productsTotal) }}</h3>
+
+                    <p v-if="productsCoverage.falta > 0">
+                      Faltante: {{ formatPrice(productsCoverage.falta) }}
+                    </p>
+
+                    <p v-else>Cubierto</p>
+                  </ion-label>
+                </ion-item>
+              </div>
 
               <template v-for="(item, index) in items" :key="index">
                 <ion-card class="shadow1">
@@ -183,36 +225,14 @@
           </div>
         </template>
 
-        <!-- Products coverage warning (only in full mode) -->
-        <ion-item
-          v-if="!isEntryMode && hasProductsWithQuantity"
-          lines="none"
-          class="warning-item"
-        >
-          <ion-icon
-            slot="start"
-            :icon="warningOutline"
-            color="warning"
-          ></ion-icon>
-          <ion-label color="warning">
-            <h3>Productos: {{ formatPrice(productsTotal) }}</h3>
-
-            <p v-if="productsCoverage.falta > 0">
-              Faltante: {{ formatPrice(productsCoverage.falta) }}
-            </p>
-
-            <p v-else>Cubierto</p>
-          </ion-label>
-        </ion-item>
-
         <!-- Products section (only in full mode) -->
         <div
           v-if="!isEntryMode && selectedSegment === 'productos'"
           class="ion-margin-top"
         >
           <template v-if="selectedProvider?.products?.length">
-            <ion-list>
-              <div class="list-content">
+            <ion-list class="ion-padding-start ion-padding-end">
+              <ion-card class="shadow1">
                 <ion-item
                   v-for="product in selectedProvider.products"
                   :key="product.name"
@@ -247,7 +267,7 @@
                     "
                   ></ion-input>
                 </ion-item>
-              </div>
+              </ion-card>
             </ion-list>
           </template>
 
@@ -322,6 +342,7 @@
           </ion-label>
         </ion-item>
 
+        <!-- FIX:no funciona -->
         <ion-item lines="full" button @click="handleDeleteFromPopover">
           <ion-icon slot="start" color="danger" :icon="trashOutline"></ion-icon>
 
@@ -369,6 +390,7 @@ import {
   saveOutline,
   ellipsisVerticalOutline,
   createOutline,
+  checkmarkCircleOutline,
 } from 'ionicons/icons';
 import { ref, computed, watch, toRefs, reactive, nextTick } from 'vue';
 import { format } from 'date-fns';
@@ -670,8 +692,10 @@ const productsTotal = computed(() => {
   if (!selectedProvider.value?.products) return 0;
   return selectedProvider.value.products.reduce(
     (sum: number, product: Product) => {
+      // Match providerProducts entries by the product's sync_id or id
+      const productId = product.sync_id ?? product.id;
       const providerProduct = providerProducts.value.find(
-        p => p.supplierProductId === product.id
+        p => String(p.supplierProductId) === String(productId)
       );
       const qty = providerProduct?.quantity || 0;
       return sum + qty * (product.price || 0);
@@ -803,8 +827,12 @@ function initializeProviderMode() {
   // Load items from provider if available, otherwise create single item from estimated/accountId
   // Clear the array first to ensure reactivity with keep-contents-mounted
   items.value.splice(0, items.value.length);
-  
-  if (provider.value!.items && Array.isArray(provider.value!.items) && provider.value!.items.length > 0) {
+
+  if (
+    provider.value!.items &&
+    Array.isArray(provider.value!.items) &&
+    provider.value!.items.length > 0
+  ) {
     provider.value!.items.forEach(item => {
       items.value.push({
         amount: Number(item.amount) || 0,
@@ -877,7 +905,11 @@ function updateProviderFromProps(newProvider: ProviderData) {
 
   // Load items from provider if available, otherwise create single item from estimated/accountId
   items.value.splice(0, items.value.length);
-  if (newProvider.items && Array.isArray(newProvider.items) && newProvider.items.length > 0) {
+  if (
+    newProvider.items &&
+    Array.isArray(newProvider.items) &&
+    newProvider.items.length > 0
+  ) {
     newProvider.items.forEach(item => {
       items.value.push({
         amount: Number(item.amount) || 0,
@@ -1046,7 +1078,8 @@ function removeItem(params: { index: number }) {
 
 function getProductQuantity(params: { product: Product }): number {
   const { product } = params;
-  const productId = product?.id ?? product?.sync_id;
+  // Prefer sync_id when present to match supplier data; fallback to id
+  const productId = product?.sync_id ?? product?.id;
   const productName = product?.name;
   const productPrice = product?.price;
   const found = providerProducts.value.find(p => {
@@ -1066,6 +1099,7 @@ function setProductQuantity(params: {
 }) {
   const { product, productPrice, quantity } = params;
   const numQuantity = Number(quantity) || 0;
+  // Try to use the supplier-level sync id first, then id, then any supplierProductId
   const productId =
     product?.sync_id ?? product?.id ?? product?.supplierProductId;
   const productName = product?.name;
@@ -1235,12 +1269,6 @@ watch(
 </script>
 
 <style scoped>
-.warning-item {
-  margin-top: 8px;
-  border: 1px solid var(--ion-color-warning);
-  border-radius: 8px;
-}
-
 /* Truncate long provider name inside the header popover */
 .truncate {
   /* allow the label to shrink in a flex container */
