@@ -337,6 +337,7 @@ class BudgetController {
     _supplierName?: string;
     _supplier?: Supplier;
     products?: Array<{ supplierProductId: string | number; productName: string; productPrice: number; quantity: number }>;
+    items?: Array<{ amount: number; accountId: string | number | null }>;
   }) {
     const {
       name = '',
@@ -347,6 +348,7 @@ class BudgetController {
       _supplierName,
       _supplier,
       products,
+      items,
     } = params;
     if (!name && !allowEmpty) return;
 
@@ -372,6 +374,7 @@ class BudgetController {
       _supplierName,
       _pendingProducts: products,
       products,
+      items,
       _supplier: _supplier ? JSON.parse(JSON.stringify(_supplier)) : undefined,
     };
 

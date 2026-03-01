@@ -1,3 +1,29 @@
+## [v0.57.4] - 2026-03-01
+
+### Fixes
+
+- **Provider Modal Items Persistence**: Fix multi-item data not being saved when editing providers
+  - Add `items` field to Provider interface and store to track multiple amount/account entries
+  - Pass `items` array through provider create/edit flows in budgetController
+  - Load existing items when reopening provider modal instead of creating single item from estimated/accountId
+  - Use `splice()` instead of array reassignment for Vue reactivity compatibility with `keep-contents-mounted`
+
+### Refactor
+
+- **Modal State Management**: Improve array reactivity in EditProviderModal
+  - Replace direct array assignment with `splice(0, length)` + `push()` pattern for items and products arrays
+  - Ensures proper reactivity when modal content is kept mounted between open/close cycles
+
+### Files Changed
+
+- `front/src/controllers/budgetController.ts` — Add items parameter to addProvider method
+- `front/src/stores/budgetStore.ts` — Add items field to Provider interface and updateProvider handler
+- `front/src/views/budget/ProvidersComponent.vue` — Pass items through edit/save flows
+- `front/src/views/budget/components/EditProviderModal.vue` — Fix items loading and array reactivity
+- `front/package.json` — Bump version to 0.57.4
+
+---
+
 ## [v0.57.2] - 2026-02-28
 
 ### Fixes

@@ -368,6 +368,7 @@ async function openEditProviderModal(
       _supplierId: fullSupplier?.sync_id || supplierSyncId || fullSupplier?.id,
       _supplierName: providerData._supplierName || providerData.name,
       products: fullSupplier?.products || [],
+      items: providerData.items,
       _supplier: fullSupplier
         ? structuredClone
           ? structuredClone(fullSupplier)
@@ -382,6 +383,7 @@ async function openEditProviderModal(
       name: providerData?.name || '',
       estimated: providerData?.estimated || 0,
       accountId: providerData?.accountId,
+      items: providerData?.items,
     } as any;
   } finally {
     // Always try to open modal so user can inspect/fix
@@ -396,7 +398,6 @@ function handleProviderSaved(payload: {
   totalAmount: number;
   products?: Array<ProviderProduct>;
 }) {
-  console.log('ProvidersComponent.handleProviderSaved - payload:', payload);
   const firstItem = payload.items[0];
   const firstAccountId = firstItem?.accountId;
 
@@ -409,6 +410,7 @@ function handleProviderSaved(payload: {
         _supplierId: payload.providerId,
         _supplierName: payload.providerName,
         products: payload.products,
+        items: payload.items,
         _supplier: editingProvider.value._supplier
           ? structuredClone
             ? structuredClone(editingProvider.value._supplier)
@@ -425,6 +427,7 @@ function handleProviderSaved(payload: {
       _supplierId: payload.providerId,
       _supplierName: payload.providerName,
       products: payload.products,
+      items: payload.items,
       _supplier: editingProvider.value?._supplier
         ? structuredClone
           ? structuredClone(editingProvider.value._supplier)
