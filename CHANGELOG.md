@@ -1,3 +1,31 @@
+## [v0.57.5] - 2026-03-01
+
+### Features
+
+- **Provider Items Persistence**: Allow providers to store multiple amount/account entries
+  - Add `items` array to provider data flow so providers can contain several amount/account pairs
+  - Pass `items` through create/edit flows and persist in the budget store
+
+### Fixes
+
+- **EditProviderModal Reactivity & Loading**: Fix stale/incorrect modal state when editing providers
+  - Use `splice()` to clear arrays and `push()` to populate them so `keep-contents-mounted` modals remain reactive
+  - Load existing `items` when opening the edit modal instead of recreating a single item from `estimated`/`accountId`
+  - Defensive product id matching to prefer `sync_id` over `id` when resolving product quantities
+
+### Refactor
+
+- **Modal State Management**: Improve internal initialization functions and guard against reactive proxy issues
+
+### Files Changed
+
+- `front/src/views/budget/components/EditProviderModal.vue` — Load and persist multi-item provider data; improve array reactivity and product matching
+- `front/src/views/budget/ProvidersComponent.vue` — Pass `items` through edit/save flows and deep-clone supplier data defensively
+- `front/src/theme/variables.css` — Add border utility classes used by modal warnings and coverage indicators
+- `front/package.json` — Bump version to 0.57.5
+
+---
+
 ## [v0.57.4] - 2026-03-01
 
 ### Fixes
