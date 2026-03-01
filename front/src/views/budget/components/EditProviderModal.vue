@@ -437,6 +437,7 @@ export interface ProviderData {
   estimated?: number;
   accountId?: string | number;
   products?: Array<PendingProduct>;
+  items?: Array<ProviderItem>;
 }
 
 // Type aliases for external usage
@@ -743,11 +744,14 @@ function resetModalState() {
 }
 
 function initializeEntryMode() {
-  items.value = entryData.value!.items.map(item => ({
-    amount: Number(item.amount) || 0,
-    accountId: item.accountId,
-  }));
-  providerProducts.value = [];
+  items.value.splice(0, items.value.length);
+  entryData.value!.items.forEach(item => {
+    items.value.push({
+      amount: Number(item.amount) || 0,
+      accountId: item.accountId,
+    });
+  });
+  providerProducts.value.splice(0, providerProducts.value.length);
   initReassignDate();
 }
 
@@ -769,9 +773,10 @@ function setTodayDate() {
 function initializeNewProviderMode() {
   selectedProvider.value = null;
   isSelectingProvider.value = true;
-  providerProducts.value = [];
+  providerProducts.value.splice(0, providerProducts.value.length);
   // Do not preselect an account when creating a new provider
-  items.value = [{ amount: '', accountId: null }];
+  items.value.splice(0, items.value.length);
+  items.value.push({ amount: '', accountId: null });
 }
 
 function initializeProviderMode() {
@@ -795,14 +800,25 @@ function initializeProviderMode() {
     products: fullSupplier?.products || [],
   };
 
-  items.value = [
-    {
+  // Load items from provider if available, otherwise create single item from estimated/accountId
+  // Clear the array first to ensure reactivity with keep-contents-mounted
+  items.value.splice(0, items.value.length);
+  
+  if (provider.value!.items && Array.isArray(provider.value!.items) && provider.value!.items.length > 0) {
+    provider.value!.items.forEach(item => {
+      items.value.push({
+        amount: Number(item.amount) || 0,
+        accountId: item.accountId ? { id: item.accountId } : null,
+      });
+    });
+  } else {
+    items.value.push({
       amount: provider.value!.estimated ?? '',
       accountId: provider.value!.accountId
         ? { id: provider.value!.accountId }
         : getDefaultAccountId(),
-    },
-  ];
+    });
+  }
 
   // Load existing products
   if (fullSupplier?.products && Array.isArray(fullSupplier.products)) {
@@ -859,14 +875,23 @@ function updateProviderFromProps(newProvider: ProviderData) {
       []) as Product[],
   };
 
-  items.value = [
-    {
+  // Load items from provider if available, otherwise create single item from estimated/accountId
+  items.value.splice(0, items.value.length);
+  if (newProvider.items && Array.isArray(newProvider.items) && newProvider.items.length > 0) {
+    newProvider.items.forEach(item => {
+      items.value.push({
+        amount: Number(item.amount) || 0,
+        accountId: item.accountId ? { id: item.accountId } : null,
+      });
+    });
+  } else {
+    items.value.push({
       amount: newProvider.estimated ?? '',
       accountId: newProvider.accountId
         ? { id: newProvider.accountId }
         : getDefaultAccountId(),
-    },
-  ];
+    });
+  }
 
   if (newProvider.products && Array.isArray(newProvider.products)) {
     providerProducts.value = newProvider.products.map((p: PendingProduct) => ({
@@ -1178,11 +1203,10 @@ function resetFormState() {
     selectedProvider.value = null;
     isSelectingProvider.value = false;
     selectedSegment.value = 'inicio';
-    providerProducts.value = [];
+    providerProducts.value.splice(0, providerProducts.value.length);
     productQuantities.value = {};
-    items.value = [{ amount: '', accountId: null }];
-    popoverState.open = false;
-    popoverState.event = null;
+    items.value.splice(0, items.value.length);
+    items.value.push({ amount: '', accountId: null });
     reassignDate.value = null;
     reassignDateISO.value = null;
     showPicker.value = true;

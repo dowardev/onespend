@@ -44,6 +44,7 @@ export interface Provider {
   tarjeta: number;
   credito: number;
   products?: BudgetProviderProduct[];
+  items?: Array<{ amount: number; accountId: string | number | null }>;
   notes: string;
   visited: boolean;
   synced_at?: number;
@@ -301,6 +302,10 @@ export const useBudgetStore = defineStore('budget', () => {
       updatedProvider._supplierId = changes._supplierId;
     if (changes._supplierName !== undefined)
       updatedProvider._supplierName = changes._supplierName;
+    if (changes.products !== undefined)
+      updatedProvider.products = changes.products;
+    if (changes.items !== undefined)
+      updatedProvider.items = changes.items;
 
     providers.splice(idx, 1, updatedProvider);
   }
