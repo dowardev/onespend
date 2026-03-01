@@ -154,6 +154,11 @@
                       }"
                       :error-text="getAccountError(index)"
                     >
+                      <!-- Placeholder forces explicit selection when model is null -->
+                      <ion-select-option :value="null" disabled>
+                        Seleccionar cuenta
+                      </ion-select-option>
+
                       <ion-select-option
                         v-for="acc in availableAccountsForItem(index)"
                         :key="acc.id"
@@ -765,7 +770,8 @@ function initializeNewProviderMode() {
   selectedProvider.value = null;
   isSelectingProvider.value = true;
   providerProducts.value = [];
-  items.value = [{ amount: '', accountId: getDefaultAccountId() }];
+  // Do not preselect an account when creating a new provider
+  items.value = [{ amount: '', accountId: null }];
 }
 
 function initializeProviderMode() {
@@ -942,14 +948,15 @@ function selectProvider(params: { p: Supplier | any }) {
   if (p.items && Array.isArray(p.items) && p.items.length > 0) {
     items.value = p.items.map((item: any) => ({
       amount: Number(item.amount) || 0,
-      accountId: item.accountId || getDefaultAccountId(),
+      // Preserve provided accountId, otherwise leave null so user must select
+      accountId: item.accountId ?? null,
     }));
   } else if (p.estimated && Number(p.estimated) > 0) {
     // If provider has estimated amount, create one item
     items.value = [
       {
         amount: Number(p.estimated) || 0,
-        accountId: p.accountId || getDefaultAccountId(),
+        accountId: p.accountId ?? null,
       },
     ];
   }
@@ -1000,7 +1007,8 @@ function formatPrice(price: number | { price: number }): string {
 
 function addItem() {
   if (canAddMoreItems.value) {
-    items.value.push({ amount: '', accountId: getDefaultAccountId() });
+    // New rows should not auto-select an account
+    items.value.push({ amount: '', accountId: null });
   }
 }
 
