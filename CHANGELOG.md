@@ -1,3 +1,19 @@
+## [v0.57.6] - 2026-03-03
+
+### Fixes
+
+- **EditProviderModal: Delete action and deleted payload shape**
+  - Fix header popover delete button so it triggers deletion flow correctly
+  - Emit `deleted` with either a plain entry id (when modal is editing an entry) or an object `{ id, _supplierId? }` when removing a provider so parents can remove related entries reliably
+  - Improve `defineEmits` typing to reflect both payload shapes
+
+### Files Changed (staged)
+
+- `front/src/views/budget/components/EditProviderModal.vue` — Emit consistent `deleted` payload (id or object) and improve delete handler logic
+- `front/package.json` — Bump version to 0.57.6
+
+---
+
 ## [v0.57.5] - 2026-03-01
 
 ### Features
