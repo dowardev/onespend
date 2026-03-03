@@ -342,7 +342,6 @@
           </ion-label>
         </ion-item>
 
-        <!-- FIX:no funciona -->
         <ion-item lines="full" button @click="handleDeleteFromPopover">
           <ion-icon slot="start" color="danger" :icon="trashOutline"></ion-icon>
 
@@ -502,7 +501,9 @@ const emit = defineEmits<{
       products?: ProviderProduct[];
     }
   ): void;
-  (e: 'deleted', id: string | number): void;
+  // 'deleted' can be emitted either as a plain entry id (when editing an entry)
+  // or as an object with provider id and optional _supplierId (when deleting a provider).
+  (e: 'deleted', payload: string | number | { id: string | number; _supplierId?: string | number }): void;
   (e: 'reassign-date', date: string): void;
   (e: 'quick-account', index: number): void;
 }>();
@@ -1154,9 +1155,23 @@ function handleSave() {
 
 function handleDelete() {
   if (isEntryMode.value && entryData.value?.entryId) {
-    emit('deleted', entryData.value.entryId);
-  } else if (provider.value?.id) {
-    emit('deleted', provider.value.id);
+    // When editing an entry emit the legacy entry id so callers like InicioViewComponent
+    // can handle removing the ingreso/egreso by id.
+    emit('deleted', entryData.value.entryId as string | number);
+    return;
+  }
+
+  if (provider.value?.id) {
+    // For provider deletion emit an object including the provider id and, when
+    // available, the supplier id so parent components can remove related entries.
+    const payload: { id: string | number; _supplierId?: string | number } = {
+      id: provider.value.id,
+    };
+
+    if ((provider as any)._supplierId) payload._supplierId = (provider as any)._supplierId;
+    else if (selectedProvider.value?.sync_id) payload._supplierId = selectedProvider.value.sync_id;
+
+    emit('deleted', payload);
   }
 }
 
