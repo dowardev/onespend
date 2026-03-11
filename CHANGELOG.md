@@ -1,3 +1,30 @@
+## [v0.57.7] - 2026-03-10
+
+### Chore
+
+- **Dependencies Update**: Update PHP dependencies via composer lock
+  - Laravel framework v12.44.0 → v12.54.1
+  - Multiple package updates including brick/math, guzzlehttp/psr7, symfony components, and others
+  - Security patches and performance improvements from upstream packages
+
+### Build
+
+- **Mise Configuration**: Add mise runtime version manager configuration files
+  - Add root `mise.toml` specifying PHP 8.3 for the project
+  - Add `back/mise.toml` with PHP configured via brew
+  - Add `front/mise.toml` with Node.js set to latest version
+  - Enables consistent development environments across team members
+
+### Files Changed
+
+- `back/composer.lock` — Update PHP dependencies to latest versions
+- `mise.toml` — New: Root-level PHP version configuration
+- `back/mise.toml` — New: Backend PHP version configuration (brew)
+- `front/mise.toml` — New: Frontend Node.js version configuration
+- `front/package.json` — Bump version to 0.57.7
+
+---
+
 ## [v0.57.6] - 2026-03-03
 
 ### Fixes
