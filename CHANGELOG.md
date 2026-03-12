@@ -1,3 +1,32 @@
+## [v0.57.8] - 2026-03-12
+
+### UI Improvements
+
+- **EditProviderModal: Enhanced form layout**
+  - Move selected provider and date display from popover menu to main form card for better visibility
+  - Add new card component at the top of the form showing selected provider and reassign date
+  - Date picker is now directly accessible when editing existing entries
+
+### Fixes
+
+- **EditProviderModal: Simplified date picker popover**
+  - Streamline the date reassign popover by removing redundant wrapper and stacked label
+  - Improve button layout in the popover for cleaner appearance
+
+### Refactor
+
+- **EditProviderModal: Code organization**
+  - Add `isEditingEntry` computed property to determine if editing an existing entry vs creating new
+  - Add `openReassignFromMenu` function to properly handle date reassignment flow
+  - Improve `defineEmits` type definitions formatting for better readability
+
+### Files Changed
+
+- `front/src/views/budget/components/EditProviderModal.vue` — Improve form layout, simplify date picker, and enhance code organization
+- `front/package.json` — Bump version to 0.57.8
+
+---
+
 ## [v0.57.7] - 2026-03-10
 
 ### Chore
