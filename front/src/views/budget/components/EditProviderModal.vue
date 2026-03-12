@@ -75,6 +75,36 @@
 
       <!-- Provider form (when provider is selected or in entry mode) -->
       <div v-else>
+        <ion-list class="ion-padding-start ion-padding-end">
+          <ion-card class="shadow1">
+            <ion-item
+              v-if="!isSelectingProvider"
+              class="transparent"
+              button
+              lines="full"
+              @click="handleProviderClick"
+            >
+              <ion-label class="truncate">
+                Provedor seleccionado
+                <p class="truncate">{{ providerName }}</p>
+              </ion-label>
+            </ion-item>
+
+            <ion-item
+              v-if="isEditingEntry"
+              class="transparent"
+              button
+              lines="full"
+              @click="openReassignFromMenu($event)"
+            >
+              <ion-label>Fecha</ion-label>
+              <ion-label slot="end">{{
+                formatShortDate(reassignDateISO)
+              }}</ion-label>
+            </ion-item>
+          </ion-card>
+        </ion-list>
+
         <!-- Segment for full mode -->
         <div v-if="!isEntryMode" class="ion-padding-start ion-padding-end">
           <ion-segment v-model="selectedSegment">
@@ -288,38 +318,33 @@
       @did-dismiss="closeReassignPopover"
     >
       <ion-content class="ion-padding">
-        <div style="min-width: 220px; max-width: 320px">
-          <ion-item lines="none">
-            <ion-label position="stacked">Seleccionar fecha</ion-label>
-            <ion-datetime
-              v-if="showPicker"
-              ref="reassignPicker"
-              :key="reassignDateISO"
-              v-model="reassignDateISO"
-              presentation="date"
-              style="background: transparent; width: 100%"
-              @ion-change="onReassignDatetimeChange"
-            ></ion-datetime>
-          </ion-item>
+        <ion-datetime
+          v-if="showPicker"
+          ref="reassignPicker"
+          :key="reassignDateISO"
+          v-model="reassignDateISO"
+          presentation="date"
+          style="background: transparent; width: 100%"
+          @ion-change="onReassignDatetimeChange"
+        ></ion-datetime>
 
-          <ion-item lines="full" style="margin-top: 8px">
-            <ion-button
-              slot="start"
-              fill="clear"
-              size="small"
-              @click="closeReassignPopover"
-              >Cancelar</ion-button
-            >
-            <ion-button
-              slot="end"
-              size="small"
-              color="primary"
-              :disabled="!canApplyReassign"
-              @click="applyPopoverReassign"
-              >Aplicar</ion-button
-            >
-          </ion-item>
-        </div>
+        <ion-item>
+          <ion-button
+            slot="start"
+            fill="clear"
+            size="small"
+            @click="closeReassignPopover"
+            >Cancelar</ion-button
+          >
+          <ion-button
+            slot="end"
+            size="small"
+            color="primary"
+            :disabled="!canApplyReassign"
+            @click="applyPopoverReassign"
+            >Aplicar</ion-button
+          >
+        </ion-item>
       </ion-content>
     </ion-popover>
 
@@ -330,18 +355,6 @@
       @did-dismiss="closeMenuPopover"
     >
       <ion-content>
-        <ion-item
-          v-if="!isSelectingProvider"
-          button
-          lines="full"
-          @click="handleProviderClick"
-        >
-          <ion-label class="truncate">
-            Provedo seleccionado
-            <p class="truncate">{{ providerName }}</p>
-          </ion-label>
-        </ion-item>
-
         <ion-item lines="full" button @click="handleDeleteFromPopover">
           <ion-icon slot="start" color="danger" :icon="trashOutline"></ion-icon>
 
@@ -503,7 +516,13 @@ const emit = defineEmits<{
   ): void;
   // 'deleted' can be emitted either as a plain entry id (when editing an entry)
   // or as an object with provider id and optional _supplierId (when deleting a provider).
-  (e: 'deleted', payload: string | number | { id: string | number; _supplierId?: string | number }): void;
+  (
+    e: 'deleted',
+    payload:
+      | string
+      | number
+      | { id: string | number; _supplierId?: string | number }
+  ): void;
   (e: 'reassign-date', date: string): void;
   (e: 'quick-account', index: number): void;
 }>();
@@ -748,6 +767,15 @@ const isFormValid = computed(() => {
 const canApplyReassign = computed(() => {
   const short = reassignDate.value || reassignDateISO.value?.slice(0, 10);
   return short?.length === 10;
+});
+
+// true cuando estamos editando una entrada existente (no creando una nueva)
+const isEditingEntry = computed(() => {
+  // Verifica si tenemos un entryId válido (entrada existente)
+  const hasEntryId = entryData.value?.entryId != null;
+  // También verificamos mode === 'entry' o si provider tiene un id
+  const isEditing = hasEntryId || provider.value?.id != null;
+  return isEditing;
 });
 // end computed
 
@@ -1168,8 +1196,10 @@ function handleDelete() {
       id: provider.value.id,
     };
 
-    if ((provider as any)._supplierId) payload._supplierId = (provider as any)._supplierId;
-    else if (selectedProvider.value?.sync_id) payload._supplierId = selectedProvider.value.sync_id;
+    if ((provider as any)._supplierId)
+      payload._supplierId = (provider as any)._supplierId;
+    else if (selectedProvider.value?.sync_id)
+      payload._supplierId = selectedProvider.value.sync_id;
 
     emit('deleted', payload);
   }
@@ -1227,6 +1257,13 @@ function applyPopoverReassign() {
 function openHeaderPopover(e: Event) {
   popoverMenu.event = e;
   popoverMenu.open = true;
+}
+
+// Abrir popover de reasignación desde el menú: cerrar el menú primero
+async function openReassignFromMenu(e: Event) {
+  closeMenuPopover();
+  await nextTick();
+  openReassignPopover(e);
 }
 
 function closeReassignPopover() {
