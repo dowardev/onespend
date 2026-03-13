@@ -292,6 +292,7 @@ export const useBudgetStore = defineStore('budget', () => {
     }
 
     if (changes.name !== undefined) updatedProvider.name = String(changes.name);
+    if (changes.date !== undefined) updatedProvider.date = String(changes.date);
     if (changes.notes !== undefined)
       updatedProvider.notes = String(changes.notes);
     if (changes.visited !== undefined)
