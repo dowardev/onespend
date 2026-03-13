@@ -95,11 +95,11 @@
               class="transparent"
               button
               lines="full"
-              @click="openReassignFromMenu($event)"
+              @click="openReassignFromMenu({ e: $event })"
             >
               <ion-label>Fecha</ion-label>
               <ion-label slot="end">{{
-                formatShortDate(reassignDateISO)
+                formatShortDate({ isoDate: reassignDateISO })
               }}</ion-label>
             </ion-item>
           </ion-card>
@@ -128,12 +128,12 @@
               lines="full"
               class="transparent"
               button
-              @click="openReassignPopover($event)"
+              @click="openReassignPopover({ e: $event })"
             >
               <ion-label>Fecha</ion-label>
 
               <ion-label slot="end">{{
-                formatShortDate(reassignDateISO)
+                formatShortDate({ isoDate: reassignDateISO })
               }}</ion-label>
             </ion-item>
 
@@ -206,10 +206,10 @@
                       type="number"
                       placeholder="0"
                       :class="{
-                        'ion-invalid': isAmountInvalid(index),
-                        'ion-touched': isAmountTouched(index),
+                        'ion-invalid': isAmountInvalid({ index }),
+                        'ion-touched': isAmountTouched({ index }),
                       }"
-                      :error-text="getAmountError(index)"
+                      :error-text="getAmountError({ index })"
                     ></ion-input>
                   </ion-item>
 
@@ -221,10 +221,10 @@
                       interface="popover"
                       :compare-with="compareAccounts"
                       :class="{
-                        'ion-invalid': isAccountInvalid(index),
-                        'ion-touched': isAccountTouched(index),
+                        'ion-invalid': isAccountInvalid({ index }),
+                        'ion-touched': isAccountTouched({ index }),
                       }"
-                      :error-text="getAccountError(index)"
+                      :error-text="getAccountError({ index })"
                     >
                       <!-- Placeholder forces explicit selection when model is null -->
                       <ion-select-option :value="null" disabled>
@@ -232,7 +232,9 @@
                       </ion-select-option>
 
                       <ion-select-option
-                        v-for="acc in availableAccountsForItem(index)"
+                        v-for="acc in availableAccountsForItem({
+                          currentIndex: index,
+                        })"
                         :key="acc.id"
                         :value="isEntryMode ? acc.id : acc"
                       >
@@ -281,13 +283,22 @@
                     :value="getProductQuantity({ product })"
                     style="width: 80px; text-align: end"
                     :class="{
-                      'ion-invalid': isProductQuantityInvalid(product.id),
-                      'ion-touched': isProductQuantityTouched(product.id),
+                      'ion-invalid': isProductQuantityInvalid({
+                        productId: product.id,
+                      }),
+                      'ion-touched': isProductQuantityTouched({
+                        productId: product.id,
+                      }),
                     }"
-                    :error-text="getProductQuantityError(product.id)"
+                    :error-text="
+                      getProductQuantityError({ productId: product.id })
+                    "
                     @ion-input="
                       e => {
-                        setProductRawValue(product.id, e.detail.value || '');
+                        setProductRawValue({
+                          productId: product.id,
+                          value: e.detail.value || '',
+                        });
                         setProductQuantity({
                           product,
                           productPrice: product.price,
@@ -555,49 +566,61 @@ const reassignInitialShort = ref<string | null>(null);
 const tempPickerDateISO = ref<string | null>(null);
 
 // Validación simple para amount
-function isNumericValue(value: unknown): boolean {
+function isNumericValue(params: {
+  value: string | number | null | undefined;
+}): boolean {
+  const { value } = params;
   if (value === null || value === undefined || value === '') return true;
   return /^-?\d*\.?\d+$/.test(String(value));
 }
 
-function isPositiveValue(value: unknown): boolean {
+function isPositiveValue(params: {
+  value: string | number | null | undefined;
+}): boolean {
+  const { value } = params;
   if (value === null || value === undefined || value === '') return true;
   const num = Number(value);
   return !isNaN(num) && num > 0;
 }
 
-function getAmountError(index: number): string {
+function getAmountError(params: { index: number }): string {
+  const { index } = params;
   const amount = items.value[index]?.amount;
-  if (!isNumericValue(amount)) return 'Solo se permiten números';
-  if (!isPositiveValue(amount)) return 'El valor debe ser mayor a 0';
+  if (!isNumericValue({ value: amount })) return 'Solo se permiten números';
+  if (!isPositiveValue({ value: amount })) return 'El valor debe ser mayor a 0';
   return '';
 }
 
-function isAmountInvalid(index: number): boolean {
+function isAmountInvalid(params: { index: number }): boolean {
+  const { index } = params;
   const amount = items.value[index]?.amount;
-  return !isNumericValue(amount) || !isPositiveValue(amount);
+  return (
+    !isNumericValue({ value: amount }) || !isPositiveValue({ value: amount })
+  );
 }
 
-function isAmountTouched(index: number): boolean {
+function isAmountTouched(params: { index: number }): boolean {
+  const { index } = params;
   const amount = items.value[index]?.amount;
   return amount !== null && amount !== undefined && String(amount) !== '';
 }
 
 // Validación para cuenta seleccionada
-function isAccountInvalid(index: number): boolean {
+function isAccountInvalid(params: { index: number }): boolean {
+  const { index } = params;
   const accountId = items.value[index]?.accountId;
   return accountId === null || accountId === undefined;
 }
 
-function isAccountTouched(index: number): boolean {
-  // Consideramos que el campo ha sido "tocado" si el amount ya tiene valor
-  // (el usuario ya empezó a llenar el formulario)
+function isAccountTouched(params: { index: number }): boolean {
+  const { index } = params;
   const amount = items.value[index]?.amount;
   return amount !== null && amount !== undefined && String(amount) !== '';
 }
 
-function getAccountError(index: number): string {
-  if (isAccountInvalid(index) && isAccountTouched(index)) {
+function getAccountError(params: { index: number }): string {
+  const { index } = params;
+  if (isAccountInvalid({ index }) && isAccountTouched({ index })) {
     return 'Debe seleccionar una cuenta';
   }
   return '';
@@ -606,29 +629,43 @@ function getAccountError(index: number): string {
 // Validación para cantidad de productos
 const productQuantityRawValues = ref<Map<string | number, string>>(new Map());
 
-function getProductRawValue(productId: string | number): string {
+function getProductRawValue(params: { productId: string | number }): string {
+  const { productId } = params;
   return productQuantityRawValues.value.get(productId) ?? '';
 }
 
-function setProductRawValue(productId: string | number, value: string): void {
+function setProductRawValue(params: {
+  productId: string | number;
+  value: string;
+}): void {
+  const { productId, value } = params;
   productQuantityRawValues.value.set(productId, value);
 }
 
-function getProductQuantityError(productId: string | number): string {
-  const rawValue = getProductRawValue(productId);
+function getProductQuantityError(params: {
+  productId: string | number;
+}): string {
+  const { productId } = params;
+  const rawValue = getProductRawValue({ productId });
   if (rawValue === '') return '';
-  if (!isNumericValue(rawValue)) return 'Solo números';
+  if (!isNumericValue({ value: rawValue })) return 'Solo números';
   return '';
 }
 
-function isProductQuantityInvalid(productId: string | number): boolean {
-  const rawValue = getProductRawValue(productId);
+function isProductQuantityInvalid(params: {
+  productId: string | number;
+}): boolean {
+  const { productId } = params;
+  const rawValue = getProductRawValue({ productId });
   if (rawValue === '') return false;
-  return !isNumericValue(rawValue);
+  return !isNumericValue({ value: rawValue });
 }
 
-function isProductQuantityTouched(productId: string | number): boolean {
-  const rawValue = getProductRawValue(productId);
+function isProductQuantityTouched(params: {
+  productId: string | number;
+}): boolean {
+  const { productId } = params;
+  const rawValue = getProductRawValue({ productId });
   return rawValue !== '';
 }
 // end vars and const
@@ -652,7 +689,7 @@ watch(
   () => props.provider,
   newProvider => {
     if (isOpen.value && newProvider && !isEntryMode.value) {
-      updateProviderFromProps(newProvider);
+      updateProviderFromProps({ newProvider });
     }
   },
   { deep: true }
@@ -811,9 +848,10 @@ function initializeEntryMode() {
 }
 
 function initReassignDate() {
-  const raw = (entryData.value as any)?.date;
+  const entryWithDate = entryData.value as { date?: string } | undefined;
+  const raw = entryWithDate?.date;
   if (raw) {
-    reassignDateISO.value = parseDateValue(raw);
+    reassignDateISO.value = parseDateValue({ raw });
     reassignDate.value = String(reassignDateISO.value).slice(0, 10);
   } else {
     setTodayDate();
@@ -856,9 +894,10 @@ function initializeProviderMode() {
   };
 
   // Initialize date from provider
-  const providerDate = provider.value?.date;
+  const providerDate = (provider.value as ProviderData & { date?: string })
+    ?.date;
   if (providerDate) {
-    reassignDateISO.value = parseDateValue(providerDate);
+    reassignDateISO.value = parseDateValue({ raw: providerDate });
     reassignDate.value = String(reassignDateISO.value).slice(0, 10);
   } else {
     setTodayDate();
@@ -874,9 +913,14 @@ function initializeProviderMode() {
     provider.value!.items.length > 0
   ) {
     provider.value!.items.forEach(item => {
+      const accountIdValue = item.accountId;
       items.value.push({
         amount: Number(item.amount) || 0,
-        accountId: item.accountId ? { id: item.accountId } : null,
+        accountId: accountIdValue
+          ? typeof accountIdValue === 'object'
+            ? { id: (accountIdValue as Account).id }
+            : { id: accountIdValue }
+          : null,
       });
     });
   } else {
@@ -920,7 +964,8 @@ function initializeProviderMode() {
   }
 }
 
-function updateProviderFromProps(newProvider: ProviderData) {
+function updateProviderFromProps(params: { newProvider: ProviderData }) {
+  const { newProvider } = params;
   const supplierSyncId = newProvider._supplierId || newProvider.id;
   const fullSupplier =
     suppliers.value.find(
@@ -951,16 +996,24 @@ function updateProviderFromProps(newProvider: ProviderData) {
     newProvider.items.length > 0
   ) {
     newProvider.items.forEach(item => {
+      const accountIdValue = item.accountId;
       items.value.push({
         amount: Number(item.amount) || 0,
-        accountId: item.accountId ? { id: item.accountId } : null,
+        accountId: accountIdValue
+          ? typeof accountIdValue === 'object'
+            ? { id: (accountIdValue as Account).id }
+            : { id: accountIdValue }
+          : null,
       });
     });
   } else {
+    const accountIdValue = newProvider.accountId;
     items.value.push({
       amount: newProvider.estimated ?? '',
-      accountId: newProvider.accountId
-        ? { id: newProvider.accountId }
+      accountId: accountIdValue
+        ? typeof accountIdValue === 'object'
+          ? { id: (accountIdValue as Account).id }
+          : { id: accountIdValue }
         : getDefaultAccountId(),
     });
   }
@@ -978,7 +1031,10 @@ function updateProviderFromProps(newProvider: ProviderData) {
   }
 }
 
-function parseDateValue(raw: unknown): string {
+function parseDateValue(params: {
+  raw: string | number | null | undefined;
+}): string {
+  const { raw } = params;
   if (!raw) return format(new Date(), 'yyyy-MM-dd') + 'T00:00:00';
 
   if (typeof raw === 'string') {
@@ -997,7 +1053,8 @@ function parseDateValue(raw: unknown): string {
 // end Helper functions
 
 // Format ISO date to short localized string (dd/MM/yy)
-function formatShortDate(isoDate: string | null): string {
+function formatShortDate(params: { isoDate: string | null }): string {
+  const { isoDate } = params;
   if (!isoDate) return '';
   try {
     const date = new Date(isoDate);
@@ -1006,14 +1063,15 @@ function formatShortDate(isoDate: string | null): string {
       month: '2-digit',
       year: '2-digit',
     });
-  } catch (e) {
+  } catch {
     return String(isoDate).slice(0, 10);
   }
 }
 
-const availableAccountsForItem = (currentIndex: number) => {
+const availableAccountsForItem = (params: { currentIndex: number }) => {
+  const { currentIndex } = params;
   const usedAccountIds = items.value
-    .filter((_: unknown, idx: number) => idx !== currentIndex)
+    .filter((_, idx: number) => idx !== currentIndex)
     .map((item: ProviderItem) => {
       if (isEntryMode.value) {
         return String(item.accountId);
@@ -1027,14 +1085,39 @@ const availableAccountsForItem = (currentIndex: number) => {
   );
 };
 
-function selectProvider(params: { p: Supplier | any }) {
+interface SelectProviderProduct {
+  sync_id?: string | number;
+  id?: string | number;
+  supplierProductId?: string | number;
+  name: string;
+  price?: number;
+  productPrice?: number;
+  quantity?: number;
+}
+
+interface SelectProviderItem {
+  amount?: number;
+  accountId?: string | number | null;
+}
+
+interface SelectProviderData {
+  products?: SelectProviderProduct[];
+  items?: SelectProviderItem[];
+  estimated?: number;
+  accountId?: string | number | null;
+  name?: string;
+}
+
+function selectProvider(params: { p: Supplier | SelectProviderData }) {
   const { p } = params;
-  selectedProvider.value = p;
+  selectedProvider.value = p as Supplier;
   isSelectingProvider.value = false;
+
+  const providerData = p as SelectProviderData;
 
   // Load products
   providerProducts.value =
-    p.products?.map((prod: any) => ({
+    providerData.products?.map((prod: SelectProviderProduct) => ({
       supplierProductId: prod.sync_id ?? prod.id ?? prod.supplierProductId,
       productName: prod.name,
       productPrice: prod.price ?? prod.productPrice,
@@ -1042,18 +1125,21 @@ function selectProvider(params: { p: Supplier | any }) {
     })) || [];
 
   // Load items (quantities by account) if available
-  if (p.items && Array.isArray(p.items) && p.items.length > 0) {
-    items.value = p.items.map((item: any) => ({
+  if (
+    providerData.items &&
+    Array.isArray(providerData.items) &&
+    providerData.items.length > 0
+  ) {
+    items.value = providerData.items.map((item: SelectProviderItem) => ({
       amount: Number(item.amount) || 0,
-      // Preserve provided accountId, otherwise leave null so user must select
       accountId: item.accountId ?? null,
     }));
-  } else if (p.estimated && Number(p.estimated) > 0) {
+  } else if (providerData.estimated && Number(providerData.estimated) > 0) {
     // If provider has estimated amount, create one item
     items.value = [
       {
-        amount: Number(p.estimated) || 0,
-        accountId: p.accountId ?? null,
+        amount: Number(providerData.estimated) || 0,
+        accountId: providerData.accountId ?? null,
       },
     ];
   }
@@ -1072,22 +1158,16 @@ function handleProviderClick() {
   closeMenuPopover();
 }
 
-function compareAccounts(
-  o1: Account | string | number | null | undefined,
-  o2: Account | string | number | null | undefined
-) {
-  // Handle cases where ion-select passes arguments directly or a single object
-  // Normalize if a single object param was provided
-  if (arguments.length === 1 && typeof o1 === 'object' && o1 != null) {
-    const obj = o1 as any;
-    o1 = obj.o1 ?? obj.o1;
-    o2 = obj.o2 ?? obj.o2;
-  }
+function compareAccounts(params: {
+  o1: Account | string | number | null;
+  o2: Account | string | number | null;
+}): boolean {
+  let { o1, o2 } = params;
 
   if (o1 === o2) return true;
   if (o1 != null && o2 != null) {
     if (typeof o1 === 'object' && typeof o2 === 'object') {
-      return (o1 as any).id === (o2 as any).id;
+      return (o1 as Account).id === (o2 as Account).id;
     }
     return String(o1) === String(o2);
   }
@@ -1175,7 +1255,8 @@ function handleSave() {
   const products = providerProducts.value.filter(p => (p.quantity || 0) > 0);
 
   // Obtener la fecha seleccionada (si existe)
-  const selectedDate = reassignDate.value || reassignDateISO.value?.slice(0, 10);
+  const selectedDate =
+    reassignDate.value || reassignDateISO.value?.slice(0, 10);
 
   emit('saved', {
     providerId: selectedProvider.value?.sync_id || selectedProvider.value?.id,
@@ -1207,12 +1288,15 @@ function handleDelete() {
   if (provider.value?.id) {
     // For provider deletion emit an object including the provider id and, when
     // available, the supplier id so parent components can remove related entries.
+    const providerValue = provider.value as ProviderData & {
+      _supplierId?: string | number;
+    };
     const payload: { id: string | number; _supplierId?: string | number } = {
       id: provider.value.id,
     };
 
-    if ((provider as any)._supplierId)
-      payload._supplierId = (provider as any)._supplierId;
+    if (providerValue._supplierId)
+      payload._supplierId = providerValue._supplierId;
     else if (selectedProvider.value?.sync_id)
       payload._supplierId = selectedProvider.value.sync_id;
 
@@ -1221,11 +1305,14 @@ function handleDelete() {
 }
 
 // Reassign date functions
-async function openReassignPopover(e: Event) {
+async function openReassignPopover(params: { e: Event }) {
+  const { e } = params;
   // Prepare ISO value for the picker - use current reassignDateISO or default
   if (!reassignDateISO.value) {
-    if (entryData.value && (entryData.value as any).date) {
-      reassignDateISO.value = parseDateValue((entryData.value as any).date);
+    if (entryData.value && (entryData.value as { date?: string }).date) {
+      reassignDateISO.value = parseDateValue({
+        raw: (entryData.value as { date?: string }).date,
+      });
     } else {
       reassignDateISO.value = format(new Date(), 'yyyy-MM-dd') + 'T00:00:00';
     }
@@ -1257,16 +1344,18 @@ function applyPopoverReassign() {
   popoverReassign.event = null;
 }
 
-function openHeaderPopover(e: Event) {
+function openHeaderPopover(params: { e: Event }) {
+  const { e } = params;
   popoverMenu.event = e;
   popoverMenu.open = true;
 }
 
 // Abrir popover de reasignación desde el menú: cerrar el menú primero
-async function openReassignFromMenu(e: Event) {
+async function openReassignFromMenu(params: { e: Event }) {
+  const { e } = params;
   closeMenuPopover();
   await nextTick();
-  openReassignPopover(e);
+  openReassignPopover({ e });
 }
 
 function closeReassignPopover() {
