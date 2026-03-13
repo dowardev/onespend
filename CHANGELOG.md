@@ -1,3 +1,27 @@
+## [v0.58.0] - 2026-03-12
+
+### Refactor
+
+- **EditProviderModal: Convert functions to object parameters pattern**
+  - Refactor all function calls to use `{ paramName: value }` pattern instead of positional arguments
+  - Update validation functions (`isAmountInvalid`, `isAmountTouched`, `getAmountError`, etc.) to use object parameters
+  - Update product validation functions (`isProductQuantityInvalid`, `getProductQuantityError`, etc.) to use object parameters
+  - Update helper functions (`formatShortDate`, `parseDateValue`, `updateProviderFromProps`, etc.) to use object parameters
+  - Update event handlers (`openReassignPopover`, `openReassignFromMenu`, `openHeaderPopover`) to use object parameters
+
+- **EditProviderModal: Improve TypeScript type safety**
+  - Add explicit interfaces (`SelectProviderProduct`, `SelectProviderItem`, `SelectProviderData`) for better type definitions
+  - Replace `any` type usage with proper type definitions throughout the component
+  - Remove redundant type assertions and normalize account ID handling
+  - Improve function return types and parameter types for better code maintainability
+
+### Files Changed
+
+- `front/src/views/budget/components/EditProviderModal.vue` — Convert to object parameters pattern and improve TypeScript types
+- `front/package.json` — Bump version to 0.58.0
+
+---
+
 ## [v0.57.9] - 2026-03-12
 
 ### Features
