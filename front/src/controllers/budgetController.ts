@@ -7,6 +7,7 @@ import type { Supplier } from './suppliersController';
 interface BudgetData {
   entries: Income[];
   proveedores: Provider[];
+  isDayClosed?: boolean;
   finishDayData: {
     totalSalesEfectivo: number;
     totalSalesTarjeta: number;
@@ -338,6 +339,7 @@ class BudgetController {
     _supplier?: Supplier;
     products?: Array<{ supplierProductId: string | number; productName: string; productPrice: number; quantity: number }>;
     items?: Array<{ amount: number; accountId: string | number | null }>;
+    date?: string;
   }) {
     const {
       name = '',
@@ -349,6 +351,7 @@ class BudgetController {
       _supplier,
       products,
       items,
+      date,
     } = params;
     if (!name && !allowEmpty) return;
 
@@ -361,7 +364,7 @@ class BudgetController {
       id: localId,
       sync_id: generateSyncId(),
       name,
-      date: this.store.selectedDate,
+      date: date || this.store.selectedDate,
       estimated: Number(estimated) || 0,
       accountId: Number(accountId) || 0,
       efectivo: 0,
@@ -401,20 +404,90 @@ class BudgetController {
       }, 500);
   }
 
-  updateProvider(params: { id: string | number; changes: Partial<Provider> }) {
+  updateProvider(params: { id: string | number; changes: Partial<Provider> }): boolean {
     const { id, changes } = params;
     console.log('budgetController.updateProvider - id:', id, 'changes:', JSON.stringify(changes, null, 2));
     
     const provider = this.store.providers.find(p => p.id === id);
+    if (!provider) return false;
+
     const productsToSync = changes.products || (provider?.products || []);
     const supplierSyncId = (provider?._supplierId || changes._supplierId) as string | undefined;
     
-    this.store.updateProvider(id, changes);
+    // Check if date is being changed to a different date
+    const newDate = changes.date;
+    const currentDate = this.store.selectedDate;
     
-    if (provider) {
-      const { syncBudgetProvider } = useSync();
+    if (newDate && newDate !== currentDate) {
+      // Provider is being moved to a different date
+      console.log('budgetController.updateProvider - moving provider to new date:', newDate);
       
+      // Create updated provider with all changes
+      const updatedProvider = { ...provider, ...changes };
+      
+      // Remove from current date's store
+      this.store.removeProvider(id);
+      
+      // Save current date data (without this provider)
+      this.saveData();
+      
+      // Save provider to the new date bucket
+      this.saveProviderToDate(updatedProvider, newDate);
+      
+      // Sync with server
+      const { syncBudgetProvider } = useSync();
+      syncBudgetProvider({ provider: updatedProvider, operation: 'update', products: productsToSync, supplierSyncId });
+      
+      // Return true to indicate data was already saved
+      return true;
+    } else {
+      // Normal update - same date
+      this.store.updateProvider(id, changes);
+      
+      const { syncBudgetProvider } = useSync();
       syncBudgetProvider({ provider: { ...provider, ...changes }, operation: 'update', products: productsToSync, supplierSyncId });
+      
+      // Return false to indicate caller should save data
+      return false;
+    }
+  }
+
+  // Save a provider to a specific date bucket (different from current selected date)
+  private async saveProviderToDate(provider: Provider, targetDate: string) {
+    try {
+      const dateKey = `budget:${targetDate}`;
+      console.log('[BudgetController.saveProviderToDate] Saving to:', dateKey);
+      
+      // Convert provider to plain object to avoid Proxy serialization issues
+      const plainProvider = JSON.parse(JSON.stringify(provider));
+      
+      // Load existing data for target date using getBackup (not getEntry)
+      const existing = (await dixieController.getBackup({ id: dateKey })) as { data?: BudgetData } | null;
+      // Convert to plain objects to avoid Proxy issues
+      const entries = existing?.data?.entries ? JSON.parse(JSON.stringify(existing.data.entries)) : [];
+      const providers = existing?.data?.proveedores ? JSON.parse(JSON.stringify(existing.data.proveedores)) : [];
+      const isDayClosed = existing?.data?.isDayClosed || false;
+      const finishDayData = existing?.data?.finishDayData || {};
+      
+      // Add provider
+      providers.push(plainProvider);
+      
+      // Save updated data
+      await dixieController.putEntry({
+        entry: {
+          id: dateKey,
+          data: {
+            entries,
+            proveedores: providers,
+            isDayClosed,
+            finishDayData,
+          },
+        },
+      });
+      
+      console.log('[BudgetController.saveProviderToDate] Provider saved to:', dateKey);
+    } catch (e) {
+      console.error('[BudgetController.saveProviderToDate] Error:', e);
     }
   }
 
@@ -494,8 +567,8 @@ class BudgetController {
       // Convert entry to plain object to avoid Proxy serialization issues
       const plainEntry = JSON.parse(JSON.stringify(entry));
       
-      // Load existing data for target date
-      const existing = await dixieController.getEntry(dateKey);
+      // Load existing data for target date using getBackup (not getEntry)
+      const existing = (await dixieController.getBackup({ id: dateKey })) as { data?: BudgetData } | null;
       // Convert to plain objects to avoid Proxy issues
       const entries = existing?.data?.entries ? JSON.parse(JSON.stringify(existing.data.entries)) : [];
       const providers = existing?.data?.proveedores ? JSON.parse(JSON.stringify(existing.data.proveedores)) : [];

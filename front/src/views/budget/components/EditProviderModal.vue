@@ -321,11 +321,10 @@
         <ion-datetime
           v-if="showPicker"
           ref="reassignPicker"
-          :key="reassignDateISO"
-          v-model="reassignDateISO"
+          :key="tempPickerDateISO"
+          v-model="tempPickerDateISO"
           presentation="date"
           style="background: transparent; width: 100%"
-          @ion-change="onReassignDatetimeChange"
         ></ion-datetime>
 
         <ion-item>
@@ -512,6 +511,7 @@ const emit = defineEmits<{
       items: ProviderItem[];
       totalAmount: number;
       products?: ProviderProduct[];
+      date?: string;
     }
   ): void;
   // 'deleted' can be emitted either as a plain entry id (when editing an entry)
@@ -551,6 +551,8 @@ const reassignDateISO = ref<string | null>(null);
 const reassignPicker = ref<any>(null);
 const showPicker = ref(true);
 const reassignInitialShort = ref<string | null>(null);
+// Variable temporal para el picker (solo se aplica al hacer clic en "Aplicar")
+const tempPickerDateISO = ref<string | null>(null);
 
 // Validación simple para amount
 function isNumericValue(value: unknown): boolean {
@@ -765,7 +767,7 @@ const isFormValid = computed(() => {
 });
 
 const canApplyReassign = computed(() => {
-  const short = reassignDate.value || reassignDateISO.value?.slice(0, 10);
+  const short = tempPickerDateISO.value?.slice(0, 10);
   return short?.length === 10;
 });
 
@@ -852,6 +854,15 @@ function initializeProviderMode() {
     name: provider.value!._supplierName || provider.value!.name,
     products: fullSupplier?.products || [],
   };
+
+  // Initialize date from provider
+  const providerDate = provider.value?.date;
+  if (providerDate) {
+    reassignDateISO.value = parseDateValue(providerDate);
+    reassignDate.value = String(reassignDateISO.value).slice(0, 10);
+  } else {
+    setTodayDate();
+  }
 
   // Load items from provider if available, otherwise create single item from estimated/accountId
   // Clear the array first to ensure reactivity with keep-contents-mounted
@@ -1163,6 +1174,9 @@ function handleSave() {
 
   const products = providerProducts.value.filter(p => (p.quantity || 0) > 0);
 
+  // Obtener la fecha seleccionada (si existe)
+  const selectedDate = reassignDate.value || reassignDateISO.value?.slice(0, 10);
+
   emit('saved', {
     providerId: selectedProvider.value?.sync_id || selectedProvider.value?.id,
     providerName: selectedProvider.value?.name,
@@ -1178,6 +1192,7 @@ function handleSave() {
     })) as ProviderItem[],
     totalAmount,
     products: products.length > 0 ? products : undefined,
+    date: selectedDate || undefined,
   });
 }
 
@@ -1207,7 +1222,7 @@ function handleDelete() {
 
 // Reassign date functions
 async function openReassignPopover(e: Event) {
-  // Prepare ISO value for the picker
+  // Prepare ISO value for the picker - use current reassignDateISO or default
   if (!reassignDateISO.value) {
     if (entryData.value && (entryData.value as any).date) {
       reassignDateISO.value = parseDateValue((entryData.value as any).date);
@@ -1216,8 +1231,9 @@ async function openReassignPopover(e: Event) {
     }
   }
 
+  // Initialize temp picker with current date value
+  tempPickerDateISO.value = reassignDateISO.value;
   reassignInitialShort.value = reassignDateISO.value?.slice(0, 10) || null;
-  reassignDate.value = reassignInitialShort.value;
 
   // Force remount of picker
   showPicker.value = false;
@@ -1228,26 +1244,13 @@ async function openReassignPopover(e: Event) {
   popoverReassign.open = true;
 }
 
-function onReassignDatetimeChange(e: any) {
-  const val = e?.detail?.value ?? e;
-  if (!val) return;
-
-  let iso: string;
-  if (typeof val === 'string') {
-    iso = val.includes('T') ? val : `${val.slice(0, 10)}T00:00:00`;
-  } else if (val instanceof Date) {
-    iso = format(val, 'yyyy-MM-dd') + 'T00:00:00';
-  } else {
-    iso = String(val).slice(0, 10) + 'T00:00:00';
-  }
-
-  reassignDateISO.value = iso;
-  reassignDate.value = iso.slice(0, 10);
-}
-
 function applyPopoverReassign() {
-  const finalDate = reassignDate.value || reassignDateISO.value?.slice(0, 10);
+  const finalDate = tempPickerDateISO.value?.slice(0, 10);
   if (!finalDate) return;
+
+  // Apply the temp date to the actual variables
+  reassignDateISO.value = tempPickerDateISO.value;
+  reassignDate.value = finalDate;
 
   emit('reassign-date', finalDate);
   popoverReassign.open = false;
@@ -1295,6 +1298,7 @@ function resetFormState() {
     items.value.push({ amount: '', accountId: null });
     reassignDate.value = null;
     reassignDateISO.value = null;
+    tempPickerDateISO.value = null;
     showPicker.value = true;
     reassignInitialShort.value = null;
   } catch (err) {

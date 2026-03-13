@@ -1,3 +1,38 @@
+## [v0.57.9] - 2026-03-12
+
+### Features
+
+- **Provider Date Reassignment**: Add ability to move providers to different dates
+  - Providers can now be rescheduled to a different date via the edit modal
+  - When a provider's date is changed, it is moved from the current date's data bucket to the target date's bucket
+  - The date picker in EditProviderModal now initializes with the provider's existing date
+
+### Fixes
+
+- **Budget Data Loading**: Fix data retrieval when saving entries to different dates
+  - Use `getBackup` instead of `getEntry` for proper IndexedDB data loading in `saveEntryToDate` and `saveProviderToDate`
+  - Include `isDayClosed` flag when moving data between date buckets
+
+- **Date Picker UX**: Improve date picker interaction in EditProviderModal
+  - Use temporary variable for picker selection that only applies when clicking "Apply"
+  - Prevents accidental date changes when browsing the calendar
+
+### Refactor
+
+- **ProvidersComponent**: Add `safeClone` helper function for safe deep cloning of objects
+  - Replace `structuredClone` with JSON-based cloning to avoid Proxy serialization issues
+  - Simplify supplier cloning throughout the component
+
+### Files Changed
+
+- `front/src/controllers/budgetController.ts` — Add date parameter to `addProvider`, implement `saveProviderToDate`, update `updateProvider` to handle date changes
+- `front/src/stores/budgetStore.ts` — Support updating provider `date` field
+- `front/src/views/budget/ProvidersComponent.vue` — Handle date in saved payload, add `safeClone` helper
+- `front/src/views/budget/components/EditProviderModal.vue` — Initialize date from provider, emit date in saved payload, improve picker UX with temp variable
+- `front/package.json` — Bump version to 0.57.9
+
+---
+
 ## [v0.57.8] - 2026-03-12
 
 ### UI Improvements

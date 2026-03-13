@@ -261,6 +261,16 @@ const quickAccountButtons = [
 
 // End Vars
 
+// Helper function for safe deep cloning
+function safeClone<T>(obj: T): T | undefined {
+  if (!obj) return undefined;
+  try {
+    return JSON.parse(JSON.stringify(obj));
+  } catch {
+    return undefined;
+  }
+}
+
 // Computed
 const providers = computed(() => budgetCtrl.getProviders());
 const providerIdsWithEntries = computed(() =>
@@ -363,17 +373,14 @@ async function openEditProviderModal(
     editingProvider.value = {
       id: providerData.id,
       name: providerData.name,
+      date: providerData.date,
       estimated: providerData.estimated || 0,
       accountId: providerData.accountId,
       _supplierId: fullSupplier?.sync_id || supplierSyncId || fullSupplier?.id,
       _supplierName: providerData._supplierName || providerData.name,
       products: fullSupplier?.products || [],
       items: providerData.items,
-      _supplier: fullSupplier
-        ? structuredClone
-          ? structuredClone(fullSupplier)
-          : JSON.parse(JSON.stringify(fullSupplier))
-        : undefined,
+      _supplier: safeClone(fullSupplier),
     };
   } catch (err) {
     console.error('openEditProviderModal error:', err);
@@ -381,6 +388,7 @@ async function openEditProviderModal(
     editingProvider.value = {
       id: providerData?.id,
       name: providerData?.name || '',
+      date: providerData?.date,
       estimated: providerData?.estimated || 0,
       accountId: providerData?.accountId,
       items: providerData?.items,
@@ -397,12 +405,15 @@ function handleProviderSaved(payload: {
   items: Array<{ amount: number; accountId: string | number | null }>;
   totalAmount: number;
   products?: Array<ProviderProduct>;
+  date?: string;
 }) {
   const firstItem = payload.items[0];
   const firstAccountId = firstItem?.accountId;
 
+  let dataSaved = false;
+
   if (editingProvider.value?.id) {
-    budgetController.updateProvider({
+    dataSaved = budgetController.updateProvider({
       id: editingProvider.value.id,
       changes: {
         estimated: payload.totalAmount,
@@ -411,11 +422,8 @@ function handleProviderSaved(payload: {
         _supplierName: payload.providerName,
         products: payload.products,
         items: payload.items,
-        _supplier: editingProvider.value._supplier
-          ? structuredClone
-            ? structuredClone(editingProvider.value._supplier)
-            : JSON.parse(JSON.stringify(editingProvider.value._supplier))
-          : undefined,
+        _supplier: safeClone(editingProvider.value._supplier),
+        date: payload.date,
       },
     });
   } else {
@@ -428,14 +436,16 @@ function handleProviderSaved(payload: {
       _supplierName: payload.providerName,
       products: payload.products,
       items: payload.items,
-      _supplier: editingProvider.value?._supplier
-        ? structuredClone
-          ? structuredClone(editingProvider.value._supplier)
-          : JSON.parse(JSON.stringify(editingProvider.value._supplier))
-        : undefined,
+      _supplier: safeClone(editingProvider.value?._supplier),
+      date: payload.date,
     });
   }
-  budgetController.saveData();
+  
+  // Only save if updateProvider didn't already save (date change case)
+  if (!dataSaved) {
+    budgetController.saveData();
+  }
+  
   showAddProviderModal.value = false;
   editingProvider.value = null;
 }
