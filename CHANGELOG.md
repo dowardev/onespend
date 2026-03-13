@@ -1,3 +1,30 @@
+## [v0.58.1] - 2026-03-12
+
+### Refactor
+
+- **EditProviderModal: Convert to object parameters pattern**
+  - Change `openHeaderPopover($event)` to `openHeaderPopover({ e: $event })`
+  - Update all function calls throughout the component to use `{ paramName: value }` pattern
+  - Move internal interfaces (`SelectProviderProduct`, `SelectProviderItem`, `SelectProviderData`) to top of script section
+
+- **EditProviderModal: Improve TypeScript type safety**
+  - Add explicit interfaces at the top of the script for better organization
+  - Remove redundant refs (`productQuantities`, `reassignPicker`, `reassignInitialShort`)
+  - Remove unused imports (`createOutline`)
+  - Remove unused computed properties (`canDelete`, `hasProducts`)
+
+- **EditProviderModal: Improve date picker reliability**
+  - Add `:key` to datetime component for proper key-based remounting
+  - Add watch for `isOpen` prop to reset form state when parent closes modal programmatically
+  - Simplify template comments
+
+### Files Changed
+
+- `front/src/views/budget/components/EditProviderModal.vue` — Convert to object parameters pattern and improve TypeScript types
+- `front/package.json` — Bump version to 0.58.1
+
+---
+
 ## [v0.58.0] - 2026-03-12
 
 ### Refactor
