@@ -1,3 +1,28 @@
+## [v0.58.3] - 2026-03-14
+
+### Fix
+
+- **EditProviderModal: Initialize date when creating new provider record**
+  - Add `setTodayDate()` call in `initializeNewProviderMode()` to set default date
+  - Previously the date was only initialized for editing existing records, not for new ones
+
+- **InicioViewComponent: Add date support when saving provider entries**
+  - Add `date` field to `handleProviderEntrySaved` payload type
+  - Pass date to `updateIngreso`, `updateProvider`, and `addProvider` calls
+
+- **budgetController: Handle different dates for provider and entry creation**
+  - Modify `addProvider` to save to different dates using `saveProviderToDate` when selected date differs from current date
+  - Modify `updateIngreso` to move entries to different dates using `saveEntryToDate` when date changes
+
+### Files Changed
+
+- `front/src/views/budget/components/EditProviderModal.vue` — Initialize date for new providers
+- `front/src/views/budget/InicioViewComponent.vue` — Add date field to save handler
+- `front/src/controllers/budgetController.ts` — Handle different dates for creation
+- `front/package.json` — Bump version to 0.58.3
+
+---
+
 ## [v0.58.2] - 2026-03-14
 
 ### Fix

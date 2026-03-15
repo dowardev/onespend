@@ -304,12 +304,31 @@ class BudgetController {
 
   updateIngreso(params: { id: string | number; changes: Partial<Income> }) {
     const { id, changes } = params;
-    this.store.updateEntry(id, changes);
     
-    const entry = this.store.entries.find(e => e.id === id);
-    if (entry) {
+    const newDate = changes.date;
+    const currentDate = this.store.selectedDate;
+    
+    if (newDate && newDate !== currentDate) {
+      const entry = this.store.entries.find(e => e.id === id);
+      if (!entry) return;
+      
+      const updatedEntry = { ...entry, ...changes };
+      
+      this.store.removeEntry(id);
+      this.saveData();
+      
+      this.saveEntryToDate(updatedEntry, newDate);
+      
       const { syncEntry } = useSync();
-      syncEntry({ entry, operation: 'update' });
+      syncEntry({ entry: updatedEntry, operation: 'update' });
+    } else {
+      this.store.updateEntry(id, changes);
+      
+      const entry = this.store.entries.find(e => e.id === id);
+      if (entry) {
+        const { syncEntry } = useSync();
+        syncEntry({ entry, operation: 'update' });
+      }
     }
   }
 
@@ -360,11 +379,14 @@ class BudgetController {
     const supplierSyncId = _supplierId as string | undefined;
     console.log('budgetController.addProvider - _supplierId:', _supplierId, 'supplierSyncId:', supplierSyncId);
     
+    const providerDate = date || this.store.selectedDate;
+    const currentDate = this.store.selectedDate;
+    
     const newProvider: Provider = {
       id: localId,
       sync_id: generateSyncId(),
       name,
-      date: date || this.store.selectedDate,
+      date: providerDate,
       estimated: Number(estimated) || 0,
       accountId: Number(accountId) || 0,
       efectivo: 0,
@@ -381,11 +403,16 @@ class BudgetController {
       _supplier: _supplier ? JSON.parse(JSON.stringify(_supplier)) : undefined,
     };
 
-    this.store.addProvider(newProvider);
-    
     const { syncBudgetProvider } = useSync();
-    console.log('budgetController.addProvider - sincronizando provider con productos');
-    syncBudgetProvider({ provider: newProvider, operation: 'create', products, supplierSyncId });
+
+    if (providerDate && providerDate !== currentDate) {
+      this.saveProviderToDate(newProvider, providerDate);
+      syncBudgetProvider({ provider: newProvider, operation: 'create', products, supplierSyncId });
+    } else {
+      this.store.addProvider(newProvider);
+      console.log('budgetController.addProvider - sincronizando provider con productos');
+      syncBudgetProvider({ provider: newProvider, operation: 'create', products, supplierSyncId });
+    }
 
       const timeoutId = setTimeout(() => {
         const provider = this.store.providers.find(p => p.id === newProvider.id);
