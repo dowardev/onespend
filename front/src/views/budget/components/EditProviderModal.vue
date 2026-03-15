@@ -227,7 +227,7 @@
                       :error-text="getAccountError({ index })"
                     >
                       <!-- Placeholder forces explicit selection when model is null -->
-                      <ion-select-option :value="null" disabled>
+                      <ion-select-option :value="null">
                         Seleccionar cuenta
                       </ion-select-option>
 
@@ -1142,12 +1142,10 @@ function handleProviderClick() {
   closeMenuPopover();
 }
 
-function compareAccounts(params: {
-  o1: Account | string | number | null;
-  o2: Account | string | number | null;
-}): boolean {
-  let { o1, o2 } = params;
-
+function compareAccounts(
+  o1: Account | string | number | null,
+  o2: Account | string | number | null
+): boolean {
   if (o1 === o2) return true;
   if (o1 != null && o2 != null) {
     if (typeof o1 === 'object' && typeof o2 === 'object') {

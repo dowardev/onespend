@@ -1,3 +1,23 @@
+## [v0.58.2] - 2026-03-14
+
+### Fix
+
+- **EditProviderModal: Fix account select not opening**
+  - Remove `disabled` attribute from placeholder `ion-select-option` with `null` value
+  - The disabled option was preventing the select dropdown from functioning properly
+
+- **EditProviderModal: Fix compareAccounts TypeError**
+  - Update `compareAccounts` function to accept direct parameters `(o1, o2)` instead of destructuring from an object
+  - The Ionic `compare-with` directive passes values directly, not as an object
+  - This fixes the "Cannot destructure property 'o1' of 'params' as it is null" error
+
+### Files Changed
+
+- `front/src/views/budget/components/EditProviderModal.vue` — Fix account select functionality
+- `front/package.json` — Bump version to 0.58.2
+
+---
+
 ## [v0.58.1] - 2026-03-12
 
 ### Refactor
