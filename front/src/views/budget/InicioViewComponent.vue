@@ -759,6 +759,7 @@ function handleProviderEntrySaved(payload: {
   items: Array<EntryGroup>;
   totalAmount: number;
   products?: Array<ProviderProduct>;
+  date?: string;
 }) {
   const entryId = editingProviderEntryId.value;
   if (entryId) {
@@ -774,6 +775,7 @@ function handleProviderEntrySaved(payload: {
         accountId: groups[0]?.accountId || null,
         groups: groups.length > 1 ? groups : undefined,
         _providerName: payload.providerName,
+        date: payload.date,
       },
     });
     budgetController.saveData();
@@ -783,6 +785,7 @@ function handleProviderEntrySaved(payload: {
       changes: {
         estimated: payload.totalAmount,
         products: payload.products,
+        date: payload.date,
       },
     });
     budgetController.saveData();
@@ -792,6 +795,7 @@ function handleProviderEntrySaved(payload: {
       name: payload.providerName || 'Proveedor',
       estimated: payload.totalAmount,
       products: payload.products,
+      date: payload.date,
     });
     budgetController.saveData();
   }

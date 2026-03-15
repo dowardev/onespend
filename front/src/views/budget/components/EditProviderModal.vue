@@ -91,7 +91,6 @@
             </ion-item>
 
             <ion-item
-              v-if="isEditingEntry"
               class="transparent"
               button
               lines="full"
@@ -121,22 +120,6 @@
         <!-- Amounts by account section (inicio segment) -->
         <template v-if="!isEntryMode && selectedSegment === 'inicio'">
           <div class="ion-padding-start ion-padding-end">
-            <!-- Date selector (entry mode) - moved into the form like EditEntryModal -->
-            <!-- TODO: verificar si se sigue usando -->
-            <ion-item
-              v-if="isEntryMode"
-              lines="full"
-              class="transparent"
-              button
-              @click="openReassignPopover({ e: $event })"
-            >
-              <ion-label>Fecha</ion-label>
-
-              <ion-label slot="end">{{
-                formatShortDate({ isoDate: reassignDateISO })
-              }}</ion-label>
-            </ion-item>
-
             <ion-list class="transparent">
               <ion-list-header>
                 <ion-label>Cantidades por Cuenta</ion-label>
@@ -780,6 +763,7 @@ function initializeNewProviderMode() {
   providerProducts.value.splice(0, providerProducts.value.length);
   items.value.splice(0, items.value.length);
   items.value.push({ amount: '', accountId: null });
+  setTodayDate();
 }
 
 function initializeProviderMode() {
