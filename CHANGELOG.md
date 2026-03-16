@@ -1,3 +1,47 @@
+## [v0.58.4] - 2026-03-15
+
+### Feat
+
+- **ProviderEditPage: Convert provider editing from modal to page-based navigation**
+  - Create new ProviderEditPage.vue component as a full page instead of modal
+  - Add routes `/budget/provider/new` and `/budget/provider/edit` for navigation
+  - Provider entries now open as pages instead of modals
+
+- **InicioViewComponent: Unify entry editing with EditEntryModal**
+  - Remove EditProviderModal usage from InicioViewComponent
+  - All entries (provider and regular) now open EditEntryModal
+  - Simplifies entry editing flow by using single modal
+
+- **ProvidersComponent: Navigate to page instead of opening modal**
+  - Update ProvidersComponent to use router navigation to ProviderEditPage
+  - Add provider and entry edit modes with route query parameters
+
+### Refactor
+
+- **Move provider components to suppliers directory**
+  - Relocate ProviderEditPage.vue, ProvidersComponent.vue, and ProviderCardComponent.vue to `front/src/views/budget/suppliers/`
+  - Update all import paths in BudgetView.vue and router configuration
+
+### Fix
+
+- **BudgetView: Update ProvidersComponent import path**
+  - Fix import from `./ProvidersComponent.vue` to `./suppliers/ProvidersComponent.vue`
+
+- **ProvidersComponent: Update component import paths**
+  - Fix imports for ProvidersSummary, TemplatesModal, and NotesModal to use `../components/`
+
+### Files Changed
+
+- `front/src/router/index.ts` — Add routes for provider editing pages
+- `front/src/views/budget/BudgetView.vue` — Update ProvidersComponent import
+- `front/src/views/budget/InicioViewComponent.vue` — Remove EditProviderModal, use EditEntryModal for all
+- `front/src/views/budget/suppliers/ProviderEditPage.vue` — New page component (converted from modal)
+- `front/src/views/budget/suppliers/ProvidersComponent.vue` — Renamed from budget directory
+- `front/src/views/budget/suppliers/ProviderCardComponent.vue` — Renamed from budget directory
+- `front/package.json` — Bump version to 0.58.4
+
+---
+
 ## [v0.58.3] - 2026-03-14
 
 ### Fix
