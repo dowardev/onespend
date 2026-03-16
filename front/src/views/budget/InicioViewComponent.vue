@@ -125,20 +125,6 @@
     </ion-row>
   </ion-grid>
 
-  <!-- Edit Provider Entry Modal -->
-  <EditProviderModal
-    :is-open="editProviderModalOpen"
-    :provider="editProviderData"
-    :entry-data="editProviderEntryData"
-    :suppliers="allSuppliers"
-    :accounts="accountsList"
-    :mode="editingProviderEntryId ? 'entry' : 'provider'"
-    @dismiss="editProviderModalOpen = false"
-    @saved="handleProviderEntrySaved"
-    @deleted="handleProviderEntryDeleted"
-    @reassign-date="reassignProviderFromModal"
-  />
-
   <EditEntryModal
     :is-open="editEntryModalOpen"
     :entry-data="editEntryModalData"
@@ -216,7 +202,6 @@ import {
   informationCircleOutline,
 } from 'ionicons/icons';
 import AccountCards from './components/AccountCards.vue';
-import EditProviderModal from './components/EditProviderModal.vue';
 import EditEntryModal from './components/EditEntryModal.vue';
 import { reassignEntry } from '@/composables/useReassignEntry';
 import { computed, ref, onMounted, reactive, watch } from 'vue';
@@ -227,8 +212,6 @@ import { computed, ref, onMounted, reactive, watch } from 'vue';
 import budgetController from '@/controllers/budgetController';
 import { BudgetController } from '@/controllers/budgetController';
 import accountsController from '@/controllers/accountsController';
-import suppliersController from '@/controllers/suppliersController';
-import type { Supplier } from '@/controllers/suppliersController';
 import type { Account } from '@/stores/accountsStore';
 import type {
   Income,
@@ -240,9 +223,12 @@ import type {
   AccountWithBalance,
   EntryGroup,
   PendingProduct,
-  ProviderEditData,
-  ProviderProduct,
-} from './components/EditProviderModal.vue';
+} from './components/EditEntryModal.vue';
+
+type EntryItem = {
+  amount: number;
+  accountId: string | number | null;
+};
 
 // Components
 
@@ -288,17 +274,6 @@ const quickAccountButtons = [
   },
 ];
 
-const editProviderModalOpen = ref(false);
-const editProviderData = ref<ProviderEditData | null>(null);
-const editProviderEntryData = ref<{
-  name: string;
-  entryId: string | number | null;
-  items: Array<{ amount: number; accountId: string | number | null }>;
-} | null>(null);
-const allSuppliers = computed(() => budgetController.getProviders());
-
-const editingProviderEntryId = ref<string | number | null>(null);
-
 const editEntryModalOpen = ref(false);
 const editEntryModalData = ref({
   id: null as string | number | null,
@@ -316,7 +291,6 @@ const entryFormState = reactive({
   items: [{ amount: 0, accountId: null }],
 });
 
-const editingProviderId = ref<string | number | null>(null);
 
 // End Vars
 
@@ -679,139 +653,8 @@ function getAccountRemaining(
   return initialBalance + ingresos - egresos;
 }
 
-function isProviderEntry(item: Income) {
-  return (
-    item.entryType === 'egreso' &&
-    (item._fromProviderGroupId || item._providerName)
-  );
-}
-
 function handleEntryClick(item: Income) {
-  if (isProviderEntry(item)) {
-    openEditProviderModal(item);
-  } else {
-    openEditEntryModal(item);
-  }
-}
-
-async function openEditProviderModal(item: Income) {
-  editingProviderEntryId.value = item.id;
-
-  await suppliersController.listSuppliers();
-
-  const providerName = item._providerName || item.name || '';
-  const supplierSyncId = item._supplierId || item._fromProviderGroupId;
-
-  let fullSupplier: Supplier | null = null;
-  if (supplierSyncId) {
-    fullSupplier =
-      allSuppliers.value.find(
-        (s: Supplier) => String(s.sync_id) === String(supplierSyncId)
-      ) ||
-      allSuppliers.value.find(
-        (s: Supplier) => String(s.id) === String(supplierSyncId)
-      );
-  }
-  if (!fullSupplier) {
-    fullSupplier = allSuppliers.value.find(
-      (s: Supplier) => s.name?.toLowerCase() === providerName.toLowerCase()
-    );
-  }
-
-  // If this is an entry (editing an existing provider entry) populate entry-data for the modal
-  const groups =
-    item.groups && Array.isArray(item.groups) && item.groups.length > 0
-      ? item.groups.map((g: EntryGroup) => ({
-          amount: Number(g.amount) || 0,
-          accountId: g.accountId ?? null,
-        }))
-      : [
-          {
-            amount: Number(item.amount) || 0,
-            accountId: item.accountId ?? null,
-          },
-        ];
-
-  editProviderEntryData.value = {
-    name: providerName,
-    entryId: item.id,
-    items: groups,
-    date: item.date || budgetController.getSelectedDate(),
-  };
-
-  // keep provider metadata too (useful when switching modes)
-  editProviderData.value = {
-    id: item.id,
-    name: providerName,
-    estimated: Number(item.amount) || 0,
-    accountId: item.accountId,
-    _supplierId: fullSupplier?.sync_id || supplierSyncId || fullSupplier?.id,
-    _supplierName: providerName,
-    products: fullSupplier?.products || [],
-  };
-
-  editProviderModalOpen.value = true;
-}
-
-function handleProviderEntrySaved(payload: {
-  providerId?: string | number;
-  providerName?: string;
-  items: Array<EntryGroup>;
-  totalAmount: number;
-  products?: Array<ProviderProduct>;
-  date?: string;
-}) {
-  const entryId = editingProviderEntryId.value;
-  if (entryId) {
-    const groups = payload.items.map(item => ({
-      amount: Number(item.amount) || 0,
-      accountId: item.accountId,
-    }));
-
-    budgetController.updateIngreso({
-      id: entryId,
-      changes: {
-        amount: payload.totalAmount,
-        accountId: groups[0]?.accountId || null,
-        groups: groups.length > 1 ? groups : undefined,
-        _providerName: payload.providerName,
-        date: payload.date,
-      },
-    });
-    budgetController.saveData();
-  } else if (editingProviderId.value) {
-    budgetController.updateProvider({
-      id: editingProviderId.value,
-      changes: {
-        estimated: payload.totalAmount,
-        products: payload.products,
-        date: payload.date,
-      },
-    });
-    budgetController.saveData();
-  } else {
-    console.log('InicioViewComponent.onProviderSaved - payload:', payload);
-    budgetController.addProvider({
-      name: payload.providerName || 'Proveedor',
-      estimated: payload.totalAmount,
-      products: payload.products,
-      date: payload.date,
-    });
-    budgetController.saveData();
-  }
-  editProviderModalOpen.value = false;
-  editProviderData.value = null;
-  editingProviderEntryId.value = null;
-  editingProviderId.value = null;
-}
-
-function handleProviderEntryDeleted(entryId: string | number) {
-  budgetController.removeIngreso({ id: entryId });
-  budgetController.saveData();
-  editProviderModalOpen.value = false;
-  editProviderData.value = null;
-  editingProviderEntryId.value = null;
-  editProviderEntryData.value = null;
+  openEditEntryModal(item);
 }
 
 function openEditEntryModal(item: Income) {
@@ -865,113 +708,6 @@ async function reassignEntryFromModal(newDate: string | null) {
   editEntryModalOpen.value = false;
   editEntryModalData.value = { id: null, entryType: 'ingreso', name: '' };
   entryItems.value = [{ amount: 0, accountId: getDefaultAccountId() }];
-  try {
-    const sel =
-      budgetController.getSelectedDate && budgetController.getSelectedDate();
-    if (sel) await budgetController.loadDataForDate({ date: sel });
-  } catch (_e) {}
-}
-
-// Handler for reassign-date emitted by EditProviderModal (when editing a provider entry)
-async function reassignProviderFromModal(newDate: string | null) {
-  if (!newDate || !editingProviderEntryId.value) return;
-  try {
-    const originalDate =
-      editProviderEntryData.value && (editProviderEntryData.value as any).date
-        ? (editProviderEntryData.value as any).date
-        : (editProviderData.value as any)?.date;
-
-    console.log('InicioViewComponent.reassignProviderFromModal called', {
-      editingProviderEntryId: editingProviderEntryId.value,
-      newDate,
-      originalDateResolved: originalDate,
-      editProviderEntryData: editProviderEntryData.value,
-      editProviderData: editProviderData.value,
-    });
-
-    const res = await reassignEntry({
-      entryId: editingProviderEntryId.value,
-      newDate: String(newDate).slice(0, 10),
-      originalDate: originalDate || undefined,
-      restoreSelectedDate: true,
-      verbose: true,
-    });
-
-    console.log('InicioViewComponent.reassignProviderFromModal - result', res);
-    if (!res || !res.moved) {
-      console.warn(
-        'InicioViewComponent.reassignProviderFromModal - move did not occur, performing fallback remove+create',
-        res && res.error ? res.error : res
-      );
-      // Fallback: perform explicit remove + create to ensure the entry moves buckets
-      try {
-        const srcDate = originalDate
-          ? String(originalDate).slice(0, 10)
-          : (budgetController.getSelectedDate &&
-              budgetController.getSelectedDate()) ||
-            String(new Date()).slice(0, 10);
-        const destDate = String(newDate).slice(0, 10);
-
-        // load source bucket
-        try {
-          budgetController.setDate({ date: srcDate });
-        } catch (err) {}
-        await budgetController.loadDataForDate({ date: srcDate });
-
-        const srcEntries = budgetController.getEntries();
-        const srcEntry = srcEntries.find(
-          (en: any) => String(en.id) === String(editingProviderEntryId.value)
-        );
-        if (srcEntry) {
-          const payload: any = {
-            name: srcEntry.name,
-            amount: srcEntry.amount,
-            paymentType: srcEntry.paymentType,
-            accountId: srcEntry.accountId ?? null,
-            groups: srcEntry.groups ?? [],
-            // preserve provider metadata
-            _providerName: srcEntry._providerName,
-            _fromProviderGroupId: srcEntry._fromProviderGroupId,
-          };
-
-          // remove from source
-          budgetController.removeIngreso({ id: srcEntry.id });
-          await budgetController.saveData();
-
-          // add to dest
-          try {
-            budgetController.setDate({ date: destDate });
-          } catch (err) {}
-          await budgetController.loadDataForDate({ date: destDate });
-          if ((srcEntry as any).entryType === 'ingreso')
-            budgetController.addIngreso(payload);
-          else budgetController.addEgreso(payload);
-          await budgetController.saveData();
-
-          console.log(
-            'InicioViewComponent.reassignProviderFromModal - fallback move completed'
-          );
-        } else {
-          console.warn(
-            'InicioViewComponent.reassignProviderFromModal - fallback: source entry not found'
-          );
-        }
-      } catch (err) {
-        console.error(
-          'InicioViewComponent.reassignProviderFromModal - fallback error',
-          err
-        );
-      }
-    }
-  } catch (err) {
-    console.error('InicioViewComponent.reassignProviderFromModal error', err);
-  }
-
-  // close modal and refresh current bucket
-  editProviderModalOpen.value = false;
-  editProviderEntryData.value = null;
-  editingProviderEntryId.value = null;
-  editProviderData.value = null;
   try {
     const sel =
       budgetController.getSelectedDate && budgetController.getSelectedDate();

@@ -1,6 +1,6 @@
 <template>
   <ion-grid>
-    <ion-row >
+    <ion-row>
       <ion-col size="6">
         <ion-list class="transparent">
           <ion-list-header>
@@ -28,7 +28,13 @@
                   @update-provider="handleUpdateProvider"
                   @confirm-remove-proveedor="confirmRemoveProveedor"
                   @open-notes-modal="handleOpenNotesModal"
-                  @open-edit-modal="openEditProviderModal"
+                  @open-edit-modal="
+                    provider =>
+                      router.push({
+                        path: '/budget/provider/edit',
+                        query: { providerId: String(provider.id) },
+                      })
+                  "
                 />
               </div>
             </template>
@@ -68,19 +74,6 @@
     @update-notes="notesContent = $event"
   />
   <!-- end modals -->
-
-  <!-- Edit/Add Provider Modal -->
-  <EditProviderModal
-    :is-open="showAddProviderModal"
-    :provider="editingProvider"
-    :suppliers="allSuppliers"
-    :accounts="allAccounts"
-    mode="provider"
-    @dismiss="showAddProviderModal = false"
-    @saved="handleProviderSaved"
-    @deleted="handleProviderDeleted"
-    @quick-account="openQuickAccountAlert"
-  />
 
   <!-- alerts -->
   <ion-alert
@@ -168,6 +161,7 @@ import {
   watchEffect,
 } from 'vue';
 import { addOutline, documentOutline, trashOutline } from 'ionicons/icons';
+import { useRouter } from 'vue-router';
 // End Imports
 
 // Controllers
@@ -182,21 +176,17 @@ import accountsController from '@/controllers/accountsController';
 import { AccountsController } from '@/controllers/accountsController';
 import { SyncController } from '@/controllers/syncController';
 import type { Supplier } from '@/controllers/suppliersController';
-import type {
-  ProviderData,
-  ProviderProduct,
-} from './components/EditProviderModal.vue';
 // End Controllers
 
 // Components
 import ProviderCardComponent from './ProviderCardComponent.vue';
-import ProvidersSummary from './components/ProvidersSummary.vue';
-import EditProviderModal from './components/EditProviderModal.vue';
-import TemplatesModal from './components/TemplatesModal.vue';
-import NotesModal from './components/NotesModal.vue';
+import ProvidersSummary from '../components/ProvidersSummary.vue';
+import TemplatesModal from '../components/TemplatesModal.vue';
+import NotesModal from '../components/NotesModal.vue';
 // End Components
 
 // Vars
+const router = useRouter();
 const budgetCtrl = budgetController;
 const suppliersCtrl = new SuppliersController();
 const accountsCtrl = new AccountsController();
@@ -332,71 +322,6 @@ async function loadAccounts() {
 function openAddProviderModal() {
   editingProvider.value = null;
   void forceSyncSuppliers();
-  showAddProviderModal.value = true;
-}
-
-async function openEditProviderModal(
-  params: { provider: ProviderData } | ProviderData
-) {
-  // Accept either the provider directly or an object { provider }
-  const provider =
-    params && (params as any).provider
-      ? (params as any).provider
-      : (params as any);
-  console.log('openEditProviderModal - payload:', provider);
-  const providerData = (provider || {}) as ProviderData;
-
-  try {
-    await forceSyncSuppliers();
-
-    let fullSupplier: Supplier | null = null;
-    const supplierSyncId =
-      providerData._supplierId || (providerData as any)._supplierKey;
-
-    if (supplierSyncId) {
-      fullSupplier =
-        allSuppliers.value.find(
-          (s: Supplier) => String(s.sync_id) === String(supplierSyncId)
-        ) ||
-        allSuppliers.value.find(
-          (s: Supplier) => String(s.id) === String(supplierSyncId)
-        );
-    } else {
-      fullSupplier = allSuppliers.value.find(
-        (s: Supplier) =>
-          s.name &&
-          providerData.name &&
-          s.name.toLowerCase() === providerData.name.toLowerCase()
-      );
-    }
-
-    editingProvider.value = {
-      id: providerData.id,
-      name: providerData.name,
-      date: providerData.date,
-      estimated: providerData.estimated || 0,
-      accountId: providerData.accountId,
-      _supplierId: fullSupplier?.sync_id || supplierSyncId || fullSupplier?.id,
-      _supplierName: providerData._supplierName || providerData.name,
-      products: fullSupplier?.products || [],
-      items: providerData.items,
-      _supplier: safeClone(fullSupplier),
-    };
-  } catch (err) {
-    console.error('openEditProviderModal error:', err);
-    // Fallback minimal editingProvider so modal can still open
-    editingProvider.value = {
-      id: providerData?.id,
-      name: providerData?.name || '',
-      date: providerData?.date,
-      estimated: providerData?.estimated || 0,
-      accountId: providerData?.accountId,
-      items: providerData?.items,
-    } as any;
-  } finally {
-    // Always try to open modal so user can inspect/fix
-    showAddProviderModal.value = true;
-  }
 }
 
 function handleProviderSaved(payload: {
@@ -440,17 +365,20 @@ function handleProviderSaved(payload: {
       date: payload.date,
     });
   }
-  
+
   // Only save if updateProvider didn't already save (date change case)
   if (!dataSaved) {
     budgetController.saveData();
   }
-  
+
   showAddProviderModal.value = false;
   editingProvider.value = null;
 }
 
-function handleProviderDeleted(params: { id: string | number; _supplierId?: string | number }) {
+function handleProviderDeleted(params: {
+  id: string | number;
+  _supplierId?: string | number;
+}) {
   const { id, _supplierId } = params;
   // Usar _supplierId para eliminar entradas asociadas, o el id si no hay _supplierId
   budgetController.removeEgresosGroup({ groupId: _supplierId || id });
@@ -461,7 +389,7 @@ function handleProviderDeleted(params: { id: string | number; _supplierId?: stri
 }
 
 function addEmptyProvider() {
-  openAddProviderModal();
+  router.push('/budget/provider/new');
 }
 
 function handleUpdateProvider(payload: {
@@ -491,7 +419,9 @@ function removeProveedorConfirmed() {
   deleteConfirm.open = false;
   if (pid != null) {
     // Buscar el provider para obtener su _supplierId
-    const provider = providers.value.find((p: any) => String(p.id) === String(pid));
+    const provider = providers.value.find(
+      (p: any) => String(p.id) === String(pid)
+    );
     const supplierId = provider?._supplierId || pid;
     budgetController.removeEgresosGroup({ groupId: supplierId });
     budgetController.removeProvider({ id: pid });
