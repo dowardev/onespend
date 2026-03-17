@@ -258,7 +258,7 @@
     <!-- Provider Selection Modal -->
     <ion-modal
       :is-open="showProviderModal"
-      @did-dismiss="showProviderModal = false"
+      @will-dismiss="onProviderModalDismiss"
     >
       <ion-header class="ion-no-border" mode="ios">
         <ion-toolbar>
@@ -306,7 +306,7 @@
     <!-- Account Selection Modal -->
     <ion-modal
       :is-open="showAccountModal"
-      @did-dismiss="showAccountModal = false"
+      @will-dismiss="onAccountModalDismiss"
     >
       <ion-header class="ion-no-border" mode="ios">
         <ion-toolbar>
@@ -395,13 +395,21 @@
         <ion-item lines="full" button @click="handleDeleteFromPopover">
           <ion-icon slot="start" color="danger" :icon="trashOutline"></ion-icon>
 
-          <ion-label color="danger">Eliminar proveedor</ion-label>
+          <ion-label>Eliminar proveedor</ion-label>
         </ion-item>
       </ion-content>
     </ion-popover>
     <!-- end popovers -->
 
     <!-- alerts -->
+    <ion-alert
+      :is-open="showDeleteAlert"
+      header="Confirmar eliminación"
+      message="¿Estás seguro de que deseas eliminar este proveedor?"
+      :buttons="deleteAlertButtons"
+      @did-dismiss="showDeleteAlert = false"
+    ></ion-alert>
+
     <ion-alert
       :is-open="showQuickAccountAlert"
       header="Nueva Cuenta"
@@ -430,14 +438,15 @@ import {
   IonItem,
   IonLabel,
   IonInput,
-  IonSelect,
-  IonSelectOption,
   IonSegment,
   IonSegmentButton,
   IonCard,
   IonPopover,
   IonDatetime,
   IonAlert,
+  IonModal,
+  IonGrid,
+  IonCol,
 } from '@ionic/vue';
 import {
   arrowBackOutline,
@@ -449,7 +458,7 @@ import {
   ellipsisVerticalOutline,
   checkmarkCircleOutline,
 } from 'ionicons/icons';
-import { ref, computed, watch, reactive, nextTick, onMounted } from 'vue';
+import { ref, computed, reactive, nextTick, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { format } from 'date-fns';
 import accountsController from '@/controllers/accountsController';
@@ -584,6 +593,7 @@ const showAccountModal = ref(false);
 const selectedAccountIndex = ref<number | null>(null);
 const accountSearchQuery = ref('');
 const showQuickAccountAlert = ref(false);
+const showDeleteAlert = ref(false);
 const quickAccountTargetIndex = ref<number | null>(null);
 
 const quickAccountInputs = [
@@ -620,6 +630,21 @@ const quickAccountButtons = [
   },
 ];
 
+const deleteAlertButtons = [
+  {
+    text: 'Cancelar',
+    role: 'cancel',
+    handler: () => {
+      showDeleteAlert.value = false;
+    },
+  },
+  {
+    text: 'Eliminar',
+    cssClass: 'danger-alert-btn',
+    handler: confirmDelete,
+  },
+];
+
 // Data from route params
 const routeMode = computed(() => route.query.mode as string | undefined);
 const routeEntryId = computed(
@@ -630,8 +655,6 @@ const routeProviderId = computed(
 );
 
 const isEntryMode = computed(() => routeMode.value === 'entry');
-const isNewMode = computed(() => !routeProviderId.value && !routeEntryId.value);
-
 // Suppliers list
 const allSuppliersList = ref<Supplier[]>([]);
 
@@ -907,12 +930,6 @@ function getDefaultAccountId() {
   return isEntryMode.value ? accounts.value[0].id : accounts.value[0];
 }
 
-function resetModalState() {
-  selectedProvider.value = null;
-  selectedSegment.value = 'inicio';
-  searchQuery.value = '';
-}
-
 function setTodayDate() {
   reassignDateISO.value = format(new Date(), 'yyyy-MM-dd') + 'T00:00:00';
   reassignDate.value = String(reassignDateISO.value).slice(0, 10);
@@ -1009,24 +1026,16 @@ function isAmountTouched(params: { index: number }): boolean {
 }
 
 // Validación para cuenta seleccionada
-function isAccountInvalid(params: { index: number }): boolean {
+function _isAccountInvalid(params: { index: number }): boolean {
   const { index } = params;
   const accountId = items.value[index]?.accountId;
   return accountId === null || accountId === undefined;
 }
 
-function isAccountTouched(params: { index: number }): boolean {
+function _isAccountTouched(params: { index: number }): boolean {
   const { index } = params;
   const amount = items.value[index]?.amount;
   return amount !== null && amount !== undefined && String(amount) !== '';
-}
-
-function getAccountError(params: { index: number }): string {
-  const { index } = params;
-  if (isAccountInvalid({ index }) && isAccountTouched({ index })) {
-    return 'Debe seleccionar una cuenta';
-  }
-  return '';
 }
 
 // Product quantity validation functions
@@ -1070,22 +1079,15 @@ function isProductQuantityTouched(params: {
   return rawValue !== '';
 }
 
-const availableAccountsForItem = (params: { currentIndex: number }) => {
-  const { currentIndex } = params;
-  const usedAccountIds = items.value
-    .filter((_: unknown, idx: number) => idx !== currentIndex)
-    .map((item: ProviderItem) => {
-      if (isEntryMode.value) {
-        return String(item.accountId);
-      }
-      return String((item.accountId as Account)?.id ?? item.accountId);
-    })
-    .filter((id: string) => id !== 'null' && id !== 'undefined' && id !== '');
+function onProviderModalDismiss() {
+  showProviderModal.value = false;
+  searchQuery.value = '';
+}
 
-  return accounts.value.filter(
-    (acc: Account) => !usedAccountIds.includes(String(acc.id))
-  );
-};
+function onAccountModalDismiss() {
+  showAccountModal.value = false;
+  accountSearchQuery.value = '';
+}
 
 function selectProvider(params: { p: Supplier | SelectProviderData }) {
   const { p } = params;
@@ -1148,20 +1150,6 @@ function getAccountName(
       : accountId;
   const acc = accounts.value.find((a: Account) => String(a.id) === String(id));
   return acc?.name || '';
-}
-
-function compareAccounts(
-  o1: Account | string | number | null,
-  o2: Account | string | number | null
-): boolean {
-  if (o1 === o2) return true;
-  if (o1 != null && o2 != null) {
-    if (typeof o1 === 'object' && typeof o2 === 'object') {
-      return (o1 as Account).id === (o2 as Account).id;
-    }
-    return String(o1) === String(o2);
-  }
-  return false;
 }
 
 function formatPrice(price: number | { price: number }): string {
@@ -1273,7 +1261,7 @@ async function handleSave() {
     }));
 
     budgetController.updateIngreso({
-      id: routeEntryId.value,
+      id: Number(routeEntryId.value),
       changes: {
         amount: payload.totalAmount,
         accountId: groups[0]?.accountId || null,
@@ -1289,7 +1277,7 @@ async function handleSave() {
     const firstAccountId = firstItem?.accountId;
 
     budgetController.updateProvider({
-      id: routeProviderId.value,
+      id: Number(routeProviderId.value),
       changes: {
         estimated: payload.totalAmount,
         accountId: firstAccountId || 0,
@@ -1321,10 +1309,6 @@ async function handleSave() {
   }
 
   router.back();
-}
-
-function handleDelete() {
-  // Handle delete based on mode
 }
 
 function handleBack() {
@@ -1383,8 +1367,26 @@ function closeMenuPopover() {
 }
 
 function handleDeleteFromPopover() {
-  handleDelete();
   closeMenuPopover();
+  showDeleteAlert.value = true;
+}
+
+function confirmDelete() {
+  return (async () => {
+    const { default: budgetController } =
+      await import('@/controllers/budgetController');
+
+    if (isEntryMode.value && routeEntryId.value) {
+      budgetController.removeIngreso({ id: Number(routeEntryId.value) });
+      budgetController.saveData();
+    } else if (routeProviderId.value) {
+      budgetController.removeProvider({ id: Number(routeProviderId.value) });
+      budgetController.saveData();
+    }
+
+    showDeleteAlert.value = false;
+    router.back();
+  })();
 }
 
 function openQuickAccountAlert(itemIndex?: number) {
@@ -1426,13 +1428,6 @@ async function createQuickAccount(name: string, initialBalance: number) {
   quickAccountTargetIndex.value = null;
 }
 
-// emit for parent communication
-const emit = defineEmits<{
-  (e: 'saved', payload: any): void;
-  (e: 'deleted', payload: any): void;
-  (e: 'reassign-date', date: string): void;
-}>();
-
 // Expose for parent if needed
 defineExpose({
   handleSave,
@@ -1451,5 +1446,11 @@ defineExpose({
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+</style>
+
+<style>
+button.alert-button.danger-alert-btn {
+  color: var(--ion-color-danger);
 }
 </style>
