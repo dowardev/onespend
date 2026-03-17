@@ -17,11 +17,10 @@
           <ion-button
             v-if="isEditing"
             fill="clear"
-            color="danger"
             :disabled="isDayClosed"
-            @click="handleDelete"
+            @click="openOptionsPopover"
           >
-            <ion-icon :icon="trashOutline"></ion-icon>
+            <ion-icon :icon="ellipsisVertical"></ion-icon>
           </ion-button>
 
           <ion-button
@@ -306,6 +305,25 @@
     </ion-popover>
     <!-- end popovers -->
 
+    <!-- options popover -->
+    <ion-popover
+      :is-open="optionsPopoverState.open"
+      :event="optionsPopoverState.event"
+      @did-dismiss="optionsPopoverState.open = false"
+    >
+      <ion-content>
+        <ion-item
+          button
+          :disabled="isDayClosed"
+          @click="handleDeleteFromPopover"
+        >
+          <ion-icon slot="start" :icon="trashOutline" color="danger"></ion-icon>
+          <ion-label color="danger">Eliminar</ion-label>
+        </ion-item>
+      </ion-content>
+    </ion-popover>
+    <!-- end options popover -->
+
     <!-- alerts -->
     <ion-alert
       :is-open="showDeleteAlert"
@@ -362,6 +380,7 @@ import {
   refreshOutline,
   saveOutline,
   trashOutline,
+  ellipsisVertical,
 } from 'ionicons/icons';
 import { computed, ref, watch, onMounted, reactive, nextTick } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
@@ -432,6 +451,10 @@ const showPicker = ref(true);
 const showDeleteAlert = ref(false);
 const showQuickAccountAlert = ref(false);
 const quickAccountTargetIndex = ref<number | null>(null);
+const optionsPopoverState = reactive({
+  open: false,
+  event: null as Event | null,
+});
 
 const quickAccountInputs = [
   {
@@ -477,7 +500,7 @@ const deleteAlertButtons = [
   },
   {
     text: 'Eliminar',
-    role: 'confirm',
+    cssClass: 'danger-alert-btn',
     handler: confirmDelete,
   },
 ];
@@ -596,6 +619,16 @@ function handleBack() {
 }
 
 function handleDelete() {
+  showDeleteAlert.value = true;
+}
+
+function openOptionsPopover(e: Event) {
+  optionsPopoverState.event = e;
+  optionsPopoverState.open = true;
+}
+
+function handleDeleteFromPopover() {
+  optionsPopoverState.open = false;
   showDeleteAlert.value = true;
 }
 
@@ -938,3 +971,9 @@ function isAmountTouched(index: number): boolean {
 }
 // end functions
 </script>
+
+<style>
+button.alert-button.danger-alert-btn {
+  color: var(--ion-color-danger);
+}
+</style>

@@ -1,3 +1,41 @@
+## [v0.58.6] - 2026-03-17
+
+### Fix
+
+- **ProviderEditPage: Fix delete and update operations failing silently**
+  - Route query parameters are strings, but the store uses strict equality with numeric IDs
+  - Wrap `routeProviderId` and `routeEntryId` with `Number()` in `confirmDelete` and `handleSave`
+  - Fixes `removeProvider`, `removeIngreso`, `updateProvider`, and `updateIngreso` calls
+
+### Feat
+
+- **EntryEditPage: Add options popover with delete confirmation**
+  - Replace trash icon with vertical ellipsis menu button
+  - Add popover with "Eliminar" option styled in danger color
+  - Show confirmation alert before deleting with "Cancelar" and "Eliminar" buttons
+  - Style alert delete button in danger color via `cssClass` + unscoped `<style>`
+
+- **ProviderEditPage: Add delete confirmation alert**
+  - Show confirmation alert before deleting provider or entry
+  - Same danger-styled button pattern as EntryEditPage
+
+### Refactor
+
+- **ProviderEditPage: Remove dead code and clean up imports**
+  - Remove unused functions: `resetModalState`, `handleDelete`, `getAccountError`, `compareAccounts`, `availableAccountsForItem`, `isNewMode`, `defineEmits`
+  - Remove unused imports: `IonSelect`, `IonSelectOption`, `watch`
+  - Add missing imports: `IonModal`, `IonGrid`, `IonCol`
+  - Prefix unused functions with `_`: `_isAccountInvalid`, `_isAccountTouched`
+  - Fix modal dismiss handlers to use `@will-dismiss` with proper cleanup
+
+### Files Changed
+
+- `front/src/views/budget/entries/EntryEditPage.vue` — Add options popover and delete confirmation alert
+- `front/src/views/budget/suppliers/ProviderEditPage.vue` — Fix delete/update type mismatch, add confirmation alert, remove dead code
+- `front/package.json` — Bump version to 0.58.6
+
+---
+
 ## [v0.58.5] - 2026-03-16
 
 ### Feat
