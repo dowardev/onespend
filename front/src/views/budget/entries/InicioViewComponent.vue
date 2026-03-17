@@ -6,7 +6,7 @@
           <ion-list-header>
             <ion-label>Registro</ion-label>
 
-            <ion-button :disabled="isDayClosed" @click="openAddEntryModal">
+            <ion-button :disabled="isDayClosed" @click="navigateToNewEntry">
               <ion-icon :icon="addOutline"></ion-icon>
             </ion-button>
           </ion-list-header>
@@ -43,7 +43,7 @@
                     class="transparent"
                     button
                     :disabled="isDayClosed"
-                    @click="handleEntryClick(block.item)"
+                    @click="navigateToEditEntry(block.item)"
                   >
                     <ion-label>
                       {{ block.item._providerName || block.item.name || '-' }}
@@ -124,44 +124,6 @@
       </ion-col>
     </ion-row>
   </ion-grid>
-
-  <EditEntryModal
-    :is-open="editEntryModalOpen"
-    :entry-data="editEntryModalData"
-    :accounts-list="accountsList"
-    :is-day-closed="isDayClosed"
-    :providers-today-with-data="providersTodayWithData"
-    @dismiss="editEntryModalOpen = false"
-    @save="saveEntryChanges"
-    @delete="deleteEntry"
-    @quick-account="openQuickAccountAlert"
-    @select-provider="selectProvider"
-  />
-
-  <ion-alert
-    :is-open="showDeleteAlert"
-    header="Confirmar eliminación"
-    message="¿Estás seguro de que deseas eliminar esta entrada?"
-    :buttons="[
-      {
-        text: 'Cancelar',
-        role: 'cancel',
-        handler: () => {
-          showDeleteAlert = false;
-        },
-      },
-      { text: 'Eliminar', role: 'confirm', handler: confirmDelete },
-    ]"
-    @did-dismiss="showDeleteAlert = false"
-  ></ion-alert>
-
-  <ion-alert
-    :is-open="showQuickAccountAlert"
-    header="Nueva Cuenta"
-    :inputs="quickAccountInputs"
-    :buttons="quickAccountButtons"
-    @did-dismiss="showQuickAccountAlert = false"
-  ></ion-alert>
 </template>
 
 <script setup lang="ts">
@@ -175,123 +137,35 @@ import {
   IonLabel,
   IonButton,
   IonIcon,
-  IonSelect,
-  IonSelectOption,
-  IonInput,
-  IonNote,
   IonItem,
-  IonContent,
-  IonModal,
-  IonHeader,
-  IonToolbar,
-  IonTitle,
-  IonButtons,
   IonCard,
   IonCardTitle,
   IonCardContent,
-  IonSegment,
-  IonSegmentButton,
-  IonAlert,
 } from '@ionic/vue';
 import {
   addOutline,
-  closeOutline,
-  saveOutline,
-  transgenderOutline,
-  trashOutline,
   informationCircleOutline,
 } from 'ionicons/icons';
-import AccountCards from './components/AccountCards.vue';
-import EditEntryModal from './components/EditEntryModal.vue';
-import { reassignEntry } from '@/composables/useReassignEntry';
-import { computed, ref, onMounted, reactive, watch } from 'vue';
-// AccountsController not needed here (use BudgetView's test data helper)
-// End Imports
-
-// Controllers
+import { computed } from 'vue';
+import { useRouter } from 'vue-router';
+import AccountCards from '../components/AccountCards.vue';
 import budgetController from '@/controllers/budgetController';
-import { BudgetController } from '@/controllers/budgetController';
 import accountsController from '@/controllers/accountsController';
 import type { Account } from '@/stores/accountsStore';
 import type {
   Income,
-  EntryType,
-  PaymentType,
   Provider,
 } from '@/stores/budgetStore';
-import type {
-  AccountWithBalance,
-  EntryGroup,
-  PendingProduct,
-} from './components/EditEntryModal.vue';
+import type { AccountWithBalance, EntryGroup } from '../components/EditEntryModal.vue';
+// End Imports
 
-type EntryItem = {
-  amount: number;
-  accountId: string | number | null;
-};
+// router
+const router = useRouter();
+// end router
 
 // Components
 
 // Vars
-
-const addEntrySegment = ref('entry');
-const showDeleteAlert = ref(false);
-
-const showQuickAccountAlert = ref(false);
-const quickAccountTargetIndex = ref<number | null>(null);
-
-const quickAccountInputs = [
-  {
-    name: 'accountName',
-    type: 'text',
-    placeholder: 'Nombre de la cuenta',
-  },
-  {
-    name: 'initialBalance',
-    type: 'number',
-    placeholder: 'Balance inicial (opcional)',
-    value: 0,
-  },
-];
-
-const quickAccountButtons = [
-  {
-    text: 'Cancelar',
-    role: 'cancel',
-  },
-  {
-    text: 'Crear',
-    handler: (data: { accountName: string; initialBalance: string }) => {
-      if (!data.accountName || data.accountName.trim() === '') {
-        return false;
-      }
-      createQuickAccount(
-        data.accountName.trim(),
-        Number(data.initialBalance) || 0
-      );
-      return true;
-    },
-  },
-];
-
-const editEntryModalOpen = ref(false);
-const editEntryModalData = ref({
-  id: null as string | number | null,
-  entryType: 'ingreso' as 'ingreso' | 'egreso',
-  name: '',
-});
-
-// dev flag removed from this component (use BudgetView's test helper)
-
-const entryItems = ref<Array<EntryGroup>>([{ amount: 0, accountId: null }]);
-
-const entryFormState = reactive({
-  name: '',
-  entryType: 'ingreso',
-  items: [{ amount: 0, accountId: null }],
-});
-
-
 // End Vars
 
 // Computed
@@ -303,38 +177,6 @@ const accountsList = computed(() => {
   const list = accountsController.getAccounts();
   if (!list || !Array.isArray(list)) return [];
   return list.filter((acc: Account) => acc != null && acc.id != null);
-});
-
-const isItemsValid = computed(() => {
-  return entryFormState.items.every(
-    item => Number(item.amount) > 0 && item.accountId != null
-  );
-});
-
-const isFormValid = computed(() => {
-  return (
-    editEntryModalData.value.name.trim().length > 0 &&
-    editEntryModalData.value.entryType &&
-    entryItems.value.length > 0 &&
-    entryItems.value.every(
-      item => Number(item.amount) > 0 && item.accountId != null
-    )
-  );
-});
-
-const availableAccountsForItem = (currentIndex: number) => {
-  const usedAccountIds = entryItems.value
-    .filter((_: unknown, idx: number) => idx !== currentIndex)
-    .map((item: EntryItem) => String(item.accountId))
-    .filter((id: string) => id !== 'null' && id !== 'undefined' && id !== '');
-  return accountsList.value.filter(
-    (acc: Account) => !usedAccountIds.includes(String(acc.id))
-  );
-};
-
-const canAddMoreItems = computed(() => {
-  const availableAccounts = accountsList.value.length;
-  return entryItems.value.length < availableAccounts + 2;
 });
 
 function calculateAccountBalance(acc: Account, accountId: string | number) {
@@ -433,16 +275,9 @@ const totalDifferenceColor = computed(() => {
 const providersToday = computed(() => {
   const sel = String(budgetController.getSelectedDate() || '').slice(0, 10);
   if (!sel) return [];
-  // Allow re-adding providers multiple times - removed !addedIds.has(p.id) filter
   return budgetController
     .getProviders()
     .filter((p: Provider) => String(p.date || '').slice(0, 10) === sel);
-});
-
-const providersTodayWithData = computed(() => {
-  return providersToday.value.filter((p: Provider) => {
-    return Number(p?.estimated) > 0;
-  });
 });
 
 const renderedEntries = computed(() => {
@@ -455,66 +290,10 @@ const renderedEntries = computed(() => {
 
 // End Computed
 
-// Watch
-watch(
-  () => entryItems.value,
-  newItems => {
-    entryFormState.items = newItems.map(item => ({
-      amount: Number(item.amount) || 0,
-      accountId: item.accountId,
-    }));
-  },
-  { deep: true }
-);
-
-watch(
-  () => editEntryModalData.value.name,
-  newName => {
-    entryFormState.name = newName;
-  }
-);
-
-watch(
-  () => editEntryModalData.value.entryType,
-  newType => {
-    entryFormState.entryType = newType;
-  }
-);
-
-// End Watch
-
-// Life cycle
-// Note: Data loading handled by parent component (BudgetView) to avoid lifecycle conflicts
-
-// End Life cycle
-
 // Functions
 function getDefaultAccountId() {
   const accounts = accountsList.value;
   return accounts.length > 0 ? accounts[0].id : null;
-}
-
-function openQuickAccountAlert(itemIndex: number) {
-  quickAccountTargetIndex.value = itemIndex;
-  showQuickAccountAlert.value = true;
-}
-
-async function createQuickAccount(name: string, initialBalance: number) {
-  const newAccount = await accountsController.addAccount({
-    a: {
-      name,
-      initialBalance,
-    },
-  });
-
-  if (newAccount && quickAccountTargetIndex.value !== null) {
-    const idx = quickAccountTargetIndex.value;
-    if (entryItems.value[idx]) {
-      entryItems.value[idx].accountId = newAccount.id;
-    }
-  }
-
-  quickAccountTargetIndex.value = null;
 }
 
 function formatCurrencyLocal(params: { v: number }) {
@@ -533,36 +312,16 @@ function formatTimeLocal(ms?: number) {
   });
 }
 
-function openAddEntryModal() {
-  console.log('=== openAddEntryModal called ===');
-  addEntrySegment.value = 'entry';
-  editEntryModalData.value = {
-    id: null,
-    entryType: 'ingreso',
-    name: '',
-    date: budgetController.getSelectedDate(),
-  };
-  entryFormState.name = '';
-  entryFormState.entryType = 'ingreso';
-  entryFormState.items = [{ amount: 0, accountId: getDefaultAccountId() }];
-  entryItems.value = [...entryFormState.items];
-  editEntryModalOpen.value = true;
-  console.log('editEntryModalData.id after set:', editEntryModalData.value.id);
+function navigateToNewEntry() {
+  router.push('/budget/entry/new');
 }
 
-// sample entry helper removed from this component to avoid duplication
+function navigateToEditEntry(item: Income) {
+  router.push(`/budget/entry/edit?entryId=${item.id}`);
+}
 
 function formatProviderAmount(provider: Provider) {
   return formatCurrencyLocal({ v: Number(provider?.estimated) || 0 });
-}
-
-function selectProvider(provider: Provider) {
-  if (!provider.accountId) {
-    return;
-  }
-  budgetController.addProviderEgresos({ provider });
-  budgetController.saveData();
-  editEntryModalOpen.value = false;
 }
 
 function blockKey(block: { type: string; item: Income }, idx: number) {
@@ -651,166 +410,6 @@ function getAccountRemaining(
     .reduce((sum: number, e: Income) => sum + Number(e.amount || 0), 0);
 
   return initialBalance + ingresos - egresos;
-}
-
-function handleEntryClick(item: Income) {
-  openEditEntryModal(item);
-}
-
-function openEditEntryModal(item: Income) {
-  editEntryModalData.value = {
-    id: item.id,
-    entryType: item.entryType || 'ingreso',
-    name: item.name || '',
-    amount: item.amount,
-    groups: item.groups,
-    date: item.date || budgetController.getSelectedDate(),
-  };
-
-  if (item.groups && Array.isArray(item.groups) && item.groups.length > 0) {
-    entryItems.value = item.groups.map((g: EntryGroup) => ({
-      amount: Number(g.amount) || 0,
-      accountId: g.accountId ?? getDefaultAccountId(),
-    }));
-  } else {
-    entryItems.value = [
-      {
-        amount: Number(item.amount) || 0,
-        accountId: item.accountId || getDefaultAccountId(),
-      },
-    ];
-  }
-  entryFormState.items = [...entryItems.value];
-  entryFormState.name = item.name || '';
-  entryFormState.entryType = item.entryType || 'ingreso';
-  editEntryModalOpen.value = true;
-}
-
-// Handler for reassign-date emitted by EditEntryModal
-async function reassignEntryFromModal(newDate: string | null) {
-  if (!newDate || !editEntryModalData.value.id) return;
-  try {
-    const res = await reassignEntry({
-      entryId: editEntryModalData.value.id,
-      newDate: String(newDate).slice(0, 10),
-      originalDate: editEntryModalData.value.date || undefined,
-      restoreSelectedDate: true,
-      verbose: false,
-    });
-    try {
-      console.log('InicioViewComponent.reassignEntryFromModal - result', res);
-    } catch (e) {}
-  } catch (err) {
-    console.error('InicioViewComponent.reassignEntryFromModal error', err);
-  }
-
-  // close modal and refresh current bucket
-  editEntryModalOpen.value = false;
-  editEntryModalData.value = { id: null, entryType: 'ingreso', name: '' };
-  entryItems.value = [{ amount: 0, accountId: getDefaultAccountId() }];
-  try {
-    const sel =
-      budgetController.getSelectedDate && budgetController.getSelectedDate();
-    if (sel) await budgetController.loadDataForDate({ date: sel });
-  } catch (_e) {}
-}
-
-function addEntryItem() {
-  if (canAddMoreItems.value) {
-    entryItems.value.push({ amount: 0, accountId: getDefaultAccountId() });
-  }
-}
-
-function saveEntryChanges(data: {
-  entryType: EntryType;
-  name: string;
-  amount: number;
-  accountId: string | number | null;
-  groups: Array<EntryGroup>;
-  date?: string;
-}) {
-  try {
-    console.log('InicioViewComponent.saveEntryChanges called with:', data);
-  } catch (e) {}
-  const { entryType, name, amount, accountId, groups, date } = data;
-
-  if (editEntryModalData.value.id) {
-    const originalDate = editEntryModalData.value.date;
-    const hasDateChanged = date && date !== originalDate;
-    
-    if (hasDateChanged) {
-      // If date changed, reassign entry to new date bucket
-      reassignEntry({
-        entryId: editEntryModalData.value.id,
-        newDate: date,
-        originalDate: originalDate,
-        restoreSelectedDate: true,
-        verbose: false,
-      });
-    } else {
-      // Update entry in place
-      budgetController.updateIngreso({
-        id: editEntryModalData.value.id,
-        changes: {
-          entryType,
-          name,
-          amount,
-          accountId,
-          groups,
-        },
-      });
-    }
-  } else {
-    if (amount > 0) {
-      const entryData: any = {
-        name,
-        amount,
-        accountId,
-        groups,
-      };
-      if (date) {
-        entryData.date = date;
-      }
-      console.log('🔄 InicioViewComponent.saveEntryChanges - entryData:', entryData, 'date received:', date);
-      if (entryType === 'ingreso') {
-        budgetController.addIngreso(entryData);
-      } else {
-        budgetController.addEgreso(entryData);
-      }
-    }
-  }
-  budgetController.saveData();
-  editEntryModalOpen.value = false;
-  editEntryModalData.value = {
-    id: null,
-    entryType: 'ingreso' as EntryType,
-    name: '',
-  };
-  entryItems.value = [{ amount: 0, accountId: null }];
-}
-
-function deleteEntry() {
-  if (editEntryModalData.value.id) {
-    showDeleteAlert.value = true;
-  }
-}
-
-function confirmDelete() {
-  if (editEntryModalData.value.id) {
-    budgetController.removeIngreso({ id: editEntryModalData.value.id });
-  }
-  budgetController.saveData();
-  showDeleteAlert.value = false;
-  editEntryModalOpen.value = false;
-  editEntryModalData.value = {
-    id: null,
-    entryType: 'ingreso' as EntryType,
-    name: '',
-  };
-  entryItems.value = [{ amount: 0, accountId: getDefaultAccountId() }];
-  entryFormState.items = [...entryItems.value];
-  entryFormState.name = '';
-  entryFormState.entryType = 'ingreso' as EntryType;
 }
 // End Functions
 </script>

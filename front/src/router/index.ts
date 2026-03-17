@@ -24,6 +24,7 @@ import CashFlowPage from '@/views/statistics/cashFlow/CashFlow.vue';
 import PerformancePage from '@/views/statistics/performance/PerformancePage.vue';
 
 import ProviderEditPage from '@/views/budget/suppliers/ProviderEditPage.vue';
+import EntryEditPage from '@/views/budget/entries/EntryEditPage.vue';
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -49,6 +50,16 @@ const routes: Array<RouteRecordRaw> = [
     path: '/budget/provider/edit',
     name: 'BudgetProviderEdit',
     component: ProviderEditPage,
+  },
+  {
+    path: '/budget/entry/new',
+    name: 'BudgetEntryNew',
+    component: EntryEditPage,
+  },
+  {
+    path: '/budget/entry/edit',
+    name: 'BudgetEntryEdit',
+    component: EntryEditPage,
   },
   {
     path: '/statistics/cash-flow',

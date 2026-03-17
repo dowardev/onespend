@@ -78,36 +78,6 @@
   </ion-popover>
 
   <ion-loading :is-open="isGeneratingPdf" message="Generando PDF..." />
-
-  <EditEntryModal
-    :is-open="editEntryModalOpen"
-    :entry-data="editEntryModalData"
-    :accounts-list="accountsList"
-    :is-day-closed="isDayClosed"
-    :providers-today-with-data="[]"
-    @dismiss="editEntryModalOpen = false"
-    @save="saveEntryChanges"
-    @delete="deleteEntry"
-    @reassign-date="reassignEntryFromModal"
-    @reassigned="onEntryReassigned"
-  />
-
-  <ion-alert
-    :is-open="showDeleteAlert"
-    header="Confirmar eliminación"
-    message="¿Estás seguro de que deseas eliminar esta entrada?"
-    :buttons="[
-      {
-        text: 'Cancelar',
-        role: 'cancel',
-        handler: () => {
-          showDeleteAlert = false;
-        },
-      },
-      { text: 'Eliminar', role: 'confirm', handler: confirmDelete },
-    ]"
-    @did-dismiss="showDeleteAlert = false"
-  ></ion-alert>
 </template>
 
 <script setup lang="ts">
@@ -126,23 +96,18 @@ import {
 } from '@ionic/vue';
 import PeriodLayout from '../components/PeriodLayout.vue';
 import EntriesList from './EntriesList.vue';
-import EditEntryModal from '@/views/budget/components/EditEntryModal.vue';
-import accountsController from '@/controllers/accountsController';
 import { computed, reactive, onMounted, ref, watch, toRef } from 'vue';
 import { format, addDays } from 'date-fns';
 import { parseLocalDate } from '@/utils/date';
 import budgetController from '@/controllers/budgetController';
-import { reassignEntry } from '@/composables/useReassignEntry';
 import systemController from '@/controllers/systemConfigController';
+import { useRouter } from 'vue-router';
 import {
   StatisticsController,
   type Snapshots,
 } from '@/controllers/statisticsController';
 import { usePeriodRange, type PeriodType } from '@/composables/usePeriodRange';
 import type { Income, EntryType } from '@/stores/budgetStore';
-
-// EntryGroup type (matches budgetStore definition)
-type EntryGroup = { amount: number; accountId: string | number | null };
 
 const props = defineProps<{
   period: PeriodType;
@@ -186,25 +151,7 @@ async function loadWeekStartDayConfig() {
 
 const isGeneratingPdf = ref(false);
 
-const editEntryModalOpen = ref(false);
-const editEntryModalData = ref<{
-  id: string | number | null;
-  entryType: EntryType;
-  name: string;
-  date?: string | null;
-  amount?: number;
-  groups?: EntryGroup[];
-}>({
-  id: null,
-  entryType: 'ingreso',
-  name: '',
-  date: null,
-});
-const editEntryDate = ref<string | null>(null);
-const showDeleteAlert = ref(false);
-const entryItems = ref<
-  Array<{ amount: number; accountId: string | number | null }>
->([{ amount: 0, accountId: null }]);
+const router = useRouter();
 
 const income = reactive({
   salary: 0,
@@ -295,140 +242,8 @@ const expenseChartColors = [
 
 const isDayClosed = computed(() => false);
 
-const accountsList = computed<Array<{ id: string | number; name: string }>>(
-  () => {
-    const list = accountsController.getAccounts();
-    if (!list || !Array.isArray(list)) return [];
-    return list
-      .filter(acc => acc?.id != null && acc?.name != null)
-      .map(acc => ({
-        id: acc.id as string | number,
-        name: acc.name as string,
-      }));
-  }
-);
-
-function getDefaultAccountId(): string | number | null {
-  const accounts = accountsList.value;
-  return accounts.length > 0 ? accounts[0].id : null;
-}
-
 function openEditEntryModal(item: Income) {
-  // Resolve date: prefer item's date, else fall back to referenceDate
-  const resolvedDate =
-    item.date ||
-    periodEntries.value.find(e => String(e.id) === String(item.id))?.date ||
-    format(referenceDate.value, 'yyyy-MM-dd');
-
-  editEntryModalData.value = {
-    id: item.id,
-    entryType: item.entryType || 'ingreso',
-    name: item.name || '',
-    amount: item.amount,
-    groups: item.groups,
-    date: resolvedDate,
-  };
-
-  if (item.groups && Array.isArray(item.groups) && item.groups.length > 0) {
-    entryItems.value = item.groups.map((g: EntryGroup) => ({
-      amount: Number(g.amount) || 0,
-      accountId: g.accountId ?? getDefaultAccountId(),
-    }));
-  } else {
-    entryItems.value = [
-      {
-        amount: Number(item.amount) || 0,
-        accountId: item.accountId || getDefaultAccountId(),
-      },
-    ];
-  }
-
-  editEntryModalOpen.value = true;
-  editEntryDate.value = editEntryModalData.value.date
-    ? String(editEntryModalData.value.date).slice(0, 10)
-    : format(new Date(), 'yyyy-MM-dd');
-}
-
-function saveEntryChanges(data: {
-  entryType: EntryType;
-  name: string;
-  amount: number;
-  accountId: string | number | null;
-  groups: Array<EntryGroup>;
-}) {
-  const { entryType, name, amount, accountId, groups } = data;
-
-  if (editEntryModalData.value.id) {
-    budgetController.updateIngreso({
-      id: editEntryModalData.value.id,
-      changes: { entryType, name, amount, accountId, groups },
-    });
-  }
-  budgetController.saveData();
-  editEntryModalOpen.value = false;
-  editEntryModalData.value = {
-    id: null,
-    entryType: 'ingreso',
-    name: '',
-    date: null,
-  };
-  editEntryDate.value = null;
-  entryItems.value = [{ amount: 0, accountId: null }];
-  void loadData();
-}
-
-function deleteEntry() {
-  if (editEntryModalData.value.id) {
-    showDeleteAlert.value = true;
-  }
-}
-
-function confirmDelete() {
-  if (editEntryModalData.value.id) {
-    budgetController.removeIngreso({ id: editEntryModalData.value.id });
-  }
-  budgetController.saveData();
-  showDeleteAlert.value = false;
-  editEntryModalOpen.value = false;
-  editEntryModalData.value = {
-    id: null,
-    entryType: 'ingreso',
-    name: '',
-    date: null,
-  };
-  entryItems.value = [{ amount: 0, accountId: getDefaultAccountId() }];
-  editEntryDate.value = null;
-  void loadData();
-}
-
-async function reassignEntryFromModal(newDate: string | null) {
-  if (!newDate || !editEntryModalData.value.id) return;
-  try {
-    await reassignEntry({
-      entryId: editEntryModalData.value.id,
-      newDate: String(newDate).slice(0, 10),
-      originalDate: editEntryModalData.value.date || undefined,
-      restoreSelectedDate: true,
-      verbose: false,
-    });
-  } catch (err) {
-    console.error('Error in reassignEntryFromModal', err);
-  }
-
-  editEntryModalOpen.value = false;
-  editEntryModalData.value = {
-    id: null,
-    entryType: 'ingreso',
-    name: '',
-    date: null,
-  };
-  editEntryDate.value = null;
-  await loadData();
-}
-
-function onEntryReassigned() {
-  editEntryModalOpen.value = false;
-  void loadData();
+  router.push(`/budget/entry/edit?entryId=${item.id}`);
 }
 
 // Wrappers for period navigation that also reload data

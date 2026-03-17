@@ -219,7 +219,7 @@ import type { PaymentType } from '@/stores/budgetStore';
 // End Controllers
 
 // Components
-import InicioViewComponent from './InicioViewComponent.vue';
+import InicioViewComponent from './entries/InicioViewComponent.vue';
 import ProvidersComponent from './suppliers/ProvidersComponent.vue';
 import DaySummaryModal from './components/DaySummaryModal.vue';
 // FinishDayForm removed (day-close flow deleted)

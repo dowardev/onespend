@@ -1,3 +1,46 @@
+## [v0.58.5] - 2026-03-16
+
+### Feat
+
+- **EntryEditPage: Convert entry editing from modal to page-based navigation**
+  - Create new EntryEditPage.vue as full page instead of modal
+  - Add routes `/budget/entry/new` and `/budget/entry/edit` for navigation
+  - Unified form for both creating and editing entries
+  - Disable "Proveedores" segment when no providers available for the day
+
+- **InicioViewComponent: Navigate to page instead of opening modal**
+  - Move InicioViewComponent.vue to `front/src/views/budget/entries/`
+  - Add button navigates to `/budget/entry/new`
+  - Entry click navigates to `/budget/entry/edit?entryId=xxx`
+
+- **PerformanceComponent: Navigate to entry page instead of using modal**
+  - Remove EditEntryModal usage
+  - Entry edit now navigates to `/budget/entry/edit?entryId=xxx`
+
+### Refactor
+
+- **Delete obsolete modal components**
+  - Remove `front/src/views/budget/components/EditEntryModal.vue`
+  - Remove `front/src/views/budget/components/EditProviderModal.vue`
+
+### Fix
+
+- **BudgetView: Update InicioViewComponent import path**
+  - Fix import from `./InicioViewComponent.vue` to `./entries/InicioViewComponent.vue`
+
+### Files Changed
+
+- `front/src/router/index.ts` — Add routes for entry editing pages
+- `front/src/views/budget/BudgetView.vue` — Update InicioViewComponent import
+- `front/src/views/budget/entries/EntryEditPage.vue` — New page component
+- `front/src/views/budget/entries/InicioViewComponent.vue` — Renamed from budget directory
+- `front/src/views/statistics/performance/components/PerformanceComponent.vue` — Use page navigation instead of modal
+- `front/src/views/budget/components/EditEntryModal.vue` — Deleted
+- `front/src/views/budget/components/EditProviderModal.vue` — Deleted
+- `front/package.json` — Bump version to 0.58.5
+
+---
+
 ## [v0.58.4] - 2026-03-15
 
 ### Feat
