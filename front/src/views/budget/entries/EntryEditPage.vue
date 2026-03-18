@@ -15,6 +15,13 @@
 
         <ion-buttons slot="end">
           <ion-button
+            :disabled="!isFormValid || isDayClosed"
+            @click="handleSave"
+          >
+            <ion-icon :icon="saveOutline"></ion-icon>
+          </ion-button>
+
+          <ion-button
             v-if="isEditing"
             fill="clear"
             :disabled="isDayClosed"
@@ -23,12 +30,6 @@
             <ion-icon :icon="ellipsisVertical"></ion-icon>
           </ion-button>
 
-          <ion-button
-            :disabled="!isFormValid || isDayClosed"
-            @click="handleSave"
-          >
-            <ion-icon :icon="saveOutline"></ion-icon>
-          </ion-button>
         </ion-buttons>
       </ion-toolbar>
     </ion-header>
@@ -564,7 +565,10 @@ onMounted(async () => {
     // New entry - initialize with defaults
     const defaultAccountId = getDefaultAccountId();
     entryItems.value = [{ amount: '', accountId: defaultAccountId }];
-    entryDateISO.value = format(new Date(), 'yyyy-MM-dd') + 'T00:00:00';
+    const selectedDate = budgetController.getSelectedDate();
+    entryDateISO.value = selectedDate
+      ? selectedDate.slice(0, 10) + 'T00:00:00'
+      : format(new Date(), 'yyyy-MM-dd') + 'T00:00:00';
     pickerDateISO.value = entryDateISO.value;
   }
 });
