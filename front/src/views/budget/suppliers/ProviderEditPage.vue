@@ -682,7 +682,7 @@ onMounted(async () => {
     await initializeFromProvider();
   } else {
     // New provider
-    initializeNewProviderMode();
+    await initializeNewProviderMode();
   }
 });
 
@@ -824,7 +824,7 @@ async function initializeFromProvider() {
     reassignDateISO.value = parseDateValue({ raw: provider.date });
     reassignDate.value = String(reassignDateISO.value).slice(0, 10);
   } else {
-    setTodayDate();
+    await setTodayDate();
   }
 }
 
@@ -930,9 +930,13 @@ function getDefaultAccountId() {
   return isEntryMode.value ? accounts.value[0].id : accounts.value[0];
 }
 
-function setTodayDate() {
-  reassignDateISO.value = format(new Date(), 'yyyy-MM-dd') + 'T00:00:00';
-  reassignDate.value = String(reassignDateISO.value).slice(0, 10);
+async function setTodayDate() {
+  const { default: budgetController } =
+    await import('@/controllers/budgetController');
+  const selectedDate = budgetController.getSelectedDate();
+  const dateToUse = selectedDate || format(new Date(), 'yyyy-MM-dd');
+  reassignDateISO.value = dateToUse + 'T00:00:00';
+  reassignDate.value = dateToUse;
 }
 
 function initReassignDate() {
@@ -941,12 +945,12 @@ function initReassignDate() {
   reassignDate.value = String(reassignDateISO.value).slice(0, 10);
 }
 
-function initializeNewProviderMode() {
+async function initializeNewProviderMode() {
   selectedProvider.value = null;
   providerProducts.value.splice(0, providerProducts.value.length);
   items.value.splice(0, items.value.length);
   items.value.push({ amount: '', accountId: null });
-  setTodayDate();
+  await setTodayDate();
 }
 
 function parseDateValue(params: {

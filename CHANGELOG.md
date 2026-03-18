@@ -1,3 +1,28 @@
+## [v0.58.7] - 2026-03-17
+
+### Fix
+
+- **EntryEditPage: Initialize date picker with selected date instead of today's date**
+  - When creating a new entry, use `budgetController.getSelectedDate()` as default instead of current date
+  - Improves UX by respecting the main date selector in BudgetView
+
+- **ProviderEditPage: Initialize date with selected date instead of today's date**
+  - When creating a new provider, use `budgetController.getSelectedDate()` as default
+  - Make `setTodayDate()` and `initializeNewProviderMode()` async to support async date retrieval
+
+### Refactor
+
+- **EntryEditPage: Reorder save button in header**
+  - Move save button before options popover button for better UX flow
+
+### Files Changed
+
+- `front/src/views/budget/entries/EntryEditPage.vue` — Initialize date picker with selected date, reorder save button
+- `front/src/views/budget/suppliers/ProviderEditPage.vue` — Initialize date with selected date, make functions async
+- `front/package.json` — Bump version to 0.58.7
+
+---
+
 ## [v0.58.6] - 2026-03-17
 
 ### Fix
