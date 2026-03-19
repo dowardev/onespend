@@ -1,3 +1,38 @@
+## [v0.58.8] - 2026-03-19
+
+### Refactor
+
+- **BudgetView: Remove day summary modal feature**
+  - Remove "Resumen del día" option from more options popover
+  - Remove DaySummaryModal component and IonModal wrapper
+  - Remove related state (`showDaySummaryModal`, `openDaySummaryModal`)
+  - Remove unused imports (IonCard, IonCardHeader, IonCardTitle, IonCardSubtitle, IonCardContent, IonList, IonListHeader, IonNote, IonModal, timeOutline)
+  - Remove unused functions (`formatCurrency`, `formatTime`)
+
+- **BudgetView: Convert onDateSelected to object parameters pattern**
+  - Change signature from `onDateSelected(e: CustomEvent)` to `onDateSelected(params: { e: CustomEvent })`
+  - Standardize with other functions in the codebase
+
+- **BudgetView: Reorganize code structure with section comments**
+  - Add `main`, `vars and const`, `watch`, `computed`, `onmounted` section blocks
+  - Add NOTE comment documenting function parameters pattern
+
+- **insertTestData: Improve account handling**
+  - Simplify account creation to use direct object literal instead of manual Account type construction
+  - Refresh accounts list after creation instead of using pre-built array
+  - Use optional chaining for accountId2
+
+- **TemplateView: Add function parameters documentation**
+  - Add NOTE block explaining the object parameters pattern for functions
+
+### Files Changed
+
+- `front/src/views/budget/BudgetView.vue` — Remove day summary modal, convert to object parameters pattern, reorganize code structure
+- `front/src/views/TemplateView.vue` — Add function parameters documentation note
+- `front/package.json` — Bump version to 0.58.8
+
+---
+
 ## [v0.58.7] - 2026-03-17
 
 ### Fix

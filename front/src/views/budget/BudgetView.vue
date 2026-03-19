@@ -17,6 +17,7 @@
     </ion-header>
 
     <ion-content>
+      <!-- content -->
       <section>
         <ion-grid>
           <ion-row class="ion-justify-content-center">
@@ -32,7 +33,6 @@
                       <ion-segment-button value="proveedores"
                         >Proveedores</ion-segment-button
                       >
-                      <!-- Resumen ahora solo se muestra en el modal -->
                     </ion-segment>
                   </ion-buttons>
 
@@ -68,6 +68,10 @@
           </ion-row>
         </ion-grid>
       </section>
+      <!-- end content -->
+
+      <!-- modals -->
+      <!-- end modals -->
 
       <!-- popovers -->
       <ion-popover
@@ -102,14 +106,6 @@
         @did-dismiss="showMoreOptions = false"
       >
         <ion-content>
-          <ion-item button @click="openDaySummaryModal">
-            <ion-icon
-              slot="start"
-              :icon="timeOutline"
-              color="primary"
-            ></ion-icon>
-            <ion-label>Resumen del día</ion-label>
-          </ion-item>
           <ion-item button @click="confirmClearDay">
             <ion-icon
               slot="start"
@@ -128,7 +124,6 @@
           </ion-item>
         </ion-content>
       </ion-popover>
-
       <!-- end popovers -->
 
       <!-- alerts -->
@@ -147,21 +142,12 @@
         @did-dismiss="showClearConfirm = false"
       ></ion-alert>
       <!-- end alerts -->
-
-      <!-- modals -->
-      <ion-modal
-        :is-open="showDaySummaryModal"
-        @did-dismiss="showDaySummaryModal = false"
-      >
-        <day-summary-modal @close="showDaySummaryModal = false" />
-      </ion-modal>
-      <!-- end modals -->
     </ion-content>
   </ion-page>
 </template>
 
-<script setup lang="ts">
-// Imports
+<script lang="ts" setup>
+// imports
 import {
   IonSegment,
   IonSegmentButton,
@@ -182,83 +168,85 @@ import {
   IonTitle,
   IonToolbar,
   IonAlert,
-  IonCard,
-  IonCardHeader,
-  IonCardTitle,
-  IonCardSubtitle,
-  IonCardContent,
-  IonList,
-  IonListHeader,
-  IonNote,
-  IonModal,
 } from '@ionic/vue';
-import { computed, ref, onMounted } from 'vue';
 import {
   chevronBackOutline,
   chevronForwardOutline,
   ellipsisVerticalOutline,
   trashOutline,
   addOutline,
-  timeOutline,
 } from 'ionicons/icons';
+import { computed, ref, onMounted } from 'vue';
 import { format } from 'date-fns';
 import { parseLocalDate, formatLocalDate } from '@/utils/date';
 import { es as esLocale } from 'date-fns/locale';
-// End Imports
+// end imports
 
-// Controllers
+// controllers
 import systemController from '@/controllers/systemConfigController';
 import budgetController from '@/controllers/budgetController';
 import accountsController from '@/controllers/accountsController';
-import {
-  AccountsController,
-  type Account,
-} from '@/controllers/accountsController';
-import type { Income, Provider } from '@/stores/budgetStore';
-import type { PaymentType } from '@/stores/budgetStore';
-// End Controllers
+import { AccountsController } from '@/controllers/accountsController';
+// end controllers
 
-// Components
+// components
 import InicioViewComponent from './entries/InicioViewComponent.vue';
 import ProvidersComponent from './suppliers/ProvidersComponent.vue';
-import DaySummaryModal from './components/DaySummaryModal.vue';
-// FinishDayForm removed (day-close flow deleted)
-// End Components
+// end components
 
-// Vars
+// interface and types imports
+// end interface and types imports
+
+// main
+// end main
+
+// vars and const
 const activeView = ref<'inicio' | 'proveedores'>('inicio');
 const showDatePicker = ref(false);
 const showMoreOptions = ref(false);
-const showDaySummaryModal = ref(false);
 const showClearConfirm = ref(false);
 const datePickerEvent = ref<Event | null>(null);
 const moreOptionsEvent = ref<Event | null>(null);
 const isDataLoaded = ref(false);
 const designMode = computed(() => systemController.getDesignMode());
 const isDev = computed(() => import.meta.env.DEV);
+// end vars and const
 
-// End Vars
+// watch
+// end
 
-// Functions
-// finish-day flow removed
+// computed
+const formattedSelectedDate = computed(() => {
+  try {
+    const d = parseLocalDate({ d: budgetController.getSelectedDate() });
+    if (isNaN(d.getTime())) return budgetController.getSelectedDate();
+    return format(d, "d 'de' MMMM 'de' yyyy", { locale: esLocale });
+  } catch {
+    return budgetController.getSelectedDate();
+  }
+});
+// end computed
 
-function formatCurrency(params: { value: number }) {
-  const { value } = params;
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-  }).format(value || 0);
-}
+// onmounted
+onMounted(async () => {
+  try {
+    await accountsController.loadAll();
+    await budgetController.loadDataForCurrentDate();
+    isDataLoaded.value = true;
+  } catch (error) {
+    console.error('Failed to load budget data:', error);
+    isDataLoaded.value = true;
+  }
+});
+// end onmounted
 
-function formatTime(params: { timestamp: number }) {
-  const { timestamp } = params;
-  if (!timestamp) return '--:--';
-  return new Date(timestamp).toLocaleTimeString('es-MX', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
+// functions
+// NOTE: functions must follow the structure of named parameters
+// The parameters of the function must be accessed using object destructuring
+// Example
+// function prueba(params:{nombre:string,apellido:string,edad:number}) {
+// const {nombre,apellido,edad}=params
+// }
 function openDatePicker(params: { event: Event }) {
   const { event } = params;
   datePickerEvent.value = event;
@@ -271,12 +259,8 @@ function openMoreOptions(params: { event: Event }) {
   showMoreOptions.value = true;
 }
 
-function openDaySummaryModal() {
-  showMoreOptions.value = false;
-  showDaySummaryModal.value = true;
-}
-
-function onDateSelected(e: CustomEvent) {
+function onDateSelected(params: { e: CustomEvent }) {
+  const { e } = params;
   const value = e.detail?.value;
   if (value) {
     const d = new Date(value);
@@ -327,37 +311,24 @@ async function insertTestData() {
 
   try {
     await accountsCtrl.loadAll();
-  } catch {}
+  } catch (error) {
+    console.error(error);
+  }
 
   let accounts = accountsCtrl.getAccounts();
 
   if (accounts.length === 0) {
-    const now = Date.now();
-    const acc1: Account = {
-      id: Date.now() + 1,
-      name: 'Caja Principal',
-      initialBalance: 0,
-      createdAt: now,
-      updatedAt: now,
-    };
-    const acc2: Account = {
-      id: Date.now() + 2,
-      name: 'Banco',
-      initialBalance: 0,
-      createdAt: now,
-      updatedAt: now,
-    };
     await accountsCtrl.addAccount({
       account: { name: 'Caja Principal', initialBalance: 0 },
     });
     await accountsCtrl.addAccount({
       account: { name: 'Banco', initialBalance: 0 },
     });
-    accounts = [acc1, acc2];
+    accounts = accountsCtrl.getAccounts();
   }
 
   const accountId1 = accounts[0].id;
-  const accountId2 = accounts.length > 1 ? accounts[1].id : accountId1;
+  const accountId2 = accounts[1]?.id ?? accountId1;
 
   budgetController.addIngreso({
     name: 'Venta mostrador 1',
@@ -448,35 +419,5 @@ async function insertTestData() {
   budgetController.saveData();
   showMoreOptions.value = false;
 }
-
-// End Functions
-
-// Life cycle
-onMounted(async () => {
-  try {
-    await accountsController.loadAll();
-    await budgetController.loadDataForCurrentDate();
-    isDataLoaded.value = true;
-  } catch (error) {
-    console.error('Failed to load budget data:', error);
-    isDataLoaded.value = true; // Still set to true to allow component to render
-  }
-});
-
-// End Life cycle
-
-// Computed
-// finish-day related computed values removed
-
-const formattedSelectedDate = computed(() => {
-  try {
-    const d = parseLocalDate({ d: budgetController.getSelectedDate() });
-    if (isNaN(d.getTime())) return budgetController.getSelectedDate();
-    return format(d, "d 'de' MMMM 'de' yyyy", { locale: esLocale });
-  } catch {
-    return budgetController.getSelectedDate();
-  }
-});
-
-// End Computed
+// end functions
 </script>
