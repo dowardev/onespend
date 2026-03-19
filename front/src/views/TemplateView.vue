@@ -1,4 +1,4 @@
-<template>
+templa<template>
   <ion-page>
     <ion-header class="ion-no-border" mode="ios">
       <ion-toolvar>
@@ -54,5 +54,11 @@
 // end onmounted
 
 // functions
+// NOTE: functions must follow the structure of named parameters
+// The parameters of the function must be accessed using object destructuring
+// Example
+// function prueba(params:{nombre:string,apellido:string,edad:number}) {
+// const {nombre,apellido,edad}=params
+// }
 // end functions
 </script>
