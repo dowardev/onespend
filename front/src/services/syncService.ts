@@ -1,4 +1,6 @@
 import { getToken, hasToken } from './tokenStorage';
+import pendingAttachmentsService from './pendingAttachmentsService';
+import attachmentService from './attachmentService';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8001';
 
@@ -134,10 +136,29 @@ class SyncService {
     }
   }
 
-  private handleOnline() {
+  private async handleOnline() {
     this.isOnline = true;
     this.notifyOnlineListeners();
-    this.processQueue();
+    await this.processQueue();
+    await this.processPendingAttachments();
+  }
+
+  private async processPendingAttachments() {
+    if (!this.isOnline) return;
+
+    const pending = pendingAttachmentsService.getAllPendingAttachments();
+
+    for (const attachment of pending) {
+      try {
+        const files = attachment.files.map(f =>
+          pendingAttachmentsService.base64ToFile(f.data, f.name, f.type)
+        );
+        await attachmentService.uploadAttachments(attachment.entrySyncId, files);
+        pendingAttachmentsService.removePendingAttachment(attachment.entrySyncId);
+      } catch (error) {
+        console.error('[SyncService] Failed to upload pending attachments:', error);
+      }
+    }
   }
 
   private handleOffline() {

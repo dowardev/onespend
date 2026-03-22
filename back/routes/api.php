@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\RegisteredUserController;
+use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\SyncController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -22,4 +23,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/sync/merge', [SyncController::class, 'merge']);
     Route::get('/sync/full', [SyncController::class, 'fullSync']);
     Route::post('/sync/resolve-conflict', [SyncController::class, 'resolveConflict']);
+
+    // Attachments API
+    Route::get('/budget-entries/{entryId}/attachments', [AttachmentController::class, 'index']);
+    Route::post('/budget-entries/{entryId}/attachments', [AttachmentController::class, 'store']);
+    Route::get('/attachments/{attachmentId}/download', [AttachmentController::class, 'download']);
+    Route::delete('/attachments/{attachmentId}', [AttachmentController::class, 'destroy']);
 });

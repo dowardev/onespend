@@ -1,6 +1,6 @@
 <template>
   <ion-modal :is-open="isOpen" @did-dismiss="handleDismiss">
-    <ion-header class="ion-no-border" mode=ios>
+    <ion-header class="ion-no-border" mode="ios">
       <ion-toolbar>
         <ion-buttons slot="start">
           <ion-button @click="handleDismiss">
@@ -11,7 +11,7 @@
         <ion-title>Adjuntos</ion-title>
 
         <ion-buttons slot="end">
-          <ion-button @click="handleSave">
+          <ion-button :disabled="!hasChanges" @click="handleSave">
             <ion-icon :icon="saveOutline"></ion-icon>
           </ion-button>
         </ion-buttons>
@@ -39,7 +39,7 @@
 
           <ion-icon :icon="attachOutline" class="upload-icon"></ion-icon>
 
-          <ion-text class="upload-text"> Toca o arrastra archivos </ion-text>
+          <ion-text class="upload-text">Toca o arrastra archivos</ion-text>
 
           <ion-text class="upload-hint">Imagenes y PDF</ion-text>
         </div>
@@ -55,7 +55,7 @@
         <ion-card class="shadow1">
           <ion-item
             v-for="(file, index) in selectedFiles"
-            :key="index"
+            :key="'new-' + index"
             lines="full"
             class="transparent"
           >
@@ -63,7 +63,6 @@
 
             <ion-label>
               <h3>{{ file.name }}</h3>
-
               <p>{{ formatFileSize(file.size) }}</p>
             </ion-label>
 
@@ -71,7 +70,7 @@
               slot="end"
               fill="clear"
               color="danger"
-              @click="removeFile(index)"
+              @click="removeNewFile(index)"
             >
               <ion-icon :icon="trashOutline"></ion-icon>
             </ion-button>
@@ -79,32 +78,38 @@
         </ion-card>
       </ion-list>
 
-      <div
-        v-if="existingAttachments && existingAttachments.length > 0"
-        class="existing-files"
-      >
-        <ion-list>
-          <ion-list-header>
-            <ion-label>
-              Archivos existentes ({{ existingAttachments.length }})
-            </ion-label>
-          </ion-list-header>
-          <ion-item v-for="(file, index) in existingAttachments" :key="index">
+      <ion-list v-if="localExistingAttachments.length > 0" class="file-list">
+        <ion-list-header>
+          <ion-label>
+            Archivos existentes ({{ localExistingAttachments.length }})
+          </ion-label>
+        </ion-list-header>
+
+        <ion-card class="shadow1">
+          <ion-item
+            v-for="attachment in localExistingAttachments"
+            :key="'existing-' + attachment.id"
+            lines="full"
+            class="transparent"
+          >
             <ion-icon slot="start" :icon="documentOutline"></ion-icon>
+
             <ion-label>
-              <h3>{{ file.name || file.url }}</h3>
+              <h3>{{ attachment.name }}</h3>
+              <p>{{ formatFileSize(attachment.size) }}</p>
             </ion-label>
+
             <ion-button
               slot="end"
               fill="clear"
               color="danger"
-              @click="removeExistingFile(index)"
+              @click="markForDeletion(attachment.id)"
             >
               <ion-icon :icon="trashOutline"></ion-icon>
             </ion-button>
           </ion-item>
-        </ion-list>
-      </div>
+        </ion-card>
+      </ion-list>
     </ion-content>
   </ion-modal>
 </template>
@@ -133,23 +138,25 @@ import {
   documentOutline,
   trashOutline,
 } from 'ionicons/icons';
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
+
+interface ExistingAttachment {
+  id: number;
+  name: string;
+  size: number;
+}
 
 const isDragging = ref(false);
 
-interface Attachment {
-  name?: string;
-  url: string;
-}
-
 interface Props {
   isOpen: boolean;
-  existingAttachments?: Attachment[];
+  initialFiles?: File[];
+  existingAttachments?: ExistingAttachment[];
 }
 
 interface Emits {
   (e: 'dismiss'): void;
-  (e: 'save', files: File[], deletedIndexes: number[]): void;
+  (e: 'save', newFiles: File[], deletedIds: number[]): void;
 }
 
 const props = defineProps<Props>();
@@ -157,19 +164,27 @@ const emit = defineEmits<Emits>();
 
 const fileInputRef = ref<HTMLInputElement | null>(null);
 const selectedFiles = ref<File[]>([]);
-const deletedExistingIndexes = ref<number[]>([]);
-const localExistingAttachments = ref<Attachment[]>([]);
+const localExistingAttachments = ref<ExistingAttachment[]>([]);
+const deletedExistingIds = ref<number[]>([]);
+
+const hasChanges = computed(() => {
+  return selectedFiles.value.length > 0 || deletedExistingIds.value.length > 0;
+});
 
 watch(
   () => props.isOpen,
   newVal => {
     if (!newVal) {
       selectedFiles.value = [];
-      deletedExistingIndexes.value = [];
+      localExistingAttachments.value = [];
+      deletedExistingIds.value = [];
     } else {
-      localExistingAttachments.value = props.existingAttachments
-        ? [...props.existingAttachments]
-        : [];
+      if (props.initialFiles?.length) {
+        selectedFiles.value = [...props.initialFiles];
+      }
+      if (props.existingAttachments?.length) {
+        localExistingAttachments.value = [...props.existingAttachments];
+      }
     }
   }
 );
@@ -239,23 +254,24 @@ async function showRejectedToast(count: number) {
   await toast.present();
 }
 
-function removeFile(index: number) {
+function removeNewFile(index: number) {
   selectedFiles.value.splice(index, 1);
 }
 
-function removeExistingFile(index: number) {
-  deletedExistingIndexes.value.push(index);
-  localExistingAttachments.value.splice(index, 1);
+function markForDeletion(id: number) {
+  deletedExistingIds.value.push(id);
+  localExistingAttachments.value = localExistingAttachments.value.filter(a => a.id !== id);
 }
 
 function handleDismiss() {
   selectedFiles.value = [];
-  deletedExistingIndexes.value = [];
+  localExistingAttachments.value = [];
+  deletedExistingIds.value = [];
   emit('dismiss');
 }
 
 function handleSave() {
-  emit('save', selectedFiles.value, deletedExistingIndexes.value);
+  emit('save', selectedFiles.value, deletedExistingIds.value);
   handleDismiss();
 }
 
@@ -298,12 +314,6 @@ function formatFileSize(bytes: number): string {
   border-color: var(--ion-color-primary);
 }
 
-.upload-area--dragging + .upload-card,
-.upload-area--dragging ~ .upload-card,
-.upload-card:has(.upload-area--dragging) {
-  border-color: var(--ion-color-primary);
-}
-
 .upload-icon {
   font-size: 48px;
   color: var(--ion-color-primary);
@@ -322,10 +332,6 @@ function formatFileSize(bytes: number): string {
 }
 
 .file-list {
-  margin-top: 20px;
-}
-
-.existing-files {
   margin-top: 20px;
 }
 </style>
