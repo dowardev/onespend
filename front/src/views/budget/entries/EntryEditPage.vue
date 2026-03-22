@@ -874,6 +874,7 @@ async function handleSave() {
   budgetController.saveData();
 
   const entrySyncIdValue = savedEntry?.sync_id || entrySyncId.value;
+  const isNewEntry = !entryData.value.id;
 
   if (entrySyncIdValue) {
     for (const attachmentId of deletedAttachments.value) {
@@ -885,7 +886,9 @@ async function handleSave() {
     }
 
     if (pendingAttachments.value.length > 0) {
-      if (navigator.onLine) {
+      // Para entradas nuevas: siempre guardar en pendingAttachments (se subirá al sincronizar)
+      // Para entradas existentes: intentar subir inmediatamente si hay conexión
+      if (!isNewEntry && navigator.onLine) {
         try {
           await attachmentService.uploadAttachments(entrySyncIdValue, pendingAttachments.value);
         } catch (error) {
