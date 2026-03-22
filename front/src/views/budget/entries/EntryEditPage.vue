@@ -238,7 +238,7 @@
                     class="transparent"
                     lines="full"
                     button
-                    @click="showAttachmentsModal = true"
+                    @click="handleOpenAttachments"
                   >
                     <ion-label>Adjuntos</ion-label>
                   </ion-item>
@@ -373,6 +373,8 @@
     <!-- components -->
     <AttachmentsModal
       :is-open="showAttachmentsModal"
+      :initial-files="pendingAttachments"
+      :existing-attachments="existingAttachments"
       @dismiss="showAttachmentsModal = false"
       @save="handleAttachmentsSave"
     />
@@ -424,6 +426,8 @@ import { useRouter, useRoute } from 'vue-router';
 import { format } from 'date-fns';
 import budgetController from '@/controllers/budgetController';
 import accountsController from '@/controllers/accountsController';
+import pendingAttachmentsService from '@/services/pendingAttachmentsService';
+import attachmentService from '@/services/attachmentService';
 import AttachmentsModal from './componentes/AttachmentsModal.vue';
 // end imports
 
@@ -469,6 +473,10 @@ const entryData = ref({
 
 const entryNotes = ref('');
 const showAttachmentsModal = ref(false);
+const entrySyncId = ref<string | null>(null);
+const pendingAttachments = ref<File[]>([]);
+const existingAttachments = ref<Array<{ id: number; name: string; size: number }>>([]);
+const deletedAttachments = ref<number[]>([]);
 
 // reassignDate holds the short date (yyyy-MM-dd) used for persistence
 const reassignDate = ref<string | null>(null);
@@ -632,6 +640,8 @@ async function loadEntry(entryId: string) {
   };
 
   entryNotes.value = entry.notes || '';
+
+  entrySyncId.value = entry.sync_id || null;
 
   const defaultAccountId = getDefaultAccountId();
 
@@ -799,6 +809,8 @@ async function handleSave() {
     payload.date = entryDateISO.value.slice(0, 10);
   }
 
+  let savedEntry;
+
   if (entryData.value.id) {
     const originalDate = entryData.value.date;
     const hasDateChanged = payload.date && payload.date !== originalDate;
@@ -824,6 +836,7 @@ async function handleSave() {
         },
       });
     }
+    savedEntry = budgetController.getEntries().find((e: any) => String(e.id) === String(entryData.value.id));
   } else {
     if (totalAmount > 0) {
       const entryDataAny: any = {
@@ -836,13 +849,48 @@ async function handleSave() {
         entryDataAny.date = payload.date;
       }
       if (payload.entryType === 'ingreso') {
-        budgetController.addIngreso(entryDataAny);
+        savedEntry = budgetController.addIngreso(entryDataAny);
       } else {
-        budgetController.addEgreso(entryDataAny);
+        savedEntry = budgetController.addEgreso(entryDataAny);
       }
     }
   }
+
   budgetController.saveData();
+
+  const entrySyncIdValue = savedEntry?.sync_id || entrySyncId.value;
+
+  if (entrySyncIdValue) {
+    for (const attachmentId of deletedAttachments.value) {
+      try {
+        await attachmentService.deleteAttachment(attachmentId);
+      } catch (error) {
+        console.error('Failed to delete attachment:', error);
+      }
+    }
+
+    if (pendingAttachments.value.length > 0) {
+      if (navigator.onLine) {
+        try {
+          await attachmentService.uploadAttachments(entrySyncIdValue, pendingAttachments.value);
+        } catch (error) {
+          await pendingAttachmentsService.addPendingAttachment(
+            entrySyncIdValue,
+            pendingAttachments.value
+          );
+        }
+      } else {
+        await pendingAttachmentsService.addPendingAttachment(
+          entrySyncIdValue,
+          pendingAttachments.value
+        );
+      }
+    }
+
+    pendingAttachments.value = [];
+    deletedAttachments.value = [];
+  }
+
   router.back();
 }
 
@@ -885,8 +933,22 @@ function goToToday() {
   pickerDateKey.value++;
 }
 
-function handleAttachmentsSave(files: File[], _deletedIndexes: number[]) {
-  console.log('Attachments saved:', files);
+async function handleOpenAttachments() {
+  if (entrySyncId.value) {
+    try {
+      const response = await attachmentService.listAttachments(entrySyncId.value);
+      existingAttachments.value = response.data;
+    } catch (error) {
+      console.error('Failed to load existing attachments:', error);
+      existingAttachments.value = [];
+    }
+  }
+  showAttachmentsModal.value = true;
+}
+
+function handleAttachmentsSave(newFiles: File[], deletedIds: number[]) {
+  pendingAttachments.value = newFiles;
+  deletedAttachments.value = deletedIds;
 }
 
 async function openReassignPopover(e: Event) {
