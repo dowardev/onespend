@@ -47,74 +47,83 @@ class AttachmentController extends Controller
 
     public function store(Request $request, string $entryId): JsonResponse
     {
-        $user = $request->user();
+        try {
+            $user = $request->user();
 
-        $entry = BudgetEntry::forUser($user->id)
-            ->where('sync_id', $entryId)
-            ->first();
+            $entry = BudgetEntry::forUser($user->id)
+                ->where('sync_id', $entryId)
+                ->first();
 
-        if (!$entry) {
-            return response()->json(['error' => 'Entry not found'], 404);
-        }
-
-        $request->validate([
-            'files' => 'required|array|max:20',
-            'files.*' => 'required|file|mimes:jpeg,jpg,png,gif,webp,pdf|max:10240',
-        ]);
-
-        $uploaded = [];
-        $errors = [];
-
-        foreach ($request->file('files') as $index => $file) {
-            try {
-                $extension = $file->getClientOriginalExtension();
-                $attachmentId = Str::uuid()->toString();
-                $filename = $attachmentId . '.' . $extension;
-                $entityType = Attachment::ENTITY_TYPE_ENTRIES;
-                $path = 'attachments/' . $user->id . '/' . $entityType . '/' . $filename;
-
-                Storage::disk('local')->put($path, file_get_contents($file->getRealPath()));
-
-                $attachment = Attachment::create([
-                    'user_id' => $user->id,
-                    'sync_id' => $attachmentId,
-                    'entity_type' => $entityType,
-                    'name' => $file->getClientOriginalName(),
-                    'path' => $path,
-                    'mime_type' => $file->getMimeType(),
-                    'size' => $file->getSize(),
-                    'budget_entry_sync_id' => $entryId,
-                ]);
-
-                $uploaded[] = [
-                    'id' => $attachment->id,
-                    'sync_id' => $attachment->sync_id,
-                    'name' => $attachment->name,
-                    'mime_type' => $attachment->mime_type,
-                    'size' => $attachment->size,
-                    'download_url' => $attachment->getDownloadUrl(),
-                    'created_at' => $attachment->created_at->toIso8601String(),
-                ];
-            } catch (\Exception $e) {
-                Log::error('Attachment upload failed', [
-                    'index' => $index,
-                    'file' => $file->getClientOriginalName(),
-                    'error' => $e->getMessage(),
-                ]);
-                $errors[] = [
-                    'index' => $index,
-                    'name' => $file->getClientOriginalName(),
-                    'error' => $e->getMessage(),
-                ];
+            if (!$entry) {
+                return response()->json(['error' => 'Entry not found'], 404);
             }
-        }
 
-        return response()->json([
-            'uploaded' => $uploaded,
-            'errors' => $errors,
-            'total_uploaded' => count($uploaded),
-            'total_errors' => count($errors),
-        ], count($errors) > 0 ? 207 : 201);
+            $request->validate([
+                'files' => 'required|array|max:20',
+                'files.*' => 'required|file|mimes:jpeg,jpg,png,gif,webp,pdf|max:10240',
+            ]);
+
+            $uploaded = [];
+            $errors = [];
+
+            foreach ($request->file('files') as $index => $file) {
+                try {
+                    $extension = $file->getClientOriginalExtension();
+                    $attachmentId = Str::uuid()->toString();
+                    $filename = $attachmentId . '.' . $extension;
+                    $entityType = Attachment::ENTITY_TYPE_ENTRIES;
+                    $path = 'attachments/' . $user->id . '/' . $entityType . '/' . $filename;
+
+                    Storage::disk('local')->put($path, file_get_contents($file->getRealPath()));
+
+                    $attachment = Attachment::create([
+                        'user_id' => $user->id,
+                        'sync_id' => $attachmentId,
+                        'entity_type' => $entityType,
+                        'name' => $file->getClientOriginalName(),
+                        'path' => $path,
+                        'mime_type' => $file->getMimeType(),
+                        'size' => $file->getSize(),
+                        'budget_entry_sync_id' => $entryId,
+                    ]);
+
+                    $uploaded[] = [
+                        'id' => $attachment->id,
+                        'sync_id' => $attachment->sync_id,
+                        'name' => $attachment->name,
+                        'mime_type' => $attachment->mime_type,
+                        'size' => $attachment->size,
+                        'download_url' => $attachment->getDownloadUrl(),
+                        'created_at' => $attachment->created_at->toIso8601String(),
+                    ];
+                } catch (\Exception $e) {
+                    Log::error('Attachment upload failed', [
+                        'index' => $index,
+                        'file' => $file->getClientOriginalName(),
+                        'error' => $e->getMessage(),
+                    ]);
+                    $errors[] = [
+                        'index' => $index,
+                        'name' => $file->getClientOriginalName(),
+                        'error' => $e->getMessage(),
+                    ];
+                }
+            }
+
+            return response()->json([
+                'uploaded' => $uploaded,
+                'errors' => $errors,
+                'total_uploaded' => count($uploaded),
+                'total_errors' => count($errors),
+            ], count($errors) > 0 ? 207 : 201);
+        } catch (\Exception $e) {
+            Log::error('AttachmentController.store error', [
+                'entryId' => $entryId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
     }
 
     public function download(Request $request, string $attachmentId): mixed
