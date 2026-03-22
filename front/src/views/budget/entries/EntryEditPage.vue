@@ -688,8 +688,23 @@ function handleDeleteFromPopover() {
   showDeleteAlert.value = true;
 }
 
-function confirmDelete() {
+async function confirmDelete() {
   if (entryData.value.id) {
+    // Eliminar adjuntos del backend si existe sync_id
+    if (entrySyncId.value) {
+      try {
+        const response = await attachmentService.listAttachments(entrySyncId.value);
+        for (const attachment of response.data) {
+          await attachmentService.deleteAttachment(attachment.id);
+        }
+      } catch (error) {
+        console.error('Failed to delete attachments:', error);
+      }
+
+      // Eliminar archivos pendientes de localStorage
+      pendingAttachmentsService.removePendingAttachment(entrySyncId.value);
+    }
+
     budgetController.removeIngreso({ id: entryData.value.id });
     budgetController.saveData();
   }
