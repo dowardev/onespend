@@ -1,3 +1,34 @@
+## [v0.59.0] - 2026-03-21
+
+### Feature
+
+- **EntryEditPage: Add attachments modal component**
+  - Create `AttachmentsModal.vue` component in `componentes/` directory
+  - Modal with file upload area supporting click and drag-and-drop
+  - Dashed border card design following app styling conventions
+  - Display list of selected files with name and size
+  - Remove individual files from the selection
+
+- **AttachmentsModal: File validation and duplicate prevention**
+  - Filter accepted files by type (images and PDF only)
+  - Detect and ignore duplicate files (by name and size)
+  - Show warning toast for rejected files with message
+  - Toast notification using `toastController` pattern
+
+- **EntryEditPage: Add notes field and modal integration**
+  - Add "Adjuntos" button in Detalles section of entry form
+  - Add `entryNotes` textarea bound to entry data
+  - Include notes in entry payload when saving
+  - Load existing notes when editing an entry
+
+### Files Changed
+
+- `front/src/views/budget/entries/EntryEditPage.vue` — Add attachments button, notes field, modal integration
+- `front/src/views/budget/entries/componentes/AttachmentsModal.vue` — New file upload modal component
+- `front/package.json` — Bump version to 0.59.0
+
+---
+
 ## [v0.58.8] - 2026-03-19
 
 ### Refactor

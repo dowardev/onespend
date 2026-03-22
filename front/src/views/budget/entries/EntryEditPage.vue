@@ -29,7 +29,6 @@
           >
             <ion-icon :icon="ellipsisVertical"></ion-icon>
           </ion-button>
-
         </ion-buttons>
       </ion-toolbar>
     </ion-header>
@@ -151,7 +150,7 @@
 
               <ion-list class="transparent">
                 <ion-list-header>
-                  <ion-label>Detalles</ion-label>
+                  <ion-label>Cuentas</ion-label>
                   <ion-button
                     :disabled="!canAddMoreItems || isDayClosed"
                     @click="addEntryItem"
@@ -227,6 +226,34 @@
                     </ion-item>
                   </ion-card>
                 </template>
+              </ion-list>
+
+              <ion-list>
+                <ion-list-header>
+                  <ion-label> Detalles </ion-label>
+                </ion-list-header>
+
+                <ion-card class="shadow1">
+                  <ion-item
+                    class="transparent"
+                    lines="full"
+                    button
+                    @click="showAttachmentsModal = true"
+                  >
+                    <ion-label>Adjuntos</ion-label>
+                  </ion-item>
+
+                  <ion-item class="transparent" lines="none">
+                    <ion-textarea
+                      v-model="entryNotes"
+                      label="Notas"
+                      label-placement="stacked"
+                      placeholder="Agregar notas..."
+                      :auto-grow="true"
+                      :rows="3"
+                    ></ion-textarea>
+                  </ion-item>
+                </ion-card>
               </ion-list>
             </section>
           </ion-col>
@@ -342,6 +369,14 @@
       @did-dismiss="showQuickAccountAlert = false"
     ></ion-alert>
     <!-- end alerts -->
+
+    <!-- components -->
+    <AttachmentsModal
+      :is-open="showAttachmentsModal"
+      @dismiss="showAttachmentsModal = false"
+      @save="handleAttachmentsSave"
+    />
+    <!-- end components -->
   </ion-page>
 </template>
 
@@ -373,6 +408,7 @@ import {
   IonDatetime,
   IonPopover,
   IonAlert,
+  IonTextarea,
 } from '@ionic/vue';
 import {
   arrowBackOutline,
@@ -388,6 +424,7 @@ import { useRouter, useRoute } from 'vue-router';
 import { format } from 'date-fns';
 import budgetController from '@/controllers/budgetController';
 import accountsController from '@/controllers/accountsController';
+import AttachmentsModal from './componentes/AttachmentsModal.vue';
 // end imports
 
 // interface and types imports
@@ -429,6 +466,9 @@ const entryData = ref({
   name: '',
   date: '',
 });
+
+const entryNotes = ref('');
+const showAttachmentsModal = ref(false);
 
 // reassignDate holds the short date (yyyy-MM-dd) used for persistence
 const reassignDate = ref<string | null>(null);
@@ -591,6 +631,8 @@ async function loadEntry(entryId: string) {
     date: entry.date || '',
   };
 
+  entryNotes.value = entry.notes || '';
+
   const defaultAccountId = getDefaultAccountId();
 
   if (entry.groups && Array.isArray(entry.groups) && entry.groups.length > 0) {
@@ -750,6 +792,7 @@ async function handleSave() {
     amount: totalAmount,
     accountId: entryItems.value[0]?.accountId ?? null,
     groups: entryItems.value,
+    notes: entryNotes.value,
   };
 
   if (entryDateISO.value) {
@@ -842,7 +885,10 @@ function goToToday() {
   pickerDateKey.value++;
 }
 
-// Reassign date functions
+function handleAttachmentsSave(files: File[], _deletedIndexes: number[]) {
+  console.log('Attachments saved:', files);
+}
+
 async function openReassignPopover(e: Event) {
   try {
     if (!reassignDateISO.value) {
