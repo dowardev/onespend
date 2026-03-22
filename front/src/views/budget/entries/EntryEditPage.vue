@@ -888,16 +888,20 @@ async function handleSave() {
     if (pendingAttachments.value.length > 0) {
       // Para entradas nuevas: siempre guardar en pendingAttachments (se subirá al sincronizar)
       // Para entradas existentes: intentar subir inmediatamente si hay conexión
+      console.log('[EntryEditPage] Saving attachments:', { isNewEntry, entrySyncIdValue, count: pendingAttachments.value.length });
       if (!isNewEntry && navigator.onLine) {
         try {
           await attachmentService.uploadAttachments(entrySyncIdValue, pendingAttachments.value);
+          console.log('[EntryEditPage] Attachments uploaded successfully');
         } catch (error) {
+          console.error('[EntryEditPage] Failed to upload, saving to pending:', error);
           await pendingAttachmentsService.addPendingAttachment(
             entrySyncIdValue,
             pendingAttachments.value
           );
         }
       } else {
+        console.log('[EntryEditPage] Saving to pendingAttachmentsService');
         await pendingAttachmentsService.addPendingAttachment(
           entrySyncIdValue,
           pendingAttachments.value
