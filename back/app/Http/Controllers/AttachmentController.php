@@ -59,14 +59,19 @@ class AttachmentController extends Controller
             }
 
             $request->validate([
-                'files' => 'required|array|max:20',
-                'files.*' => 'required|file|mimes:jpeg,jpg,png,gif,webp,pdf|max:10240',
+                'files' => 'required',
+                'files.*' => 'file|mimes:jpeg,jpg,png,gif,webp,pdf|max:10240',
             ]);
 
             $uploaded = [];
             $errors = [];
 
-            foreach ($request->file('files') as $index => $file) {
+            $files = $request->file('files');
+            if (!is_array($files)) {
+                $files = [$files];
+            }
+
+            foreach ($files as $index => $file) {
                 try {
                     $extension = $file->getClientOriginalExtension();
                     $attachmentId = Str::uuid()->toString();

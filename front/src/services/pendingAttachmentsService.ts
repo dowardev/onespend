@@ -50,7 +50,24 @@ export async function addPendingAttachment(
     timestamp: Date.now(),
   };
 
-  savePending(pending);
+  try {
+    savePending(pending);
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+      console.error('[pendingAttachmentsService] localStorage quota exceeded, clearing pending attachments');
+      // Clear old pending attachments and try again
+      localStorage.removeItem(PENDING_ATTACHMENTS_KEY);
+      const newPending: Record<string, PendingAttachment> = {};
+      newPending[entrySyncId] = {
+        entrySyncId,
+        files: fileData,
+        timestamp: Date.now(),
+      };
+      savePending(newPending);
+    } else {
+      throw error;
+    }
+  }
 }
 
 export function getPendingAttachment(entrySyncId: string): PendingAttachment | null {
