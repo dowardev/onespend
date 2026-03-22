@@ -146,17 +146,21 @@ class SyncService {
   private async processPendingAttachments() {
     if (!this.isOnline) return;
 
+    console.log('[SyncService] processPendingAttachments called');
     const pending = pendingAttachmentsService.getAllPendingAttachments();
+    console.log('[SyncService] Pending attachments:', pending.length);
 
     for (const attachment of pending) {
       try {
+        console.log('[SyncService] Uploading attachments for:', attachment.entrySyncId);
         const files = attachment.files.map(f =>
           pendingAttachmentsService.base64ToFile(f.data, f.name, f.type)
         );
         await attachmentService.uploadAttachments(attachment.entrySyncId, files);
         pendingAttachmentsService.removePendingAttachment(attachment.entrySyncId);
+        console.log('[SyncService] ✅ Attachments uploaded successfully');
       } catch (error) {
-        console.error('[SyncService] Failed to upload pending attachments:', error);
+        console.error('[SyncService] ❌ Failed to upload pending attachments:', error);
       }
     }
   }
