@@ -13,9 +13,13 @@ class Attachment extends Model
 
     protected $table = 'attachments';
 
+    public const ENTITY_TYPE_ENTRIES = 'entries';
+    // Futuro: public const ENTITY_TYPE_PROVIDERS = 'providers';
+
     protected $fillable = [
         'user_id',
         'sync_id',
+        'entity_type',
         'name',
         'path',
         'mime_type',

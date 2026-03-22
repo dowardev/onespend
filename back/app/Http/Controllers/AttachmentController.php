@@ -70,13 +70,15 @@ class AttachmentController extends Controller
                 $extension = $file->getClientOriginalExtension();
                 $attachmentId = Str::uuid()->toString();
                 $filename = $attachmentId . '.' . $extension;
-                $path = 'attachments/' . $user->id . '/' . $filename;
+                $entityType = Attachment::ENTITY_TYPE_ENTRIES;
+                $path = 'attachments/' . $user->id . '/' . $entityType . '/' . $filename;
 
                 Storage::disk('local')->put($path, file_get_contents($file->getRealPath()));
 
                 $attachment = Attachment::create([
                     'user_id' => $user->id,
                     'sync_id' => $attachmentId,
+                    'entity_type' => $entityType,
                     'name' => $file->getClientOriginalName(),
                     'path' => $path,
                     'mime_type' => $file->getMimeType(),
