@@ -343,6 +343,8 @@ class SyncService {
         await this.handleConflicts(result.conflicts);
       }
 
+      await this.processPendingAttachments();
+
       return result;
     } catch (error) {
       const queue = this.getQueue();
