@@ -57,7 +57,7 @@ export async function uploadAttachments(
   const headers = await getHeaders();
   const formData = new FormData();
   files.forEach(file => {
-    formData.append('files[]', file);
+    formData.append('files', file);
   });
 
   const response = await fetch(`${API_URL}/api/budget-entries/${entrySyncId}/attachments`, {
