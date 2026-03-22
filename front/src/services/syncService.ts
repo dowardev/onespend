@@ -160,7 +160,15 @@ class SyncService {
         pendingAttachmentsService.removePendingAttachment(attachment.entrySyncId);
         console.log('[SyncService] ✅ Attachments uploaded successfully');
       } catch (error) {
-        console.error('[SyncService] ❌ Failed to upload pending attachments:', error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error('[SyncService] ❌ Failed to upload pending attachments:', errorMessage);
+        
+        // Si el error es "Entry not found", eliminar el archivo pendiente
+        // (la entrada nunca se sincronizó o fue eliminada)
+        if (errorMessage.includes('Entry not found')) {
+          console.log('[SyncService] Removing orphaned pending attachment:', attachment.entrySyncId);
+          pendingAttachmentsService.removePendingAttachment(attachment.entrySyncId);
+        }
       }
     }
   }
