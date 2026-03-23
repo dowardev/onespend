@@ -187,6 +187,8 @@ import systemController from '@/controllers/systemConfigController';
 import budgetController from '@/controllers/budgetController';
 import accountsController from '@/controllers/accountsController';
 import { AccountsController } from '@/controllers/accountsController';
+import attachmentService from '@/services/attachmentService';
+import pendingAttachmentsService from '@/services/pendingAttachmentsService';
 // end controllers
 
 // components
@@ -300,7 +302,27 @@ function confirmClearDay() {
   showClearConfirm.value = true;
 }
 
-function performClearDay() {
+async function performClearDay() {
+  // Eliminar adjuntos de todas las entradas del día
+  const entries = budgetController.getEntries();
+  for (const entry of entries) {
+    if (entry.sync_id) {
+      try {
+        // Eliminar adjuntos del backend
+        const response = await attachmentService.listAttachments(entry.sync_id);
+        for (const attachment of response.data) {
+          await attachmentService.deleteAttachment(attachment.id);
+        }
+      } catch (error) {
+        console.error('Failed to delete attachments for entry:', entry.sync_id, error);
+      }
+
+      // Eliminar archivos pendientes de localStorage
+      pendingAttachmentsService.removePendingAttachment(entry.sync_id);
+    }
+  }
+
+  // Eliminar entradas del día
   budgetController.clearDay();
   budgetController.saveData();
   showClearConfirm.value = false;
