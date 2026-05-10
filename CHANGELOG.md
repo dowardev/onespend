@@ -1,3 +1,37 @@
+## [v0.60.0] - 2026-05-10
+
+### Features
+
+- **UI/UX Pro Max Skill**: Add comprehensive UI/UX design system guidance skill
+  - BM25 search engine for design guidelines across multiple domains (style, color, typography, landing pages, charts, UX, web interface)
+  - CSV data files covering design patterns, color schemes, typography, icon sets, and stack-specific guidelines
+  - Design system generator with Master + Overrides pattern for project-specific customization
+  - Supports stacks: HTML/Tailwind, React, Next.js, Nuxt, Vue, Svelte, Flutter, SwiftUI, Jetpack Compose, React Native
+  - Pre-delivery checklist for accessibility and responsive design compliance
+  - Command-line interface for searching and generating design systems
+
+- **AGENTS.md Documentation**: Add comprehensive developer documentation for SSO Server project
+  - Project structure for monorepo (Laravel backend + Ionic Vue frontend)
+  - Developer commands for running services and building
+  - Backend setup instructions with OAuth2 client registration
+  - Testing commands for backend (PHPUnit) and frontend (Vitest, Cypress)
+  - Code conventions for frontend: named parameters pattern, controller-only communication, template structure
+
+- **Vue Component Template**: Add TemplateView.vue in guides directory
+  - Standardized Vue component structure following codebase conventions
+  - Organized script sections: imports, controllers, components, interfaces, main, vars, watch, computed, onmounted, functions
+  - Named parameters pattern documentation for functions
+  - IonPage structure with proper header, content, modals, popovers, alerts sections
+
+### Files Changed
+
+- `.opencode/skills/ui-ux-pro-max/` — New: skill definition, CSV data files, Python search scripts
+- `AGENTS.md` — New: project documentation for developers
+- `guides/TemplateView.vue` — New: Vue component template with code conventions
+- `front/package.json` — Bump version to 0.60.0
+
+---
+
 ## [v0.59.0] - 2026-03-21
 
 ### Feature
