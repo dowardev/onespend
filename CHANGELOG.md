@@ -1,3 +1,20 @@
+## [v0.60.1] - 2026-05-10
+
+### Fix
+
+- **AccountsPage: Fix edit modal opening as create mode**
+  - Clicking on an existing account incorrectly opened the "Crear Cuenta" modal instead of "Editar Cuenta"
+  - The issue was caused by passing `{ c }` instead of `{ account: c }` to the `edit` function
+  - The `edit` function destructures `params.account`, so the property name must match
+  - Now clicking on accounts correctly opens the edit modal
+
+### Files Changed
+
+- `front/src/views/suppliers/accounts/AccountsPage.vue` — Fix parameter name in click handler
+- `front/package.json` — Bump version to 0.60.1
+
+---
+
 ## [v0.60.0] - 2026-05-10
 
 ### Features
