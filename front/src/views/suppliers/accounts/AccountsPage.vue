@@ -42,7 +42,7 @@
                   :key="c.id"
                   button
                   class="transparent"
-                  @click="edit({ c })"
+                  @click="edit({ account: c })"
                 >
                   <ion-label>
                     <h3>{{ c.name }}</h3>
