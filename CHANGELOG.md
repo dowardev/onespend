@@ -1,3 +1,63 @@
+## [v0.61.0] - 2026-05-12
+
+### Features
+
+- **InicioViewComponent: Add popover for add button**
+  - Replace direct navigation with ion-popover containing "Registro" and "Proveedores" options
+  - "Registro" navigates to `/budget/entry/new` (existing behavior)
+  - "Proveedores" navigates to `/budget/provider/new`
+
+- **InicioViewComponent: Unified entries and providers list**
+  - Combine entries and providers into single chronological list
+  - Add `createdAt` timestamp to providers for proper sorting
+  - Providers display with warning color, entries use income/expense colors
+  - Click handler navigates to appropriate edit page based on item type
+
+- **ProviderEditPage: Replace ion-segment with ion-select for expense type**
+  - Replace "Inicio/Productos" segment with "Tipo de gasto" select (Simple/Multiple)
+  - "Simple" mode: single amount + account (no products, no add button)
+  - "Multiple" mode: products with quantities + distribution by account (existing behavior)
+  - "Multiple" option disabled when provider has no products
+  - Add watchers to handle mode transitions (collapse/expand items, clear products)
+
+### Fix
+
+- **AccountsPage: Fix edit modal opening as create mode**
+  - Pass `{ id }` instead of `{ id: id }` to `remove` function in delete handler
+
+### Refactor
+
+- **budgetController: Add createdAt timestamp to providers**
+  - Track creation time for chronological sorting in unified list
+
+- **budgetStore: Add createdAt optional field to Provider interface**
+
+### Documentation
+
+- **AGENTS.md: Update controller-only communication guidelines**
+  - Clarify that components can contain local logic (computed, functions, vars, watchers, onMounted)
+  - Restriction applies only to external connections (stores, APIs)
+
+- **Add specification and planning documents**
+  - `docs/superpowers/specs/2026-05-10-budget-add-popover-design.md`
+  - `docs/superpowers/plans/2026-05-10-budget-add-popover-plan.md`
+  - `docs/superpowers/specs/2026-05-11-provider-type-select-design.md`
+  - `docs/superpowers/plans/2026-05-11-provider-type-select-plan.md`
+
+### Files Changed
+
+- `front/src/views/budget/entries/InicioViewComponent.vue` — Add popover, unified items list, click handlers
+- `front/src/views/budget/suppliers/ProviderEditPage.vue` — Replace segment with select, add expenseType state and watchers
+- `front/src/controllers/budgetController.ts` — Add createdAt to provider payload
+- `front/src/stores/budgetStore.ts` — Add createdAt to Provider interface
+- `front/src/views/suppliers/accounts/AccountsPage.vue` — Fix remove call parameter
+- `AGENTS.md` — Update controller-only communication guidelines
+- `docs/superpowers/specs/` — New specification documents
+- `docs/superpowers/plans/` — New planning documents
+- `front/package.json` — Bump version to 0.61.0
+
+---
+
 ## [v0.60.1] - 2026-05-10
 
 ### Fix

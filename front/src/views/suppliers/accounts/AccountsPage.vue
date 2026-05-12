@@ -189,7 +189,7 @@ async function removeAccountConfirmed() {
   deleteConfirmAccount.accountName = '';
 
   if (id == null) return;
-  await remove(id as string | number);
+  await remove({ id: id as string | number });
 }
 
 function onDeleteAlertDidDismissAccount() {
@@ -275,7 +275,6 @@ const groupedAccounts = computed(() => {
 
 .account-actions {
   opacity: 0;
-  pointer-events: none;
   transition: opacity 150ms ease;
 }
 
