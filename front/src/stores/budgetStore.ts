@@ -48,6 +48,7 @@ export interface Provider {
   notes: string;
   visited: boolean;
   synced_at?: number;
+  createdAt?: number;
   _justAdded?: boolean;
   _fromTemplate?: boolean;
   _pendingProducts?: BudgetProviderProduct[];

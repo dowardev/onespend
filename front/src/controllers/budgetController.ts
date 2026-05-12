@@ -401,6 +401,7 @@ class BudgetController {
       products,
       items,
       _supplier: _supplier ? JSON.parse(JSON.stringify(_supplier)) : undefined,
+      createdAt: Date.now(),
     };
 
     const { syncBudgetProvider } = useSync();

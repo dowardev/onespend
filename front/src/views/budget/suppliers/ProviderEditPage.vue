@@ -69,128 +69,72 @@
 
             <!-- Segment for full mode -->
             <div v-if="!isEntryMode" class="ion-padding-start ion-padding-end">
-              <ion-segment v-model="selectedSegment" scrollable>
-                <ion-segment-button value="inicio">
-                  <ion-label>Inicio</ion-label>
-                </ion-segment-button>
-
-                <ion-segment-button value="productos">
-                  <ion-label>Productos</ion-label>
-                </ion-segment-button>
-              </ion-segment>
+              <ion-item class="transparent" lines="none">
+                <ion-label>Tipo de gasto</ion-label>
+                <ion-select
+                  v-model="expenseType"
+                  interface="popover"
+                  slot="end"
+                  style="width: auto"
+                >
+                  <ion-select-option value="simple">Simple</ion-select-option>
+                  <ion-select-option
+                    value="multiple"
+                    :disabled="!hasProviderProducts"
+                    >Múltiple</ion-select-option
+                  >
+                </ion-select>
+              </ion-item>
             </div>
 
-            <!-- Amounts by account section (inicio segment) -->
-            <template v-if="!isEntryMode && selectedSegment === 'inicio'">
+            <!-- Simple mode: single amount -->
+            <template v-if="!isEntryMode && expenseType === 'simple'">
               <div class="ion-padding-start ion-padding-end">
                 <ion-list class="transparent">
                   <ion-list-header>
-                    <ion-label>Cantidades por Cuenta</ion-label>
-
-                    <ion-button :disabled="!canAddMoreItems" @click="addItem">
-                      <ion-icon :icon="addOutline"></ion-icon>
-                    </ion-button>
+                    <ion-label>Monto</ion-label>
                   </ion-list-header>
 
-                  <!-- Products coverage warning (only in full mode) -->
-                  <div
-                    v-if="!isEntryMode && hasProductsWithQuantity"
-                    class="ion-padding-start ion-padding-end ion-margin-bottom"
-                  >
+                  <ion-card class="shadow1">
                     <ion-item
-                      lines="none"
-                      :class="
-                        productsCoverage.falta > 0
-                          ? 'border-warning'
-                          : 'border-success'
-                      "
-                      style="margin-top: 8px"
+                      lines="full"
+                      class="transparent"
+                      button
+                      @click="openAccountModal(0)"
                     >
-                      <ion-icon
-                        slot="start"
-                        :icon="
-                          productsCoverage.falta > 0
-                            ? warningOutline
-                            : checkmarkCircleOutline
-                        "
-                        :color="
-                          productsCoverage.falta > 0 ? 'warning' : 'success'
-                        "
-                      ></ion-icon>
-                      <ion-label
-                        :color="
-                          productsCoverage.falta > 0 ? 'warning' : 'success'
-                        "
-                      >
-                        <h3>Productos: {{ formatPrice(productsTotal) }}</h3>
-
-                        <p v-if="productsCoverage.falta > 0">
-                          Faltante: {{ formatPrice(productsCoverage.falta) }}
+                      <ion-label>
+                        Cuenta
+                        <p>
+                          {{
+                            getAccountName(items[0].accountId) ||
+                            'Seleccionar cuenta'
+                          }}
                         </p>
-
-                        <p v-else>Cubierto</p>
                       </ion-label>
                     </ion-item>
-                  </div>
 
-                  <template v-for="(item, index) in items" :key="index">
-                    <ion-card class="shadow1">
-                      <div
-                        v-if="items.length > 1"
-                        style="display: flex; justify-content: flex-end"
-                      >
-                        <ion-button
-                          fill="clear"
-                          size="small"
-                          @click="removeItem({ index })"
-                        >
-                          <ion-icon
-                            :icon="closeOutline"
-                            color="danger"
-                          ></ion-icon>
-                        </ion-button>
-                      </div>
-
-                      <ion-item lines="full" class="transparent">
-                        <ion-input
-                          v-model="item.amount"
-                          label="Cantidad"
-                          label-placement="floating"
-                          type="number"
-                          placeholder="0"
-                          :class="{
-                            'ion-invalid': isAmountInvalid({ index }),
-                            'ion-touched': isAmountTouched({ index }),
-                          }"
-                          :error-text="getAmountError({ index })"
-                        ></ion-input>
-                      </ion-item>
-
-                      <ion-item
-                        lines="full"
-                        class="transparent"
-                        button
-                        @click="openAccountModal(index)"
-                      >
-                        <ion-label>
-                          Cuenta
-                          <p>
-                            {{
-                              getAccountName(item.accountId) ||
-                              'Seleccionar cuenta'
-                            }}
-                          </p>
-                        </ion-label>
-                      </ion-item>
-                    </ion-card>
-                  </template>
+                    <ion-item lines="full" class="transparent">
+                      <ion-input
+                        v-model="items[0].amount"
+                        label="Cantidad"
+                        label-placement="floating"
+                        type="number"
+                        placeholder="0"
+                        :class="{
+                          'ion-invalid': isAmountInvalid({ index: 0 }),
+                          'ion-touched': isAmountTouched({ index: 0 }),
+                        }"
+                        :error-text="getAmountError({ index: 0 })"
+                      ></ion-input>
+                    </ion-item>
+                  </ion-card>
                 </ion-list>
               </div>
             </template>
 
             <!-- Products section (only in full mode) -->
             <div
-              v-if="!isEntryMode && selectedSegment === 'productos'"
+              v-if="!isEntryMode && expenseType === 'multiple'"
               class="ion-margin-top"
             >
               <template v-if="selectedProvider?.products?.length">
@@ -249,6 +193,115 @@
                 </ion-item>
               </template>
             </div>
+
+            <!-- Products coverage summary (only in multiple mode) -->
+            <div
+              v-if="
+                !isEntryMode &&
+                expenseType === 'multiple' &&
+                selectedProvider?.products?.length
+              "
+              class="ion-padding-start ion-padding-end ion-margin-top"
+            >
+              <ion-item
+                lines="none"
+                :class="
+                  productsCoverage.falta > 0
+                    ? 'border-warning'
+                    : 'border-success'
+                "
+              >
+                <ion-icon
+                  slot="start"
+                  :icon="
+                    productsCoverage.falta > 0
+                      ? warningOutline
+                      : checkmarkCircleOutline
+                  "
+                  :color="productsCoverage.falta > 0 ? 'warning' : 'success'"
+                ></ion-icon>
+                <ion-label
+                  :color="productsCoverage.falta > 0 ? 'warning' : 'success'"
+                >
+                  <h3>Total productos: {{ formatPrice(productsTotal) }}</h3>
+                  <p v-if="productsCoverage.falta > 0">
+                    Faltante: {{ formatPrice(productsCoverage.falta) }}
+                  </p>
+                  <p v-else>Cubierto</p>
+                </ion-label>
+              </ion-item>
+            </div>
+
+            <!-- Items by account section (only in multiple mode) -->
+            <template v-if="!isEntryMode && expenseType === 'multiple'">
+              <div class="ion-padding-start ion-padding-end ion-margin-top">
+                <ion-list class="transparent">
+                  <ion-list-header>
+                    <ion-label>
+                      Distribución por Cuenta
+                      <p class="ion-note" style="margin-top: 4px; opacity: 0.7">
+                        Distribuye el total de productos entre las cuentas
+                      </p>
+                    </ion-label>
+                    <ion-button @click="handleAddItem">
+                      <ion-icon :icon="addOutline"></ion-icon>
+                    </ion-button>
+                  </ion-list-header>
+
+                  <template v-for="(item, index) in items" :key="index">
+                    <ion-card class="shadow1">
+                      <div
+                        v-if="items.length > 1"
+                        style="display: flex; justify-content: flex-end"
+                      >
+                        <ion-button
+                          fill="clear"
+                          size="small"
+                          @click="removeItem({ index })"
+                        >
+                          <ion-icon
+                            :icon="closeOutline"
+                            color="danger"
+                          ></ion-icon>
+                        </ion-button>
+                      </div>
+
+                      <ion-item
+                        lines="full"
+                        class="transparent"
+                        button
+                        @click="openAccountModal(index)"
+                      >
+                        <ion-label>
+                          Cuenta
+                          <p>
+                            {{
+                              getAccountName(item.accountId) ||
+                              'Seleccionar cuenta'
+                            }}
+                          </p>
+                        </ion-label>
+                      </ion-item>
+
+                      <ion-item lines="full" class="transparent">
+                        <ion-input
+                          v-model="item.amount"
+                          label="Cantidad"
+                          label-placement="floating"
+                          type="number"
+                          placeholder="0"
+                          :class="{
+                            'ion-invalid': isAmountInvalid({ index }),
+                            'ion-touched': isAmountTouched({ index }),
+                          }"
+                          :error-text="getAmountError({ index })"
+                        ></ion-input>
+                      </ion-item>
+                    </ion-card>
+                  </template>
+                </ion-list>
+              </div>
+            </template>
           </ion-col>
         </ion-row>
       </ion-grid>
@@ -333,7 +386,10 @@
           ></ion-searchbar>
         </ion-item>
 
-        <ion-list class="transparent ion-padding-start ion-padding-end">
+        <ion-list
+          v-if="filteredAccounts.length"
+          class="transparent ion-padding-start ion-padding-end"
+        >
           <ion-card class="shadow1">
             <ion-item
               v-for="acc in filteredAccounts"
@@ -348,6 +404,15 @@
             </ion-item>
           </ion-card>
         </ion-list>
+
+        <div
+          v-if="!filteredAccounts.length"
+          class="ion-text-center ion-padding"
+        >
+          <ion-label color="medium">
+            Presiona '+' para agregar una nueva cuenta
+          </ion-label>
+        </div>
       </ion-content>
     </ion-modal>
 
@@ -440,6 +505,8 @@ import {
   IonInput,
   IonSegment,
   IonSegmentButton,
+  IonSelect,
+  IonSelectOption,
   IonCard,
   IonPopover,
   IonDatetime,
@@ -458,7 +525,7 @@ import {
   ellipsisVerticalOutline,
   checkmarkCircleOutline,
 } from 'ionicons/icons';
-import { ref, computed, reactive, nextTick, onMounted } from 'vue';
+import { ref, computed, reactive, nextTick, onMounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { format } from 'date-fns';
 import accountsController from '@/controllers/accountsController';
@@ -571,7 +638,7 @@ const route = useRoute();
 // vars and const
 const searchQuery = ref('');
 const selectedProvider = ref<Supplier | null>(null);
-const selectedSegment = ref('inicio');
+const expenseType = ref<'simple' | 'multiple'>('simple');
 const providerProducts = ref<ProviderProduct[]>([]);
 const items = ref<
   Array<{
@@ -596,11 +663,12 @@ const showQuickAccountAlert = ref(false);
 const showDeleteAlert = ref(false);
 const quickAccountTargetIndex = ref<number | null>(null);
 
-const quickAccountInputs = [
+const quickAccountInputs = ref([
   {
     name: 'accountName',
     type: 'text',
     placeholder: 'Nombre de la cuenta',
+    value: '',
   },
   {
     name: 'initialBalance',
@@ -608,7 +676,7 @@ const quickAccountInputs = [
     placeholder: 'Balance inicial (opcional)',
     value: 0,
   },
-];
+]);
 
 const quickAccountButtons = [
   {
@@ -829,6 +897,22 @@ async function initializeFromProvider() {
 }
 
 // watch
+watch(expenseType, (newType, oldType) => {
+  if (newType === 'simple' && oldType === 'multiple') {
+    items.value = items.value.slice(0, 1);
+    providerProducts.value = [];
+  }
+});
+
+watch(selectedProvider, newProvider => {
+  if (
+    newProvider &&
+    !hasProviderProducts.value &&
+    expenseType.value === 'multiple'
+  ) {
+    expenseType.value = 'simple';
+  }
+});
 // end watch
 
 // computed
@@ -915,12 +999,28 @@ const isFormValid = computed(() => {
   if (isEntryMode.value) {
     return isItemsValid.value;
   }
-  return selectedProvider.value != null && isItemsValid.value;
+  if (!selectedProvider.value) return false;
+
+  if (expenseType.value === 'simple') {
+    const firstItem = items.value[0];
+    const amount = Number(firstItem?.amount);
+    const hasAccount = firstItem?.accountId != null;
+    return amount > 0 && hasAccount;
+  }
+
+  const hasProductsWithQty = providerProducts.value.some(
+    p => (p.quantity || 0) > 0
+  );
+  return hasProductsWithQty && isItemsValid.value;
 });
 
 const canApplyReassign = computed(() => {
   const short = tempPickerDateISO.value?.slice(0, 10);
   return short?.length === 10;
+});
+
+const hasProviderProducts = computed(() => {
+  return selectedProvider.value?.products?.length > 0;
 });
 // end computed
 
@@ -1091,6 +1191,7 @@ function onProviderModalDismiss() {
 function onAccountModalDismiss() {
   showAccountModal.value = false;
   accountSearchQuery.value = '';
+  selectedAccountIndex.value = null;
 }
 
 function selectProvider(params: { p: Supplier | SelectProviderData }) {
@@ -1167,6 +1268,14 @@ function formatPrice(price: number | { price: number }): string {
 function addItem() {
   if (canAddMoreItems.value) {
     items.value.push({ amount: '', accountId: null });
+  }
+}
+
+function handleAddItem() {
+  if (canAddMoreItems.value) {
+    addItem();
+  } else {
+    openQuickAccountAlert(items.value.length);
   }
 }
 
@@ -1394,6 +1503,20 @@ function confirmDelete() {
 }
 
 function openQuickAccountAlert(itemIndex?: number) {
+  quickAccountInputs.value = [
+    {
+      name: 'accountName',
+      type: 'text',
+      placeholder: 'Nombre de la cuenta',
+      value: '',
+    },
+    {
+      name: 'initialBalance',
+      type: 'number',
+      placeholder: 'Balance inicial (opcional)',
+      value: 0,
+    },
+  ];
   const indexToUse = itemIndex ?? selectedAccountIndex.value;
   if (indexToUse !== null) {
     quickAccountTargetIndex.value = indexToUse;
@@ -1410,22 +1533,19 @@ async function createQuickAccount(name: string, initialBalance: number) {
   });
 
   if (newAccount) {
-    if (quickAccountTargetIndex.value !== null) {
+    if (quickAccountTargetIndex.value !== null && !canAddMoreItems.value) {
+      addItem();
+      const lastIdx = items.value.length - 1;
+      items.value[lastIdx].accountId = isEntryMode.value
+        ? newAccount.id
+        : { id: newAccount.id };
+    } else if (quickAccountTargetIndex.value !== null) {
       const idx = quickAccountTargetIndex.value;
       if (items.value[idx]) {
         items.value[idx].accountId = isEntryMode.value
           ? newAccount.id
           : { id: newAccount.id };
       }
-    }
-
-    if (selectedAccountIndex.value !== null) {
-      const idx = selectedAccountIndex.value;
-      items.value[idx].accountId = isEntryMode.value
-        ? newAccount.id
-        : { id: newAccount.id };
-      showAccountModal.value = false;
-      selectedAccountIndex.value = null;
     }
   }
 

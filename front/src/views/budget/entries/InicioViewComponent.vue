@@ -6,7 +6,7 @@
           <ion-list-header>
             <ion-label>Registro</ion-label>
 
-            <ion-button :disabled="isDayClosed" @click="navigateToNewEntry">
+            <ion-button :disabled="isDayClosed" id="add-btn">
               <ion-icon :icon="addOutline"></ion-icon>
             </ion-button>
           </ion-list-header>
@@ -30,43 +30,43 @@
             </div>
 
             <div class="scroll-content">
-              <template v-if="budgetController.getEntries().length > 0">
+              <template v-if="unifiedItems.length > 0">
                 <template
                   v-for="(block, bIdx) in renderedEntries"
                   :key="blockKey(block, bIdx)"
                 >
                   <ion-item
-                    v-if="block.type === 'item'"
+                    v-if="block.type === 'unified'"
                     :lines="
                       bIdx === renderedEntries.length - 1 ? 'none' : 'full'
                     "
                     class="transparent"
                     button
                     :disabled="isDayClosed"
-                    @click="navigateToEditEntry(block.item)"
+                    @click="handleUnifiedItemClick(block.item)"
                   >
                     <ion-label>
-                      {{ block.item._providerName || block.item.name || '-' }}
+                      {{ block.item.name }}
                       <p>{{ formatTimeLocal(block.item.createdAt) }}</p>
                     </ion-label>
 
                     <ion-label
                       slot="end"
                       class="ion-text-end"
-                      :style="`color: ${block.item.entryType === 'egreso' ? 'var(--ion-color-danger)' : 'var(--ion-color-success)'}`"
+                      :style="`color: ${getItemColor(block.item)}`"
                     >
                       {{ formatCurrencyLocal({ v: block.item.amount || 0 }) }}
 
-                      <p>
-                        {{ getEntryAccountInfo(block.item).name }}:
+                      <p v-if="block.item.type === 'entry'">
+                        {{ getUnifiedEntryInfo(block.item).name }}:
                         {{
                           formatCurrencyLocal({
-                            v: getAccountRemaining(
-                              getEntryAccountInfo(block.item).accountId,
-                              block.item.id
-                            ),
+                            v: getUnifiedAccountRemaining(block.item),
                           })
                         }}
+                      </p>
+                      <p v-else>
+                        Proveedor
                       </p>
                     </ion-label>
                   </ion-item>
@@ -124,6 +124,28 @@
       </ion-col>
     </ion-row>
   </ion-grid>
+
+  <!-- Popover para Add -->
+  <ion-popover
+    trigger="add-btn"
+    trigger-action="click"
+    side="bottom"
+    alignment="end"
+    dismiss-on-select
+  >
+    <ion-content>
+      <ion-list lines="none">
+        <ion-item button @click="handleRegistroClick" :disabled="isDayClosed">
+          <ion-icon :icon="documentTextOutline" slot="start"></ion-icon>
+          <ion-label>Registro</ion-label>
+        </ion-item>
+        <ion-item button @click="handleProveedoresClick" :disabled="isDayClosed">
+          <ion-icon :icon="peopleOutline" slot="start"></ion-icon>
+          <ion-label>Proveedores</ion-label>
+        </ion-item>
+      </ion-list>
+    </ion-content>
+  </ion-popover>
 </template>
 
 <script setup lang="ts">
@@ -141,10 +163,14 @@ import {
   IonCard,
   IonCardTitle,
   IonCardContent,
+  IonPopover,
+  IonContent,
 } from '@ionic/vue';
 import {
   addOutline,
   informationCircleOutline,
+  documentTextOutline,
+  peopleOutline,
 } from 'ionicons/icons';
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
@@ -157,6 +183,18 @@ import type {
   Provider,
 } from '@/stores/budgetStore';
 import type { AccountWithBalance, EntryGroup } from '../components/EditEntryModal.vue';
+
+interface UnifiedItem {
+  id: string | number;
+  name: string;
+  amount: number;
+  date: string;
+  type: 'entry' | 'provider';
+  entryType?: 'ingreso' | 'egreso';
+  accountId?: string | number | null;
+  createdAt: number;
+  _providerName?: string;
+}
 // End Imports
 
 // router
@@ -280,12 +318,50 @@ const providersToday = computed(() => {
     .filter((p: Provider) => String(p.date || '').slice(0, 10) === sel);
 });
 
-const renderedEntries = computed(() => {
-  const entries =
+const unifiedItems = computed((): UnifiedItem[] => {
+  const entries: Income[] =
     isDayClosed.value && frozenSnapshot.value
       ? frozenSnapshot.value.entries
       : budgetController.getEntries();
-  return entries.map((item: Income) => ({ type: 'item', item }));
+
+  const selectedDateStr = String(budgetController.getSelectedDate() || '').slice(0, 10);
+  const providers: Provider[] = budgetController.getProviders().filter(
+    (p: Provider) => String(p.date || '').slice(0, 10) === selectedDateStr
+  );
+
+  const entryItems: UnifiedItem[] = entries.map((entry: Income) => ({
+    id: entry.id,
+    name: entry._providerName || entry.name || '-',
+    amount: entry.amount || 0,
+    date: entry.date,
+    type: 'entry',
+    entryType: entry.entryType,
+    accountId: entry.accountId,
+    createdAt: entry.createdAt || 0,
+    _providerName: entry._providerName,
+  }));
+
+  const providerItems: UnifiedItem[] = providers.map((provider: Provider) => ({
+    id: provider.id,
+    name: provider._supplierName || provider.name || '-',
+    amount: Number(provider.efectivo || 0) + Number(provider.tarjeta || 0),
+    date: provider.date,
+    type: 'provider',
+    accountId: provider.accountId,
+    createdAt: provider.createdAt || Date.now(),
+    _providerName: provider._supplierName,
+  }));
+
+  return [...entryItems, ...providerItems].sort(
+    (a, b) => (a.createdAt || 0) - (b.createdAt || 0)
+  );
+});
+
+const renderedEntries = computed(() => {
+  return unifiedItems.value.map((item: UnifiedItem) => ({
+    type: 'unified',
+    item,
+  }));
 });
 
 // End Computed
@@ -312,8 +388,29 @@ function formatTimeLocal(ms?: number) {
   });
 }
 
-function navigateToNewEntry() {
+function handleRegistroClick() {
   router.push('/budget/entry/new');
+}
+
+function handleProveedoresClick() {
+  router.push('/budget/provider/new');
+}
+
+function handleUnifiedItemClick(item: UnifiedItem) {
+  if (item.type === 'entry') {
+    router.push(`/budget/entry/edit?entryId=${item.id}`);
+  } else {
+    router.push(`/budget/provider/edit?providerId=${item.id}`);
+  }
+}
+
+function getItemColor(item: UnifiedItem): string {
+  if (item.type === 'provider') {
+    return 'var(--ion-color-warning)';
+  }
+  return item.entryType === 'egreso'
+    ? 'var(--ion-color-danger)'
+    : 'var(--ion-color-success)';
 }
 
 function navigateToEditEntry(item: Income) {
@@ -355,6 +452,23 @@ function getEntryAccountInfo(item: Income) {
     name: getAccountName(item.accountId),
     accountId: item.accountId ?? null,
   };
+}
+
+function getUnifiedEntryInfo(item: UnifiedItem) {
+  if (item.type !== 'entry') {
+    return { name: '', accountId: null };
+  }
+  return {
+    name: getAccountName(item.accountId),
+    accountId: item.accountId ?? null,
+  };
+}
+
+function getUnifiedAccountRemaining(item: UnifiedItem): number {
+  if (item.type !== 'entry') {
+    return 0;
+  }
+  return getAccountRemaining(item.accountId, item.id);
 }
 
 function getAccountRemaining(
