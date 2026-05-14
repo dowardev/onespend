@@ -1,3 +1,17 @@
+## [v0.61.1] - 2026-05-13
+
+### Features
+
+- **ProviderEditPage: Add card validation and coverage alert**
+  - Add button now only adds cards (removed quick account alert behavior)
+  - Prevent adding new card until existing card has amount and account filled
+  - Show warning alert when trying to add card but products total is already covered
+  - Disable account/mount inputs and add/remove buttons until at least one product has quantity
+
+### Fix
+
+- **ProviderEditPage: Remove account creation from add button flow**
+
 ## [v0.61.0] - 2026-05-12
 
 ### Features
