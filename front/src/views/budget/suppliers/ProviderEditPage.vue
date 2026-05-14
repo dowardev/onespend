@@ -57,6 +57,7 @@
                   class="transparent"
                   button
                   lines="full"
+                  :disabled="!selectedProvider"
                   @click="openReassignFromMenu({ e: $event })"
                 >
                   <ion-label>Fecha</ion-label>
@@ -67,28 +68,102 @@
               </ion-card>
             </ion-list>
 
-            <!-- Segment for full mode -->
-            <div v-if="!isEntryMode" class="ion-padding-start ion-padding-end">
-              <ion-item class="transparent" lines="none">
-                <ion-label>Tipo de gasto</ion-label>
-                <ion-select
-                  v-model="expenseType"
-                  interface="popover"
-                  slot="end"
-                  style="width: auto"
-                >
-                  <ion-select-option value="simple">Simple</ion-select-option>
-                  <ion-select-option
-                    value="multiple"
-                    :disabled="!hasProviderProducts"
-                    >Múltiple</ion-select-option
-                  >
-                </ion-select>
-              </ion-item>
-            </div>
+            <!-- Products section (only in full mode) -->
+            <ion-list class="ion-padding-start ion-padding-end">
+              <ion-card class="shadow1">
+                <!-- Segment for full mode -->
+                <template v-if="!isEntryMode">
+                  <ion-item class="transparent" lines="full">
+                    <ion-label>Tipo de gasto</ion-label>
+                    <ion-select
+                      v-model="expenseType"
+                      interface="popover"
+                      slot="end"
+                      style="width: auto"
+                      :disabled="!selectedProvider"
+                    >
+                      <ion-select-option value="simple"
+                        >Simple</ion-select-option
+                      >
+                      <ion-select-option
+                        value="multiple"
+                        :disabled="!hasProviderProducts"
+                        >Múltiple</ion-select-option
+                      >
+                    </ion-select>
+
+                    <ion-button
+                      slot="end"
+                      fill="clear"
+                      :disabled="!selectedProvider"
+                      @click="openInfoPopover({ e: $event })"
+                    >
+                      <ion-icon
+                        slot="icon-only"
+                        :icon="informationCircleSharp"
+                      ></ion-icon>
+                    </ion-button>
+                  </ion-item>
+                </template>
+
+                <template v-if="selectedProvider">
+                  <template v-if="selectedProvider?.products?.length">
+                    <template v-if="!isEntryMode && expenseType === 'multiple'">
+                      <ion-item
+                        v-for="product in selectedProvider.products"
+                        :key="product.name"
+                        lines="full"
+                        class="transparent"
+                      >
+                        <ion-label>
+                          {{ product.name }}
+                          <p>{{ formatPrice({ price: product.price }) }}</p>
+                        </ion-label>
+
+                        <ion-input
+                          slot="end"
+                          type="number"
+                          placeholder="0"
+                          :value="getProductQuantity({ product })"
+                          style="width: 80px; text-align: end"
+                          :class="{
+                            'ion-invalid': isProductQuantityInvalid({
+                              productId: product.id,
+                            }),
+                            'ion-touched': isProductQuantityTouched({
+                              productId: product.id,
+                            }),
+                          }"
+                          :error-text="
+                            getProductQuantityError({ productId: product.id })
+                          "
+                          @ion-input="
+                            e => {
+                              setProductRawValue({
+                                productId: product.id,
+                                value: e.detail.value || '',
+                              });
+                              setProductQuantity({
+                                product,
+                                productPrice: product.price,
+                                quantity: e.detail.value,
+                              });
+                            }
+                          "
+                        ></ion-input>
+                      </ion-item>
+                    </template>
+                  </template>
+                </template>
+              </ion-card>
+            </ion-list>
 
             <!-- Simple mode: single amount -->
-            <template v-if="!isEntryMode && expenseType === 'simple'">
+            <template
+              v-if="
+                selectedProvider && !isEntryMode && expenseType === 'simple'
+              "
+            >
               <div class="ion-padding-start ion-padding-end">
                 <ion-list class="transparent">
                   <ion-list-header>
@@ -132,108 +207,14 @@
               </div>
             </template>
 
-            <!-- Products section (only in full mode) -->
-            <div
-              v-if="!isEntryMode && expenseType === 'multiple'"
-              class="ion-margin-top"
-            >
-              <template v-if="selectedProvider?.products?.length">
-                <ion-list class="ion-padding-start ion-padding-end">
-                  <ion-card class="shadow1">
-                    <ion-item
-                      v-for="product in selectedProvider.products"
-                      :key="product.name"
-                      lines="full"
-                      class="transparent"
-                    >
-                      <ion-label>
-                        {{ product.name }}
-                        <p>{{ formatPrice({ price: product.price }) }}</p>
-                      </ion-label>
-
-                      <ion-input
-                        slot="end"
-                        type="number"
-                        placeholder="0"
-                        :value="getProductQuantity({ product })"
-                        style="width: 80px; text-align: end"
-                        :class="{
-                          'ion-invalid': isProductQuantityInvalid({
-                            productId: product.id,
-                          }),
-                          'ion-touched': isProductQuantityTouched({
-                            productId: product.id,
-                          }),
-                        }"
-                        :error-text="
-                          getProductQuantityError({ productId: product.id })
-                        "
-                        @ion-input="
-                          e => {
-                            setProductRawValue({
-                              productId: product.id,
-                              value: e.detail.value || '',
-                            });
-                            setProductQuantity({
-                              product,
-                              productPrice: product.price,
-                              quantity: e.detail.value,
-                            });
-                          }
-                        "
-                      ></ion-input>
-                    </ion-item>
-                  </ion-card>
-                </ion-list>
-              </template>
-
-              <template v-else>
-                <ion-item lines="none">
-                  <ion-label>Este proveedor no tiene productos</ion-label>
-                </ion-item>
-              </template>
-            </div>
-
             <!-- Products coverage summary (only in multiple mode) -->
-            <div
-              v-if="
-                !isEntryMode &&
-                expenseType === 'multiple' &&
-                selectedProvider?.products?.length
-              "
-              class="ion-padding-start ion-padding-end ion-margin-top"
-            >
-              <ion-item
-                lines="none"
-                :class="
-                  productsCoverage.falta > 0
-                    ? 'border-warning'
-                    : 'border-success'
-                "
-              >
-                <ion-icon
-                  slot="start"
-                  :icon="
-                    productsCoverage.falta > 0
-                      ? warningOutline
-                      : checkmarkCircleOutline
-                  "
-                  :color="productsCoverage.falta > 0 ? 'warning' : 'success'"
-                ></ion-icon>
-                <ion-label
-                  :color="productsCoverage.falta > 0 ? 'warning' : 'success'"
-                >
-                  <h3>Total productos: {{ formatPrice(productsTotal) }}</h3>
-                  <p v-if="productsCoverage.falta > 0">
-                    Faltante: {{ formatPrice(productsCoverage.falta) }}
-                  </p>
-                  <p v-else>Cubierto</p>
-                </ion-label>
-              </ion-item>
-            </div>
 
             <!-- Items by account section (only in multiple mode) -->
-            <template v-if="!isEntryMode && expenseType === 'multiple'">
+            <template
+              v-if="
+                selectedProvider && !isEntryMode && expenseType === 'multiple'
+              "
+            >
               <div class="ion-padding-start ion-padding-end ion-margin-top">
                 <ion-list class="transparent">
                   <ion-list-header>
@@ -243,12 +224,71 @@
                         Distribuye el total de productos entre las cuentas
                       </p>
                     </ion-label>
-                    <ion-button @click="handleAddItem">
+
+                    <ion-button @click="handleAddItem" :disabled="!hasProductsWithQuantity">
                       <ion-icon :icon="addOutline"></ion-icon>
                     </ion-button>
                   </ion-list-header>
 
-                  <template v-for="(item, index) in items" :key="index">
+                  <!-- Products coverage summary banner -->
+                  <ion-card
+                    v-if="selectedProvider?.products?.length"
+                    class="shadow1 no-shadow"
+                    :class="
+                      productsCoverage.falta > 0
+                        ? 'coverage-card-warning'
+                        : 'coverage-card-success'
+                    "
+                  >
+                    <ion-item lines="none">
+                      <ion-icon
+                        slot="start"
+                        :icon="
+                          productsCoverage.falta > 0
+                            ? warningOutline
+                            : checkmarkCircleOutline
+                        "
+                        :color="
+                          productsCoverage.falta > 0 ? 'warning' : 'success'
+                        "
+                        style="font-size: 24px; margin-right: 12px"
+                      ></ion-icon>
+                      <ion-label>
+                        <div class="coverage-info">
+                          <span class="coverage-total"
+                            >Total: {{ formatPrice(productsTotal) }}</span
+                          >
+                          <span class="coverage-entered"
+                            >Cubierto:
+                            {{ formatPrice(productsCoverage.entered) }}</span
+                          >
+                          <template v-if="productsCoverage.falta > 0">
+                            <span class="coverage-shortage"
+                              >Faltante:
+                              {{ formatPrice(productsCoverage.falta) }}</span
+                            >
+                          </template>
+                          <template v-else>
+                            <span class="coverage-covered">¡Cubierto!</span>
+                          </template>
+                        </div>
+                        <div class="progress-container">
+                          <div
+                            class="progress-bar"
+                            :style="{
+                              width: `${Math.min(100, (productsCoverage.entered / productsTotal) * 100 || 0)}%`,
+                              'background-color':
+                                productsCoverage.falta > 0
+                                  ? 'var(--ion-color-warning)'
+                                  : 'var(--ion-color-success)',
+                            }"
+                          ></div>
+                        </div>
+                      </ion-label>
+                    </ion-item>
+                  </ion-card>
+
+                  <template v-for="(item, index) in reversedItems" :key="index">
                     <ion-card class="shadow1">
                       <div
                         v-if="items.length > 1"
@@ -257,7 +297,10 @@
                         <ion-button
                           fill="clear"
                           size="small"
-                          @click="removeItem({ index })"
+                          :disabled="!hasProductsWithQuantity"
+                          @click="
+                            removeItem({ index: items.length - 1 - index })
+                          "
                         >
                           <ion-icon
                             :icon="closeOutline"
@@ -270,7 +313,8 @@
                         lines="full"
                         class="transparent"
                         button
-                        @click="openAccountModal(index)"
+                        :disabled="!hasProductsWithQuantity"
+                        @click="openAccountModal(items.length - 1 - index)"
                       >
                         <ion-label>
                           Cuenta
@@ -290,11 +334,18 @@
                           label-placement="floating"
                           type="number"
                           placeholder="0"
+                          :disabled="!hasProductsWithQuantity"
                           :class="{
-                            'ion-invalid': isAmountInvalid({ index }),
-                            'ion-touched': isAmountTouched({ index }),
+                            'ion-invalid': isAmountInvalid({
+                              index: items.length - 1 - index,
+                            }),
+                            'ion-touched': isAmountTouched({
+                              index: items.length - 1 - index,
+                            }),
                           }"
-                          :error-text="getAmountError({ index })"
+                          :error-text="
+                            getAmountError({ index: items.length - 1 - index })
+                          "
                         ></ion-input>
                       </ion-item>
                     </ion-card>
@@ -320,19 +371,23 @@
               <ion-icon :icon="closeOutline"></ion-icon>
             </ion-button>
           </ion-buttons>
+
           <ion-title>Seleccionar Proveedor</ion-title>
         </ion-toolbar>
-      </ion-header>
-      <ion-content>
-        <ion-item lines="none">
-          <ion-searchbar
-            v-model="searchQuery"
-            mode="ios"
-            placeholder="Buscar proveedor"
-            class="ion-no-padding"
-          ></ion-searchbar>
-        </ion-item>
 
+        <ion-toolbar>
+          <div class="ion-padding-start ion-padding-end">
+            <ion-searchbar
+              v-model="searchQuery"
+              mode="ios"
+              placeholder="Buscar proveedor"
+              class="ion-no-padding"
+            ></ion-searchbar>
+          </div>
+        </ion-toolbar>
+      </ion-header>
+
+      <ion-content>
         <ion-list class="transparent ion-padding-start ion-padding-end">
           <ion-card class="shadow1">
             <ion-item
@@ -347,9 +402,6 @@
               "
             >
               <ion-label>{{ p.name }}</ion-label>
-              <ion-label slot="end">{{
-                formatPrice({ price: p.estimated || 0 })
-              }}</ion-label>
             </ion-item>
           </ion-card>
         </ion-list>
@@ -464,6 +516,30 @@
         </ion-item>
       </ion-content>
     </ion-popover>
+
+    <ion-popover
+      :is-open="popoverInfo.open"
+      :event="popoverInfo.event"
+      @did-dismiss="popoverInfo.open = false"
+    >
+      <ion-content>
+        <ion-list class="transparent">
+          <ion-item lines="full">
+            <ion-label>
+              <strong>Simple:</strong> Ingresa un monto único para este
+              proveedor
+            </ion-label>
+          </ion-item>
+
+          <ion-item lines="none">
+            <ion-label>
+              <strong>Múltiple:</strong> Selecciona productos y distribúyelos
+              entre múltiples cuentas
+            </ion-label>
+          </ion-item>
+        </ion-list>
+      </ion-content>
+    </ion-popover>
     <!-- end popovers -->
 
     <!-- alerts -->
@@ -481,6 +557,14 @@
       :inputs="quickAccountInputs"
       :buttons="quickAccountButtons"
       @did-dismiss="showQuickAccountAlert = false"
+    ></ion-alert>
+
+    <ion-alert
+      :is-open="showCoverageAlert"
+      header="Total cubierto"
+      message="Ya has distribuido el monto total de los productos entre las cuentas existentes."
+      :buttons="[{ text: 'Entendido', role: 'cancel' }]"
+      @did-dismiss="showCoverageAlert = false"
     ></ion-alert>
     <!-- end alerts -->
   </ion-page>
@@ -524,6 +608,7 @@ import {
   saveOutline,
   ellipsisVerticalOutline,
   checkmarkCircleOutline,
+  informationCircleSharp,
 } from 'ionicons/icons';
 import { ref, computed, reactive, nextTick, onMounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
@@ -648,6 +733,7 @@ const items = ref<
 >([{ amount: '', accountId: null }]);
 const popoverReassign = reactive({ open: false, event: null as Event | null });
 const popoverMenu = reactive({ open: false, event: null as Event | null });
+const popoverInfo = reactive({ open: false, event: null as Event | null });
 const reassignDate = ref<string | null>(null);
 const reassignDateISO = ref<string | null>(null);
 const showPicker = ref(true);
@@ -661,6 +747,7 @@ const selectedAccountIndex = ref<number | null>(null);
 const accountSearchQuery = ref('');
 const showQuickAccountAlert = ref(false);
 const showDeleteAlert = ref(false);
+const showCoverageAlert = ref(false);
 const quickAccountTargetIndex = ref<number | null>(null);
 
 const quickAccountInputs = ref([
@@ -736,8 +823,9 @@ const accounts = computed(() => {
 // onMounted - initialize form based on route params
 onMounted(async () => {
   // Sync suppliers
-  const { SuppliersController } =
-    await import('@/controllers/suppliersController');
+  const { SuppliersController } = await import(
+    '@/controllers/suppliersController'
+  );
   const suppliersCtrl = new SuppliersController();
   const suppliers = await suppliersCtrl.listSuppliers();
   allSuppliersList.value = suppliers || [];
@@ -755,10 +843,12 @@ onMounted(async () => {
 });
 
 async function initializeFromEntry() {
-  const { default: budgetController } =
-    await import('@/controllers/budgetController');
-  const { SuppliersController } =
-    await import('@/controllers/suppliersController');
+  const { default: budgetController } = await import(
+    '@/controllers/budgetController'
+  );
+  const { SuppliersController } = await import(
+    '@/controllers/suppliersController'
+  );
   const suppliersCtrl = new SuppliersController();
 
   const entryId = routeEntryId.value;
@@ -823,10 +913,12 @@ async function initializeFromEntry() {
 }
 
 async function initializeFromProvider() {
-  const { default: budgetController } =
-    await import('@/controllers/budgetController');
-  const { SuppliersController } =
-    await import('@/controllers/suppliersController');
+  const { default: budgetController } = await import(
+    '@/controllers/budgetController'
+  );
+  const { SuppliersController } = await import(
+    '@/controllers/suppliersController'
+  );
   const suppliersCtrl = new SuppliersController();
 
   const providerId = routeProviderId.value;
@@ -980,7 +1072,18 @@ const productsCoverage = computed(() => {
 });
 
 const canAddMoreItems = computed(() => {
-  return items.value.length < accounts.value.length;
+  if (items.value.length >= accounts.value.length) return false;
+  const lastItem = items.value[items.value.length - 1];
+  const hasAmount =
+    String(lastItem?.amount).trim() !== '' &&
+    !isNaN(Number(lastItem.amount)) &&
+    Number(lastItem.amount) > 0;
+  const hasAccount = lastItem?.accountId != null;
+  return hasAmount && hasAccount;
+});
+
+const reversedItems = computed(() => {
+  return [...items.value].reverse();
 });
 
 const isItemsValid = computed(() => {
@@ -1031,8 +1134,9 @@ function getDefaultAccountId() {
 }
 
 async function setTodayDate() {
-  const { default: budgetController } =
-    await import('@/controllers/budgetController');
+  const { default: budgetController } = await import(
+    '@/controllers/budgetController'
+  );
   const selectedDate = budgetController.getSelectedDate();
   const dateToUse = selectedDate || format(new Date(), 'yyyy-MM-dd');
   reassignDateISO.value = dateToUse + 'T00:00:00';
@@ -1273,9 +1377,11 @@ function addItem() {
 
 function handleAddItem() {
   if (canAddMoreItems.value) {
+    if (productsCoverage.value.falta <= 0) {
+      showCoverageAlert.value = true;
+      return;
+    }
     addItem();
-  } else {
-    openQuickAccountAlert(items.value.length);
   }
 }
 
@@ -1335,8 +1441,9 @@ function setProductQuantity(params: {
 }
 
 async function handleSave() {
-  const { default: budgetController } =
-    await import('@/controllers/budgetController');
+  const { default: budgetController } = await import(
+    '@/controllers/budgetController'
+  );
 
   const totalAmount = items.value.reduce(
     (sum, item) => sum + (Number(item.amount) || 0),
@@ -1462,6 +1569,12 @@ function openHeaderPopover(params: { e: Event }) {
   popoverMenu.open = true;
 }
 
+function openInfoPopover(params: { e: Event }) {
+  const { e } = params;
+  popoverInfo.event = e;
+  popoverInfo.open = true;
+}
+
 async function openReassignFromMenu(params: { e: Event }) {
   const { e } = params;
   closeMenuPopover();
@@ -1486,8 +1599,9 @@ function handleDeleteFromPopover() {
 
 function confirmDelete() {
   return (async () => {
-    const { default: budgetController } =
-      await import('@/controllers/budgetController');
+    const { default: budgetController } = await import(
+      '@/controllers/budgetController'
+    );
 
     if (isEntryMode.value && routeEntryId.value) {
       budgetController.removeIngreso({ id: Number(routeEntryId.value) });
@@ -1570,6 +1684,64 @@ defineExpose({
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* Coverage banner styles */
+.coverage-banner {
+  margin-bottom: 16px;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.coverage-card-warning {
+  border: 1px solid var(--ion-color-warning);
+}
+
+.coverage-card-success {
+  border: 1px solid var(--ion-color-success);
+}
+
+.coverage-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.coverage-total {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ion-color-dark);
+}
+
+.coverage-entered {
+  font-size: 14px;
+  color: var(--ion-color-medium);
+}
+
+.coverage-shortage {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ion-color-warning);
+}
+
+.coverage-covered {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ion-color-success);
+}
+
+.progress-container {
+  height: 8px;
+  background: var(--ion-color-light);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.4s ease;
 }
 </style>
 
