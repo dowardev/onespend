@@ -1,3 +1,25 @@
+## [v0.62.0] - 2026-05-19
+
+### Features
+
+- **Add oxlint and oxfmt for improved linting and formatting**
+  - Integrate oxlint as new linting tool alongside eslint
+  - Add oxfmt for code formatting (replacement for Prettier)
+  - Update lint scripts to run both oxlint and eslint in parallel using npm-run-all2
+
+### Refactor
+
+- **Migrate from Prettier to Oxlint for code formatting**
+  - Replace prettier with oxfmt in format commands
+  - Remove eslint-plugin-prettier from eslint config
+  - Remove .prettierrc.cjs configuration file
+
+### Chore
+
+- **Update dependencies for new tooling**
+  - Add eslint-plugin-oxlint, npm-run-all2, oxfmt, oxlint
+  - Move @fsouza/prettierd to devDependencies
+
 ## [v0.61.1] - 2026-05-13
 
 ### Features
