@@ -1,3 +1,41 @@
+## [v0.63.0] - 2026-05-20
+
+### Features
+
+- **Remove simple/multiple expense type toggle in provider edit page, always show products and multi-account distribution**
+  - Products are now always visible when provider has them
+  - Account distribution section always shows regardless of expense type
+  - Coverage banner extracted as standalone component shown when any product has quantity > 0
+
+- **Add smart account sorting in account selection modal**
+  - Available accounts (not selected in any item) shown first and are clickable
+  - Selected accounts shown last, disabled with "Seleccionada" label
+
+- **Add toast notification when attempting to add group with incomplete previous**
+  - Shows warning toast when user clicks "+" before completing current group
+  - Validates using isItemsValid computed
+
+### Changed
+
+- Simplify isFormValid computed by collapsing redundant branches
+- Simplify addItem/handleAddItem to always add with isItemsValid guard + toast
+- Simplify createQuickAccount by removing canAddMoreItems branch
+- Replace filteredAccounts with sortedAccounts computed that returns { available, selected }
+
+### Removed
+
+- Remove expenseType ref and watch logic
+- Remove simple mode section (single amount with one account)
+- Remove info popover (Simple/Multiple explanation)
+- Remove canAddMoreItems computed
+- Remove popoverInfo reactive and openInfoPopover function
+- Remove hasProviderProducts computed
+- Remove unused imports: IonSegment, IonSegmentButton, IonSelect, IonSelectOption, informationCircleSharp, watch
+
+### Fixed
+
+- Remove redundant nullish coalescing on html2canvasOptions in usePdfReport and statisticsController
+
 ## [v0.62.0] - 2026-05-19
 
 ### Features

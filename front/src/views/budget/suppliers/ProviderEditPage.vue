@@ -71,44 +71,11 @@
             <!-- Products section (only in full mode) -->
             <ion-list class="ion-padding-start ion-padding-end">
               <ion-card class="shadow1">
-                <!-- Segment for full mode -->
-                <template v-if="!isEntryMode">
-                  <ion-item class="transparent" lines="full">
-                    <ion-label>Tipo de gasto</ion-label>
-                    <ion-select
-                      v-model="expenseType"
-                      interface="popover"
-                      slot="end"
-                      style="width: auto"
-                      :disabled="!selectedProvider"
-                    >
-                      <ion-select-option value="simple"
-                        >Simple</ion-select-option
-                      >
-                      <ion-select-option
-                        value="multiple"
-                        :disabled="!hasProviderProducts"
-                        >Múltiple</ion-select-option
-                      >
-                    </ion-select>
-
-                    <ion-button
-                      slot="end"
-                      fill="clear"
-                      :disabled="!selectedProvider"
-                      @click="openInfoPopover({ e: $event })"
-                    >
-                      <ion-icon
-                        slot="icon-only"
-                        :icon="informationCircleSharp"
-                      ></ion-icon>
-                    </ion-button>
-                  </ion-item>
-                </template>
+                
 
                 <template v-if="selectedProvider">
                   <template v-if="selectedProvider?.products?.length">
-                    <template v-if="!isEntryMode && expenseType === 'multiple'">
+                    <template v-if="!isEntryMode">
                       <ion-item
                         v-for="product in selectedProvider.products"
                         :key="product.name"
@@ -158,61 +125,73 @@
               </ion-card>
             </ion-list>
 
-            <!-- Simple mode: single amount -->
-            <template
-              v-if="
-                selectedProvider && !isEntryMode && expenseType === 'simple'
-              "
-            >
+            
+
+            <!-- Products coverage summary (shown when any product has quantity > 0) -->
+            <template v-if="!isEntryMode && hasProductsWithQuantity">
               <div class="ion-padding-start ion-padding-end">
-                <ion-list class="transparent">
-                  <ion-list-header>
-                    <ion-label>Monto</ion-label>
-                  </ion-list-header>
-
-                  <ion-card class="shadow1">
-                    <ion-item
-                      lines="full"
-                      class="transparent"
-                      button
-                      @click="openAccountModal(0)"
-                    >
-                      <ion-label>
-                        Cuenta
-                        <p>
-                          {{
-                            getAccountName(items[0].accountId) ||
-                            'Seleccionar cuenta'
-                          }}
-                        </p>
-                      </ion-label>
-                    </ion-item>
-
-                    <ion-item lines="full" class="transparent">
-                      <ion-input
-                        v-model="items[0].amount"
-                        label="Cantidad"
-                        label-placement="floating"
-                        type="number"
-                        placeholder="0"
-                        :class="{
-                          'ion-invalid': isAmountInvalid({ index: 0 }),
-                          'ion-touched': isAmountTouched({ index: 0 }),
-                        }"
-                        :error-text="getAmountError({ index: 0 })"
-                      ></ion-input>
-                    </ion-item>
-                  </ion-card>
-                </ion-list>
+                <ion-card
+                  class="shadow1 no-shadow"
+                  :class="
+                    productsCoverage.falta > 0
+                      ? 'coverage-card-warning'
+                      : 'coverage-card-success'
+                  "
+                >
+                  <ion-item lines="none">
+                    <ion-icon
+                      slot="start"
+                      :icon="
+                        productsCoverage.falta > 0
+                          ? warningOutline
+                          : checkmarkCircleOutline
+                      "
+                      :color="
+                        productsCoverage.falta > 0 ? 'warning' : 'success'
+                      "
+                      style="font-size: 24px; margin-right: 12px"
+                    ></ion-icon>
+                    <ion-label>
+                      <div class="coverage-info">
+                        <span class="coverage-total"
+                          >Total: {{ formatPrice(productsTotal) }}</span
+                        >
+                        <span class="coverage-entered"
+                          >Cubierto:
+                          {{ formatPrice(productsCoverage.entered) }}</span
+                        >
+                        <template v-if="productsCoverage.falta > 0">
+                          <span class="coverage-shortage"
+                            >Faltante:
+                            {{ formatPrice(productsCoverage.falta) }}</span
+                          >
+                        </template>
+                        <template v-else>
+                          <span class="coverage-covered">¡Cubierto!</span>
+                        </template>
+                      </div>
+                      <div class="progress-container">
+                        <div
+                          class="progress-bar"
+                          :style="{
+                            width: `${Math.min(100, (productsCoverage.entered / productsTotal) * 100 || 0)}%`,
+                            'background-color':
+                              productsCoverage.falta > 0
+                                ? 'var(--ion-color-warning)'
+                                : 'var(--ion-color-success)',
+                          }"
+                        ></div>
+                      </div>
+                    </ion-label>
+                  </ion-item>
+                </ion-card>
               </div>
             </template>
 
-            <!-- Products coverage summary (only in multiple mode) -->
-
-            <!-- Items by account section (only in multiple mode) -->
+            <!-- Items by account section -->
             <template
               v-if="
-                selectedProvider && !isEntryMode && expenseType === 'multiple'
+                selectedProvider && !isEntryMode
               "
             >
               <div class="ion-padding-start ion-padding-end ion-margin-top">
@@ -221,72 +200,14 @@
                     <ion-label>
                       Distribución por Cuenta
                       <p class="ion-note" style="margin-top: 4px; opacity: 0.7">
-                        Distribuye el total de productos entre las cuentas
+                        Distribuye el monto entre las cuentas
                       </p>
                     </ion-label>
 
-                    <ion-button @click="handleAddItem" :disabled="!hasProductsWithQuantity">
+                    <ion-button @click="handleAddItem">
                       <ion-icon :icon="addOutline"></ion-icon>
                     </ion-button>
                   </ion-list-header>
-
-                  <!-- Products coverage summary banner -->
-                  <ion-card
-                    v-if="selectedProvider?.products?.length"
-                    class="shadow1 no-shadow"
-                    :class="
-                      productsCoverage.falta > 0
-                        ? 'coverage-card-warning'
-                        : 'coverage-card-success'
-                    "
-                  >
-                    <ion-item lines="none">
-                      <ion-icon
-                        slot="start"
-                        :icon="
-                          productsCoverage.falta > 0
-                            ? warningOutline
-                            : checkmarkCircleOutline
-                        "
-                        :color="
-                          productsCoverage.falta > 0 ? 'warning' : 'success'
-                        "
-                        style="font-size: 24px; margin-right: 12px"
-                      ></ion-icon>
-                      <ion-label>
-                        <div class="coverage-info">
-                          <span class="coverage-total"
-                            >Total: {{ formatPrice(productsTotal) }}</span
-                          >
-                          <span class="coverage-entered"
-                            >Cubierto:
-                            {{ formatPrice(productsCoverage.entered) }}</span
-                          >
-                          <template v-if="productsCoverage.falta > 0">
-                            <span class="coverage-shortage"
-                              >Faltante:
-                              {{ formatPrice(productsCoverage.falta) }}</span
-                            >
-                          </template>
-                          <template v-else>
-                            <span class="coverage-covered">¡Cubierto!</span>
-                          </template>
-                        </div>
-                        <div class="progress-container">
-                          <div
-                            class="progress-bar"
-                            :style="{
-                              width: `${Math.min(100, (productsCoverage.entered / productsTotal) * 100 || 0)}%`,
-                              'background-color':
-                                productsCoverage.falta > 0
-                                  ? 'var(--ion-color-warning)'
-                                  : 'var(--ion-color-success)',
-                            }"
-                          ></div>
-                        </div>
-                      </ion-label>
-                    </ion-item>
-                  </ion-card>
 
                   <template v-for="(item, index) in reversedItems" :key="index">
                     <ion-card class="shadow1">
@@ -297,7 +218,6 @@
                         <ion-button
                           fill="clear"
                           size="small"
-                          :disabled="!hasProductsWithQuantity"
                           @click="
                             removeItem({ index: items.length - 1 - index })
                           "
@@ -313,7 +233,6 @@
                         lines="full"
                         class="transparent"
                         button
-                        :disabled="!hasProductsWithQuantity"
                         @click="openAccountModal(items.length - 1 - index)"
                       >
                         <ion-label>
@@ -334,7 +253,6 @@
                           label-placement="floating"
                           type="number"
                           placeholder="0"
-                          :disabled="!hasProductsWithQuantity"
                           :class="{
                             'ion-invalid': isAmountInvalid({
                               index: items.length - 1 - index,
@@ -439,13 +357,13 @@
         </ion-item>
 
         <ion-list
-          v-if="filteredAccounts.length"
+          v-if="sortedAccounts.available.length || sortedAccounts.selected.length"
           class="transparent ion-padding-start ion-padding-end"
         >
           <ion-card class="shadow1">
             <ion-item
-              v-for="acc in filteredAccounts"
-              :key="acc.id"
+              v-for="acc in sortedAccounts.available"
+              :key="'avail-' + acc.id"
               lines="full"
               button
               class="transparent"
@@ -454,11 +372,21 @@
               <ion-label>{{ acc.name }}</ion-label>
               <ion-label slot="end">{{ acc.type || '' }}</ion-label>
             </ion-item>
+            <ion-item
+              v-for="acc in sortedAccounts.selected"
+              :key="'sel-' + acc.id"
+              lines="full"
+              class="transparent"
+              :disabled="true"
+            >
+              <ion-label>{{ acc.name }}</ion-label>
+              <ion-note slot="end" color="medium">Seleccionada</ion-note>
+            </ion-item>
           </ion-card>
         </ion-list>
 
         <div
-          v-if="!filteredAccounts.length"
+          v-if="!sortedAccounts.available.length && !sortedAccounts.selected.length"
           class="ion-text-center ion-padding"
         >
           <ion-label color="medium">
@@ -517,29 +445,6 @@
       </ion-content>
     </ion-popover>
 
-    <ion-popover
-      :is-open="popoverInfo.open"
-      :event="popoverInfo.event"
-      @did-dismiss="popoverInfo.open = false"
-    >
-      <ion-content>
-        <ion-list class="transparent">
-          <ion-item lines="full">
-            <ion-label>
-              <strong>Simple:</strong> Ingresa un monto único para este
-              proveedor
-            </ion-label>
-          </ion-item>
-
-          <ion-item lines="none">
-            <ion-label>
-              <strong>Múltiple:</strong> Selecciona productos y distribúyelos
-              entre múltiples cuentas
-            </ion-label>
-          </ion-item>
-        </ion-list>
-      </ion-content>
-    </ion-popover>
     <!-- end popovers -->
 
     <!-- alerts -->
@@ -566,6 +471,15 @@
       :buttons="[{ text: 'Entendido', role: 'cancel' }]"
       @did-dismiss="showCoverageAlert = false"
     ></ion-alert>
+
+    <ion-toast
+      :is-open="showIncompleteGroupToast"
+      message="Completa el grupo actual antes de agregar otro"
+      :duration="2000"
+      position="top"
+      color="warning"
+      @did-dismiss="showIncompleteGroupToast = false"
+    ></ion-toast>
     <!-- end alerts -->
   </ion-page>
 </template>
@@ -587,10 +501,6 @@ import {
   IonItem,
   IonLabel,
   IonInput,
-  IonSegment,
-  IonSegmentButton,
-  IonSelect,
-  IonSelectOption,
   IonCard,
   IonPopover,
   IonDatetime,
@@ -598,6 +508,7 @@ import {
   IonModal,
   IonGrid,
   IonCol,
+  IonToast,
 } from '@ionic/vue';
 import {
   arrowBackOutline,
@@ -608,9 +519,8 @@ import {
   saveOutline,
   ellipsisVerticalOutline,
   checkmarkCircleOutline,
-  informationCircleSharp,
 } from 'ionicons/icons';
-import { ref, computed, reactive, nextTick, onMounted, watch } from 'vue';
+import { ref, computed, reactive, nextTick, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { format } from 'date-fns';
 import accountsController from '@/controllers/accountsController';
@@ -723,7 +633,6 @@ const route = useRoute();
 // vars and const
 const searchQuery = ref('');
 const selectedProvider = ref<Supplier | null>(null);
-const expenseType = ref<'simple' | 'multiple'>('simple');
 const providerProducts = ref<ProviderProduct[]>([]);
 const items = ref<
   Array<{
@@ -733,7 +642,6 @@ const items = ref<
 >([{ amount: '', accountId: null }]);
 const popoverReassign = reactive({ open: false, event: null as Event | null });
 const popoverMenu = reactive({ open: false, event: null as Event | null });
-const popoverInfo = reactive({ open: false, event: null as Event | null });
 const reassignDate = ref<string | null>(null);
 const reassignDateISO = ref<string | null>(null);
 const showPicker = ref(true);
@@ -748,6 +656,7 @@ const accountSearchQuery = ref('');
 const showQuickAccountAlert = ref(false);
 const showDeleteAlert = ref(false);
 const showCoverageAlert = ref(false);
+const showIncompleteGroupToast = ref(false);
 const quickAccountTargetIndex = ref<number | null>(null);
 
 const quickAccountInputs = ref([
@@ -988,24 +897,7 @@ async function initializeFromProvider() {
   }
 }
 
-// watch
-watch(expenseType, (newType, oldType) => {
-  if (newType === 'simple' && oldType === 'multiple') {
-    items.value = items.value.slice(0, 1);
-    providerProducts.value = [];
-  }
-});
 
-watch(selectedProvider, newProvider => {
-  if (
-    newProvider &&
-    !hasProviderProducts.value &&
-    expenseType.value === 'multiple'
-  ) {
-    expenseType.value = 'simple';
-  }
-});
-// end watch
 
 // computed
 const pageTitle = computed(() => {
@@ -1032,11 +924,34 @@ const filteredProviders = computed(() => {
   );
 });
 
-const filteredAccounts = computed(() => {
-  if (!accountSearchQuery.value) return accounts.value;
-  return accounts.value.filter((acc: Account) =>
-    acc.name.toLowerCase().includes(accountSearchQuery.value.toLowerCase())
+const selectedAccountIds = computed(() => {
+  const skipIndex = selectedAccountIndex.value;
+  return new Set(
+    items.value
+      .filter((_, i) => i !== skipIndex)
+      .map(item => {
+        if (!item.accountId) return null;
+        return typeof item.accountId === 'object'
+          ? (item.accountId as { id: string | number }).id
+          : item.accountId;
+      })
+      .filter((id): id is string | number => id !== null)
   );
+});
+
+const sortedAccounts = computed(() => {
+  const query = accountSearchQuery.value?.toLowerCase() || '';
+  const available: Account[] = [];
+  const selected: Account[] = [];
+  for (const acc of accounts.value) {
+    if (query && !acc.name.toLowerCase().includes(query)) continue;
+    if (selectedAccountIds.value.has(acc.id)) {
+      selected.push(acc);
+    } else {
+      available.push(acc);
+    }
+  }
+  return { available, selected };
 });
 
 const productsTotal = computed(() => {
@@ -1071,17 +986,6 @@ const productsCoverage = computed(() => {
   };
 });
 
-const canAddMoreItems = computed(() => {
-  if (items.value.length >= accounts.value.length) return false;
-  const lastItem = items.value[items.value.length - 1];
-  const hasAmount =
-    String(lastItem?.amount).trim() !== '' &&
-    !isNaN(Number(lastItem.amount)) &&
-    Number(lastItem.amount) > 0;
-  const hasAccount = lastItem?.accountId != null;
-  return hasAmount && hasAccount;
-});
-
 const reversedItems = computed(() => {
   return [...items.value].reverse();
 });
@@ -1099,31 +1003,13 @@ const isItemsValid = computed(() => {
 });
 
 const isFormValid = computed(() => {
-  if (isEntryMode.value) {
-    return isItemsValid.value;
-  }
-  if (!selectedProvider.value) return false;
-
-  if (expenseType.value === 'simple') {
-    const firstItem = items.value[0];
-    const amount = Number(firstItem?.amount);
-    const hasAccount = firstItem?.accountId != null;
-    return amount > 0 && hasAccount;
-  }
-
-  const hasProductsWithQty = providerProducts.value.some(
-    p => (p.quantity || 0) > 0
-  );
-  return hasProductsWithQty && isItemsValid.value;
+  if (!isEntryMode.value && !selectedProvider.value) return false;
+  return isItemsValid.value;
 });
 
 const canApplyReassign = computed(() => {
   const short = tempPickerDateISO.value?.slice(0, 10);
   return short?.length === 10;
-});
-
-const hasProviderProducts = computed(() => {
-  return selectedProvider.value?.products?.length > 0;
 });
 // end computed
 
@@ -1370,19 +1256,15 @@ function formatPrice(price: number | { price: number }): string {
 }
 
 function addItem() {
-  if (canAddMoreItems.value) {
-    items.value.push({ amount: '', accountId: null });
-  }
+  items.value.push({ amount: '', accountId: null });
 }
 
 function handleAddItem() {
-  if (canAddMoreItems.value) {
-    if (productsCoverage.value.falta <= 0) {
-      showCoverageAlert.value = true;
-      return;
-    }
-    addItem();
+  if (!isItemsValid.value) {
+    showIncompleteGroupToast.value = true;
+    return;
   }
+  addItem();
 }
 
 function removeItem(params: { index: number }) {
@@ -1569,12 +1451,6 @@ function openHeaderPopover(params: { e: Event }) {
   popoverMenu.open = true;
 }
 
-function openInfoPopover(params: { e: Event }) {
-  const { e } = params;
-  popoverInfo.event = e;
-  popoverInfo.open = true;
-}
-
 async function openReassignFromMenu(params: { e: Event }) {
   const { e } = params;
   closeMenuPopover();
@@ -1647,13 +1523,7 @@ async function createQuickAccount(name: string, initialBalance: number) {
   });
 
   if (newAccount) {
-    if (quickAccountTargetIndex.value !== null && !canAddMoreItems.value) {
-      addItem();
-      const lastIdx = items.value.length - 1;
-      items.value[lastIdx].accountId = isEntryMode.value
-        ? newAccount.id
-        : { id: newAccount.id };
-    } else if (quickAccountTargetIndex.value !== null) {
+    if (quickAccountTargetIndex.value !== null) {
       const idx = quickAccountTargetIndex.value;
       if (items.value[idx]) {
         items.value[idx].accountId = isEntryMode.value

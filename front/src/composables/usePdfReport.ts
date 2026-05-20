@@ -55,7 +55,7 @@ export function usePdfReport() {
         scale: 2,
         useCORS: true,
         backgroundColor: '#ffffff',
-        ...(opts.html2canvasOptions || {}),
+        ...opts.html2canvasOptions,
       } as any);
 
       if (downloadBtn && prevDisplay !== null)
