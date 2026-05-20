@@ -269,7 +269,7 @@ class StatisticsController {
         useCORS: true,
         backgroundColor: '#ffffff',
         logging: false,
-        ...(opts.html2canvasOptions || {}),
+        ...opts.html2canvasOptions,
       });
       console.log('[StatisticsController] Canvas created:', canvas.width, 'x', canvas.height);
 
