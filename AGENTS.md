@@ -1,23 +1,46 @@
-# AGENTS.md - SSO Server
+# AGENTS.md - OneSpend
 
 ## Project Structure
 
-Monorepo with two workspaces:
+Monorepo con dos directorios:
 - `back/` — Laravel 12 backend (PHP 8.2+)
-- `front/` — Ionic Vue 8 frontend (Node.js, pnpm)
+- `front/` — Ionic Vue 8 frontend multi-plataforma (Node.js, pnpm)
 
 ## Developer Commands
 
 ```bash
-# Run both services (concurrently)
-pnpm run dev
+# Run backend (concurrent: serve + queue + pail + npm dev)
+cd back && composer dev
 
-# Run individually
-pnpm run dev:front  # Vite dev server
-pnpm run dev:back  # php artisan serve --port=8001
+# Run frontend (web)
+cd front && pnpm run dev
 
-# Build frontend (includes lint + typecheck)
-cd front && pnpm run build
+# Build frontend (web)
+cd front && pnpm run build           # vite build (sin lint/typecheck)
+
+# Frontend typecheck
+cd front && pnpm run typecheck       # vue-tsc --noEmit
+
+# Frontend lint
+cd front && pnpm run lint            # oxlint + eslint
+
+# Frontend format
+cd front && pnpm run format
+
+# Frontend unit tests
+cd front && pnpm run test:unit
+
+# Frontend e2e tests
+cd front && pnpm run test:e2e
+
+# Backend tests
+cd back && composer test
+
+# Electron (desktop development)
+cd front && pnpm run electron:dev
+
+# Electron (production build)
+cd front && pnpm run build && pnpm run electron:build
 ```
 
 ## Backend Setup
@@ -27,44 +50,56 @@ cd back
 composer install
 cp .env.example .env
 php artisan key:generate
-php artisan jwt:generate-keys  # Creates back/keys/private.pem & public.pem
 php artisan migrate
 php artisan db:seed
-php artisan serve --port=8001
+php artisan serve
 ```
 
-**Default credentials:** `admin@sso.local` / `admin123`
+**Database:** MariaDB (default: `onespend` database)
+
+**Default port:** 8000
+
+## Architecture
+
+### Backend (`back/`)
+- **Laravel 12** con PHP 8.2+
+- **Autenticación:** Laravel Sanctum + Breeze (registro, login, password reset, email verification)
+- **Dominio:** Control de gastos/presupuestos (budget/expense tracking)
+- `app/Models/` — Account, BudgetEntry, BudgetEntryGroup, BudgetProvider, BudgetProviderProduct, Income, Supplier, SupplierProduct, SyncMetadata, Template, Attachment
+- `app/Http/Controllers/` — Auth (Breeze), AttachmentController, SyncController
+- `routes/api.php` — Sync API (changes, merge, full, resolve-conflict) + Attachments CRUD
+- `routes/auth.php` — Breeze auth routes
+- **Colas:** database driver para queue
+- **Sin JWT ni OAuth2** — usa Sanctum tokens
+
+### Frontend (`front/`)
+- **Ionic 8** + **Vue 3** con Composition API
+- **Multi-plataforma:**
+  - Web (Vite 5)
+  - Android (Capacitor 8, app ID: com.dowardev.abogaz)
+  - Desktop (Electron 33 con cross-platform builds: Linux, Windows, Mac, RPM)
+- **Pinia** para estado
+- **Chart.js** + vue-chartjs para gráficos
+- **Offline-first:** API Sync con resolución de conflictos
+- `src/controllers/` — Controladores de negocio
+- `src/composables/` — Composables Vue
+- `src/stores/` — Pinia stores
+- `src/services/` — Servicios API
+- `src/migrations/` — Migraciones client-side (offline storage)
+- `src/views/` — Vistas organizadas por feature
 
 ## Testing
 
 ```bash
-# Backend tests (PHPUnit)
+# Backend (PHPUnit)
 cd back && composer test
 
-# Frontend unit tests (Vitest)
+# Frontend unit (Vitest)
 cd front && pnpm run test:unit
 
 # Frontend e2e (Cypress)
 cd front && pnpm run test:e2e
-
-# Frontend lint
-cd front && pnpm run lint
 ```
-
-## Key Notes
-
-- Backend runs on **port 8001** (not Laravel default 8000)
-- JWT uses RS256; keys must exist in `back/keys/` before token generation
-- Frontend build (`pnpm run build`) runs **ESLint + vue-tsc** before Vite build
-- Root `package.json` uses pnpm workspaces; always use `pnpm` from root
-- OAuth2 clients must be registered via admin API before use
-
-## Architecture
-
-- `back/app/` — Controllers, Models, Services
-- `back/routes/api.php` — All API endpoints
-- `front/src/` — Vue components, views, router, stores
-- `/.well-known/jwks` — JWKS endpoint for JWT verification
 
 ## Code Conventions
 
@@ -86,12 +121,7 @@ function holaMundo(objeto1: string, objeto2: number) { ... }
 
 ### Frontend (Vue Components): Controller or Composable Communication
 
-Vue components may contain any **local** logic (props, emits, computed, watch,
-onMounted, reactive variables, internal functions, etc.) that is internal to the
-component. However, any logic that is **shared** with or reused by other parts of
-the application — such as API calls, store access, or cross-component business
-logic — must go through **controllers or composables**, depending on what best fits
-the case. These are the bridge between Vue components and external application layers.
+Vue components may contain any **local** logic (props, emits, computed, watch, onMounted, reactive variables, internal functions, etc.) that is internal to the component. However, any logic that is **shared** with or reused by other parts of the application — such as API calls, store access, or cross-component business logic — must go through **controllers or composables**, depending on what best fits the case. These are the bridge between Vue components and external application layers.
 
 ```ts
 // ✅ Correct — local logic in component is fine
@@ -118,10 +148,6 @@ import { authApi } from '@/services/auth'
 authApi.login(params)
 ```
 
-## Commit Policy
-
-NEVER create git commits unless the user explicitly requests it. This overrides any skill or workflow that suggests committing as a final step.
-
 ### Frontend (Vue Components): Template Structure
 
 All Vue components must follow the structure and rules defined in `guides/TemplateView.vue`. Key sections in order:
@@ -141,3 +167,7 @@ All Vue components must follow the structure and rules defined in `guides/Templa
 8. Computed
 9. OnMounted
 10. Functions (must use named parameters pattern)
+
+## Commit Policy
+
+NEVER create git commits unless the user explicitly requests it. This overrides any skill or workflow that suggests committing as a final step.
