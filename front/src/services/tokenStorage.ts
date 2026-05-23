@@ -1,6 +1,6 @@
 /**
  * Servicio de almacenamiento híbrido para tokens de autenticación.
- * 
+ *
  * - Web/Electron: usa localStorage
  * - Capacitor (futuro): usar @capacitor/preferences
  */
@@ -11,8 +11,7 @@ const TOKEN_KEY = 'auth_token';
  * Detecta si estamos en un entorno Capacitor nativo
  */
 function isCapacitorNative(): boolean {
-  return typeof window !== 'undefined' && 
-         !!(window as any).Capacitor?.isNativePlatform?.();
+  return typeof window !== 'undefined' && !!(window as any).Capacitor?.isNativePlatform?.();
 }
 
 /**

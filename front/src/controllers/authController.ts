@@ -41,15 +41,12 @@ class AuthController {
   /**
    * Realiza una petición HTTP con el token Bearer si está disponible
    */
-  private async request<T>(
-    endpoint: string,
-    options: RequestInit = {}
-  ): Promise<T> {
+  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const token = await getToken();
-    
+
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      'Accept': 'application/json',
+      Accept: 'application/json',
       ...(options.headers as Record<string, string>),
     };
 
@@ -64,7 +61,9 @@ class AuthController {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || errorData.error || `HTTP error! status: ${response.status}`);
+      throw new Error(
+        errorData.message || errorData.error || `HTTP error! status: ${response.status}`,
+      );
     }
 
     const text = await response.text();
@@ -99,7 +98,7 @@ class AuthController {
       }
 
       this.store.setUser(response.user);
-      
+
       return { user: response.user };
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : 'Error al iniciar sesión';
@@ -113,7 +112,13 @@ class AuthController {
   /**
    * Registra un nuevo usuario
    */
-  async register(params: { name: string; user: string; email: string; password: string; password_confirmation: string }): Promise<AuthResponse> {
+  async register(params: {
+    name: string;
+    user: string;
+    email: string;
+    password: string;
+    password_confirmation: string;
+  }): Promise<AuthResponse> {
     this.store.setIsLoading(true);
     this.store.setError(null);
 
@@ -138,7 +143,7 @@ class AuthController {
       }
 
       this.store.setUser(response.user);
-      
+
       return { user: response.user };
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : 'Error al registrar';
@@ -158,7 +163,7 @@ class AuthController {
     if (pendingItems > 0) {
       const confirmed = window.confirm(
         `Tienes ${pendingItems} cambio(s) pendiente(s) de sincronizar. ` +
-        `Si cierras sesión ahora, estos datos se perderán. ¿Deseas continuar?`
+          `Si cierras sesión ahora, estos datos se perderán. ¿Deseas continuar?`,
       );
 
       if (!confirmed) {
@@ -217,7 +222,7 @@ class AuthController {
         this.store.setUser(user);
         return true;
       }
-      
+
       // Token inválido o expirado
       await removeToken();
       this.store.setUser(null);

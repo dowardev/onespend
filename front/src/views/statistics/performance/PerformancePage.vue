@@ -31,23 +31,13 @@
       <ion-grid style="height: 94%">
         <ion-row class="ion-justify-content-center">
           <ion-col size="12" size-md="10" size-lg="8">
-            <PerformanceComponent
-              ref="performanceComponentRef"
-              :period="mainSegment"
-            />
+            <PerformanceComponent ref="performanceComponentRef" :period="mainSegment" />
           </ion-col>
         </ion-row>
       </ion-grid>
 
-      <ion-modal
-        class="config-modal"
-        :is-open="isConfigModalOpen"
-        @did-dismiss="closeConfigModal"
-      >
-        <PersonalFinanceConfigModal
-          @close="closeConfigModal"
-          @save="onConfigSave"
-        />
+      <ion-modal class="config-modal" :is-open="isConfigModalOpen" @did-dismiss="closeConfigModal">
+        <PersonalFinanceConfigModal @close="closeConfigModal" @save="onConfigSave" />
       </ion-modal>
 
       <ion-loading :is-open="isExporting" message="Generando Excel..." />
@@ -130,8 +120,7 @@ async function exportToExcel() {
       summaryData: {
         balance: performanceComponentRef.value?.summary?.balance || 0,
         savings: performanceComponentRef.value?.summary?.savings || 0,
-        savingsPercentage:
-          performanceComponentRef.value?.summary?.savingsPercentage || 0,
+        savingsPercentage: performanceComponentRef.value?.summary?.savingsPercentage || 0,
       },
       configData: {
         savingsPercent: performanceComponentRef.value?.config?.savingsPercent || 20,

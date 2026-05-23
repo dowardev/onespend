@@ -17,9 +17,8 @@
         <ion-row class="ion-justify-content-center">
           <ion-col size="6">
             <p>
-              Esta herramienta añade la clave <code>entries</code> a las copias
-              de seguridad antiguas que sólo contienen
-              <code>ingresos</code> para mantener compatibilidad.
+              Esta herramienta añade la clave <code>entries</code> a las copias de seguridad
+              antiguas que sólo contienen <code>ingresos</code> para mantener compatibilidad.
             </p>
 
             <div class="stepper">
@@ -41,10 +40,7 @@
             </div>
 
             <div class="actions">
-              <ion-button
-                fill="outline"
-                :disabled="stepIndex === 0 || running"
-                @click="prevStep"
+              <ion-button fill="outline" :disabled="stepIndex === 0 || running" @click="prevStep"
                 >Atrás</ion-button
               >
 
@@ -62,16 +58,12 @@
 
               <template v-if="stepIndex === 3">
                 <ion-item lines="none">
-                  <ion-label
-                    >Confirmo que he descargado la copia de seguridad</ion-label
-                  >
+                  <ion-label>Confirmo que he descargado la copia de seguridad</ion-label>
                   <ion-checkbox slot="end" v-model="backupConfirmed" />
                 </ion-item>
               </template>
 
-              <ion-button fill="clear" :disabled="running" @click="resetAll"
-                >Reiniciar</ion-button
-              >
+              <ion-button fill="clear" :disabled="running" @click="resetAll">Reiniciar</ion-button>
 
               <ion-button
                 v-if="isDev"
@@ -88,18 +80,11 @@
             <div
               v-if="confirmAlert.open"
               class="inline-confirm"
-              style="
-                padding: 16px;
-                border: 1px solid #eee;
-                margin: 12px 0;
-                border-radius: 8px;
-              "
+              style="padding: 16px; border: 1px solid #eee; margin: 12px 0; border-radius: 8px"
             >
               <p>{{ confirmAlert.message }}</p>
               <div style="display: flex; gap: 8px; margin-top: 8px">
-                <ion-button fill="outline" @click="confirmCancel"
-                  >Cancelar</ion-button
-                >
+                <ion-button fill="outline" @click="confirmCancel">Cancelar</ion-button>
                 <ion-button
                   color="danger"
                   @click="
@@ -114,9 +99,7 @@
             </div>
 
             <div class="status-area">
-              <div v-if="running" class="status">
-                Ejecutando... {{ progressText }}
-              </div>
+              <div v-if="running" class="status">Ejecutando... {{ progressText }}</div>
               <div v-if="error" class="error">Error: {{ error }}</div>
 
               <div v-if="dryRunResult">
@@ -244,23 +227,21 @@ const confirmAlert = reactive({
 // Computed
 const changedCount = computed(() => {
   if (!dryRunResult.value) return 0;
-  return dryRunResult.value.filter(r => r.changed).length;
+  return dryRunResult.value.filter((r) => r.changed).length;
 });
 
 const applyChangedCount = computed(() => {
   if (!applyResult.value) return 0;
-  return applyResult.value.filter(r => r.changed).length;
+  return applyResult.value.filter((r) => r.changed).length;
 });
 
 const sampleResults = computed(() => {
   if (!dryRunResult.value) return [];
-  return dryRunResult.value.filter(r => r.changed).slice(0, 10);
+  return dryRunResult.value.filter((r) => r.changed).slice(0, 10);
 });
 
 const hasChanges = computed(() => {
-  return !!(
-    dryRunResult.value && dryRunResult.value.some((r: MigrationResult) => r.changed)
-  );
+  return !!(dryRunResult.value && dryRunResult.value.some((r: MigrationResult) => r.changed));
 });
 
 const primaryLabel = computed(() => {
@@ -279,7 +260,7 @@ const primaryLabel = computed(() => {
 });
 
 // dev-only test insert button
-const isDev = !!(import.meta.env?.DEV);
+const isDev = !!import.meta.env?.DEV;
 
 const confirmButtons = [
   {
@@ -449,17 +430,11 @@ function onAlertDidDismiss(params: { event: CustomEvent }) {
   const { event } = params;
   try {
     const role = event?.detail?.role ?? null;
-    if (
-      (import.meta as unknown as { env?: Record<string, string | undefined> })
-        .env?.DEV
-    ) {
+    if ((import.meta as unknown as { env?: Record<string, string | undefined> }).env?.DEV) {
       console.log('ion-alert did-dismiss, role=', role);
     }
     if (role === 'confirm') {
-      if (
-        (import.meta as unknown as { env?: Record<string, string | undefined> })
-          .env?.DEV
-      ) {
+      if ((import.meta as unknown as { env?: Record<string, string | undefined> }).env?.DEV) {
         console.log('onAlertDidDismiss: triggering doApplyMigration');
       }
       void doApplyMigration();
@@ -529,9 +504,7 @@ async function primaryAction() {
       return runDryRun();
     case 2:
       if (!hasChanges.value) {
-        alert(
-          'No se encontraron cambios para aplicar. No es necesario continuar.'
-        );
+        alert('No se encontraron cambios para aplicar. No es necesario continuar.');
         return;
       }
       stepIndex.value = 3;
@@ -550,8 +523,7 @@ onMounted(() => {
     if (route && route.query && route.query.autoDryRun) {
       void runDryRun();
     }
-  } catch (e) {
-  }
+  } catch (e) {}
 });
 
 // End Life cycle

@@ -52,7 +52,9 @@
         </ion-item>
         <ion-item lines="none">
           <ion-label><strong>Progreso</strong></ion-label>
-          <ion-note slot="end"><strong>{{ progressPercent.toFixed(1) }}%</strong></ion-note>
+          <ion-note slot="end"
+            ><strong>{{ progressPercent.toFixed(1) }}%</strong></ion-note
+          >
         </ion-item>
       </ion-list>
 

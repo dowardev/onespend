@@ -78,11 +78,11 @@ router.isReady().then(async () => {
 
   app.mount('#app');
   logBreakpoint();
-  
+
   // Add resize listener with cleanup support
   const resizeListener = () => logBreakpoint();
   window.addEventListener('resize', resizeListener);
-  
+
   // Cleanup on app unmount (if needed)
   app.unmount = () => {
     window.removeEventListener('resize', resizeListener);

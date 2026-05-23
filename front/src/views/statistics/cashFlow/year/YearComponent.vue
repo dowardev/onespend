@@ -36,7 +36,7 @@
         </ion-col>
 
         <ion-col size="6">
-        <YearChartComponent :chart-data="chartData" :chart-options="chartOptions" />
+          <YearChartComponent :chart-data="chartData" :chart-options="chartOptions" />
         </ion-col>
       </ion-row>
     </div>

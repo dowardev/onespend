@@ -5,14 +5,14 @@
         <ion-title>Performance Test Suite</ion-title>
       </ion-toolbar>
     </ion-header>
-    
+
     <ion-content class="ion-padding">
       <ion-card>
         <ion-card-header>
           <ion-card-title>Optimization Tests</ion-card-title>
           <ion-card-subtitle>Test Phase 1 Performance Improvements</ion-card-subtitle>
         </ion-card-header>
-        
+
         <ion-card-content>
           <!-- Memory Test -->
           <ion-item>
@@ -20,9 +20,7 @@
               <h2>Memory Usage Test</h2>
               <p>Test memory before/after operations</p>
             </ion-label>
-            <ion-button slot="end" @click="testMemoryUsage">
-              Test Memory
-            </ion-button>
+            <ion-button slot="end" @click="testMemoryUsage"> Test Memory </ion-button>
           </ion-item>
 
           <!-- JSON Cloning Test -->
@@ -31,9 +29,7 @@
               <h2>JSON Cloning Test</h2>
               <p>Compare JSON.parse vs structuredClone</p>
             </ion-label>
-            <ion-button slot="end" @click="testJSONCloning">
-              Test Cloning
-            </ion-button>
+            <ion-button slot="end" @click="testJSONCloning"> Test Cloning </ion-button>
           </ion-item>
 
           <!-- Image Compression Test -->
@@ -42,15 +38,13 @@
               <h2>Image Compression Test</h2>
               <p>Test Base64 image compression</p>
             </ion-label>
-            <ion-button slot="end" @click="triggerImageTest">
-              Test Images
-            </ion-button>
+            <ion-button slot="end" @click="triggerImageTest"> Test Images </ion-button>
             <input
               ref="fileInput"
               type="file"
               accept="image/*"
               @change="onFileChange"
-              style="display: none;"
+              style="display: none"
             />
           </ion-item>
 
@@ -71,9 +65,7 @@
               <h2>Clear Metrics</h2>
               <p>Reset all test data</p>
             </ion-label>
-            <ion-button slot="end" @click="clearMetrics" color="danger">
-              Clear
-            </ion-button>
+            <ion-button slot="end" @click="clearMetrics" color="danger"> Clear </ion-button>
           </ion-item>
         </ion-card-content>
       </ion-card>
@@ -118,21 +110,21 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue';
-import { 
-  IonPage, 
-  IonHeader, 
-  IonToolbar, 
-  IonTitle, 
-  IonContent, 
-  IonCard, 
-  IonCardHeader, 
-  IonCardTitle, 
-  IonCardSubtitle, 
-  IonCardContent, 
-  IonItem, 
-  IonLabel, 
-  IonButton, 
-  IonNote
+import {
+  IonPage,
+  IonHeader,
+  IonToolbar,
+  IonTitle,
+  IonContent,
+  IonCard,
+  IonCardHeader,
+  IonCardTitle,
+  IonCardSubtitle,
+  IonCardContent,
+  IonItem,
+  IonLabel,
+  IonButton,
+  IonNote,
 } from '@ionic/vue';
 import { usePerformanceMonitoring } from '@/utils/performanceMonitor';
 import { registerCleanup, removeTemporaryElements, useDOMCleanup } from '@/utils/domCleanup';
@@ -164,7 +156,7 @@ const { registerTask, unregisterCleanup: unregisterTask } = useDOMCleanup();
 onMounted(() => {
   updateMemoryStatus();
   memoryInterval = setInterval(updateMemoryStatus, 2000);
-  
+
   // Remove any existing temporary elements on mount
   removeTemporaryElements();
 });
@@ -174,7 +166,7 @@ onUnmounted(() => {
   if (memoryInterval) {
     clearInterval(memoryInterval);
   }
-  
+
   // Clean up all temporary elements
   removeTemporaryElements();
 });
@@ -206,14 +198,18 @@ function testMemoryUsage() {
   testContainer.style.visibility = 'hidden';
   testContainer.setAttribute('data-performance-test', 'container');
   document.body.appendChild(testContainer);
-  
+
   // Register cleanup task
-  registerTask('memory-test-container', () => {
-    if (testContainer.parentNode) {
-      testContainer.parentNode.removeChild(testContainer);
-    }
-  }, testContainer);
-  
+  registerTask(
+    'memory-test-container',
+    () => {
+      if (testContainer.parentNode) {
+        testContainer.parentNode.removeChild(testContainer);
+      }
+    },
+    testContainer,
+  );
+
   testMemoryWithDOM(() => {
     // Ensure document exists before creating elements
     if (!document) {
@@ -223,22 +219,22 @@ function testMemoryUsage() {
 
     const container = document.createElement('div');
     container.setAttribute('data-test-container', 'true');
-    
+
     for (let i = 0; i < 100; i++) {
       const div = document.createElement('div');
       div.innerHTML = `<p>Test element ${i}</p>`;
       div.setAttribute('data-test-element', 'true');
       container.appendChild(div);
     }
-    
+
     // Add to isolated container first
     testContainer.appendChild(container);
-    
+
     // Immediate cleanup instead of timeout to prevent race conditions
     if (container.parentNode) {
       container.parentNode.removeChild(container);
     }
-    
+
     // Clean up test container
     unregisterTask('memory-test-container');
   });
@@ -284,10 +280,10 @@ function triggerImageTest() {
 async function onFileChange(event: Event) {
   const target = event.target as HTMLInputElement;
   const file = target.files?.[0];
-  
+
   if (file) {
     await testImageCompression(file);
-    
+
     testResults.value.push({
       test: 'Image Compression Test',
       result: 'Image compression test completed - check console for compression ratios',
@@ -297,7 +293,7 @@ async function onFileChange(event: Event) {
 
 function generateReport() {
   genReport();
-  
+
   testResults.value.push({
     test: 'Performance Report',
     result: 'Full performance report generated - check console for complete analysis',

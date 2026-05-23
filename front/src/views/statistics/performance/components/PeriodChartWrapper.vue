@@ -1,9 +1,6 @@
 <template>
   <div style="height: 100%">
-    <DayPerformanceChart
-      :chart-data="styledChartData"
-      :chart-options="chartOptions"
-    />
+    <DayPerformanceChart :chart-data="styledChartData" :chart-options="chartOptions" />
   </div>
 </template>
 
@@ -18,13 +15,13 @@ const props = withDefaults(
     chartOptions?: ChartOptions<'bar'> | null;
     colorIndex?: number;
   }>(),
-  { colorIndex: 1, chartOptions: null }
+  { colorIndex: 1, chartOptions: null },
 );
 
 function safeCloneChartData(data: ChartData<'bar'>): ChartData<'bar'> {
   return {
     labels: data.labels ? JSON.parse(JSON.stringify(data.labels)) : [],
-    datasets: (data.datasets || []).map(dataset => ({
+    datasets: (data.datasets || []).map((dataset) => ({
       label: dataset.label,
       data: Array.isArray(dataset.data) ? [...dataset.data] : dataset.data,
       backgroundColor: dataset.backgroundColor,
@@ -40,9 +37,7 @@ function safeCloneChartData(data: ChartData<'bar'>): ChartData<'bar'> {
 
 // safe reactive clone used for the canvas chart
 const styledChartData = shallowRef<ChartData<'bar'>>(
-  props.chartData
-    ? safeCloneChartData(props.chartData)
-    : { labels: [], datasets: [] }
+  props.chartData ? safeCloneChartData(props.chartData) : { labels: [], datasets: [] },
 );
 
 // Pastel neon colors palette (copiado de DayChartComponent)
@@ -72,8 +67,7 @@ function applyNeonStyles(data: ChartData<'bar'>): ChartData<'bar'> {
         const hoverBgColors: string[] = [];
 
         for (let i = 0; i < dataArray.length; i++) {
-          const colors =
-            pastelNeonColors[(props.colorIndex + i) % pastelNeonColors.length];
+          const colors = pastelNeonColors[(props.colorIndex + i) % pastelNeonColors.length];
           bgColors.push(colors.bg);
           borderColors.push(colors.border);
           hoverBgColors.push(colors.border.replace(', 1)', ', 0.6)'));
@@ -91,10 +85,7 @@ function applyNeonStyles(data: ChartData<'bar'>): ChartData<'bar'> {
         };
       }
 
-      const colors =
-        pastelNeonColors[
-          (props.colorIndex + datasetIndex) % pastelNeonColors.length
-        ];
+      const colors = pastelNeonColors[(props.colorIndex + datasetIndex) % pastelNeonColors.length];
       return {
         ...dataset,
         backgroundColor: colors.bg,
@@ -105,7 +96,7 @@ function applyNeonStyles(data: ChartData<'bar'>): ChartData<'bar'> {
         hoverBorderColor: colors.border,
         hoverBorderWidth: 3,
       };
-    }
+    },
   );
 
   return cloned;
@@ -113,17 +104,15 @@ function applyNeonStyles(data: ChartData<'bar'>): ChartData<'bar'> {
 
 watch(
   () => props.chartData,
-  v => {
+  (v) => {
     try {
       const cloned = v ? safeCloneChartData(v) : { labels: [], datasets: [] };
       styledChartData.value = applyNeonStyles(cloned);
     } catch (_e) {
-      styledChartData.value = v
-        ? safeCloneChartData(v)
-        : { labels: [], datasets: [] };
+      styledChartData.value = v ? safeCloneChartData(v) : { labels: [], datasets: [] };
     }
   },
-  { immediate: true, deep: true }
+  { immediate: true, deep: true },
 );
 </script>
 

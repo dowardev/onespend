@@ -12,11 +12,11 @@ let cleanupInterval: NodeJS.Timeout;
 onMounted(() => {
   // Initial cleanup
   removeTemporaryElements();
-  
+
   // Set up periodic cleanup (every 5 seconds)
   cleanupInterval = setInterval(() => {
     removeTemporaryElements();
-    
+
     // Log cleanup state for debugging
     if (import.meta.env.DEV) {
       const taskCount = domCleanup.getTaskCount();
@@ -31,7 +31,7 @@ onUnmounted(() => {
   if (cleanupInterval) {
     clearInterval(cleanupInterval);
   }
-  
+
   // Final cleanup
   removeTemporaryElements();
 });

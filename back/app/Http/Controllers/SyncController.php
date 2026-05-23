@@ -391,14 +391,14 @@ case 'budget_entry':
             $modelClass::insert($insertData);
             
             $syncIds = array_column($insertData, 'sync_id');
-            $createdRecords = $modelClass::whereIn('sync_id', $syncIds)->get(['id', 'sync_id']);
+            $createdRecords = $modelClass::whereIn('sync_id', $syncIds)->get(['id', 'sync_id', 'user_id']);
             
             foreach ($createdRecords as $record) {
                 $results[] = ['sync_id' => $record->sync_id, 'id' => $record->id];
                 $this->updateSyncMetadata($entityType, $record->sync_id, 'synced', $userId);
                 
                 if ($entityType === 'budget_entry' && isset($groupsToCreate[$record->sync_id])) {
-                    $this->createBudgetEntryGroups($record->id, $groupsToCreate[$record->sync_id]);
+                    $this->createBudgetEntryGroups($record->id, $record->user_id, $groupsToCreate[$record->sync_id]);
                 }
             }
         }
@@ -406,7 +406,7 @@ case 'budget_entry':
         return $results;
     }
     
-    private function createBudgetEntryGroups(int $entryId, array $groups): void
+    private function createBudgetEntryGroups(int $entryId, int $userId, array $groups): void
     {
         foreach ($groups as $group) {
             $accountId = $group['account_id'] ?? $group['accountId'] ?? null;
@@ -419,6 +419,7 @@ case 'budget_entry':
                 'budget_entry_id' => $entryId,
                 'account_id' => $accountId ? (int)$accountId : null,
                 'amount' => $group['amount'] ?? 0,
+                'user_id' => $userId,
             ]);
         }
     }
@@ -856,7 +857,7 @@ case 'budget_entry':
             }
             
             $createData = $item;
-            unset($createData['id']);
+            unset($createData['id'], $createData['products']);
             
             if ($entityType === 'budget_provider_product' && isset($createData['supplier_product_id'])) {
                 $spId = $createData['supplier_product_id'];
@@ -878,7 +879,7 @@ case 'budget_entry':
             $created = $modelClass::create($createData);
             
             if ($entityType === 'budget_entry' && !empty($groups)) {
-                $this->createBudgetEntryGroups($created->id, $groups);
+                $this->createBudgetEntryGroups($created->id, $created->user_id, $groups);
             }
             
             $this->updateSyncMetadata($entityType, $syncId, 'synced', $userId);
@@ -911,7 +912,7 @@ case 'budget_entry':
         $modelClass = self::ENTITY_TYPES[$entityType];
         
         $updateData = $data;
-        unset($updateData['id'], $updateData['sync_id']);
+        unset($updateData['id'], $updateData['sync_id'], $updateData['products']);
         
         foreach ($updateData as $key => $value) {
             if (in_array($key, ['updated_at']) && is_numeric($value)) {
@@ -929,7 +930,7 @@ case 'budget_entry':
             
             if ($existing && !empty($groups)) {
                 $existing->groups()->delete();
-                $this->createBudgetEntryGroups($existing->id, $groups);
+                $this->createBudgetEntryGroups($existing->id, $existing->user_id, $groups);
             }
         }
         

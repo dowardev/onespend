@@ -23,24 +23,25 @@ const canvasRef = ref<HTMLCanvasElement | null>(null);
 let chartInstance: Chart<'bar'> | null = null;
 let ChartJSInstance: Chart | null = null;
 
-const hasData = computed(() => 
-  props.chartData && 
-  props.chartData.labels && 
-  props.chartData.labels.length > 0 &&
-  props.chartData.datasets && 
-  props.chartData.datasets.length > 0
+const hasData = computed(
+  () =>
+    props.chartData &&
+    props.chartData.labels &&
+    props.chartData.labels.length > 0 &&
+    props.chartData.datasets &&
+    props.chartData.datasets.length > 0,
 );
 
 const canRenderChart = computed(() => hasData.value && isLoaded.value);
 
 async function createChart() {
   if (!canvasRef.value || !canRenderChart.value) return;
-  
+
   const { ChartJS } = await loadChartDependencies();
   if (!ChartJS || !canvasRef.value) return;
-  
+
   ChartJSInstance = ChartJS;
-  
+
   // clean up previous instance if any
   if (chartInstance) {
     try {
@@ -50,14 +51,11 @@ async function createChart() {
   }
 
   try {
-    chartInstance = new ChartJS(
-      canvasRef.value.getContext('2d') as CanvasRenderingContext2D,
-      {
-        type: 'bar',
-        data: props.chartData || { labels: [], datasets: [] },
-        options: (props.chartOptions || {}) as ChartOptions<'bar'>,
-      }
-    );
+    chartInstance = new ChartJS(canvasRef.value.getContext('2d') as CanvasRenderingContext2D, {
+      type: 'bar',
+      data: props.chartData || { labels: [], datasets: [] },
+      options: (props.chartOptions || {}) as ChartOptions<'bar'>,
+    });
   } catch (e) {
     console.error('[DayPerformanceChart] failed to create chart', e);
   }
@@ -80,21 +78,21 @@ onBeforeUnmount(() => {
 
 watch(
   () => props.chartData,
-  newVal => {
+  (newVal) => {
     try {
       if (!chartInstance) {
         createChart();
         return;
       }
       chartInstance.data = JSON.parse(
-        JSON.stringify(newVal || { labels: [], datasets: [] })
+        JSON.stringify(newVal || { labels: [], datasets: [] }),
       ) as ChartData<'bar'>;
       chartInstance.update();
     } catch (e) {
       console.error('[DayPerformanceChart] update error', e);
     }
   },
-  { immediate: true, deep: true }
+  { immediate: true, deep: true },
 );
 
 watch(
@@ -103,23 +101,21 @@ watch(
     if (loaded) {
       createChart();
     }
-  }
+  },
 );
 
 watch(
   () => props.chartOptions,
-  newOpt => {
+  (newOpt) => {
     try {
       if (!chartInstance) return;
-      chartInstance.options = JSON.parse(
-        JSON.stringify(newOpt || {})
-      ) as ChartOptions<'bar'>;
+      chartInstance.options = JSON.parse(JSON.stringify(newOpt || {})) as ChartOptions<'bar'>;
       chartInstance.update();
     } catch (e) {
       console.error('[DayPerformanceChart] options update error', e);
     }
   },
-  { immediate: true, deep: true }
+  { immediate: true, deep: true },
 );
 </script>
 

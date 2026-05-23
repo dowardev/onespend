@@ -14,9 +14,7 @@
           <ion-button
             :disabled="
               !isFormValid ||
-              (!isEntryMode &&
-                hasProductsWithQuantity &&
-                productsCoverage.falta > 0)
+              (!isEntryMode && hasProductsWithQuantity && productsCoverage.falta > 0)
             "
             @click="handleSave"
           >
@@ -39,12 +37,7 @@
             <!-- Provider form -->
             <ion-list class="ion-padding-start ion-padding-end">
               <ion-card class="shadow1">
-                <ion-item
-                  class="transparent"
-                  button
-                  lines="full"
-                  @click="showProviderModal = true"
-                >
+                <ion-item class="transparent" button lines="full" @click="showProviderModal = true">
                   <ion-label class="truncate">
                     Proveedor
                     <p class="truncate">
@@ -68,64 +61,125 @@
               </ion-card>
             </ion-list>
 
-            <!-- Products section (only in full mode) -->
-            <ion-list class="ion-padding-start ion-padding-end">
+            <!-- Products section  -->
+            <ion-list v-if="selectedProvider" class="ion-padding-start ion-padding-end">
+              <ion-list-header>
+                <ion-label>Productos</ion-label>
+
+                <ion-button @click="addTemporaryProduct()">
+                  <ion-icon slot="start" :icon="addOutline" />
+                </ion-button>
+              </ion-list-header>
+
               <ion-card class="shadow1">
-                
+                <ion-item
+                  v-for="product in selectedProvider.products"
+                  :key="'cat_' + (product.sync_id ?? product.id ?? product.name)"
+                  lines="full"
+                  class="transparent"
+                >
+                  <ion-label>
+                    {{ product.name }}
+                    <p>{{ formatPrice({ price: product.price }) }}</p>
+                  </ion-label>
 
-                <template v-if="selectedProvider">
-                  <template v-if="selectedProvider?.products?.length">
-                    <template v-if="!isEntryMode">
-                      <ion-item
-                        v-for="product in selectedProvider.products"
-                        :key="product.name"
-                        lines="full"
-                        class="transparent"
-                      >
-                        <ion-label>
-                          {{ product.name }}
-                          <p>{{ formatPrice({ price: product.price }) }}</p>
-                        </ion-label>
+                  <ion-input
+                    slot="end"
+                    type="number"
+                    placeholder="0"
+                    :value="getProductQuantity({ product })"
+                    style="width: 80px; text-align: end"
+                    :class="{
+                      'ion-invalid': isProductQuantityInvalid({
+                        productId: product.id,
+                      }),
+                      'ion-touched': isProductQuantityTouched({
+                        productId: product.id,
+                      }),
+                    }"
+                    :error-text="getProductQuantityError({ productId: product.id })"
+                    @ion-input="
+                      (e) => {
+                        setProductRawValue({
+                          productId: product.id,
+                          value: e.detail.value || '',
+                        });
+                        setProductQuantity({
+                          product,
+                          productPrice: product.price,
+                          quantity: e.detail.value,
+                        });
+                      }
+                    "
+                  ></ion-input>
+                </ion-item>
 
-                        <ion-input
-                          slot="end"
-                          type="number"
-                          placeholder="0"
-                          :value="getProductQuantity({ product })"
-                          style="width: 80px; text-align: end"
-                          :class="{
-                            'ion-invalid': isProductQuantityInvalid({
-                              productId: product.id,
-                            }),
-                            'ion-touched': isProductQuantityTouched({
-                              productId: product.id,
-                            }),
-                          }"
-                          :error-text="
-                            getProductQuantityError({ productId: product.id })
-                          "
-                          @ion-input="
-                            e => {
-                              setProductRawValue({
-                                productId: product.id,
-                                value: e.detail.value || '',
-                              });
-                              setProductQuantity({
-                                product,
-                                productPrice: product.price,
-                                quantity: e.detail.value,
-                              });
-                            }
-                          "
-                        ></ion-input>
-                      </ion-item>
-                    </template>
-                  </template>
-                </template>
+                <ion-item
+                  v-for="(product, index) in providerProducts.filter((p) => p.isTemporary)"
+                  :key="'temp_' + index"
+                  lines="full"
+                  class="transparent"
+                >
+                  <ion-input
+                    placeholder="Nombre"
+                    :value="product.productName"
+                    style="flex: 1; --padding-start: 0"
+                    @ion-input="
+                      (e) => {
+                        updateTemporaryProduct({
+                          index: providerProducts.indexOf(product),
+                          field: 'productName',
+                          value: e.detail.value || '',
+                        });
+                      }
+                    "
+                  ></ion-input>
+                  <ion-input
+                    type="number"
+                    placeholder="Precio"
+                    :value="product.productPrice || ''"
+                    style="width: 90px; text-align: end"
+                    @ion-input="
+                      (e) => {
+                        updateTemporaryProduct({
+                          index: providerProducts.indexOf(product),
+                          field: 'productPrice',
+                          value: e.detail.value || '0',
+                        });
+                      }
+                    "
+                  ></ion-input>
+                  <ion-input
+                    type="number"
+                    placeholder="Cant"
+                    :value="product.quantity || ''"
+                    style="width: 65px; text-align: end"
+                    @ion-input="
+                      (e) => {
+                        updateTemporaryProduct({
+                          index: providerProducts.indexOf(product),
+                          field: 'quantity',
+                          value: e.detail.value || '0',
+                        });
+                      }
+                    "
+                  ></ion-input>
+                  <ion-button
+                    slot="end"
+                    fill="clear"
+                    color="danger"
+                    size="small"
+                    @click="
+                      removeTemporaryProduct({
+                        index: providerProducts.indexOf(product),
+                      })
+                    "
+                  >
+                    <ion-icon slot="icon-only" :icon="trashOutline" />
+                  </ion-button>
+                </ion-item>
               </ion-card>
             </ion-list>
-
-            
 
             <!-- Products coverage summary (shown when any product has quantity > 0) -->
             <template v-if="!isEntryMode && hasProductsWithQuantity">
@@ -133,37 +187,25 @@
                 <ion-card
                   class="shadow1 no-shadow"
                   :class="
-                    productsCoverage.falta > 0
-                      ? 'coverage-card-warning'
-                      : 'coverage-card-success'
+                    productsCoverage.falta > 0 ? 'coverage-card-warning' : 'coverage-card-success'
                   "
                 >
                   <ion-item lines="none">
                     <ion-icon
                       slot="start"
-                      :icon="
-                        productsCoverage.falta > 0
-                          ? warningOutline
-                          : checkmarkCircleOutline
-                      "
-                      :color="
-                        productsCoverage.falta > 0 ? 'warning' : 'success'
-                      "
+                      :icon="productsCoverage.falta > 0 ? warningOutline : checkmarkCircleOutline"
+                      :color="productsCoverage.falta > 0 ? 'warning' : 'success'"
                       style="font-size: 24px; margin-right: 12px"
                     ></ion-icon>
                     <ion-label>
                       <div class="coverage-info">
-                        <span class="coverage-total"
-                          >Total: {{ formatPrice(productsTotal) }}</span
-                        >
+                        <span class="coverage-total">Total: {{ formatPrice(productsTotal) }}</span>
                         <span class="coverage-entered"
-                          >Cubierto:
-                          {{ formatPrice(productsCoverage.entered) }}</span
+                          >Cubierto: {{ formatPrice(productsCoverage.entered) }}</span
                         >
                         <template v-if="productsCoverage.falta > 0">
                           <span class="coverage-shortage"
-                            >Faltante:
-                            {{ formatPrice(productsCoverage.falta) }}</span
+                            >Faltante: {{ formatPrice(productsCoverage.falta) }}</span
                           >
                         </template>
                         <template v-else>
@@ -189,11 +231,7 @@
             </template>
 
             <!-- Items by account section -->
-            <template
-              v-if="
-                selectedProvider && !isEntryMode
-              "
-            >
+            <template v-if="selectedProvider && !isEntryMode">
               <div class="ion-padding-start ion-padding-end ion-margin-top">
                 <ion-list class="transparent">
                   <ion-list-header>
@@ -211,21 +249,13 @@
 
                   <template v-for="(item, index) in reversedItems" :key="index">
                     <ion-card class="shadow1">
-                      <div
-                        v-if="items.length > 1"
-                        style="display: flex; justify-content: flex-end"
-                      >
+                      <div v-if="items.length > 1" style="display: flex; justify-content: flex-end">
                         <ion-button
                           fill="clear"
                           size="small"
-                          @click="
-                            removeItem({ index: items.length - 1 - index })
-                          "
+                          @click="removeItem({ index: items.length - 1 - index })"
                         >
-                          <ion-icon
-                            :icon="closeOutline"
-                            color="danger"
-                          ></ion-icon>
+                          <ion-icon :icon="closeOutline" color="danger"></ion-icon>
                         </ion-button>
                       </div>
 
@@ -233,15 +263,12 @@
                         lines="full"
                         class="transparent"
                         button
-                        @click="openAccountModal(items.length - 1 - index)"
+                        @click="openAccountModal({ index: items.length - 1 - index })"
                       >
                         <ion-label>
                           Cuenta
                           <p>
-                            {{
-                              getAccountName(item.accountId) ||
-                              'Seleccionar cuenta'
-                            }}
+                            {{ getAccountName({ accountId: item.accountId }) || 'Seleccionar cuenta' }}
                           </p>
                         </ion-label>
                       </ion-item>
@@ -261,9 +288,7 @@
                               index: items.length - 1 - index,
                             }),
                           }"
-                          :error-text="
-                            getAmountError({ index: items.length - 1 - index })
-                          "
+                          :error-text="getAmountError({ index: items.length - 1 - index })"
                         ></ion-input>
                       </ion-item>
                     </ion-card>
@@ -273,15 +298,38 @@
             </template>
           </ion-col>
         </ion-row>
+
+        <ion-row class="ion-justify-content-center">
+          <ion-col size="4">
+            <ion-list class="ion-padding-start ion-padding-end">
+              <ion-list-header>
+                <ion-label> Detalles </ion-label>
+              </ion-list-header>
+
+              <ion-card class="shadow1">
+                <ion-item class="transparent" lines="full" button @click="handleOpenAttachments">
+                  <ion-label>Adjuntos</ion-label>
+                </ion-item>
+                <ion-item class="transparent" lines="none">
+                  <ion-textarea
+                    v-model="providerNotes"
+                    label="Notas"
+                    label-placement="stacked"
+                    placeholder="Agregar notas..."
+                    :auto-grow="true"
+                    :rows="3"
+                  ></ion-textarea>
+                </ion-item>
+              </ion-card>
+            </ion-list>
+          </ion-col>
+        </ion-row>
       </ion-grid>
     </ion-content>
     <!-- end content -->
 
     <!-- Provider Selection Modal -->
-    <ion-modal
-      :is-open="showProviderModal"
-      @will-dismiss="onProviderModalDismiss"
-    >
+    <ion-modal :is-open="showProviderModal" @will-dismiss="onProviderModalDismiss">
       <ion-header class="ion-no-border" mode="ios">
         <ion-toolbar>
           <ion-buttons>
@@ -327,10 +375,7 @@
     </ion-modal>
 
     <!-- Account Selection Modal -->
-    <ion-modal
-      :is-open="showAccountModal"
-      @will-dismiss="onAccountModalDismiss"
-    >
+    <ion-modal :is-open="showAccountModal" @will-dismiss="onAccountModalDismiss">
       <ion-header class="ion-no-border" mode="ios">
         <ion-toolbar>
           <ion-buttons>
@@ -367,7 +412,7 @@
               lines="full"
               button
               class="transparent"
-              @click="selectAccount(acc)"
+              @click="selectAccount({ acc })"
             >
               <ion-label>{{ acc.name }}</ion-label>
               <ion-label slot="end">{{ acc.type || '' }}</ion-label>
@@ -389,9 +434,7 @@
           v-if="!sortedAccounts.available.length && !sortedAccounts.selected.length"
           class="ion-text-center ion-padding"
         >
-          <ion-label color="medium">
-            Presiona '+' para agregar una nueva cuenta
-          </ion-label>
+          <ion-label color="medium"> Presiona '+' para agregar una nueva cuenta </ion-label>
         </div>
       </ion-content>
     </ion-modal>
@@ -412,11 +455,7 @@
         ></ion-datetime>
 
         <ion-item>
-          <ion-button
-            slot="start"
-            fill="clear"
-            size="small"
-            @click="closeReassignPopover"
+          <ion-button slot="start" fill="clear" size="small" @click="closeReassignPopover"
             >Cancelar</ion-button
           >
           <ion-button
@@ -481,6 +520,16 @@
       @did-dismiss="showIncompleteGroupToast = false"
     ></ion-toast>
     <!-- end alerts -->
+
+    <!-- components -->
+    <AttachmentsModal
+      :is-open="showAttachmentsModal"
+      :initial-files="pendingAttachments"
+      :existing-attachments="existingAttachments"
+      @dismiss="closeAttachmentsModal"
+      @save="onAttachmentsSave"
+    />
+    <!-- end components -->
   </ion-page>
 </template>
 
@@ -507,8 +556,10 @@ import {
   IonAlert,
   IonModal,
   IonGrid,
+  IonRow,
   IonCol,
   IonToast,
+  IonTextarea,
 } from '@ionic/vue';
 import {
   arrowBackOutline,
@@ -524,46 +575,39 @@ import { ref, computed, reactive, nextTick, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { format } from 'date-fns';
 import accountsController from '@/controllers/accountsController';
+import { type Supplier, type Product } from '@/controllers/suppliersController';
+import { type Account } from '@/controllers/accountsController';
+import type { EntryGroup } from '@/utils/budgetTypes';
+
+interface AccountWithId extends Account {
+  id: string | number;
+  type?: string;
+}
 // end imports
 
 // controllers
 // end controllers
 
+// composables
+import { useAttachments } from '@/composables/useAttachments';
+// end composables
+
 // components
+import AttachmentsModal from '@/views/budget/entries/componentes/AttachmentsModal.vue';
 // end components
 
 // interface and types imports
 export interface ProviderItem {
   amount: number;
-  accountId: string | number | Account | null;
-}
-
-export interface Account {
-  id: string | number;
-  name: string;
-  type?: string;
-}
-
-export interface Supplier {
-  id?: string | number;
-  sync_id?: string | number;
-  name: string;
-  products?: Array<Product>;
-}
-
-export interface Product {
-  id?: string | number;
-  sync_id?: string;
-  supplierProductId?: string | number;
-  name: string;
-  price: number;
+  accountId: string | number | { id: string | number } | null;
 }
 
 export interface ProviderProduct {
-  supplierProductId: string | number;
+  supplierProductId?: string | number | null;
   productName: string;
   productPrice: number;
   quantity: number;
+  isTemporary?: boolean;
 }
 
 export interface PendingProduct {
@@ -590,11 +634,10 @@ export interface ProviderData {
   accountId?: string | number;
   products?: Array<PendingProduct>;
   items?: Array<ProviderItem>;
+  notes?: string;
 }
 
 // Type aliases for external usage
-export type AccountWithBalance = Account & { balance?: number };
-export type EntryGroup = ProviderItem;
 export type ProviderEditData = ProviderData;
 
 // Internal interfaces for selectProvider function
@@ -637,7 +680,7 @@ const providerProducts = ref<ProviderProduct[]>([]);
 const items = ref<
   Array<{
     amount: number | string;
-    accountId: string | number | Account | { id: string | number } | null;
+    accountId: string | number | { id: string | number } | null;
   }>
 >([{ amount: '', accountId: null }]);
 const popoverReassign = reactive({ open: false, event: null as Event | null });
@@ -648,6 +691,7 @@ const showPicker = ref(true);
 const tempPickerDateISO = ref<string | null>(null);
 
 const productQuantityRawValues = ref<Map<string | number, string>>(new Map());
+const temporaryProductCounter = ref(0);
 
 const showProviderModal = ref(false);
 const showAccountModal = ref(false);
@@ -685,10 +729,7 @@ const quickAccountButtons = [
       if (!data.accountName || data.accountName.trim() === '') {
         return false;
       }
-      createQuickAccount(
-        data.accountName.trim(),
-        Number(data.initialBalance) || 0
-      );
+      createQuickAccount({ name: data.accountName.trim(), initialBalance: Number(data.initialBalance) || 0 });
       return true;
     },
   },
@@ -711,16 +752,32 @@ const deleteAlertButtons = [
 
 // Data from route params
 const routeMode = computed(() => route.query.mode as string | undefined);
-const routeEntryId = computed(
-  () => route.query.entryId as string | number | undefined
-);
-const routeProviderId = computed(
-  () => route.query.providerId as string | number | undefined
-);
+const routeEntryId = computed(() => route.query.entryId as string | number | undefined);
+const routeProviderId = computed(() => route.query.providerId as string | number | undefined);
 
 const isEntryMode = computed(() => routeMode.value === 'entry');
 // Suppliers list
 const allSuppliersList = ref<Supplier[]>([]);
+
+// Attachment state
+const providerSyncId = ref<string | null>(null);
+const providerServerId = ref<number | null>(null);
+const {
+  showAttachmentsModal,
+  pendingAttachments,
+  existingAttachments,
+  deletedAttachments,
+  openAttachments: handleOpenAttachments,
+  handleAttachmentsSave,
+  saveAttachments,
+  deleteAllAttachments,
+  dismissModal: closeAttachmentsModal,
+} = useAttachments({ entityType: 'providers', syncId: providerSyncId });
+// end attachment state
+
+// Notes state
+const providerNotes = ref('');
+// end notes state
 
 // Compute accounts from controller
 const accounts = computed(() => {
@@ -732,9 +789,7 @@ const accounts = computed(() => {
 // onMounted - initialize form based on route params
 onMounted(async () => {
   // Sync suppliers
-  const { SuppliersController } = await import(
-    '@/controllers/suppliersController'
-  );
+  const { SuppliersController } = await import('@/controllers/suppliersController');
   const suppliersCtrl = new SuppliersController();
   const suppliers = await suppliersCtrl.listSuppliers();
   allSuppliersList.value = suppliers || [];
@@ -752,12 +807,8 @@ onMounted(async () => {
 });
 
 async function initializeFromEntry() {
-  const { default: budgetController } = await import(
-    '@/controllers/budgetController'
-  );
-  const { SuppliersController } = await import(
-    '@/controllers/suppliersController'
-  );
+  const { default: budgetController } = await import('@/controllers/budgetController');
+  const { SuppliersController } = await import('@/controllers/suppliersController');
   const suppliersCtrl = new SuppliersController();
 
   const entryId = routeEntryId.value;
@@ -774,16 +825,12 @@ async function initializeFromEntry() {
 
   if (supplierSyncId) {
     fullSupplier =
-      allSuppliers.find(
-        (s: Supplier) => String(s.sync_id) === String(supplierSyncId)
-      ) ||
-      allSuppliers.find(
-        (s: Supplier) => String(s.id) === String(supplierSyncId)
-      );
+      allSuppliers.find((s: Supplier) => String(s.sync_id) === String(supplierSyncId)) ||
+      allSuppliers.find((s: Supplier) => String(s.id) === String(supplierSyncId));
   }
   if (!fullSupplier) {
     fullSupplier = allSuppliers.find(
-      (s: Supplier) => s.name?.toLowerCase() === providerName.toLowerCase()
+      (s: Supplier) => s.name?.toLowerCase() === providerName.toLowerCase(),
     );
   }
 
@@ -822,21 +869,18 @@ async function initializeFromEntry() {
 }
 
 async function initializeFromProvider() {
-  const { default: budgetController } = await import(
-    '@/controllers/budgetController'
-  );
-  const { SuppliersController } = await import(
-    '@/controllers/suppliersController'
-  );
+  const { default: budgetController } = await import('@/controllers/budgetController');
+  const { SuppliersController } = await import('@/controllers/suppliersController');
   const suppliersCtrl = new SuppliersController();
 
   const providerId = routeProviderId.value;
   const providers = budgetController.getProviders();
-  const provider = providers.find(
-    (p: any) => String(p.id) === String(providerId)
-  );
+  const provider = providers.find((p: any) => String(p.id) === String(providerId));
 
   if (!provider) return;
+
+  providerSyncId.value = provider.sync_id || null;
+  providerServerId.value = provider.serverId ?? null;
 
   const supplierSyncId = provider._supplierId || provider.id;
   const allSuppliers = suppliersCtrl.getSuppliers();
@@ -844,12 +888,8 @@ async function initializeFromProvider() {
 
   if (supplierSyncId) {
     fullSupplier =
-      allSuppliers.find(
-        (s: Supplier) => String(s.sync_id) === String(supplierSyncId)
-      ) ||
-      allSuppliers.find(
-        (s: Supplier) => String(s.id) === String(supplierSyncId)
-      );
+      allSuppliers.find((s: Supplier) => String(s.sync_id) === String(supplierSyncId)) ||
+      allSuppliers.find((s: Supplier) => String(s.id) === String(supplierSyncId));
   }
 
   selectedProvider.value = fullSupplier
@@ -861,13 +901,25 @@ async function initializeFromProvider() {
       }
     : null;
 
+  // Load saved products (including temporaries) from the provider
+  providerProducts.value.splice(0, providerProducts.value.length);
+  if (provider.products && Array.isArray(provider.products)) {
+    for (const prod of provider.products) {
+      const isTemporary = !prod.supplierProductId;
+      providerProducts.value.push({
+        supplierProductId:
+          prod.supplierProductId || `temp_restore_${providerProducts.value.length}_${Date.now()}`,
+        productName: prod.productName || '',
+        productPrice: Number(prod.productPrice) || 0,
+        quantity: Number(prod.quantity) || 0,
+        isTemporary,
+      });
+    }
+  }
+
   // Load items from provider
   items.value.splice(0, items.value.length);
-  if (
-    provider.items &&
-    Array.isArray(provider.items) &&
-    provider.items.length > 0
-  ) {
+  if (provider.items && Array.isArray(provider.items) && provider.items.length > 0) {
     provider.items.forEach((item: any) => {
       const accountIdValue = item.accountId;
       items.value.push({
@@ -882,11 +934,12 @@ async function initializeFromProvider() {
   } else {
     items.value.push({
       amount: provider.estimated ?? '',
-      accountId: provider.accountId
-        ? { id: provider.accountId }
-        : getDefaultAccountId(),
+      accountId: provider.accountId ? { id: provider.accountId } : getDefaultAccountId(),
     });
   }
+
+  // Load notes
+  providerNotes.value = provider.notes || '';
 
   // Initialize date
   if (provider.date) {
@@ -896,8 +949,6 @@ async function initializeFromProvider() {
     await setTodayDate();
   }
 }
-
-
 
 // computed
 const pageTitle = computed(() => {
@@ -920,7 +971,7 @@ const providerName = computed(() => {
 const filteredProviders = computed(() => {
   if (!searchQuery.value) return allSuppliersList.value;
   return allSuppliersList.value.filter((p: Supplier) =>
-    p.name.toLowerCase().includes(searchQuery.value.toLowerCase())
+    p.name.toLowerCase().includes(searchQuery.value.toLowerCase()),
   );
 });
 
@@ -929,21 +980,21 @@ const selectedAccountIds = computed(() => {
   return new Set(
     items.value
       .filter((_, i) => i !== skipIndex)
-      .map(item => {
+      .map((item) => {
         if (!item.accountId) return null;
         return typeof item.accountId === 'object'
           ? (item.accountId as { id: string | number }).id
           : item.accountId;
       })
-      .filter((id): id is string | number => id !== null)
+      .filter((id): id is string | number => id !== null),
   );
 });
 
 const sortedAccounts = computed(() => {
   const query = accountSearchQuery.value?.toLowerCase() || '';
-  const available: Account[] = [];
-  const selected: Account[] = [];
-  for (const acc of accounts.value) {
+  const available: AccountWithId[] = [];
+  const selected: AccountWithId[] = [];
+  for (const acc of accounts.value as AccountWithId[]) {
     if (query && !acc.name.toLowerCase().includes(query)) continue;
     if (selectedAccountIds.value.has(acc.id)) {
       selected.push(acc);
@@ -955,30 +1006,31 @@ const sortedAccounts = computed(() => {
 });
 
 const productsTotal = computed(() => {
-  if (!selectedProvider.value?.products) return 0;
-  return selectedProvider.value.products.reduce(
-    (sum: number, product: Product) => {
+  let total = 0;
+  if (selectedProvider.value?.products) {
+    for (const product of selectedProvider.value.products) {
       const productId = product.sync_id ?? product.id;
       const providerProduct = providerProducts.value.find(
-        p => String(p.supplierProductId) === String(productId)
+        (p) => String(p.supplierProductId) === String(productId),
       );
       const qty = providerProduct?.quantity || 0;
-      return sum + qty * (product.price || 0);
-    },
-    0
-  );
+      total += qty * (product.price || 0);
+    }
+  }
+  for (const tp of providerProducts.value) {
+    if (tp.isTemporary && tp.quantity > 0) {
+      total += tp.quantity * tp.productPrice;
+    }
+  }
+  return total;
 });
 
 const hasProductsWithQuantity = computed(() => {
-  if (!selectedProvider.value?.products) return false;
-  return providerProducts.value.some(p => (p.quantity || 0) > 0);
+  return providerProducts.value.some((p) => (p.quantity || 0) > 0);
 });
 
 const productsCoverage = computed(() => {
-  const totalEntered = items.value.reduce(
-    (sum, item) => sum + (Number(item.amount) || 0),
-    0
-  );
+  const totalEntered = items.value.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
   return {
     falta: productsTotal.value - totalEntered,
     total: productsTotal.value,
@@ -991,14 +1043,9 @@ const reversedItems = computed(() => {
 });
 
 const isItemsValid = computed(() => {
-  return items.value.every(item => {
+  return items.value.every((item) => {
     const val = String(item.amount).trim();
-    return (
-      val !== '' &&
-      !isNaN(Number(val)) &&
-      Number(val) > 0 &&
-      item.accountId != null
-    );
+    return val !== '' && !isNaN(Number(val)) && Number(val) > 0 && item.accountId != null;
   });
 });
 
@@ -1020,9 +1067,7 @@ function getDefaultAccountId() {
 }
 
 async function setTodayDate() {
-  const { default: budgetController } = await import(
-    '@/controllers/budgetController'
-  );
+  const { default: budgetController } = await import('@/controllers/budgetController');
   const selectedDate = budgetController.getSelectedDate();
   const dateToUse = selectedDate || format(new Date(), 'yyyy-MM-dd');
   reassignDateISO.value = dateToUse + 'T00:00:00';
@@ -1043,9 +1088,7 @@ async function initializeNewProviderMode() {
   await setTodayDate();
 }
 
-function parseDateValue(params: {
-  raw: string | number | null | undefined;
-}): string {
+function parseDateValue(params: { raw: string | number | null | undefined }): string {
   const { raw } = params;
   if (!raw) return format(new Date(), 'yyyy-MM-dd') + 'T00:00:00';
 
@@ -1080,17 +1123,13 @@ function formatShortDate(params: { isoDate: string | null }): string {
 }
 
 // Validation functions
-function isNumericValue(params: {
-  value: string | number | null | undefined;
-}): boolean {
+function isNumericValue(params: { value: string | number | null | undefined }): boolean {
   const { value } = params;
   if (value === null || value === undefined || value === '') return true;
   return /^-?\d*\.?\d+$/.test(String(value));
 }
 
-function isPositiveValue(params: {
-  value: string | number | null | undefined;
-}): boolean {
+function isPositiveValue(params: { value: string | number | null | undefined }): boolean {
   const { value } = params;
   if (value === null || value === undefined || value === '') return true;
   const num = Number(value);
@@ -1108,25 +1147,10 @@ function getAmountError(params: { index: number }): string {
 function isAmountInvalid(params: { index: number }): boolean {
   const { index } = params;
   const amount = items.value[index]?.amount;
-  return (
-    !isNumericValue({ value: amount }) || !isPositiveValue({ value: amount })
-  );
+  return !isNumericValue({ value: amount }) || !isPositiveValue({ value: amount });
 }
 
 function isAmountTouched(params: { index: number }): boolean {
-  const { index } = params;
-  const amount = items.value[index]?.amount;
-  return amount !== null && amount !== undefined && String(amount) !== '';
-}
-
-// Validación para cuenta seleccionada
-function _isAccountInvalid(params: { index: number }): boolean {
-  const { index } = params;
-  const accountId = items.value[index]?.accountId;
-  return accountId === null || accountId === undefined;
-}
-
-function _isAccountTouched(params: { index: number }): boolean {
   const { index } = params;
   const amount = items.value[index]?.amount;
   return amount !== null && amount !== undefined && String(amount) !== '';
@@ -1138,17 +1162,12 @@ function getProductRawValue(params: { productId: string | number }): string {
   return productQuantityRawValues.value.get(productId) ?? '';
 }
 
-function setProductRawValue(params: {
-  productId: string | number;
-  value: string;
-}): void {
+function setProductRawValue(params: { productId: string | number; value: string }): void {
   const { productId, value } = params;
   productQuantityRawValues.value.set(productId, value);
 }
 
-function getProductQuantityError(params: {
-  productId: string | number;
-}): string {
+function getProductQuantityError(params: { productId: string | number }): string {
   const { productId } = params;
   const rawValue = getProductRawValue({ productId });
   if (rawValue === '') return '';
@@ -1156,18 +1175,14 @@ function getProductQuantityError(params: {
   return '';
 }
 
-function isProductQuantityInvalid(params: {
-  productId: string | number;
-}): boolean {
+function isProductQuantityInvalid(params: { productId: string | number }): boolean {
   const { productId } = params;
   const rawValue = getProductRawValue({ productId });
   if (rawValue === '') return false;
   return !isNumericValue({ value: rawValue });
 }
 
-function isProductQuantityTouched(params: {
-  productId: string | number;
-}): boolean {
+function isProductQuantityTouched(params: { productId: string | number }): boolean {
   const { productId } = params;
   const rawValue = getProductRawValue({ productId });
   return rawValue !== '';
@@ -1191,20 +1206,19 @@ function selectProvider(params: { p: Supplier | SelectProviderData }) {
   const providerData = p as SelectProviderData;
 
   // Load products
+  const existingTemporaries = providerProducts.value.filter((p) => p.isTemporary);
   providerProducts.value =
     providerData.products?.map((prod: SelectProviderProduct) => ({
       supplierProductId: prod.sync_id ?? prod.id ?? prod.supplierProductId,
       productName: prod.name,
       productPrice: prod.price ?? prod.productPrice,
       quantity: prod.quantity || 0,
+      isTemporary: false,
     })) || [];
+  providerProducts.value.push(...existingTemporaries);
 
   // Load items (quantities by account) if available
-  if (
-    providerData.items &&
-    Array.isArray(providerData.items) &&
-    providerData.items.length > 0
-  ) {
+  if (providerData.items && Array.isArray(providerData.items) && providerData.items.length > 0) {
     items.value = providerData.items.map((item: SelectProviderItem) => ({
       amount: Number(item.amount) || 0,
       accountId: item.accountId ?? null,
@@ -1219,30 +1233,31 @@ function selectProvider(params: { p: Supplier | SelectProviderData }) {
   }
 }
 
-function openAccountModal(index: number) {
+function openAccountModal(params: { index: number }) {
+  const { index } = params;
   selectedAccountIndex.value = index;
   accountSearchQuery.value = '';
   showAccountModal.value = true;
 }
 
-function selectAccount(acc: Account) {
+function selectAccount(params: { acc: AccountWithId }) {
+  const { acc } = params;
   if (selectedAccountIndex.value !== null) {
+    const accountIdValue = acc.id as string | number;
     items.value[selectedAccountIndex.value].accountId = isEntryMode.value
-      ? acc.id
-      : { id: acc.id };
+      ? accountIdValue
+      : { id: accountIdValue };
   }
   showAccountModal.value = false;
   selectedAccountIndex.value = null;
 }
 
-function getAccountName(
-  accountId: string | number | Account | { id: string | number } | null
-): string {
+function getAccountName(params: {
+  accountId: string | number | Account | { id: string | number } | null,
+}): string {
+  const { accountId } = params;
   if (!accountId) return '';
-  const id =
-    typeof accountId === 'object'
-      ? (accountId as { id: string | number }).id
-      : accountId;
+  const id = typeof accountId === 'object' ? (accountId as { id: string | number }).id : accountId;
   const acc = accounts.value.find((a: Account) => String(a.id) === String(id));
   return acc?.name || '';
 }
@@ -1279,7 +1294,7 @@ function getProductQuantity(params: { product: Product }): number {
   const productId = product?.sync_id ?? product?.id;
   const productName = product?.name;
   const productPrice = product?.price;
-  const found = providerProducts.value.find(p => {
+  const found = providerProducts.value.find((p) => {
     if (productId) {
       return String(p.supplierProductId) === String(productId);
     }
@@ -1296,10 +1311,9 @@ function setProductQuantity(params: {
 }) {
   const { product, productPrice, quantity } = params;
   const numQuantity = Number(quantity) || 0;
-  const productId =
-    product?.sync_id ?? product?.id ?? product?.supplierProductId;
+  const productId = product?.sync_id ?? product?.id;
   const productName = product?.name;
-  const existing = providerProducts.value.find(p => {
+  const existing = providerProducts.value.find((p) => {
     if (productId) {
       return String(p.supplierProductId) === String(productId);
     }
@@ -1322,51 +1336,89 @@ function setProductQuantity(params: {
   }
 }
 
+function addTemporaryProduct() {
+  temporaryProductCounter.value += 1;
+  const tempId = `temp_${temporaryProductCounter.value}_${Date.now()}`;
+  providerProducts.value.push({
+    supplierProductId: tempId,
+    productName: '',
+    productPrice: 0,
+    quantity: 0,
+    isTemporary: true,
+  });
+}
+
+function removeTemporaryProduct(params: { index: number }) {
+  const { index } = params;
+  const product = providerProducts.value[index];
+  if (product?.isTemporary) {
+    providerProducts.value.splice(index, 1);
+    const rawKey = product.supplierProductId;
+    if (rawKey) {
+      productQuantityRawValues.value.delete(rawKey);
+    }
+  }
+}
+
+function updateTemporaryProduct(params: {
+  index: number;
+  field: 'productName' | 'productPrice' | 'quantity';
+  value: string | number;
+}) {
+  const { index, field, value } = params;
+  const product = providerProducts.value[index];
+  if (!product?.isTemporary) return;
+  if (field === 'productName') {
+    product.productName = String(value);
+  } else if (field === 'productPrice') {
+    product.productPrice = Number(value) || 0;
+  } else if (field === 'quantity') {
+    product.quantity = Number(value) || 0;
+  }
+}
+
 async function handleSave() {
-  const { default: budgetController } = await import(
-    '@/controllers/budgetController'
-  );
+  const { default: budgetController } = await import('@/controllers/budgetController');
 
-  const totalAmount = items.value.reduce(
-    (sum, item) => sum + (Number(item.amount) || 0),
-    0
-  );
+  const totalAmount = items.value.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
 
-  const products = providerProducts.value.filter(p => (p.quantity || 0) > 0);
+  const products = providerProducts.value
+    .filter((p) => (p.quantity || 0) > 0)
+    .map((p) => ({
+      ...p,
+      supplierProductId: p.isTemporary ? null : p.supplierProductId,
+    }));
 
-  const selectedDate =
-    reassignDate.value || reassignDateISO.value?.slice(0, 10);
+  const selectedDate = reassignDate.value || reassignDateISO.value?.slice(0, 10);
 
   const payload = {
     providerId: selectedProvider.value?.sync_id || selectedProvider.value?.id,
     providerName: selectedProvider.value?.name,
     entryId: routeEntryId.value,
-    items: items.value.map(item => ({
+    items: items.value.map((item) => ({
       amount: Number(item.amount) || 0,
       accountId: isEntryMode.value
         ? (item.accountId as string | number | null)
-        : (((item.accountId as Account)?.id ?? item.accountId) as
-            | string
-            | number
-            | null),
+        : (((item.accountId as Account)?.id ?? item.accountId) as string | number | null),
     })) as ProviderItem[],
     totalAmount,
     products: products.length > 0 ? products : undefined,
     date: selectedDate || undefined,
   };
 
+  let savedProviderSyncId: string | null = null;
+
   if (isEntryMode.value && routeEntryId.value) {
-    // Update existing entry
-    const groups = payload.items.map(item => ({
+    const groups = payload.items.map((item) => ({
       amount: Number(item.amount) || 0,
-      accountId: item.accountId,
+      accountId: getAccountIdValue(item.accountId),
     }));
 
     budgetController.updateIngreso({
       id: Number(routeEntryId.value),
       changes: {
         amount: payload.totalAmount,
-        accountId: groups[0]?.accountId || null,
+        accountId: getAccountIdValue(groups[0]?.accountId),
         groups: groups.length > 1 ? groups : undefined,
         _providerName: payload.providerName,
         date: payload.date,
@@ -1374,40 +1426,57 @@ async function handleSave() {
     });
     budgetController.saveData();
   } else if (routeProviderId.value) {
-    // Update existing provider
-    const firstItem = payload.items[0];
-    const firstAccountId = firstItem?.accountId;
+    const firstAccountId = getAccountIdAsNumber(payload.items[0]?.accountId);
+
+    const normalizedItems = payload.items.map((item) => ({
+      amount: Number(item.amount) || 0,
+      accountId: getAccountIdValue(item.accountId),
+    }));
 
     budgetController.updateProvider({
       id: Number(routeProviderId.value),
       changes: {
         estimated: payload.totalAmount,
-        accountId: firstAccountId || 0,
+        accountId: firstAccountId,
         _supplierId: payload.providerId,
         _supplierName: payload.providerName,
         products: payload.products,
-        items: payload.items,
+        items: normalizedItems,
+        notes: providerNotes.value,
         date: payload.date,
       },
     });
     budgetController.saveData();
+    savedProviderSyncId = providerSyncId.value;
   } else {
-    // Create new provider
-    const firstItem = payload.items[0];
-    const firstAccountId = firstItem?.accountId;
+    const firstAccountId = getAccountIdAsNumber(payload.items[0]?.accountId);
 
-    budgetController.addProvider({
+    const normalizedItems = payload.items.map((item) => ({
+      amount: Number(item.amount) || 0,
+      accountId: getAccountIdValue(item.accountId),
+    }));
+
+    const newProvider = budgetController.addProvider({
       name: payload.providerName || '',
       estimated: payload.totalAmount,
-      accountId: firstAccountId || 0,
+      accountId: firstAccountId,
       allowEmpty: true,
       _supplierId: payload.providerId,
       _supplierName: payload.providerName,
       products: payload.products,
-      items: payload.items,
+      items: normalizedItems,
+      notes: providerNotes.value,
       date: payload.date,
     });
     budgetController.saveData();
+    savedProviderSyncId = newProvider?.sync_id ?? null;
+  }
+
+  // Handle attachments for providers
+  if (savedProviderSyncId) {
+    providerSyncId.value = savedProviderSyncId;
+    const isProviderSynced = Boolean(routeProviderId.value);
+    await saveAttachments({ isSynced: isProviderSynced && navigator.onLine });
   }
 
   router.back();
@@ -1473,23 +1542,21 @@ function handleDeleteFromPopover() {
   showDeleteAlert.value = true;
 }
 
-function confirmDelete() {
-  return (async () => {
-    const { default: budgetController } = await import(
-      '@/controllers/budgetController'
-    );
+async function confirmDelete() {
+  const { default: budgetController } = await import('@/controllers/budgetController');
 
-    if (isEntryMode.value && routeEntryId.value) {
-      budgetController.removeIngreso({ id: Number(routeEntryId.value) });
-      budgetController.saveData();
-    } else if (routeProviderId.value) {
-      budgetController.removeProvider({ id: Number(routeProviderId.value) });
-      budgetController.saveData();
-    }
+  if (isEntryMode.value && routeEntryId.value) {
+    budgetController.removeIngreso({ id: Number(routeEntryId.value) });
+    budgetController.saveData();
+  } else if (routeProviderId.value) {
+    await deleteAllAttachments();
 
-    showDeleteAlert.value = false;
-    router.back();
-  })();
+    budgetController.removeProvider({ id: Number(routeProviderId.value) });
+    budgetController.saveData();
+  }
+
+  showDeleteAlert.value = false;
+  router.back();
 }
 
 function openQuickAccountAlert(itemIndex?: number) {
@@ -1514,7 +1581,8 @@ function openQuickAccountAlert(itemIndex?: number) {
   showQuickAccountAlert.value = true;
 }
 
-async function createQuickAccount(name: string, initialBalance: number) {
+async function createQuickAccount(params: { name: string; initialBalance: number }) {
+  const { name, initialBalance } = params;
   const newAccount = await accountsController.addAccount({
     a: {
       name,
@@ -1526,9 +1594,8 @@ async function createQuickAccount(name: string, initialBalance: number) {
     if (quickAccountTargetIndex.value !== null) {
       const idx = quickAccountTargetIndex.value;
       if (items.value[idx]) {
-        items.value[idx].accountId = isEntryMode.value
-          ? newAccount.id
-          : { id: newAccount.id };
+        const accountIdValue = newAccount.id as string | number;
+        items.value[idx].accountId = isEntryMode.value ? accountIdValue : { id: accountIdValue };
       }
     }
   }
@@ -1536,12 +1603,37 @@ async function createQuickAccount(name: string, initialBalance: number) {
   quickAccountTargetIndex.value = null;
 }
 
+// Attachment handlers
+function onAttachmentsSave(newFiles: File[], deletedIds: number[]) {
+  handleAttachmentsSave({ newFiles, deletedIds });
+}
+// end attachment handlers
+
 // Expose for parent if needed
 defineExpose({
   handleSave,
   handleBack,
 });
 // end functions
+
+// helpers
+function getAccountIdValue(
+  accountId: string | number | { id: string | number } | null | undefined,
+): string | number | null {
+  if (!accountId) return null;
+  if (typeof accountId === 'object' && 'id' in accountId) {
+    return (accountId.id as string | number) ?? null;
+  }
+  return accountId as string | number;
+}
+
+function getAccountIdAsNumber(
+  accountId: string | number | { id: string | number } | null | undefined,
+): number {
+  const val = getAccountIdValue(accountId);
+  return val !== null ? Number(val) || 0 : 0;
+}
+// end helpers
 </script>
 
 <style scoped>

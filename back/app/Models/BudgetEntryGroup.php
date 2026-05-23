@@ -13,6 +13,7 @@ class BudgetEntryGroup extends Model
         'budget_entry_id',
         'account_id',
         'amount',
+        'user_id',
     ];
 
     protected $casts = [

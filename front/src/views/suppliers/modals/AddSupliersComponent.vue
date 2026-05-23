@@ -8,9 +8,7 @@
           </ion-button>
         </ion-buttons>
 
-        <ion-title>{{
-          selectedId ? 'Editar Proveedor' : 'Crear Proveedor'
-        }}</ion-title>
+        <ion-title>{{ selectedId ? 'Editar Proveedor' : 'Crear Proveedor' }}</ion-title>
 
         <ion-buttons slot="end">
           <ion-button @click="onSubmit">
@@ -32,19 +30,12 @@
         </ion-item>
       </ion-card>
 
-      <ion-list
-        v-if="!showNewProductFields"
-        class="transparent suppliers__products-list"
-      >
+      <ion-list v-if="!showNewProductFields" class="transparent suppliers__products-list">
         <ion-list-header>
           <ion-label>Productos</ion-label>
 
           <!-- Toggle product search bar -->
-          <ion-button
-            :disabled="showProductSearch"
-            expand="full"
-            @click="toggleProductSearch"
-          >
+          <ion-button :disabled="showProductSearch" expand="full" @click="toggleProductSearch">
             <ion-icon :icon="searchOutline"> </ion-icon>
           </ion-button>
 
@@ -58,19 +49,11 @@
         </ion-list-header>
 
         <!-- Product search bar (visible when showProductSearch is true) -->
-        <div
-          class="list-content suppliers__products-content"
-          style="overflow-y: auto"
-        >
+        <div class="list-content suppliers__products-content" style="overflow-y: auto">
           <template v-if="showProductSearch">
             <ion-item
               lines="none"
-              style="
-                position: sticky;
-                top: 0;
-                background-color: white;
-                z-index: 1000;
-              "
+              style="position: sticky; top: 0; background-color: white; z-index: 1000"
             >
               <ion-searchbar
                 v-model="productSearchTerm"
@@ -79,10 +62,7 @@
                 show-clear-button="focus"
               ></ion-searchbar>
 
-              <ion-button
-                slot="end"
-                fill="clear"
-                @click="showProductSearch = false"
+              <ion-button slot="end" fill="clear" @click="showProductSearch = false"
                 >Cancelar</ion-button
               >
             </ion-item>
@@ -109,9 +89,7 @@
 
                 <ion-label>
                   <h3>{{ item.product.name }}</h3>
-                  <p v-if="item.product.price">
-                    Precio: {{ item.product.price }}
-                  </p>
+                  <p v-if="item.product.price">Precio: {{ item.product.price }}</p>
                 </ion-label>
 
                 <ion-buttons slot="end" class="supplier-actions">
@@ -131,9 +109,7 @@
 
       <ion-list v-if="showNewProductFields">
         <ion-list-header>
-          <ion-label>{{
-            editingIndex !== null ? 'Editar producto' : 'Nuevo producto'
-          }}</ion-label>
+          <ion-label>{{ editingIndex !== null ? 'Editar producto' : 'Nuevo producto' }}</ion-label>
 
           <ion-buttons>
             <ion-button color="primary" @click="addProduct">
@@ -177,11 +153,7 @@
                 Adjuntar imagen (opcional)
               </label>
 
-              <ion-thumbnail
-                v-if="newProduct.imageBase64"
-                slot="end"
-                style="margin-left: 12px"
-              >
+              <ion-thumbnail v-if="newProduct.imageBase64" slot="end" style="margin-left: 12px">
                 <img :src="newProduct.imageBase64" alt="preview" />
               </ion-thumbnail>
 
@@ -223,13 +195,7 @@ import {
   IonThumbnail,
 } from '@ionic/vue';
 import { reactive, ref, computed, watch, toRaw } from 'vue';
-import {
-  addOutline,
-  closeOutline,
-  saveOutline,
-  searchOutline,
-  trashOutline,
-} from 'ionicons/icons';
+import { addOutline, closeOutline, saveOutline, searchOutline, trashOutline } from 'ionicons/icons';
 
 // main
 interface SupplierProduct {
@@ -352,7 +318,7 @@ function removeImage() {
 // watch
 watch(
   () => props.supplier,
-  s => {
+  (s) => {
     if (s) {
       form.name = s.name || '';
       form.products = s.products
@@ -374,7 +340,7 @@ watch(
     productSearchTerm.value = '';
     showProductSearch.value = false;
   },
-  { immediate: true }
+  { immediate: true },
 );
 // end watch
 
@@ -384,7 +350,7 @@ const filteredProducts = computed(() => {
   const products = (form.products || []) as Product[];
   const mapped = products.map((p, idx) => ({ product: p, originalIndex: idx }));
   if (!term) return mapped;
-  return mapped.filter(item => {
+  return mapped.filter((item) => {
     const name = (item.product.name || '').toString().toLowerCase();
     const price = item.product.price != null ? String(item.product.price) : '';
     return name.includes(term) || price.includes(term);
@@ -406,16 +372,10 @@ function addProduct() {
   console.log('[AddSupliersComponent] 🔵 addProduct llamado');
 
   // Get the native input values to ensure we have the latest value
-  const inputElements = document.querySelectorAll(
-    'input[placeholder="Nombre del producto"]'
-  );
-  const inputElement =
-    inputElements.length > 1 ? inputElements[1] : inputElements[0];
-  const priceElements = document.querySelectorAll(
-    'input[placeholder="Precio"]'
-  );
-  const priceInputElement =
-    priceElements.length > 1 ? priceElements[1] : priceElements[0];
+  const inputElements = document.querySelectorAll('input[placeholder="Nombre del producto"]');
+  const inputElement = inputElements.length > 1 ? inputElements[1] : inputElements[0];
+  const priceElements = document.querySelectorAll('input[placeholder="Precio"]');
+  const priceInputElement = priceElements.length > 1 ? priceElements[1] : priceElements[0];
 
   const productName = (inputElement?.value || newProduct.name || '').trim();
   const productPrice = priceInputElement
@@ -437,16 +397,10 @@ function addProduct() {
     imageBase64: newProduct.imageBase64 || null,
   };
 
-  console.log(
-    '[AddSupliersComponent] Product data:',
-    JSON.stringify(productData, null, 2)
-  );
+  console.log('[AddSupliersComponent] Product data:', JSON.stringify(productData, null, 2));
 
   if (editingIndex.value != null && form.products[editingIndex.value]) {
-    console.log(
-      '[AddSupliersComponent] Editando producto en índice:',
-      editingIndex.value
-    );
+    console.log('[AddSupliersComponent] Editando producto en índice:', editingIndex.value);
     form.products.splice(editingIndex.value, 1, productData);
   } else {
     console.log('[AddSupliersComponent] Agregando nuevo producto');
@@ -456,7 +410,7 @@ function addProduct() {
   console.log(
     '[AddSupliersComponent] ✅ form.products ahora tiene:',
     form.products.length,
-    'productos'
+    'productos',
   );
 
   // Clear the inputs
@@ -499,10 +453,7 @@ function editProduct(params: { idx: number }) {
 function onSubmit() {
   console.log('[AddSupliersComponent] 🔵 onSubmit llamado');
   console.log('[AddSupliersComponent] form.name:', form.name);
-  console.log(
-    '[AddSupliersComponent] form.products.length:',
-    form.products.length
-  );
+  console.log('[AddSupliersComponent] form.products.length:', form.products.length);
 
   if (!form.name) {
     console.log('[AddSupliersComponent] ⚠️ form.name está vacío');
@@ -514,10 +465,7 @@ function onSubmit() {
     products: form.products && form.products.length ? form.products : undefined,
   };
 
-  console.log(
-    '[AddSupliersComponent] Payload a emitir:',
-    JSON.stringify(payload, null, 2)
-  );
+  console.log('[AddSupliersComponent] Payload a emitir:', JSON.stringify(payload, null, 2));
 
   if (selectedId.value != null) payload.id = selectedId.value;
   if (props.supplier?.sync_id) payload.sync_id = props.supplier.sync_id;

@@ -8,15 +8,11 @@
   >
     <template #analysis>
       <ion-item>
-        <ion-label
-          >Resumen del {{ periodLabels[period] }} {{ dateLabel }}</ion-label
-        >
+        <ion-label>Resumen del {{ periodLabels[period] }} {{ dateLabel }}</ion-label>
 
-        <ion-label
-          slot="end"
-          :color="realBalance >= 0 ? 'success' : 'danger'"
-          >{{ formatCurrency(realBalance) }}</ion-label
-        >
+        <ion-label slot="end" :color="realBalance >= 0 ? 'success' : 'danger'">{{
+          formatCurrency(realBalance)
+        }}</ion-label>
       </ion-item>
 
       <ion-grid>
@@ -102,10 +98,7 @@ import { parseLocalDate } from '@/utils/date';
 import budgetController from '@/controllers/budgetController';
 import systemController from '@/controllers/systemConfigController';
 import { useRouter } from 'vue-router';
-import {
-  StatisticsController,
-  type Snapshots,
-} from '@/controllers/statisticsController';
+import { StatisticsController, type Snapshots } from '@/controllers/statisticsController';
 import { usePeriodRange, type PeriodType } from '@/composables/usePeriodRange';
 import type { Income, EntryType } from '@/stores/budgetStore';
 
@@ -183,26 +176,26 @@ const previousBalance = ref(0);
 const periodEntries = ref<Income[]>([]);
 const expensesTotal = computed(() => {
   return periodEntries.value
-    .filter(entry => entry.entryType !== 'ingreso')
+    .filter((entry) => entry.entryType !== 'ingreso')
     .reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
 });
 
 const incomesTotal = computed(() => {
   return periodEntries.value
-    .filter(entry => entry.entryType === 'ingreso')
+    .filter((entry) => entry.entryType === 'ingreso')
     .reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
 });
 
 const realBalance = computed(() => incomesTotal.value - expensesTotal.value);
 
 const realBalanceClass = computed(() =>
-  Number(realBalance.value) < 0 ? 'negative-profit' : 'positive-profit'
+  Number(realBalance.value) < 0 ? 'negative-profit' : 'positive-profit',
 );
 
 const incomesList = computed(() => {
   return periodEntries.value
-    .filter(entry => entry.entryType === 'ingreso')
-    .map(entry => ({
+    .filter((entry) => entry.entryType === 'ingreso')
+    .map((entry) => ({
       ...entry,
       name: entry.name,
       amount: Number(entry.amount || 0),
@@ -211,8 +204,8 @@ const incomesList = computed(() => {
 
 const expensesList = computed(() => {
   return periodEntries.value
-    .filter(entry => entry.entryType !== 'ingreso')
-    .map(entry => ({
+    .filter((entry) => entry.entryType !== 'ingreso')
+    .map((entry) => ({
       ...entry,
       name: entry.name,
       amount: Number(entry.amount || 0),
@@ -334,9 +327,7 @@ async function loadData() {
     summary.balance = income.total - expenses.total;
     summary.savings = summary.balance;
     summary.savingsPercentage =
-      income.total > 0
-        ? Number(((summary.savings / income.total) * 100).toFixed(1))
-        : 0;
+      income.total > 0 ? Number(((summary.savings / income.total) * 100).toFixed(1)) : 0;
 
     previousIncome.value = prevIncome;
     previousExpenses.value = prevExpenses;
@@ -387,7 +378,7 @@ onMounted(() => {
       if (oldPeriod !== newPeriod) {
         handleResetToToday();
       }
-    }
+    },
   );
 });
 

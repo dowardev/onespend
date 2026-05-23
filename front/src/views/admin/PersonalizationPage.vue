@@ -3,10 +3,7 @@
     <ion-header class="ion-no-border" mode="ios">
       <ion-toolbar>
         <ion-buttons slot="start">
-          <ion-back-button
-            :default-href="undefined"
-            @click="goBack"
-          ></ion-back-button>
+          <ion-back-button :default-href="undefined" @click="goBack"></ion-back-button>
         </ion-buttons>
         <ion-title>Personalización</ion-title>
       </ion-toolbar>
@@ -157,11 +154,7 @@ function applyTheme(t: ThemeMode | string) {
     return;
   }
 
-  body.classList.remove(
-    'dark',
-    'catppuccin-latte-maroon',
-    'catppuccin-macchiato-maroon'
-  );
+  body.classList.remove('dark', 'catppuccin-latte-maroon', 'catppuccin-macchiato-maroon');
 
   let themeToApply = t;
 
@@ -209,7 +202,8 @@ onMounted(() => {
 // End Computed
 
 // Watch
-// End Watch</script>
+// End Watch
+</script>
 
 <style scoped>
 .info-section {

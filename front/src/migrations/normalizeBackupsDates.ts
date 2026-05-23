@@ -102,11 +102,7 @@ export async function needsNormalizeCheck() {
       } catch (_e) {}
       if (changed) return true;
     } catch (e) {
-      console.error(
-        'needsNormalizeCheck: error checking entry',
-        entry && entry.id,
-        e
-      );
+      console.error('needsNormalizeCheck: error checking entry', entry && entry.id, e);
       // ignore and continue
     }
   }

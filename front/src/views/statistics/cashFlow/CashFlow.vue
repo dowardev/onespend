@@ -1,6 +1,6 @@
 <template>
   <ion-page>
-  <ion-header class="ion-no-border" mode="ios">
+    <ion-header class="ion-no-border" mode="ios">
       <ion-toolbar>
         <ion-title>Cash Flow</ion-title>
       </ion-toolbar>
@@ -80,7 +80,18 @@
 <script lang="ts" setup>
 // Imports
 import { reactive, ref, computed, onMounted } from 'vue';
-import { format, addDays, startOfWeek, differenceInCalendarWeeks, startOfMonth, addMonths, differenceInCalendarMonths, startOfYear, addMonths as addMonths2, differenceInCalendarYears } from 'date-fns';
+import {
+  format,
+  addDays,
+  startOfWeek,
+  differenceInCalendarWeeks,
+  startOfMonth,
+  addMonths,
+  differenceInCalendarMonths,
+  startOfYear,
+  addMonths as addMonths2,
+  differenceInCalendarYears,
+} from 'date-fns';
 import { parseLocalDate } from '@/utils/date';
 import dixieController from '@/controllers/dixie';
 
@@ -137,15 +148,19 @@ function sumIngresosFromData(d: any) {
   try {
     if (!d) return 0;
     // common explicit ingresos array
-    if (Array.isArray(d.ingresos)) return d.ingresos.reduce((s: number, i: any) => s + (Number(i?.amount || 0) || 0), 0);
+    if (Array.isArray(d.ingresos))
+      return d.ingresos.reduce((s: number, i: any) => s + (Number(i?.amount || 0) || 0), 0);
     // english alternative
-    if (Array.isArray(d.incomes)) return d.incomes.reduce((s: number, i: any) => s + (Number(i?.amount || 0) || 0), 0);
+    if (Array.isArray(d.incomes))
+      return d.incomes.reduce((s: number, i: any) => s + (Number(i?.amount || 0) || 0), 0);
     // entries with entryType 'ingreso' or 'income'
     if (Array.isArray(d.entries)) {
-      return (d.entries || []).filter((e: any) => {
-        const t = String(e?.entryType || '').toLowerCase();
-        return t === 'ingreso' || t === 'income';
-      }).reduce((s: number, i: any) => s + (Number(i?.amount || 0) || 0), 0);
+      return (d.entries || [])
+        .filter((e: any) => {
+          const t = String(e?.entryType || '').toLowerCase();
+          return t === 'ingreso' || t === 'income';
+        })
+        .reduce((s: number, i: any) => s + (Number(i?.amount || 0) || 0), 0);
     }
     // fallback: try to find any numeric property
     return extractAmountFromItem(d) || 0;
@@ -161,10 +176,15 @@ function sumEgresosFromData(d: any) {
     // Prefer entries-based egresos (day uses entries). If entries contain egreso/expense items, use that.
     let entriesEgresos = 0;
     if (Array.isArray(d.entries)) {
-      entriesEgresos = (d.entries || []).filter((e: any) => {
-        const t = String(e?.entryType || '').toLowerCase();
-        return t === 'egreso' || t === 'expense';
-      }).reduce((s: number, i: any) => s + (Number(i?.amount || i?.monto || i?.total || 0) || 0), 0);
+      entriesEgresos = (d.entries || [])
+        .filter((e: any) => {
+          const t = String(e?.entryType || '').toLowerCase();
+          return t === 'egreso' || t === 'expense';
+        })
+        .reduce(
+          (s: number, i: any) => s + (Number(i?.amount || i?.monto || i?.total || 0) || 0),
+          0,
+        );
     }
     if (entriesEgresos && entriesEgresos !== 0) return entriesEgresos;
 
@@ -192,7 +212,10 @@ function sumEgresosFromData(d: any) {
     const egKeys = ['egresos', 'gastos', 'expenses'];
     for (const k of egKeys) {
       if (Array.isArray(d[k])) {
-        proveedoresSum += d[k].reduce((s: number, i: any) => s + (Number(i?.amount || i?.monto || i?.total || 0) || 0), 0);
+        proveedoresSum += d[k].reduce(
+          (s: number, i: any) => s + (Number(i?.amount || i?.monto || i?.total || 0) || 0),
+          0,
+        );
       }
     }
 
@@ -229,7 +252,15 @@ const day = reactive<any>({
   popovers: { mainDate: { open: false, event: null as Event | null } },
   selectedDate: format(new Date(), 'yyyy-MM-dd'),
   chartData: { labels: [], datasets: [] },
-  chartOptions: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'top' }, title: { display: true, text: 'Ingresos y Egresos (día)' } }, scales: { x: { type: 'category' }, y: { type: 'linear' } } },
+  chartOptions: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: true, position: 'top' },
+      title: { display: true, text: 'Ingresos y Egresos (día)' },
+    },
+    scales: { x: { type: 'category' }, y: { type: 'linear' } },
+  },
   dailyProfit: 0,
   previousDailyProfit: 0,
 });
@@ -238,8 +269,22 @@ const week = reactive<any>({
   weekOffset: 0,
   popovers: { mainDate: { open: false, event: null as Event | null } },
   selectedDate: format(new Date(), 'yyyy-MM-dd'),
-  chartData: { labels: [], datasets: [ { label: 'Ingresos', data: [] }, { label: 'Egresos', data: [] } ] },
-  chartOptions: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'top' }, title: { display: true, text: 'Ingresos y Egresos (última semana)' } }, scales: { x: { type: 'category' }, y: { type: 'linear' } } },
+  chartData: {
+    labels: [],
+    datasets: [
+      { label: 'Ingresos', data: [] },
+      { label: 'Egresos', data: [] },
+    ],
+  },
+  chartOptions: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: true, position: 'top' },
+      title: { display: true, text: 'Ingresos y Egresos (última semana)' },
+    },
+    scales: { x: { type: 'category' }, y: { type: 'linear' } },
+  },
   weeklyProfit: 0,
   previousWeeklyProfit: 0,
 });
@@ -248,8 +293,22 @@ const month = reactive<any>({
   monthOffset: 0,
   popovers: { mainDate: { open: false, event: null as Event | null } },
   selectedDate: format(new Date(), 'yyyy-MM-dd'),
-  chartData: { labels: [], datasets: [ { label: 'Ingresos', data: [] }, { label: 'Egresos', data: [] } ] },
-  chartOptions: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'top' }, title: { display: true, text: 'Ingresos y Egresos (últimos 12 meses)' } }, scales: { x: { type: 'category' }, y: { type: 'linear' } } },
+  chartData: {
+    labels: [],
+    datasets: [
+      { label: 'Ingresos', data: [] },
+      { label: 'Egresos', data: [] },
+    ],
+  },
+  chartOptions: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: true, position: 'top' },
+      title: { display: true, text: 'Ingresos y Egresos (últimos 12 meses)' },
+    },
+    scales: { x: { type: 'category' }, y: { type: 'linear' } },
+  },
   monthlyProfit: 0,
 });
 
@@ -259,7 +318,15 @@ const year = reactive<any>({
   popovers: { mainDate: { open: false, event: null as Event | null } },
   selectedDate: format(new Date(), 'yyyy'),
   chartData: { labels: [], datasets: [] },
-  chartOptions: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'top' }, title: { display: true, text: `Comparativa anual (últimos 5 años)` } }, scales: { x: { type: 'category' }, y: { type: 'linear' } } },
+  chartOptions: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: true, position: 'top' },
+      title: { display: true, text: `Comparativa anual (últimos 5 años)` },
+    },
+    scales: { x: { type: 'category' }, y: { type: 'linear' } },
+  },
   yearProfit: 0,
 });
 
@@ -290,10 +357,20 @@ const monthRangeLabel = computed(() => {
 });
 const yearLabel = computed(() => String(new Date().getFullYear() + year.yearOffset));
 
-const formattedDailyProfit = computed(() => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(day.dailyProfit));
-const formattedWeeklyProfit = computed(() => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(week.weeklyProfit));
-const formattedMonthlyProfit = computed(() => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(month.monthlyProfit));
-const formattedYearProfit = computed(() => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(year.yearProfit));
+const formattedDailyProfit = computed(() =>
+  new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(day.dailyProfit),
+);
+const formattedWeeklyProfit = computed(() =>
+  new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(week.weeklyProfit),
+);
+const formattedMonthlyProfit = computed(() =>
+  new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(
+    month.monthlyProfit,
+  ),
+);
+const formattedYearProfit = computed(() =>
+  new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(year.yearProfit),
+);
 
 // Expose label/computed into reactive objects so child props can read them
 Object.assign(day, { dayLabel, formattedDailyProfit });
@@ -303,13 +380,13 @@ Object.assign(year, { yearLabel, formattedYearProfit });
 
 // Data loading functions (adapted from child components)
 async function loadDayData() {
-    try {
+  try {
     const all = ((await dixieController.listBackups()) as any[]) || [];
     // (debug exports removed)
     const targetDay = addDays(new Date(), day.dayOffset);
     const target = isoDate(targetDay);
 
-    const matches = (Array.isArray(all) ? all : []).filter(b => {
+    const matches = (Array.isArray(all) ? all : []).filter((b) => {
       try {
         if (!b) return false;
         const comp = String((b && b.component) || '').toLowerCase();
@@ -329,11 +406,19 @@ async function loadDayData() {
 
     if (latest && latest.data) {
       const d = latest.data;
-      const entries = Array.isArray(d.entries) ? d.entries : Array.isArray(d.ingresos) ? d.ingresos : [];
+      const entries = Array.isArray(d.entries)
+        ? d.entries
+        : Array.isArray(d.ingresos)
+          ? d.ingresos
+          : [];
       if (Array.isArray(entries) && entries.length > 0) {
         const safeEntries = entries.map((i: any) => ({ ...i }));
-        ingresosSum = safeEntries.filter((i: any) => i && i.entryType === 'ingreso').reduce((s: number, i: any) => s + (Number(i.amount || 0) || 0), 0);
-        egresosSum = safeEntries.filter((i: any) => i && i.entryType === 'egreso').reduce((s: number, i: any) => s + (Number(i.amount || 0) || 0), 0);
+        ingresosSum = safeEntries
+          .filter((i: any) => i && i.entryType === 'ingreso')
+          .reduce((s: number, i: any) => s + (Number(i.amount || 0) || 0), 0);
+        egresosSum = safeEntries
+          .filter((i: any) => i && i.entryType === 'egreso')
+          .reduce((s: number, i: any) => s + (Number(i.amount || 0) || 0), 0);
       }
     }
 
@@ -348,7 +433,7 @@ async function loadDayData() {
       const prevDay = addDays(targetDay, -1);
       const prevTarget = isoDate(prevDay);
 
-      const prevMatches = (Array.isArray(all) ? all : []).filter(b => {
+      const prevMatches = (Array.isArray(all) ? all : []).filter((b) => {
         try {
           if (!b) return false;
           const comp = String((b && b.component) || '').toLowerCase();
@@ -361,18 +446,28 @@ async function loadDayData() {
         }
       });
 
-      const prevLatest = (prevMatches || []).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))[0];
+      const prevLatest = (prevMatches || []).sort(
+        (a, b) => (b.createdAt || 0) - (a.createdAt || 0),
+      )[0];
 
       let prevIngresosSum = 0;
       let prevEgresosSum = 0;
 
       if (prevLatest && prevLatest.data) {
         const d = prevLatest.data;
-        const prevEntries = Array.isArray(d.entries) ? d.entries : Array.isArray(d.ingresos) ? d.ingresos : [];
+        const prevEntries = Array.isArray(d.entries)
+          ? d.entries
+          : Array.isArray(d.ingresos)
+            ? d.ingresos
+            : [];
         if (Array.isArray(prevEntries) && prevEntries.length > 0) {
           const safePrev = prevEntries.map((i: any) => ({ ...i }));
-          prevIngresosSum = safePrev.filter((i: any) => i && i.entryType === 'ingreso').reduce((s: number, i: any) => s + (Number(i.amount || 0) || 0), 0);
-          prevEgresosSum = safePrev.filter((i: any) => i && i.entryType === 'egreso').reduce((s: number, i: any) => s + (Number(i.amount || 0) || 0), 0);
+          prevIngresosSum = safePrev
+            .filter((i: any) => i && i.entryType === 'ingreso')
+            .reduce((s: number, i: any) => s + (Number(i.amount || 0) || 0), 0);
+          prevEgresosSum = safePrev
+            .filter((i: any) => i && i.entryType === 'egreso')
+            .reduce((s: number, i: any) => s + (Number(i.amount || 0) || 0), 0);
         }
       }
 
@@ -382,7 +477,10 @@ async function loadDayData() {
       const currLabel = format(targetDay, 'yyyy-MM-dd');
 
       day.chartData.labels = [prevLabel, currLabel];
-      day.chartData.datasets = [ { label: 'Ingresos', data: [Number(prevIngresosSum || 0), Number(ingresosSum || 0)] }, { label: 'Egresos', data: [Number(prevEgresosSum || 0), Number(egresosSum || 0)] } ];
+      day.chartData.datasets = [
+        { label: 'Ingresos', data: [Number(prevIngresosSum || 0), Number(ingresosSum || 0)] },
+        { label: 'Egresos', data: [Number(prevEgresosSum || 0), Number(egresosSum || 0)] },
+      ];
     } catch (_err) {
       day.previousDailyProfit = 0;
     }
@@ -405,7 +503,7 @@ async function loadWeeklyData() {
       const target = isoDate(dayDate);
       labels.push(format(dayDate, 'eee dd'));
 
-      const matches = (Array.isArray(all) ? all : []).filter(b => {
+      const matches = (Array.isArray(all) ? all : []).filter((b) => {
         try {
           if (!b) return false;
           const comp = String((b && b.component) || '').toLowerCase();
@@ -420,11 +518,24 @@ async function loadWeeklyData() {
 
       // expose all matches for this day (safe copy) to help debugging when sums differ
       try {
-        const safeMatchesAll = (matches || []).slice(0, 50).map(m => {
-          try { return JSON.parse(JSON.stringify(m)); } catch (_e) { return { id: m && (m.id || m.key || m.name), createdAt: m && m.createdAt, dataKeys: m && m.data ? Object.keys(m.data) : null }; }
+        const safeMatchesAll = (matches || []).slice(0, 50).map((m) => {
+          try {
+            return JSON.parse(JSON.stringify(m));
+          } catch (_e) {
+            return {
+              id: m && (m.id || m.key || m.name),
+              createdAt: m && m.createdAt,
+              dataKeys: m && m.data ? Object.keys(m.data) : null,
+            };
+          }
         });
-        try { (window as any).__debug_week_allMatches = (window as any).__debug_week_allMatches || {}; (window as any).__debug_week_allMatches[target] = safeMatchesAll; } catch (_e) {}
-      } catch (_e) { /* ignore debug helpers */ }
+        try {
+          (window as any).__debug_week_allMatches = (window as any).__debug_week_allMatches || {};
+          (window as any).__debug_week_allMatches[target] = safeMatchesAll;
+        } catch (_e) {}
+      } catch (_e) {
+        /* ignore debug helpers */
+      }
 
       const latest = (matches || []).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))[0];
 
@@ -434,10 +545,14 @@ async function loadWeeklyData() {
       if (latest && latest.data) {
         try {
           ingresosSum = sumIngresosFromData(latest.data);
-        } catch (_e) { ingresosSum = 0; }
+        } catch (_e) {
+          ingresosSum = 0;
+        }
         try {
           proveedoresSum = sumEgresosFromData(latest.data);
-        } catch (_e) { proveedoresSum = 0; }
+        } catch (_e) {
+          proveedoresSum = 0;
+        }
       }
 
       ingresosArr.push(Number(ingresosSum || 0));
@@ -445,17 +560,34 @@ async function loadWeeklyData() {
 
       // collect minimal debug info about the 'latest' backup used for this day
       try {
-        const safeLatest = latest && typeof latest === 'object' ? {
-          id: latest.id || latest.key || latest.name || null,
-          createdAt: latest.createdAt || null,
-          selectedDate: getBackupSelectedDate(latest) || null,
-          dataKeys: latest.data ? Object.keys(latest.data) : null,
-          ingresosSample: latest.data && Array.isArray(latest.data.ingresos) ? (latest.data.ingresos || []).slice(0,5) : null,
-          proveedoresSample: latest.data && Array.isArray(latest.data.proveedores) ? (latest.data.proveedores || []).slice(0,5) : null,
-          entriesSample: latest.data && Array.isArray(latest.data.entries) ? (latest.data.entries || []).slice(0,10) : null,
-        } : null;
-        try { (window as any).__debug_week_backups = (window as any).__debug_week_backups || []; if (safeLatest) (window as any).__debug_week_backups.push(safeLatest); } catch (_e) {}
-      } catch (_e) { /* ignore debug collection errors */ }
+        const safeLatest =
+          latest && typeof latest === 'object'
+            ? {
+                id: latest.id || latest.key || latest.name || null,
+                createdAt: latest.createdAt || null,
+                selectedDate: getBackupSelectedDate(latest) || null,
+                dataKeys: latest.data ? Object.keys(latest.data) : null,
+                ingresosSample:
+                  latest.data && Array.isArray(latest.data.ingresos)
+                    ? (latest.data.ingresos || []).slice(0, 5)
+                    : null,
+                proveedoresSample:
+                  latest.data && Array.isArray(latest.data.proveedores)
+                    ? (latest.data.proveedores || []).slice(0, 5)
+                    : null,
+                entriesSample:
+                  latest.data && Array.isArray(latest.data.entries)
+                    ? (latest.data.entries || []).slice(0, 10)
+                    : null,
+              }
+            : null;
+        try {
+          (window as any).__debug_week_backups = (window as any).__debug_week_backups || [];
+          if (safeLatest) (window as any).__debug_week_backups.push(safeLatest);
+        } catch (_e) {}
+      } catch (_e) {
+        /* ignore debug collection errors */
+      }
     }
 
     week.chartData.labels = labels as string[];
@@ -464,7 +596,13 @@ async function loadWeeklyData() {
 
     try {
       // expose week debug object for easier inspection in browser console
-      try { (window as any).__debug_week = { labels: labels.slice(0, 50), ingresosArr: ingresosArr.slice(0, 50), egresosArr: egresosArr.slice(0, 50) }; } catch (_e) {}
+      try {
+        (window as any).__debug_week = {
+          labels: labels.slice(0, 50),
+          ingresosArr: ingresosArr.slice(0, 50),
+          egresosArr: egresosArr.slice(0, 50),
+        };
+      } catch (_e) {}
     } catch (_e) {}
 
     try {
@@ -485,7 +623,7 @@ async function loadWeeklyData() {
         const dayDate = addDays(prevWeekStart, i);
         const target = isoDate(dayDate);
 
-        const prevMatches = (Array.isArray(all) ? all : []).filter(b => {
+        const prevMatches = (Array.isArray(all) ? all : []).filter((b) => {
           try {
             if (!b) return false;
             const comp = String((b && b.component) || '').toLowerCase();
@@ -498,14 +636,24 @@ async function loadWeeklyData() {
           }
         });
 
-        const prevLatest = (prevMatches || []).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))[0];
+        const prevLatest = (prevMatches || []).sort(
+          (a, b) => (b.createdAt || 0) - (a.createdAt || 0),
+        )[0];
 
         let prevIngresosSum = 0;
         let prevProveedoresSum = 0;
 
         if (prevLatest && prevLatest.data) {
-          try { prevIngresosSum = sumIngresosFromData(prevLatest.data); } catch (_e) { prevIngresosSum = 0; }
-          try { prevProveedoresSum = sumEgresosFromData(prevLatest.data); } catch (_e) { prevProveedoresSum = 0; }
+          try {
+            prevIngresosSum = sumIngresosFromData(prevLatest.data);
+          } catch (_e) {
+            prevIngresosSum = 0;
+          }
+          try {
+            prevProveedoresSum = sumEgresosFromData(prevLatest.data);
+          } catch (_e) {
+            prevProveedoresSum = 0;
+          }
         }
 
         prevIngresosArr.push(Number(prevIngresosSum || 0));
@@ -549,7 +697,7 @@ async function loadMonthlyData() {
       const monthKey = format(monthDate, 'yyyy-MM');
       labels.push(format(monthDate, 'MMM yyyy'));
 
-      const matches = (Array.isArray(all) ? all : []).filter(b => {
+      const matches = (Array.isArray(all) ? all : []).filter((b) => {
         try {
           if (!b) return false;
           const comp = String((b && b.component) || '').toLowerCase();
@@ -565,19 +713,35 @@ async function loadMonthlyData() {
       // expose a safe copy of matches to window for debugging in browser
       try {
         // keep only first 10 matches to avoid huge payloads
-        const safeMatches = (matches || []).slice(0, 10).map(m => {
-          try { return JSON.parse(JSON.stringify(m)); } catch (_e) { return { id: m && (m.id || m.key || m.name), data: (m && m.data) || null, createdAt: m && m.createdAt }; }
+        const safeMatches = (matches || []).slice(0, 10).map((m) => {
+          try {
+            return JSON.parse(JSON.stringify(m));
+          } catch (_e) {
+            return {
+              id: m && (m.id || m.key || m.name),
+              data: (m && m.data) || null,
+              createdAt: m && m.createdAt,
+            };
+          }
         });
         // eslint-disable-next-line no-console
-        console.log('[loadMonthlyData] debug: exported safeMatches to window.__debug_month_matches (count:', safeMatches.length, ')');
-        try { (window as any).__debug_month_matches = safeMatches; } catch (_e) { /* ignore */ }
+        console.log(
+          '[loadMonthlyData] debug: exported safeMatches to window.__debug_month_matches (count:',
+          safeMatches.length,
+          ')',
+        );
+        try {
+          (window as any).__debug_month_matches = safeMatches;
+        } catch (_e) {
+          /* ignore */
+        }
       } catch (_e) {
         /* ignore */
       }
 
       // latest per day
       const latestPerDay: Record<string, any> = {};
-      (matches || []).forEach(mb => {
+      (matches || []).forEach((mb) => {
         // Use getBackupSelectedDate to obtain the backup's selected date (some backups store date in id rather than data.selectedDate)
         const dayKeyRaw = getBackupSelectedDate(mb);
         const dayKey = String(dayKeyRaw || '').slice(0, 10);
@@ -588,15 +752,19 @@ async function loadMonthlyData() {
 
       let monthIngresos = 0;
       let monthProveedores = 0;
-        Object.values(latestPerDay).forEach((latest: any) => {
-          if (!latest || !latest.data) return;
-          try {
-            monthIngresos += sumIngresosFromData(latest.data);
-          } catch (_e) { /* ignore per-day ingreso errors */ }
-          try {
-            monthProveedores += sumEgresosFromData(latest.data);
-          } catch (_e) { /* ignore per-day egreso errors */ }
-        });
+      Object.values(latestPerDay).forEach((latest: any) => {
+        if (!latest || !latest.data) return;
+        try {
+          monthIngresos += sumIngresosFromData(latest.data);
+        } catch (_e) {
+          /* ignore per-day ingreso errors */
+        }
+        try {
+          monthProveedores += sumEgresosFromData(latest.data);
+        } catch (_e) {
+          /* ignore per-day egreso errors */
+        }
+      });
 
       ingresosArr.push(Number(monthIngresos || 0));
       egresosArr.push(Number(monthProveedores || 0));
@@ -605,20 +773,25 @@ async function loadMonthlyData() {
     month.chartData.labels = labels as string[];
     // replace datasets array completely to ensure reactivity and correct types
     month.chartData.datasets = [
-      { label: 'Ingresos', data: ingresosArr.map(v => Number(v || 0)) },
-      { label: 'Egresos', data: egresosArr.map(v => Number(v || 0)) }
+      { label: 'Ingresos', data: ingresosArr.map((v) => Number(v || 0)) },
+      { label: 'Egresos', data: egresosArr.map((v) => Number(v || 0)) },
     ];
 
     try {
       // eslint-disable-next-line no-console
-      console.log('[loadMonthlyData] assigned month.chartData.datasets sample:', JSON.stringify(month.chartData.datasets));
+      console.log(
+        '[loadMonthlyData] assigned month.chartData.datasets sample:',
+        JSON.stringify(month.chartData.datasets),
+      );
     } catch (_e) {}
 
     try {
       // monthlyProfit based on selectedDate's month within this year
       const selParsed = parseLocalDate({ d: String(month.selectedDate).slice(0, 10) });
       const selMonth = isNaN(selParsed.getTime()) ? new Date().getMonth() : selParsed.getMonth();
-      if (selMonth >= 0 && selMonth < ingresosArr.length) month.monthlyProfit = Number(ingresosArr[selMonth] || 0) - Number(egresosArr[selMonth] || 0);
+      if (selMonth >= 0 && selMonth < ingresosArr.length)
+        month.monthlyProfit =
+          Number(ingresosArr[selMonth] || 0) - Number(egresosArr[selMonth] || 0);
       else month.monthlyProfit = 0;
     } catch (_err) {
       month.monthlyProfit = 0;
@@ -642,7 +815,7 @@ async function loadYearData() {
     const startYear = selectedYear - (N - 1);
     for (let y = startYear; y <= selectedYear; y++) yearsArr.push(y);
 
-    const labels: string[] = yearsArr.map(y => String(y));
+    const labels: string[] = yearsArr.map((y) => String(y));
     const yearIngresosTotals: number[] = [];
     const yearEgresosTotals: number[] = [];
 
@@ -659,7 +832,7 @@ async function loadYearData() {
         const target = format(monthDate, 'yyyy-MM');
 
         // For each month, there may be multiple daily backups; build latestPerDay then sum those
-        const matches = (Array.isArray(all) ? all : []).filter(b => {
+        const matches = (Array.isArray(all) ? all : []).filter((b) => {
           try {
             if (!b) return false;
             const comp = String((b && b.component) || '').toLowerCase();
@@ -673,7 +846,7 @@ async function loadYearData() {
         });
 
         const latestPerDay: Record<string, any> = {};
-        (matches || []).forEach(mb => {
+        (matches || []).forEach((mb) => {
           const dayKey = String(getBackupSelectedDate(mb) || '').slice(0, 10);
           if (!dayKey) return;
           const curr = latestPerDay[dayKey];
@@ -687,10 +860,14 @@ async function loadYearData() {
           if (!latest || !latest.data) return;
           try {
             monthIngresos += sumIngresosFromData(latest.data);
-          } catch (_e) { /* ignore malformed ingresos */ }
+          } catch (_e) {
+            /* ignore malformed ingresos */
+          }
           try {
             monthProveedores += sumEgresosFromData(latest.data);
-          } catch (_e) { /* ignore malformed proveedores */ }
+          } catch (_e) {
+            /* ignore malformed proveedores */
+          }
         });
 
         yearIngresos += Number(monthIngresos || 0);
@@ -704,17 +881,26 @@ async function loadYearData() {
     year.chartData.labels = labels as string[];
     // replace datasets to ensure reactivity and numeric types (Ingresos / Egresos)
     year.chartData.datasets = [
-      { label: 'Ingresos', data: yearIngresosTotals.map(v => Number(v || 0)) },
-      { label: 'Egresos', data: yearEgresosTotals.map(v => Number(v || 0)) }
+      { label: 'Ingresos', data: yearIngresosTotals.map((v) => Number(v || 0)) },
+      { label: 'Egresos', data: yearEgresosTotals.map((v) => Number(v || 0)) },
     ];
     try {
       // eslint-disable-next-line no-console
-      console.log('[loadYearData] assigned year.chartData.datasets sample:', JSON.stringify(year.chartData.datasets));
+      console.log(
+        '[loadYearData] assigned year.chartData.datasets sample:',
+        JSON.stringify(year.chartData.datasets),
+      );
     } catch (_e) {}
 
     try {
       // expose simple year debug totals for console inspection
-      try { (window as any).__debug_year_totals = { labels: labels.slice(0, 20), ingresos: yearIngresosTotals.slice(0, 20), egresos: yearEgresosTotals.slice(0, 20) }; } catch (_e) {}
+      try {
+        (window as any).__debug_year_totals = {
+          labels: labels.slice(0, 20),
+          ingresos: yearIngresosTotals.slice(0, 20),
+          egresos: yearEgresosTotals.slice(0, 20),
+        };
+      } catch (_e) {}
     } catch (_e) {}
 
     try {
@@ -735,8 +921,14 @@ async function loadYearData() {
 }
 
 // Navigation helpers invoked by child components (delegates to central loaders)
-function dayPrev() { day.dayOffset -= 1; void loadDayData(); }
-function dayNext() { day.dayOffset += 1; void loadDayData(); }
+function dayPrev() {
+  day.dayOffset -= 1;
+  void loadDayData();
+}
+function dayNext() {
+  day.dayOffset += 1;
+  void loadDayData();
+}
 function dayOnPopoverDateChange(e: CustomEvent) {
   try {
     const val = e?.detail?.value || day.selectedDate;
@@ -751,10 +943,22 @@ function dayOnPopoverDateChange(e: CustomEvent) {
   day.popovers.mainDate.open = false;
   void loadDayData();
 }
-function dayResetToToday() { const today = new Date(); day.selectedDate = format(today, 'yyyy-MM-dd'); day.dayOffset = 0; day.popovers.mainDate.open = false; void loadDayData(); }
+function dayResetToToday() {
+  const today = new Date();
+  day.selectedDate = format(today, 'yyyy-MM-dd');
+  day.dayOffset = 0;
+  day.popovers.mainDate.open = false;
+  void loadDayData();
+}
 
-function weekPrev() { week.weekOffset -= 1; void loadWeeklyData(); }
-function weekNext() { week.weekOffset += 1; void loadWeeklyData(); }
+function weekPrev() {
+  week.weekOffset -= 1;
+  void loadWeeklyData();
+}
+function weekNext() {
+  week.weekOffset += 1;
+  void loadWeeklyData();
+}
 function weekOnPopoverDateChange(e: CustomEvent) {
   try {
     const val = e?.detail?.value || week.selectedDate;
@@ -768,7 +972,14 @@ function weekOnPopoverDateChange(e: CustomEvent) {
   week.popovers.mainDate.open = false;
   void loadWeeklyData();
 }
-function weekResetToToday() { const today = new Date(); week.selectedDate = format(today, 'yyyy-MM-dd'); const currentWeekStart = startOfWeek(new Date(), { weekStartsOn: 1 }); week.weekOffset = differenceInCalendarWeeks(today, currentWeekStart); week.popovers.mainDate.open = false; void loadWeeklyData(); }
+function weekResetToToday() {
+  const today = new Date();
+  week.selectedDate = format(today, 'yyyy-MM-dd');
+  const currentWeekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+  week.weekOffset = differenceInCalendarWeeks(today, currentWeekStart);
+  week.popovers.mainDate.open = false;
+  void loadWeeklyData();
+}
 
 function monthPrev() {
   try {
@@ -776,7 +987,9 @@ function monthPrev() {
     parsed.setFullYear(parsed.getFullYear() - 1);
     month.selectedDate = format(parsed, 'yyyy-MM-dd');
   } catch (_e) {
-    const d = new Date(); d.setFullYear(d.getFullYear() - 1); month.selectedDate = format(d, 'yyyy-MM-dd');
+    const d = new Date();
+    d.setFullYear(d.getFullYear() - 1);
+    month.selectedDate = format(d, 'yyyy-MM-dd');
   }
   month.popovers.mainDate.open = false;
   void loadMonthlyData();
@@ -787,7 +1000,9 @@ function monthNext() {
     parsed.setFullYear(parsed.getFullYear() + 1);
     month.selectedDate = format(parsed, 'yyyy-MM-dd');
   } catch (_e) {
-    const d = new Date(); d.setFullYear(d.getFullYear() + 1); month.selectedDate = format(d, 'yyyy-MM-dd');
+    const d = new Date();
+    d.setFullYear(d.getFullYear() + 1);
+    month.selectedDate = format(d, 'yyyy-MM-dd');
   }
   month.popovers.mainDate.open = false;
   void loadMonthlyData();
@@ -811,8 +1026,14 @@ function monthResetToToday() {
   void loadMonthlyData();
 }
 
-function yearPrev() { year.yearOffset -= 1; void loadYearData(); }
-function yearNext() { year.yearOffset += 1; void loadYearData(); }
+function yearPrev() {
+  year.yearOffset -= 1;
+  void loadYearData();
+}
+function yearNext() {
+  year.yearOffset += 1;
+  void loadYearData();
+}
 function yearOnPopoverDateChange(e: CustomEvent) {
   try {
     const val = e?.detail?.value || year.selectedDate;
@@ -827,7 +1048,15 @@ function yearOnPopoverDateChange(e: CustomEvent) {
   year.popovers.mainDate.open = false;
   void loadYearData();
 }
-function yearResetToToday() { const today = new Date(); year.selectedDate = format(today, 'yyyy'); const currentYear = new Date().getFullYear(); const selectedYear = parseInt(year.selectedDate, 10) || currentYear; year.yearOffset = selectedYear - currentYear; year.popovers.mainDate.open = false; void loadYearData(); }
+function yearResetToToday() {
+  const today = new Date();
+  year.selectedDate = format(today, 'yyyy');
+  const currentYear = new Date().getFullYear();
+  const selectedYear = parseInt(year.selectedDate, 10) || currentYear;
+  year.yearOffset = selectedYear - currentYear;
+  year.popovers.mainDate.open = false;
+  void loadYearData();
+}
 
 // Initial load
 onMounted(() => {
@@ -837,7 +1066,9 @@ onMounted(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (window as any).__debug_month = month;
     // expose year for debugging
-    try { (window as any).__debug_year = year; } catch (_e) {}
+    try {
+      (window as any).__debug_year = year;
+    } catch (_e) {}
   } catch (_e) {
     /* ignore */
   }

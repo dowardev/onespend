@@ -27,10 +27,8 @@ export function usePeriodView(initialModal = false) {
   }
 
   function setSnapshots(payload: { current?: SnapshotData; previous?: SnapshotData }) {
-    if (typeof payload.current !== 'undefined')
-      snapshots.current = payload.current;
-    if (typeof payload.previous !== 'undefined')
-      snapshots.previous = payload.previous;
+    if (typeof payload.current !== 'undefined') snapshots.current = payload.current;
+    if (typeof payload.previous !== 'undefined') snapshots.previous = payload.previous;
   }
 
   return {
