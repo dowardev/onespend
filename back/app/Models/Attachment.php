@@ -14,7 +14,7 @@ class Attachment extends Model
     protected $table = 'attachments';
 
     public const ENTITY_TYPE_ENTRIES = 'entries';
-    // Futuro: public const ENTITY_TYPE_PROVIDERS = 'providers';
+    public const ENTITY_TYPE_PROVIDERS = 'providers';
 
     protected $fillable = [
         'user_id',
@@ -25,6 +25,7 @@ class Attachment extends Model
         'mime_type',
         'size',
         'budget_entry_sync_id',
+        'budget_provider_sync_id',
     ];
 
     protected $casts = [
@@ -50,6 +51,11 @@ class Attachment extends Model
         return $this->belongsTo(BudgetEntry::class, 'budget_entry_sync_id', 'sync_id');
     }
 
+    public function budgetProvider(): BelongsTo
+    {
+        return $this->belongsTo(BudgetProvider::class, 'budget_provider_sync_id', 'sync_id');
+    }
+
     public function scopeForUser($query, $userId)
     {
         return $query->where('user_id', $userId);
@@ -58,6 +64,11 @@ class Attachment extends Model
     public function scopeByEntry($query, $entrySyncId)
     {
         return $query->where('budget_entry_sync_id', $entrySyncId);
+    }
+
+    public function scopeByProvider($query, $providerSyncId)
+    {
+        return $query->where('budget_provider_sync_id', $providerSyncId);
     }
 
     public function deleteFile(): void

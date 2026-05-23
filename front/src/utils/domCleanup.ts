@@ -48,18 +48,18 @@ class DOMCleanupManager {
 
   // Clean up all registered tasks
   cleanupAll(): void {
-    this.cleanupTasks.forEach(task => task.cleanup());
+    this.cleanupTasks.forEach((task) => task.cleanup());
     this.cleanupTasks.clear();
   }
 
   // Remove elements with specific attributes
   removeElementsByAttribute(attributeName: string, attributeValue?: string): void {
-    const selector = attributeValue 
+    const selector = attributeValue
       ? `[${attributeName}="${attributeValue}"]`
       : `[${attributeName}]`;
-    
+
     const elements = document.querySelectorAll(selector);
-    elements.forEach(element => {
+    elements.forEach((element) => {
       if (element.parentNode) {
         element.parentNode.removeChild(element);
       }
@@ -76,12 +76,13 @@ class DOMCleanupManager {
           mutation.addedNodes.forEach((node) => {
             if (node.nodeType === Node.ELEMENT_NODE) {
               const element = node as Element;
-              
+
               // Check for temporary elements that might be left behind
-              if (element.hasAttribute('data-chart-colors-temp') ||
-                  element.hasAttribute('data-performance-test') ||
-                  (element.classList && element.classList.contains('temp-element'))) {
-                
+              if (
+                element.hasAttribute('data-chart-colors-temp') ||
+                element.hasAttribute('data-performance-test') ||
+                (element.classList && element.classList.contains('temp-element'))
+              ) {
                 // Auto-cleanup temporary elements after a short delay
                 setTimeout(() => {
                   if (element.parentNode) {
@@ -147,10 +148,10 @@ export function removeTemporaryElements(): void {
   domCleanup.removeElementsByAttribute('data-performance-test');
   domCleanup.removeElementsByAttribute('data-test-container');
   domCleanup.removeElementsByAttribute('data-test-element');
-  
+
   // Remove elements with common temporary classes
   const tempElements = document.querySelectorAll('.temp-element, .cleanup-me');
-  tempElements.forEach(element => {
+  tempElements.forEach((element) => {
     if (element.parentNode) {
       element.parentNode.removeChild(element);
     }
@@ -177,7 +178,7 @@ export function useDOMCleanup() {
   };
 
   onUnmounted(() => {
-    cleanupTasks.forEach(id => {
+    cleanupTasks.forEach((id) => {
       unregisterCleanup(id);
     });
     cleanupTasks.clear();

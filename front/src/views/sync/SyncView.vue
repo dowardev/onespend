@@ -29,7 +29,10 @@
                 <ion-icon :icon="cloudOutline"></ion-icon>
                 <div class="status-info">
                   <span class="status-label">Conexión</span>
-                  <span class="status-value" :class="{ 'text-success': isOnline, 'text-warning': !isOnline }">
+                  <span
+                    class="status-value"
+                    :class="{ 'text-success': isOnline, 'text-warning': !isOnline }"
+                  >
                     {{ isOnline ? 'En línea' : 'Fuera de línea' }}
                   </span>
                 </div>
@@ -39,7 +42,13 @@
                 <ion-icon :icon="timeOutline"></ion-icon>
                 <div class="status-info">
                   <span class="status-label">Pendientes</span>
-                  <span class="status-value" :class="{ 'text-warning': pendingChanges > 0, 'text-success': pendingChanges === 0 }">
+                  <span
+                    class="status-value"
+                    :class="{
+                      'text-warning': pendingChanges > 0,
+                      'text-success': pendingChanges === 0,
+                    }"
+                  >
                     {{ pendingChanges }} {{ pendingChanges === 1 ? 'cambio' : 'cambios' }}
                   </span>
                 </div>
@@ -110,11 +119,7 @@
               Forzar sincronización completa
             </ion-button>
 
-            <ion-button
-              expand="block"
-              fill="outline"
-              @click="handleRefreshStatus"
-            >
+            <ion-button expand="block" fill="outline" @click="handleRefreshStatus">
               <ion-icon slot="start" :icon="refreshOutline"></ion-icon>
               Actualizar estado
             </ion-button>
@@ -248,7 +253,8 @@ async function handleSyncNow() {
 async function handleClearQueue() {
   const alert = await alertController.create({
     header: 'Limpiar cola',
-    message: '¿Estás seguro de que quieres eliminar todos los cambios pendientes? Esta acción no se puede deshacer.',
+    message:
+      '¿Estás seguro de que quieres eliminar todos los cambios pendientes? Esta acción no se puede deshacer.',
     buttons: [
       {
         text: 'Cancelar',
@@ -349,7 +355,8 @@ const pendingByType = computed(() => {
 // End Computed
 
 // Watch
-// End Watch</script>
+// End Watch
+</script>
 
 <style scoped>
 .sync-container {
@@ -382,8 +389,12 @@ const pendingByType = computed(() => {
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .status-info {

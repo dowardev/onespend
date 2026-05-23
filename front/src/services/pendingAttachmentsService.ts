@@ -4,13 +4,20 @@ export interface PendingAttachmentFile {
   name: string;
   type: string;
   size: number;
-  data: string; // Base64 encoded
+  data: string;
 }
 
+export type AttachmentEntityType = 'entries' | 'providers';
+
 export interface PendingAttachment {
-  entrySyncId: string;
+  entitySyncId: string;
+  entityType: AttachmentEntityType;
   files: PendingAttachmentFile[];
   timestamp: number;
+}
+
+function pendingKey(entitySyncId: string, entityType: AttachmentEntityType): string {
+  return `${entityType}:${entitySyncId}`;
 }
 
 function loadPending(): Record<string, PendingAttachment> {
@@ -27,8 +34,9 @@ function savePending(data: Record<string, PendingAttachment>): void {
 }
 
 export async function addPendingAttachment(
-  entrySyncId: string,
-  files: File[]
+  entitySyncId: string,
+  files: File[],
+  entityType: AttachmentEntityType = 'entries',
 ): Promise<void> {
   const pending = loadPending();
 
@@ -41,11 +49,13 @@ export async function addPendingAttachment(
         size: file.size,
         data,
       };
-    })
+    }),
   );
 
-  pending[entrySyncId] = {
-    entrySyncId,
+  const key = pendingKey(entitySyncId, entityType);
+  pending[key] = {
+    entitySyncId,
+    entityType,
     files: fileData,
     timestamp: Date.now(),
   };
@@ -54,12 +64,14 @@ export async function addPendingAttachment(
     savePending(pending);
   } catch (error) {
     if (error instanceof DOMException && error.name === 'QuotaExceededError') {
-      console.error('[pendingAttachmentsService] localStorage quota exceeded, clearing pending attachments');
-      // Clear old pending attachments and try again
+      console.error(
+        '[pendingAttachmentsService] localStorage quota exceeded, clearing pending attachments',
+      );
       localStorage.removeItem(PENDING_ATTACHMENTS_KEY);
       const newPending: Record<string, PendingAttachment> = {};
-      newPending[entrySyncId] = {
-        entrySyncId,
+      newPending[key] = {
+        entitySyncId,
+        entityType,
         files: fileData,
         timestamp: Date.now(),
       };
@@ -70,9 +82,12 @@ export async function addPendingAttachment(
   }
 }
 
-export function getPendingAttachment(entrySyncId: string): PendingAttachment | null {
+export function getPendingAttachment(
+  entitySyncId: string,
+  entityType: AttachmentEntityType = 'entries',
+): PendingAttachment | null {
   const pending = loadPending();
-  return pending[entrySyncId] || null;
+  return pending[pendingKey(entitySyncId, entityType)] || null;
 }
 
 export function getAllPendingAttachments(): PendingAttachment[] {
@@ -80,9 +95,12 @@ export function getAllPendingAttachments(): PendingAttachment[] {
   return Object.values(pending);
 }
 
-export function removePendingAttachment(entrySyncId: string): void {
+export function removePendingAttachment(
+  entitySyncId: string,
+  entityType: AttachmentEntityType = 'entries',
+): void {
   const pending = loadPending();
-  delete pending[entrySyncId];
+  delete pending[pendingKey(entitySyncId, entityType)];
   savePending(pending);
 }
 
@@ -99,7 +117,7 @@ function fileToBase64(file: File): Promise<string> {
       const result = reader.result as string;
       resolve(result.split(',')[1]);
     };
-    reader.onerror = error => reject(error);
+    reader.onerror = (error) => reject(error);
   });
 }
 
@@ -114,21 +132,39 @@ export function base64ToFile(base64: string, name: string, type: string): File {
 }
 
 export async function uploadPendingAttachments(
-  entrySyncId: string,
-  uploadFn: (entryId: string, files: File[]) => Promise<unknown>
+  entitySyncId: string,
+  entityType: AttachmentEntityType,
+  uploadFn: (id: string, files: File[]) => Promise<unknown>,
 ): Promise<boolean> {
-  const pending = getPendingAttachment(entrySyncId);
+  const pending = getPendingAttachment(entitySyncId, entityType);
   if (!pending) return true;
 
-  const files = pending.files.map(f => base64ToFile(f.data, f.name, f.type));
+  const files = pending.files.map((f) => base64ToFile(f.data, f.name, f.type));
 
   try {
-    await uploadFn(entrySyncId, files);
-    removePendingAttachment(entrySyncId);
+    await uploadFn(entitySyncId, files);
+    removePendingAttachment(entitySyncId, entityType);
     return true;
   } catch (error) {
     console.error('Failed to upload pending attachments:', error);
     return false;
+  }
+}
+
+export function removeFileFromPending(
+  entitySyncId: string,
+  entityType: AttachmentEntityType,
+  fileIndex: number,
+): void {
+  const pending = loadPending();
+  const key = pendingKey(entitySyncId, entityType);
+  const entry = pending[key];
+  if (entry && entry.files[fileIndex]) {
+    entry.files.splice(fileIndex, 1);
+    if (entry.files.length === 0) {
+      delete pending[key];
+    }
+    savePending(pending);
   }
 }
 
@@ -140,4 +176,5 @@ export default {
   hasPendingAttachments,
   base64ToFile,
   uploadPendingAttachments,
+  removeFileFromPending,
 };

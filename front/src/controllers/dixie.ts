@@ -12,10 +12,18 @@ class DixieController {
 
     return new Promise((resolve, reject) => {
       const req = indexedDB.open(name);
-      
+
       req.onupgradeneeded = (event) => {
         const d = (event.target as IDBOpenDBRequest).result;
-        const allStores = ['suppliers', 'accounts', 'templates', 'budget', 'backups', 'config', 'personalFinanceConfig'];
+        const allStores = [
+          'suppliers',
+          'accounts',
+          'templates',
+          'budget',
+          'backups',
+          'config',
+          'personalFinanceConfig',
+        ];
         for (const store of allStores) {
           if (!d.objectStoreNames.contains(store)) {
             d.createObjectStore(store, {
@@ -25,12 +33,20 @@ class DixieController {
           }
         }
       };
-      
+
       req.onsuccess = () => {
         const db = req.result;
-        const allStores = ['suppliers', 'accounts', 'templates', 'budget', 'backups', 'config', 'personalFinanceConfig'];
-        const missingStores = allStores.filter(store => !db.objectStoreNames.contains(store));
-        
+        const allStores = [
+          'suppliers',
+          'accounts',
+          'templates',
+          'budget',
+          'backups',
+          'config',
+          'personalFinanceConfig',
+        ];
+        const missingStores = allStores.filter((store) => !db.objectStoreNames.contains(store));
+
         if (missingStores.length > 0) {
           db.close();
           const getVersionReq = indexedDB.open(name);
@@ -58,7 +74,7 @@ class DixieController {
           resolve(db);
         }
       };
-      
+
       req.onerror = () => reject(req.error);
     });
   }
@@ -96,12 +112,20 @@ class DixieController {
     const { name, storeName } = params;
     const currentVersion = await this.getDBVersion({ name });
     const newVersion = (currentVersion || 1) + 1;
-    
+
     return new Promise((resolve, reject) => {
       const req = indexedDB.open(name, newVersion);
       req.onupgradeneeded = () => {
         const d = req.result;
-        const allStores = ['suppliers', 'accounts', 'templates', 'budget', 'backups', 'config', 'personalFinanceConfig'];
+        const allStores = [
+          'suppliers',
+          'accounts',
+          'templates',
+          'budget',
+          'backups',
+          'config',
+          'personalFinanceConfig',
+        ];
         for (const store of allStores) {
           if (!d.objectStoreNames.contains(store)) {
             d.createObjectStore(store, {
@@ -132,9 +156,7 @@ class DixieController {
         const out: unknown[] = [];
         seen.set(value, out);
         for (let i = 0; i < value.length; i++) {
-          out.push(
-            this.sanitizeForIndexedDB({ value: value[i], seen })
-          );
+          out.push(this.sanitizeForIndexedDB({ value: value[i], seen }));
         }
         return out;
       }
@@ -143,13 +165,12 @@ class DixieController {
         const out: Record<string, unknown> = {};
         seen.set(value, out);
         for (const k of Object.keys(value as Record<string, unknown>)) {
-            try {
-              const v = (value as Record<string, unknown>)[k];
-              const sv = this.sanitizeForIndexedDB({ value: v, seen });
-              if (sv !== undefined) out[k] = sv;
-            } catch (_e) {
-            }
-          }
+          try {
+            const v = (value as Record<string, unknown>)[k];
+            const sv = this.sanitizeForIndexedDB({ value: v, seen });
+            if (sv !== undefined) out[k] = sv;
+          } catch (_e) {}
+        }
         return out;
       }
       return String(value);
@@ -195,17 +216,15 @@ class DixieController {
         ) {
           try {
             delete (entryToStore as Record<string, unknown>).id;
-          } catch (_e) {
-          }
+          } catch (_e) {}
         }
-      } catch (_e) {
-      }
+      } catch (_e) {}
       try {
         req = store.add(entryToStore);
       } catch (syncErr) {
         console.warn(
           'DixieController.addEntry: store.add threw synchronously, trying store.put as fallback',
-          syncErr
+          syncErr,
         );
         try {
           req = store.put(entryToStore);
@@ -213,12 +232,11 @@ class DixieController {
           console.error(
             'DixieController.addEntry: both store.add and store.put failed synchronously',
             putSyncErr,
-            { entryPreview: this.sanitizeForIndexedDB({ value: entry }) }
+            { entryPreview: this.sanitizeForIndexedDB({ value: entry }) },
           );
           try {
             db.close();
-          } catch (_e) {
-          }
+          } catch (_e) {}
           reject(putSyncErr);
           return;
         }
@@ -237,29 +255,24 @@ class DixieController {
             message: (req.error as Error)?.message,
           });
         } catch (e) {
-          console.error(
-            'DixieController.addEntry: request.onerror (fallback log)',
-            ev,
-            req.error
-          );
+          console.error('DixieController.addEntry: request.onerror (fallback log)', ev, req.error);
         }
         try {
           const payload = {
             time: new Date().toISOString(),
             fn: 'addEntry',
             phase: 'request.onerror',
-             error: {
-               name: (req.error as Error)?.name || 'UnknownError',
-               message: (req.error as Error)?.message || String(req.error || ev),
-             },
+            error: {
+              name: (req.error as Error)?.name || 'UnknownError',
+              message: (req.error as Error)?.message || String(req.error || ev),
+            },
             entryPreview:
               entry && typeof entry === 'object'
                 ? this.sanitizeForIndexedDB({ value: entry })
                 : String(entry),
           };
           localStorage.setItem('dixie:lastError', JSON.stringify(payload));
-        } catch (_e) {
-        }
+        } catch (_e) {}
         reject(req.error || ev);
       };
 
@@ -269,8 +282,7 @@ class DixieController {
             event: ev,
             txError: tx.error,
           });
-        } catch (_e) {
-        }
+        } catch (_e) {}
         try {
           const payload = {
             time: new Date().toISOString(),
@@ -286,8 +298,7 @@ class DixieController {
                 : String(entry),
           };
           localStorage.setItem('dixie:lastError', JSON.stringify(payload));
-        } catch (_e) {
-        }
+        } catch (_e) {}
         reject(tx.error || ev);
       };
 
@@ -297,8 +308,7 @@ class DixieController {
             event: ev,
             txError: tx.error,
           });
-        } catch (_e) {
-        }
+        } catch (_e) {}
         try {
           const payload = {
             time: new Date().toISOString(),
@@ -314,16 +324,14 @@ class DixieController {
                 : String(entry),
           };
           localStorage.setItem('dixie:lastError', JSON.stringify(payload));
-        } catch (_e) {
-        }
+        } catch (_e) {}
         reject(tx.error || ev);
       };
 
       tx.oncomplete = () => {
         try {
           db.close();
-        } catch (e) {
-        }
+        } catch (e) {}
       };
     });
   }
@@ -340,30 +348,21 @@ class DixieController {
       } else {
         entryToPut = { value: entry };
       }
-      
+
       const req = store.put(entryToPut);
       req.onsuccess = () => resolve(req.result);
       req.onerror = (ev: unknown) => {
-        console.error(
-          'DixieController.putEntry: request.onerror',
-          ev,
-          req.error
-        );
+        console.error('DixieController.putEntry: request.onerror', ev, req.error);
         reject(req.error || ev);
       };
       tx.onerror = (ev: unknown) => {
-        console.error(
-          'DixieController.putEntry: transaction.onerror',
-          ev,
-          tx.error
-        );
+        console.error('DixieController.putEntry: transaction.onerror', ev, tx.error);
         reject(tx.error || ev);
       };
       tx.oncomplete = () => {
         try {
           db.close();
-        } catch (e) {
-        }
+        } catch (e) {}
       };
     });
   }
@@ -393,8 +392,7 @@ class DixieController {
       tx.oncomplete = () => {
         try {
           db.close();
-        } catch (e) {
-        }
+        } catch (e) {}
       };
     });
   }
@@ -444,8 +442,7 @@ class DixieController {
       tx.oncomplete = () => {
         try {
           db.close();
-        } catch (e) {
-        }
+        } catch (e) {}
       };
     });
   }

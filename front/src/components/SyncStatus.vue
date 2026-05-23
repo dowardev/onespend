@@ -17,7 +17,12 @@
 // Imports
 import { computed } from 'vue';
 import { IonIcon } from '@ionic/vue';
-import { cloudOfflineOutline, syncOutline, checkmarkCircleOutline, timeOutline } from 'ionicons/icons';
+import {
+  cloudOfflineOutline,
+  syncOutline,
+  checkmarkCircleOutline,
+  timeOutline,
+} from 'ionicons/icons';
 import { SyncController } from '@/controllers/syncController';
 // End Imports
 
@@ -61,7 +66,8 @@ const syncIcon = computed(() => {
 // End Computed
 
 // Watch
-// End Watch</script>
+// End Watch
+</script>
 
 <style scoped>
 .sync-status {
@@ -103,7 +109,11 @@ const syncIcon = computed(() => {
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>

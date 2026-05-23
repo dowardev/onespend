@@ -1,11 +1,6 @@
 <template>
   <div>
-    <Bar
-      v-if="canRenderChart"
-      :key="chartKey"
-      :data="safeChartData"
-      :options="safeChartOptions"
-    />
+    <Bar v-if="canRenderChart" :key="chartKey" :data="safeChartData" :options="safeChartOptions" />
   </div>
 </template>
 
@@ -35,12 +30,13 @@ const props = withDefaults(defineProps<Props>(), {
 const { loadChartDependencies, isLoaded } = useChart();
 
 // computed
-const hasData = computed(() =>
-  props.chartData &&
-  props.chartData.labels &&
-  props.chartData.labels.length > 0 &&
-  props.chartData.datasets &&
-  props.chartData.datasets.length > 0
+const hasData = computed(
+  () =>
+    props.chartData &&
+    props.chartData.labels &&
+    props.chartData.labels.length > 0 &&
+    props.chartData.datasets &&
+    props.chartData.datasets.length > 0,
 );
 
 const canRenderChart = computed(() => hasData.value && isLoaded.value);
@@ -53,14 +49,14 @@ const safeChartData = shallowRef<ChartData<'bar'>>(
           JSON.stringify({
             ...props.chartData,
             labels: (props.chartData.labels || []).map(translateMonthLabel),
-          })
+          }),
         ),
-        props.colorIndex
+        props.colorIndex,
       )
-    : { labels: [], datasets: [] }
+    : { labels: [], datasets: [] },
 );
 const safeChartOptions = shallowRef<ChartOptions<'bar'>>(
-  props.chartOptions ? JSON.parse(JSON.stringify(props.chartOptions)) : ({} as ChartOptions<'bar'>)
+  props.chartOptions ? JSON.parse(JSON.stringify(props.chartOptions)) : ({} as ChartOptions<'bar'>),
 );
 
 // Force remount key to ensure vue-chartjs fully re-renders when data changes
@@ -78,32 +74,34 @@ onMounted(async () => {
 // watch
 watch(
   () => props.chartData,
-  v => {
+  (v) => {
     const cloned = v ? JSON.parse(JSON.stringify(v)) : { labels: [], datasets: [] };
     cloned.labels = (cloned.labels || []).map(translateMonthLabel);
-  safeChartData.value = applyNeonStyles(cloned, props.colorIndex);
+    safeChartData.value = applyNeonStyles(cloned, props.colorIndex);
     // bump key to force Bar remount (works around chart update detection issues)
-    try { chartKey.value = (chartKey.value || 0) + 1; } catch (_e) {}
+    try {
+      chartKey.value = (chartKey.value || 0) + 1;
+    } catch (_e) {}
     // debug logs removed
   },
-  { immediate: true, deep: true }
+  { immediate: true, deep: true },
 );
 
 watch(
   () => props.chartOptions,
-  v => {
+  (v) => {
     safeChartOptions.value = v ? JSON.parse(JSON.stringify(v)) : ({} as ChartOptions<'bar'>);
   },
-  { immediate: true, deep: true }
+  { immediate: true, deep: true },
 );
 
 // watch chart loading state to help debugging
 watch(
   () => isLoaded.value,
-  v => {
+  (v) => {
     // debug logs removed
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 // functions
@@ -116,7 +114,7 @@ function translateMonthLabel(label: unknown): string {
     try {
       const d = parseLocalDate({ d: labelStr + '-01' });
       const formatted = safeIntlFormat(d, 'es-MX', { month: 'short', year: 'numeric' });
-      if (formatted) return formatted.replace(/\./g, '').replace(/^(.)/, s => s.toUpperCase());
+      if (formatted) return formatted.replace(/\./g, '').replace(/^(.)/, (s) => s.toUpperCase());
     } catch (_e) {
       // fall through
     }
@@ -127,7 +125,7 @@ function translateMonthLabel(label: unknown): string {
     try {
       const d = parseLocalDate({ d: labelStr });
       const formatted = safeIntlFormat(d, 'es-MX', { month: 'short', year: 'numeric' });
-      if (formatted) return formatted.replace(/\./g, '').replace(/^(.)/, s => s.toUpperCase());
+      if (formatted) return formatted.replace(/\./g, '').replace(/^(.)/, (s) => s.toUpperCase());
     } catch (_e) {
       // fall through
     }
@@ -145,7 +143,7 @@ function translateMonthLabel(label: unknown): string {
     const d = parseLocalDate({ d: labelStr });
     if (!isNaN(d.getTime())) {
       const formatted = safeIntlFormat(d, 'es-MX', { month: 'short', year: 'numeric' });
-      if (formatted) return formatted.replace(/\./g, '').replace(/^(.)/, s => s.toUpperCase());
+      if (formatted) return formatted.replace(/\./g, '').replace(/^(.)/, (s) => s.toUpperCase());
     }
   } catch (_e) {
     // ignore

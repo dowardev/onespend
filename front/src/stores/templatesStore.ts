@@ -19,13 +19,11 @@ export const useTemplatesStore = defineStore('templates', () => {
   const { syncTemplate } = useSync();
 
   function setTemplates(newTemplates: TemplateSummary[]) {
-    templates.value = structuredClone
-      ? structuredClone(newTemplates)
-      : [...newTemplates];
+    templates.value = structuredClone ? structuredClone(newTemplates) : [...newTemplates];
   }
 
   function removeTemplate(id: IDBValidKey) {
-    const idx = templates.value.findIndex(t => String(t.id) === String(id));
+    const idx = templates.value.findIndex((t) => String(t.id) === String(id));
     if (idx !== -1) {
       const template = templates.value[idx];
       templates.value.splice(idx, 1);
@@ -36,9 +34,7 @@ export const useTemplatesStore = defineStore('templates', () => {
 
   function addOrUpdateTemplate(template: TemplateSummary) {
     const copy = structuredClone ? structuredClone(template) : { ...template };
-    const idx = templates.value.findIndex(
-      t => String(t.id) === String(copy.id)
-    );
+    const idx = templates.value.findIndex((t) => String(t.id) === String(copy.id));
     if (idx !== -1) {
       copy.updatedAt = Date.now();
       templates.value[idx] = copy;
@@ -52,8 +48,7 @@ export const useTemplatesStore = defineStore('templates', () => {
 
   function upsertTemplate(template: TemplateSummary) {
     const idx = templates.value.findIndex(
-      t =>
-        String(t.id) === String(template.id) || t.sync_id === template.sync_id
+      (t) => String(t.id) === String(template.id) || t.sync_id === template.sync_id,
     );
     const copy = structuredClone ? structuredClone(template) : { ...template };
     if (idx !== -1) {

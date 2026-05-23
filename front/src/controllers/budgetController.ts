@@ -127,7 +127,9 @@ class BudgetController {
     try {
       const dateKey = `budget:${date}`;
       console.log('[BudgetController.loadDataForDate] Loading data for:', dateKey);
-      const data = (await dixieController.getBackup({ id: dateKey })) as unknown as { data: BudgetData } | null;
+      const data = (await dixieController.getBackup({ id: dateKey })) as unknown as {
+        data: BudgetData;
+      } | null;
       console.log('[BudgetController.loadDataForDate] Raw data from DB:', data);
 
       if (data && data.data) {
@@ -140,17 +142,22 @@ class BudgetController {
         });
         this.store.setEntries(d.entries || []);
         this.store.setProviders(d.proveedores || []);
-        this.store.setFinishDayData(d.finishDayData || {
-          totalSalesEfectivo: 0,
-          totalSalesTarjeta: 0,
-          totalSalesCredito: 0,
-          type: '%',
-          margin: 0,
-        });
+        this.store.setFinishDayData(
+          d.finishDayData || {
+            totalSalesEfectivo: 0,
+            totalSalesTarjeta: 0,
+            totalSalesCredito: 0,
+            type: '%',
+            margin: 0,
+          },
+        );
         this.store.setIsDayClosed(!!d.isDayClosed);
         try {
           // eslint-disable-next-line no-console
-          console.log('[BudgetController.loadDataForDate] Store entries count after setEntries:', this.store.entries.length);
+          console.log(
+            '[BudgetController.loadDataForDate] Store entries count after setEntries:',
+            this.store.entries.length,
+          );
         } catch (e) {}
       } else {
         console.log('[BudgetController.loadDataForDate] No data found, clearing store');
@@ -200,7 +207,14 @@ class BudgetController {
     } = params;
 
     const finalDate = date || this.store.selectedDate;
-    console.log('💰 budgetController.addIngreso - date received:', date, 'selectedDate:', this.store.selectedDate, 'finalDate:', finalDate);
+    console.log(
+      '💰 budgetController.addIngreso - date received:',
+      date,
+      'selectedDate:',
+      this.store.selectedDate,
+      'finalDate:',
+      finalDate,
+    );
 
     const newIngreso: Income = {
       id: Date.now() + Math.random(),
@@ -223,7 +237,7 @@ class BudgetController {
       this.store.addEntry(newIngreso);
       this.saveData();
     }
-    
+
     const { syncEntry } = useSync();
     syncEntry({ entry: newIngreso, operation: 'create' });
 
@@ -268,7 +282,7 @@ class BudgetController {
       this.store.addEntry(newEgreso);
       this.saveData();
     }
-    
+
     const { syncEntry } = useSync();
     syncEntry({ entry: newEgreso, operation: 'create' });
 
@@ -297,34 +311,34 @@ class BudgetController {
     };
 
     this.store.addEntry(newEntry);
-    
+
     const { syncEntry } = useSync();
     syncEntry({ entry: newEntry, operation: 'create' });
   }
 
   updateIngreso(params: { id: string | number; changes: Partial<Income> }) {
     const { id, changes } = params;
-    
+
     const newDate = changes.date;
     const currentDate = this.store.selectedDate;
-    
+
     if (newDate && newDate !== currentDate) {
-      const entry = this.store.entries.find(e => e.id === id);
+      const entry = this.store.entries.find((e) => e.id === id);
       if (!entry) return;
-      
+
       const updatedEntry = { ...entry, ...changes };
-      
+
       this.store.removeEntry(id);
       this.saveData();
-      
+
       this.saveEntryToDate(updatedEntry, newDate);
-      
+
       const { syncEntry } = useSync();
       syncEntry({ entry: updatedEntry, operation: 'update' });
     } else {
       this.store.updateEntry(id, changes);
-      
-      const entry = this.store.entries.find(e => e.id === id);
+
+      const entry = this.store.entries.find((e) => e.id === id);
       if (entry) {
         const { syncEntry } = useSync();
         syncEntry({ entry, operation: 'update' });
@@ -334,9 +348,9 @@ class BudgetController {
 
   removeIngreso(params: { id: string | number }) {
     const { id } = params;
-    const entry = this.store.entries.find(e => e.id === id);
+    const entry = this.store.entries.find((e) => e.id === id);
     this.store.removeEntry(id);
-    
+
     if (entry) {
       const { syncEntry } = useSync();
       syncEntry({ entry, operation: 'delete' });
@@ -356,10 +370,16 @@ class BudgetController {
     _supplierId?: string | number;
     _supplierName?: string;
     _supplier?: Supplier;
-    products?: Array<{ supplierProductId: string | number; productName: string; productPrice: number; quantity: number }>;
+    notes?: string;
+    products?: Array<{
+      supplierProductId?: string | number | null;
+      productName: string;
+      productPrice: number;
+      quantity: number;
+    }>;
     items?: Array<{ amount: number; accountId: string | number | null }>;
     date?: string;
-  }) {
+  }): void {
     const {
       name = '',
       estimated = 0,
@@ -368,6 +388,7 @@ class BudgetController {
       _supplierId,
       _supplierName,
       _supplier,
+      notes,
       products,
       items,
       date,
@@ -375,13 +396,18 @@ class BudgetController {
     if (!name && !allowEmpty) return;
 
     const localId = Date.now() + Math.random();
-    
+
     const supplierSyncId = _supplierId as string | undefined;
-    console.log('budgetController.addProvider - _supplierId:', _supplierId, 'supplierSyncId:', supplierSyncId);
-    
+    console.log(
+      'budgetController.addProvider - _supplierId:',
+      _supplierId,
+      'supplierSyncId:',
+      supplierSyncId,
+    );
+
     const providerDate = date || this.store.selectedDate;
     const currentDate = this.store.selectedDate;
-    
+
     const newProvider: Provider = {
       id: localId,
       sync_id: generateSyncId(),
@@ -392,7 +418,7 @@ class BudgetController {
       efectivo: 0,
       tarjeta: 0,
       credito: 0,
-      notes: '',
+      notes: notes || '',
       visited: false,
       _justAdded: true,
       _supplierId: supplierSyncId,
@@ -415,66 +441,83 @@ class BudgetController {
       syncBudgetProvider({ provider: newProvider, operation: 'create', products, supplierSyncId });
     }
 
-      const timeoutId = setTimeout(() => {
-        const provider = this.store.providers.find(p => p.id === newProvider.id);
-        if (provider) {
-          this.updateProvider({ id: provider.id, changes: { _justAdded: false } });
-        }
-      }, 400);
-      
-      // Store timeout ID for potential cleanup
-      if (!this.pendingTimeouts) {
-        this.pendingTimeouts = new Set<NodeJS.Timeout>();
+    const timeoutId = setTimeout(() => {
+      const provider = this.store.providers.find((p) => p.id === newProvider.id);
+      if (provider) {
+        this.updateProvider({ id: provider.id, changes: { _justAdded: false } });
       }
-      this.pendingTimeouts.add(timeoutId);
-      setTimeout(() => {
-        this.pendingTimeouts?.delete(timeoutId);
-      }, 500);
+    }, 400);
+
+    // Store timeout ID for potential cleanup
+    if (!this.pendingTimeouts) {
+      this.pendingTimeouts = new Set<NodeJS.Timeout>();
+    }
+    this.pendingTimeouts.add(timeoutId);
+    setTimeout(() => {
+      this.pendingTimeouts?.delete(timeoutId);
+    }, 500);
+
+    return newProvider;
   }
 
   updateProvider(params: { id: string | number; changes: Partial<Provider> }): boolean {
     const { id, changes } = params;
-    console.log('budgetController.updateProvider - id:', id, 'changes:', JSON.stringify(changes, null, 2));
-    
-    const provider = this.store.providers.find(p => p.id === id);
+    console.log(
+      'budgetController.updateProvider - id:',
+      id,
+      'changes:',
+      JSON.stringify(changes, null, 2),
+    );
+
+    const provider = this.store.providers.find((p) => p.id === id);
     if (!provider) return false;
 
-    const productsToSync = changes.products || (provider?.products || []);
+    const productsToSync = changes.products || provider?.products || [];
     const supplierSyncId = (provider?._supplierId || changes._supplierId) as string | undefined;
-    
+
     // Check if date is being changed to a different date
     const newDate = changes.date;
     const currentDate = this.store.selectedDate;
-    
+
     if (newDate && newDate !== currentDate) {
       // Provider is being moved to a different date
       console.log('budgetController.updateProvider - moving provider to new date:', newDate);
-      
+
       // Create updated provider with all changes
       const updatedProvider = { ...provider, ...changes };
-      
+
       // Remove from current date's store
       this.store.removeProvider(id);
-      
+
       // Save current date data (without this provider)
       this.saveData();
-      
+
       // Save provider to the new date bucket
       this.saveProviderToDate(updatedProvider, newDate);
-      
+
       // Sync with server
       const { syncBudgetProvider } = useSync();
-      syncBudgetProvider({ provider: updatedProvider, operation: 'update', products: productsToSync, supplierSyncId });
-      
+      syncBudgetProvider({
+        provider: updatedProvider,
+        operation: 'update',
+        products: productsToSync,
+        supplierSyncId,
+      });
+
       // Return true to indicate data was already saved
       return true;
     } else {
       // Normal update - same date
       this.store.updateProvider(id, changes);
-      
+
       const { syncBudgetProvider } = useSync();
-      syncBudgetProvider({ provider: { ...provider, ...changes }, operation: 'update', products: productsToSync, supplierSyncId });
-      
+      syncBudgetProvider({
+        provider: { ...provider, ...changes },
+        operation: 'update',
+        products: productsToSync,
+        supplierSyncId,
+      });
+
       // Return false to indicate caller should save data
       return false;
     }
@@ -485,21 +528,27 @@ class BudgetController {
     try {
       const dateKey = `budget:${targetDate}`;
       console.log('[BudgetController.saveProviderToDate] Saving to:', dateKey);
-      
+
       // Convert provider to plain object to avoid Proxy serialization issues
       const plainProvider = JSON.parse(JSON.stringify(provider));
-      
+
       // Load existing data for target date using getBackup (not getEntry)
-      const existing = (await dixieController.getBackup({ id: dateKey })) as { data?: BudgetData } | null;
+      const existing = (await dixieController.getBackup({ id: dateKey })) as {
+        data?: BudgetData;
+      } | null;
       // Convert to plain objects to avoid Proxy issues
-      const entries = existing?.data?.entries ? JSON.parse(JSON.stringify(existing.data.entries)) : [];
-      const providers = existing?.data?.proveedores ? JSON.parse(JSON.stringify(existing.data.proveedores)) : [];
+      const entries = existing?.data?.entries
+        ? JSON.parse(JSON.stringify(existing.data.entries))
+        : [];
+      const providers = existing?.data?.proveedores
+        ? JSON.parse(JSON.stringify(existing.data.proveedores))
+        : [];
       const isDayClosed = existing?.data?.isDayClosed || false;
       const finishDayData = existing?.data?.finishDayData || {};
-      
+
       // Add provider
       providers.push(plainProvider);
-      
+
       // Save updated data
       await dixieController.putEntry({
         entry: {
@@ -512,7 +561,7 @@ class BudgetController {
           },
         },
       });
-      
+
       console.log('[BudgetController.saveProviderToDate] Provider saved to:', dateKey);
     } catch (e) {
       console.error('[BudgetController.saveProviderToDate] Error:', e);
@@ -521,9 +570,9 @@ class BudgetController {
 
   removeProvider(params: { id: string | number }) {
     const { id } = params;
-    const provider = this.store.providers.find(p => p.id === id);
+    const provider = this.store.providers.find((p) => p.id === id);
     this.store.removeProvider(id);
-    
+
     if (provider) {
       const { syncBudgetProvider } = useSync();
       syncBudgetProvider({ provider, operation: 'delete' });
@@ -558,7 +607,7 @@ class BudgetController {
         isDayClosed: this.store.isDayClosed,
         finishDayData: finishDayDataPlain,
       });
-      
+
       await dixieController.putEntry({
         entry: {
           id: dateKey,
@@ -570,16 +619,16 @@ class BudgetController {
           },
         },
       });
-      
+
       console.log('[BudgetController.saveData] Datos guardados correctamente');
-      
+
       // Note: syncBudget removed - budget table no longer exists
-      
+
       if (this.store.isDayClosed) {
         console.log('[BudgetController.saveData] Creando instantánea congelada...');
         this.createFrozenSnapshot();
       }
-      
+
       console.log('[BudgetController.saveData] Proceso completado');
     } catch (e) {
       console.error('[BudgetController.saveData] Error:', e);
@@ -591,21 +640,27 @@ class BudgetController {
     try {
       const dateKey = `budget:${targetDate}`;
       console.log('[BudgetController.saveEntryToDate] Saving to:', dateKey);
-      
+
       // Convert entry to plain object to avoid Proxy serialization issues
       const plainEntry = JSON.parse(JSON.stringify(entry));
-      
+
       // Load existing data for target date using getBackup (not getEntry)
-      const existing = (await dixieController.getBackup({ id: dateKey })) as { data?: BudgetData } | null;
+      const existing = (await dixieController.getBackup({ id: dateKey })) as {
+        data?: BudgetData;
+      } | null;
       // Convert to plain objects to avoid Proxy issues
-      const entries = existing?.data?.entries ? JSON.parse(JSON.stringify(existing.data.entries)) : [];
-      const providers = existing?.data?.proveedores ? JSON.parse(JSON.stringify(existing.data.proveedores)) : [];
+      const entries = existing?.data?.entries
+        ? JSON.parse(JSON.stringify(existing.data.entries))
+        : [];
+      const providers = existing?.data?.proveedores
+        ? JSON.parse(JSON.stringify(existing.data.proveedores))
+        : [];
       const isDayClosed = existing?.data?.isDayClosed || false;
       const finishDayData = existing?.data?.finishDayData || {};
-      
+
       // Add new entry
       entries.push(plainEntry);
-      
+
       // Save updated data
       await dixieController.putEntry({
         entry: {
@@ -618,7 +673,7 @@ class BudgetController {
           },
         },
       });
-      
+
       console.log('[BudgetController.saveEntryToDate] Entry saved to:', dateKey);
     } catch (e) {
       console.error('[BudgetController.saveEntryToDate] Error:', e);
@@ -632,7 +687,7 @@ class BudgetController {
       finishDayData: this.toPlainObject({ ...this.store.finishDayData }),
       timestamp: Date.now(),
     };
-    
+
     this.store.setFrozenSnapshot(snapshot);
   }
 
@@ -656,7 +711,7 @@ class BudgetController {
   // Cleanup method for timeouts
   cleanup() {
     if (this.pendingTimeouts) {
-      this.pendingTimeouts.forEach(timeoutId => clearTimeout(timeoutId));
+      this.pendingTimeouts.forEach((timeoutId) => clearTimeout(timeoutId));
       this.pendingTimeouts.clear();
     }
   }

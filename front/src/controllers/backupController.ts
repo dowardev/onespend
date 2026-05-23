@@ -36,8 +36,7 @@ class BackupController {
           const { newData } = normalizeEntryData(data);
           (normalizedEntry as { data: BackupEntryData }).data = newData;
         }
-      } catch (_e) {
-      }
+      } catch (_e) {}
 
       const key = await this.dixie.addEntry({ entry: normalizedEntry });
       return key;
@@ -53,15 +52,10 @@ class BackupController {
     const target = dateISO.slice(0, 10);
     const matches = all
       .filter(
-        b =>
-          b &&
-          b.component === 'BudgetView' &&
-          b.data &&
-          (b.data as BackupEntryData).selectedDate
+        (b) =>
+          b && b.component === 'BudgetView' && b.data && (b.data as BackupEntryData).selectedDate,
       )
-      .filter(
-        b => ((b.data as BackupEntryData).selectedDate as string).slice(0, 10) === target
-      )
+      .filter((b) => ((b.data as BackupEntryData).selectedDate as string).slice(0, 10) === target)
       .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 
     return matches.length ? matches[0] : null;

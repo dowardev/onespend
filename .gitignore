@@ -62,3 +62,9 @@ build/
 /release/
 /build/icons/
 /squashfs-root/
+
+# OpenCode (agente CLI)
+.opencode/
+
+# Oxfmtrc
+.oxfmtrc.json

@@ -25,14 +25,7 @@ import {
   LinearScale,
 } from 'chart.js';
 
-ChartJS.register(
-  Title,
-  Tooltip,
-  Legend,
-  BarElement,
-  CategoryScale,
-  LinearScale
-);
+ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale);
 
 export interface EntryChartItem {
   name: string;
@@ -60,7 +53,7 @@ const hasData = computed(() => props.items && props.items.length > 0);
 const sortedItems = computed(() => {
   if (!props.items || props.items.length === 0) return [];
   return [...props.items]
-    .filter(item => item && item.amount > 0)
+    .filter((item) => item && item.amount > 0)
     .sort((a, b) => (b.amount || 0) - (a.amount || 0));
 });
 
@@ -70,16 +63,13 @@ const chartData = computed(() => {
   }
 
   return {
-    labels: sortedItems.value.map(item => item.name),
+    labels: sortedItems.value.map((item) => item.name),
     datasets: [
       {
         label: 'Monto',
-        data: sortedItems.value.map(item => item.amount || 0),
+        data: sortedItems.value.map((item) => item.amount || 0),
         backgroundColor: sortedItems.value.map(
-          (_, i) =>
-            (props.colors || defaultColors)[
-              i % (props.colors || defaultColors).length
-            ]
+          (_, i) => (props.colors || defaultColors)[i % (props.colors || defaultColors).length],
         ),
         borderRadius: 4,
         barThickness: 20,

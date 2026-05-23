@@ -22,10 +22,7 @@
           <ion-note>Ingresa una estimacion diaria</ion-note>
         </ion-label>
 
-        <ion-button
-          :disabled="hasUnfilledService"
-          @click="addItem()"
-        >
+        <ion-button :disabled="hasUnfilledService" @click="addItem()">
           <ion-icon :icon="addOutline"></ion-icon>
         </ion-button>
       </ion-list-header>
@@ -33,26 +30,13 @@
       <div class="list-content">
         <template v-if="serviceItems.length === 0">
           <ion-item>
-            <ion-label
-              >Pulsa el botón «+» para agregar un nuevo
-              servicio</ion-label
-            >
+            <ion-label>Pulsa el botón «+» para agregar un nuevo servicio</ion-label>
           </ion-item>
         </template>
 
         <template v-else>
-          <ion-item
-            v-for="(item, idx) in serviceItems"
-            :key="item.id || idx"
-          >
-            <div
-              style="
-                width: 100%;
-                display: flex;
-                gap: 8px;
-                align-items: center;
-              "
-            >
+          <ion-item v-for="(item, idx) in serviceItems" :key="item.id || idx">
+            <div style="width: 100%; display: flex; gap: 8px; align-items: center">
               <ion-input
                 v-model="item.name"
                 placeholder="Descripción"
@@ -68,11 +52,7 @@
                 @ion-blur="() => updateItem(item)"
               ></ion-input>
 
-              <ion-button
-                color="danger"
-                fill="clear"
-                @click="removeItem(idx)"
-              >
+              <ion-button color="danger" fill="clear" @click="removeItem(idx)">
                 <ion-icon :icon="trashOutline"></ion-icon>
               </ion-button>
             </div>
@@ -94,7 +74,9 @@ import { DixieController } from '@/controllers/dixie';
 // end constrollers
 
 const serviceItems = computed(() => categories[0].items);
-const hasUnfilledService = computed(() => serviceItems.value.some(it => !it.name?.trim() || !it.amount || Number(it.amount) <= 0));
+const hasUnfilledService = computed(() =>
+  serviceItems.value.some((it) => !it.name?.trim() || !it.amount || Number(it.amount) <= 0),
+);
 
 const emit = defineEmits<{
   (e: 'close'): void;
@@ -126,18 +108,14 @@ async function loadItems() {
     if (Array.isArray(list)) {
       for (const entry of list) {
         if (entry && entry.categoryKey) {
-          const cat = categories.find(
-            (c: Category) => c.key === entry.categoryKey
-          );
+          const cat = categories.find((c: Category) => c.key === entry.categoryKey);
           if (cat) {
             cat.items.push({
               id: entry.id,
               categoryKey: entry.categoryKey,
               name: entry.name || '',
               amount:
-                entry.amount === undefined || entry.amount === null
-                  ? null
-                  : Number(entry.amount),
+                entry.amount === undefined || entry.amount === null ? null : Number(entry.amount),
             });
           }
         }

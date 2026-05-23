@@ -29,8 +29,8 @@ export const useAccountsStore = defineStore('accounts', () => {
   async function loadAccounts() {
     try {
       const result = await dixieController.listBackups();
-      const accountBackups = (result as Array<BackupRecord>).filter(
-        (b: BackupRecord) => String(b.id).startsWith('account:')
+      const accountBackups = (result as Array<BackupRecord>).filter((b: BackupRecord) =>
+        String(b.id).startsWith('account:'),
       );
       const loadedAccounts: Account[] = [];
       for (const backup of accountBackups) {
@@ -55,12 +55,9 @@ export const useAccountsStore = defineStore('accounts', () => {
     syncAccount(newAccount, 'create');
   }
 
-  function updateAccount(params: {
-    id: IDBValidKey;
-    changes: Partial<Account>;
-  }) {
+  function updateAccount(params: { id: IDBValidKey; changes: Partial<Account> }) {
     const { id, changes } = params;
-    const idx = accounts.value.findIndex(a => a.id === id);
+    const idx = accounts.value.findIndex((a) => a.id === id);
     if (idx === -1) return;
     const updated = { ...accounts[idx], ...changes, updatedAt: Date.now() };
     accounts.value.splice(idx, 1, updated);
@@ -69,7 +66,7 @@ export const useAccountsStore = defineStore('accounts', () => {
 
   function removeAccount(params: { id: IDBValidKey }) {
     const { id } = params;
-    const idx = accounts.value.findIndex(a => a.id === id);
+    const idx = accounts.value.findIndex((a) => a.id === id);
     if (idx === -1) return;
     const account = accounts[idx];
     accounts.value.splice(idx, 1);
@@ -79,7 +76,7 @@ export const useAccountsStore = defineStore('accounts', () => {
   function upsertAccount(params: { account: Account }) {
     const { account } = params;
     const existing = accounts.value.find(
-      a => String(a.id) === String(account.id) || a.sync_id === account.sync_id
+      (a) => String(a.id) === String(account.id) || a.sync_id === account.sync_id,
     );
     if (existing) {
       const idx = accounts.value.indexOf(existing);

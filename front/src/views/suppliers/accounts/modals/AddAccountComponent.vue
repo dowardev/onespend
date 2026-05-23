@@ -8,9 +8,7 @@
           </ion-button>
         </ion-buttons>
 
-        <ion-title>{{
-          selectedId ? 'Editar Cuenta' : 'Crear Cuenta'
-        }}</ion-title>
+        <ion-title>{{ selectedId ? 'Editar Cuenta' : 'Crear Cuenta' }}</ion-title>
 
         <ion-buttons slot="end">
           <ion-button v-if="selectedId" color="danger" @click="confirmRemove">
@@ -121,7 +119,7 @@ const alertButtons = [
 
 watch(
   () => props.account,
-  a => {
+  (a) => {
     if (a) {
       form.name = a.name || '';
       form.initialBalance = a.initialBalance ?? 0;
@@ -130,7 +128,7 @@ watch(
       form.initialBalance = 0;
     }
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 function cancelModal() {

@@ -47,9 +47,7 @@
 
       <ion-list v-if="selectedFiles.length > 0" class="file-list">
         <ion-list-header>
-          <ion-label>
-            Archivos seleccionados ({{ selectedFiles.length }})
-          </ion-label>
+          <ion-label> Archivos seleccionados ({{ selectedFiles.length }}) </ion-label>
         </ion-list-header>
 
         <ion-card class="shadow1">
@@ -66,12 +64,7 @@
               <p>{{ formatFileSize(file.size) }}</p>
             </ion-label>
 
-            <ion-button
-              slot="end"
-              fill="clear"
-              color="danger"
-              @click="removeNewFile(index)"
-            >
+            <ion-button slot="end" fill="clear" color="danger" @click="removeNewFile(index)">
               <ion-icon :icon="trashOutline"></ion-icon>
             </ion-button>
           </ion-item>
@@ -80,9 +73,7 @@
 
       <ion-list v-if="localExistingAttachments.length > 0" class="file-list">
         <ion-list-header>
-          <ion-label>
-            Archivos existentes ({{ localExistingAttachments.length }})
-          </ion-label>
+          <ion-label> Archivos existentes ({{ localExistingAttachments.length }}) </ion-label>
         </ion-list-header>
 
         <ion-card class="shadow1">
@@ -173,7 +164,7 @@ const hasChanges = computed(() => {
 
 watch(
   () => props.isOpen,
-  newVal => {
+  (newVal) => {
     if (!newVal) {
       selectedFiles.value = [];
       localExistingAttachments.value = [];
@@ -186,7 +177,7 @@ watch(
         localExistingAttachments.value = [...props.existingAttachments];
       }
     }
-  }
+  },
 );
 
 function triggerFileInput() {
@@ -204,7 +195,7 @@ function onDragLeave() {
 function onDrop(event: DragEvent) {
   isDragging.value = false;
   const { accepted, rejected } = filterFiles(event.dataTransfer?.files ?? null);
-  const newFiles = accepted.filter(f => !isDuplicate(f));
+  const newFiles = accepted.filter((f) => !isDuplicate(f));
   if (newFiles.length) {
     selectedFiles.value = [...selectedFiles.value, ...newFiles];
   }
@@ -216,7 +207,7 @@ function onDrop(event: DragEvent) {
 function handleFileSelect(event: Event) {
   const target = event.target as HTMLInputElement;
   const { accepted, rejected } = filterFiles(target.files);
-  const newFiles = accepted.filter(f => !isDuplicate(f));
+  const newFiles = accepted.filter((f) => !isDuplicate(f));
   if (newFiles.length) {
     selectedFiles.value = [...selectedFiles.value, ...newFiles];
   }
@@ -227,9 +218,7 @@ function handleFileSelect(event: Event) {
 }
 
 function isDuplicate(file: File): boolean {
-  return selectedFiles.value.some(
-    f => f.name === file.name && f.size === file.size
-  );
+  return selectedFiles.value.some((f) => f.name === file.name && f.size === file.size);
 }
 
 function filterFiles(fileList: FileList | null): {
@@ -240,8 +229,8 @@ function filterFiles(fileList: FileList | null): {
   const allowed = ['image/', 'application/pdf'];
   const all = Array.from(fileList);
   return {
-    accepted: all.filter(f => allowed.some(type => f.type.startsWith(type))),
-    rejected: all.filter(f => !allowed.some(type => f.type.startsWith(type))),
+    accepted: all.filter((f) => allowed.some((type) => f.type.startsWith(type))),
+    rejected: all.filter((f) => !allowed.some((type) => f.type.startsWith(type))),
   };
 }
 
@@ -260,7 +249,7 @@ function removeNewFile(index: number) {
 
 function markForDeletion(id: number) {
   deletedExistingIds.value.push(id);
-  localExistingAttachments.value = localExistingAttachments.value.filter(a => a.id !== id);
+  localExistingAttachments.value = localExistingAttachments.value.filter((a) => a.id !== id);
 }
 
 function handleDismiss() {

@@ -29,7 +29,7 @@
                   @confirm-remove-proveedor="confirmRemoveProveedor"
                   @open-notes-modal="handleOpenNotesModal"
                   @open-edit-modal="
-                    provider =>
+                    (provider) =>
                       router.push({
                         path: '/budget/provider/edit',
                         query: { providerId: String(provider.id) },
@@ -42,8 +42,8 @@
             <template v-else>
               <ion-item lines="none">
                 <ion-label
-                  >No hay proveedores para la fecha seleccionada. Pulsa "+" para
-                  agregar uno.</ion-label
+                  >No hay proveedores para la fecha seleccionada. Pulsa "+" para agregar
+                  uno.</ion-label
                 >
               </ion-item>
             </template>
@@ -147,35 +147,20 @@ import {
   IonIcon,
   IonItem,
   IonAlert,
-  IonCard,
-  IonButtons,
-  IonContent,
   onIonViewWillEnter,
 } from '@ionic/vue';
-import {
-  ref,
-  reactive,
-  computed,
-  onMounted,
-  onUnmounted,
-  watchEffect,
-} from 'vue';
-import { addOutline, documentOutline, trashOutline } from 'ionicons/icons';
+import { ref, reactive, computed, onMounted, onUnmounted, watchEffect } from 'vue';
+import { addOutline, documentOutline } from 'ionicons/icons';
 import { useRouter } from 'vue-router';
 // End Imports
 
 // Controllers
 import budgetController from '@/controllers/budgetController';
-import { BudgetController } from '@/controllers/budgetController';
 import TemplateController from '@/controllers/TempalteController';
 import { TemplateRecord } from '@/controllers/TempalteController';
 import { buildPayloadFromTemplate } from '@/controllers/templateService';
-import suppliersController from '@/controllers/suppliersController';
 import { SuppliersController } from '@/controllers/suppliersController';
-import accountsController from '@/controllers/accountsController';
 import { AccountsController } from '@/controllers/accountsController';
-import { SyncController } from '@/controllers/syncController';
-import type { Supplier } from '@/controllers/suppliersController';
 // End Controllers
 
 // Components
@@ -183,6 +168,7 @@ import ProviderCardComponent from './ProviderCardComponent.vue';
 import ProvidersSummary from '../components/ProvidersSummary.vue';
 import TemplatesModal from '../components/TemplatesModal.vue';
 import NotesModal from '../components/NotesModal.vue';
+import type { ProviderData } from './ProviderEditPage.vue';
 // End Components
 
 // Vars
@@ -190,12 +176,7 @@ const router = useRouter();
 const budgetCtrl = budgetController;
 const suppliersCtrl = new SuppliersController();
 const accountsCtrl = new AccountsController();
-const syncCtrl = new SyncController();
 
-const showAddProviderModal = ref(false);
-const allSuppliers = computed(() => suppliersCtrl.getSuppliers());
-const allAccounts = ref<Array<{ id: string | number; name: string }>>([]);
-const editingProvider = ref<ProviderData | null>(null);
 const showTemplatesModal = ref(false);
 const showConflictModal = ref(false);
 const showNotesModal = ref(false);
@@ -213,7 +194,6 @@ const deleteConfirm = reactive({
 });
 
 const showQuickAccountAlert = ref(false);
-const quickAccountTargetIndex = ref<number | null>(null);
 
 const quickAccountInputs = [
   {
@@ -240,10 +220,7 @@ const quickAccountButtons = [
       if (!data.accountName || data.accountName.trim() === '') {
         return false;
       }
-      createQuickAccount(
-        data.accountName.trim(),
-        Number(data.initialBalance) || 0
-      );
+      createQuickAccount({ name: data.accountName.trim(), initialBalance: Number(data.initialBalance) || 0 });
       return true;
     },
   },
@@ -251,21 +228,9 @@ const quickAccountButtons = [
 
 // End Vars
 
-// Helper function for safe deep cloning
-function safeClone<T>(obj: T): T | undefined {
-  if (!obj) return undefined;
-  try {
-    return JSON.parse(JSON.stringify(obj));
-  } catch {
-    return undefined;
-  }
-}
-
 // Computed
 const providers = computed(() => budgetCtrl.getProviders());
-const providerIdsWithEntries = computed(() =>
-  budgetCtrl.getProviderIdsWithEntries()
-);
+const providerIdsWithEntries = computed(() => budgetCtrl.getProviderIdsWithEntries());
 // Day-close concept removed; always treat as open
 const isDayClosed = computed(() => false);
 
@@ -274,16 +239,12 @@ const isDayClosed = computed(() => false);
 // Life cycle
 onMounted(async () => {
   await loadSuppliers();
-  loadAccounts();
 });
 
 onMounted(() => {
   const stopWatcher = watchEffect(() => {
     const suppliers = suppliersCtrl.getSuppliers();
-    console.log(
-      '[Suppliers Change] Received update, suppliers count:',
-      suppliers.length
-    );
+    console.log('[Suppliers Change] Received update, suppliers count:', suppliers.length);
     budgetCtrl.syncProvidersWithSuppliers({ suppliers });
   });
 
@@ -304,111 +265,21 @@ async function loadSuppliers() {
   budgetCtrl.syncProvidersWithSuppliers({ suppliers: list || [] });
 }
 
-async function forceSyncSuppliers() {
-  console.log('forceSyncSuppliers - Starting sync...');
-  const result = await syncCtrl.processQueue();
-  if (result) {
-    console.log('forceSyncSuppliers - Sync completed:', result);
-  }
-  await loadSuppliers();
-}
-
-async function loadAccounts() {
-  const list = accountsCtrl.getAccounts();
-  // Crear una copia profunda para evitar problemas de reactividad circular
-  allAccounts.value = list ? JSON.parse(JSON.stringify(list)) : [];
-}
-
-function openAddProviderModal() {
-  editingProvider.value = null;
-  void forceSyncSuppliers();
-}
-
-function handleProviderSaved(payload: {
-  providerId?: string | number;
-  providerName?: string;
-  items: Array<{ amount: number; accountId: string | number | null }>;
-  totalAmount: number;
-  products?: Array<ProviderProduct>;
-  date?: string;
-}) {
-  const firstItem = payload.items[0];
-  const firstAccountId = firstItem?.accountId;
-
-  let dataSaved = false;
-
-  if (editingProvider.value?.id) {
-    dataSaved = budgetController.updateProvider({
-      id: editingProvider.value.id,
-      changes: {
-        estimated: payload.totalAmount,
-        accountId: firstAccountId || 0,
-        _supplierId: payload.providerId,
-        _supplierName: payload.providerName,
-        products: payload.products,
-        items: payload.items,
-        _supplier: safeClone(editingProvider.value._supplier),
-        date: payload.date,
-      },
-    });
-  } else {
-    budgetController.addProvider({
-      name: payload.providerName || '',
-      estimated: payload.totalAmount,
-      accountId: firstAccountId || 0,
-      allowEmpty: true,
-      _supplierId: payload.providerId,
-      _supplierName: payload.providerName,
-      products: payload.products,
-      items: payload.items,
-      _supplier: safeClone(editingProvider.value?._supplier),
-      date: payload.date,
-    });
-  }
-
-  // Only save if updateProvider didn't already save (date change case)
-  if (!dataSaved) {
-    budgetController.saveData();
-  }
-
-  showAddProviderModal.value = false;
-  editingProvider.value = null;
-}
-
-function handleProviderDeleted(params: {
-  id: string | number;
-  _supplierId?: string | number;
-}) {
-  const { id, _supplierId } = params;
-  // Usar _supplierId para eliminar entradas asociadas, o el id si no hay _supplierId
-  budgetController.removeEgresosGroup({ groupId: _supplierId || id });
-  budgetController.removeProvider({ id });
-  budgetController.saveData();
-  showAddProviderModal.value = false;
-  editingProvider.value = null;
-}
-
 function addEmptyProvider() {
   router.push('/budget/provider/new');
 }
 
-function handleUpdateProvider(payload: {
-  id: string | number;
-  field: string;
-  value: unknown;
-}) {
+function handleUpdateProvider(payload: { id: string | number; field: string; value: unknown }) {
   const { id, field, value } = payload;
   budgetController.updateProvider({ id, changes: { [field]: value } });
   budgetController.saveData();
 }
 
 function confirmRemoveProveedor(
-  payload: { id?: string | number; name?: string } | string | number
+  payload: { id?: string | number; name?: string } | string | number,
 ) {
-  const id =
-    typeof payload === 'object' && payload !== null ? payload.id : payload;
-  const name =
-    typeof payload === 'object' && payload !== null ? payload.name : '';
+  const id = typeof payload === 'object' && payload !== null ? payload.id : payload;
+  const name = typeof payload === 'object' && payload !== null ? payload.name : '';
   deleteConfirm.providerId = id ?? null;
   deleteConfirm.providerName = name || '';
   deleteConfirm.open = true;
@@ -418,10 +289,7 @@ function removeProveedorConfirmed() {
   const pid = deleteConfirm.providerId;
   deleteConfirm.open = false;
   if (pid != null) {
-    // Buscar el provider para obtener su _supplierId
-    const provider = providers.value.find(
-      (p: any) => String(p.id) === String(pid)
-    );
+    const provider = providers.value.find((p: any) => String(p.id) === String(pid));
     const supplierId = provider?._supplierId || pid;
     budgetController.removeEgresosGroup({ groupId: supplierId });
     budgetController.removeProvider({ id: pid });
@@ -491,7 +359,7 @@ function applyProviders(params: {
   }>;
 }) {
   const { providers } = params;
-  providers.forEach(p => {
+  providers.forEach((p) => {
     budgetController.addProvider({
       name: p.name,
       estimated: p.estimated,
@@ -522,25 +390,14 @@ function handleOverwrite() {
   showTemplatesModal.value = false;
 }
 
-function openQuickAccountAlert(itemIndex: number) {
-  quickAccountTargetIndex.value = itemIndex;
-  showQuickAccountAlert.value = true;
-}
-
-async function createQuickAccount(name: string, initialBalance: number) {
+async function createQuickAccount(params: { name: string; initialBalance: number }) {
+  const { name, initialBalance } = params;
   const newAccount = await accountsCtrl.addAccount({
     a: {
       name,
       initialBalance,
     },
   });
-
-  if (newAccount) {
-    // Refresh accounts list
-    loadAccounts();
-  }
-
-  quickAccountTargetIndex.value = null;
 }
 // End Functions
 </script>

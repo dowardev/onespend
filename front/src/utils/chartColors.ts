@@ -14,13 +14,25 @@ const DEFAULT_DANGER = '#ff3b30'; // red
 function getComputedVar(name: string): string {
   if (typeof window === 'undefined' || !window.getComputedStyle) return '';
   try {
-    const elems = [document.documentElement, document.body, document.querySelector('ion-app')].filter(Boolean) as Element[];
+    const elems = [
+      document.documentElement,
+      document.body,
+      document.querySelector('ion-app'),
+    ].filter(Boolean) as Element[];
     for (const el of elems) {
       try {
-        const v = getComputedStyle(el as Element).getPropertyValue(name).trim();
+        const v = getComputedStyle(el as Element)
+          .getPropertyValue(name)
+          .trim();
         if (v) {
           // eslint-disable-next-line no-console
-          console.debug('[chartColors] found CSS var', name, 'on', el && (el as any).tagName ? (el as any).tagName : el, v);
+          console.debug(
+            '[chartColors] found CSS var',
+            name,
+            'on',
+            el && (el as any).tagName ? (el as any).tagName : el,
+            v,
+          );
           return v;
         }
       } catch (_e) {
@@ -92,23 +104,27 @@ function resolveColorRgb(varNameRgb: string, varNameHex: string, fallbackHex: st
       // use var() form for the property
       el.style.color = `var(${varNameHex})`;
       el.setAttribute('data-chart-colors-temp', 'true');
-      
+
       // Use document.body instead of documentElement for better isolation
       document.body.appendChild(el);
       const computed = getComputedStyle(el).color;
-      
+
       // Register cleanup task
-      registerCleanup(`chart-colors-${varNameHex}`, () => {
-        if (el.parentNode) {
-          el.parentNode.removeChild(el);
-        }
-      }, el);
-      
+      registerCleanup(
+        `chart-colors-${varNameHex}`,
+        () => {
+          if (el.parentNode) {
+            el.parentNode.removeChild(el);
+          }
+        },
+        el,
+      );
+
       // Immediate cleanup
       if (el.parentNode) {
         el.parentNode.removeChild(el);
       }
-      
+
       const forced = rgbStringToRgb(computed);
       if (forced) return forced;
       const fromHex2 = hexToRgb(computed);
@@ -122,7 +138,11 @@ function resolveColorRgb(varNameRgb: string, varNameHex: string, fallbackHex: st
   return hexToRgb(fallbackHex) || '16, 220, 96';
 }
 
-const SUCCESS_RGB = resolveColorRgb('--ion-color-success-rgb', '--ion-color-success', DEFAULT_SUCCESS);
+const SUCCESS_RGB = resolveColorRgb(
+  '--ion-color-success-rgb',
+  '--ion-color-success',
+  DEFAULT_SUCCESS,
+);
 const DANGER_RGB = resolveColorRgb('--ion-color-danger-rgb', '--ion-color-danger', DEFAULT_DANGER);
 
 const successBg = `rgba(${SUCCESS_RGB}, 0.15)`;
@@ -152,7 +172,8 @@ function buildColors(type: 'success' | 'danger') {
   const rawIsUseful = raw && !/^\s*$/.test(raw);
 
   // Try to get numeric rgb string from rgbResolved
-  const numericRgb = rgbResolved && rgbResolved.split && rgbResolved.split(',').length >= 3 ? rgbResolved : null;
+  const numericRgb =
+    rgbResolved && rgbResolved.split && rgbResolved.split(',').length >= 3 ? rgbResolved : null;
 
   // Border: prefer the raw CSS var (keeps exact Ionic color string like hex or var())
   const borderColor = rawIsUseful ? raw : `rgba(${numericRgb || hexToRgb(fallbackHex)}, 1)`;
@@ -175,13 +196,13 @@ function pickColorForValue(v: unknown, datasetLabel?: unknown, datasetIndex?: nu
   // If index 1 (common pattern: [ingresos, egresos]) treat as danger
   if (typeof datasetIndex === 'number' && datasetIndex === 1) return buildColors('danger');
 
-  const n = typeof v === 'number' ? v : (typeof v === 'string' && v !== '' ? Number(v) : NaN);
+  const n = typeof v === 'number' ? v : typeof v === 'string' && v !== '' ? Number(v) : NaN;
   if (!isNaN(n) && n < 0) return buildColors('danger');
   return buildColors('success');
 }
 
 export function applyNeonStyles(
-  params: { data: ChartData<'bar'>; colorIndex?: number } | ChartData<'bar'> | undefined
+  params: { data: ChartData<'bar'>; colorIndex?: number } | ChartData<'bar'> | undefined,
 ): ChartData<'bar'> {
   // Backwards-compatible signature retained
   let data: ChartData<'bar'> | undefined;
@@ -225,7 +246,13 @@ export function applyNeonStyles(
       }
       try {
         // eslint-disable-next-line no-console
-        console.log('[chartColors] dataset', datasetIndex, dataset.label, 'per-item colors used', bgColors.slice(0, 5));
+        console.log(
+          '[chartColors] dataset',
+          datasetIndex,
+          dataset.label,
+          'per-item colors used',
+          bgColors.slice(0, 5),
+        );
       } catch (_e) {
         /* noop */
       }
@@ -249,7 +276,13 @@ export function applyNeonStyles(
       : pickColorForValue(val, dataset.label, datasetIndex);
     try {
       // eslint-disable-next-line no-console
-      console.log('[chartColors] dataset', datasetIndex, dataset.label, 'single colors used', colors);
+      console.log(
+        '[chartColors] dataset',
+        datasetIndex,
+        dataset.label,
+        'single colors used',
+        colors,
+      );
     } catch (_e) {
       /* noop */
     }

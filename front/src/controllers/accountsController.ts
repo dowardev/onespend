@@ -58,8 +58,7 @@ class AccountsController {
           store.accounts.splice(0, store.accounts.length, ...copy);
         }
       }
-    } catch (_e) {
-    }
+    } catch (_e) {}
   }
 
   async loadAll(): Promise<Account[]> {
@@ -67,7 +66,7 @@ class AccountsController {
     try {
       const ctrl = this.getController();
       let all = (await ctrl.listBackups()) as Account[];
-      
+
       for (const account of all) {
         if (!account.sync_id) {
           account.sync_id = generateSyncId();
@@ -75,9 +74,7 @@ class AccountsController {
         }
       }
 
-      const sorted = (all || [])
-        .slice()
-        .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      const sorted = (all || []).slice().sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 
       await this.migrateFromSuppliers();
 
@@ -95,7 +92,9 @@ class AccountsController {
     }
   }
 
-  async addAccount(params: { account: Omit<Account, 'id' | 'sync_id' | 'createdAt' | 'updatedAt'> } | any) {
+  async addAccount(
+    params: { account: Omit<Account, 'id' | 'sync_id' | 'createdAt' | 'updatedAt'> } | any,
+  ) {
     // Support multiple call shapes to be resilient: callers may pass
     // { account: {...} } or { a: {...} } or the account object directly.
     const account = params?.account ?? params?.a ?? params;
@@ -104,7 +103,7 @@ class AccountsController {
     const now = Date.now();
 
     const sync_id = generateSyncId();
-    
+
     const entry: Account = {
       name: String(account.name || ''),
       initialBalance: Number(account.initialBalance) || 0,
@@ -172,7 +171,7 @@ class AccountsController {
     const ctrl = this.getController();
     const store = this.getAccountsStore();
     const account = store.accounts.find((acc: Account) => acc.id === id);
-    
+
     await ctrl.deleteBackup({ id });
 
     const idx = store.accounts.findIndex((acc: Account) => acc.id === id);

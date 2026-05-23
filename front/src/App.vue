@@ -2,7 +2,7 @@
   <ion-app>
     <!-- DOM Cleanup Component (invisible) -->
     <DOMCleanupComponent />
-    
+
     <ion-split-pane when="(min-width: 992px)" content-id="main-content">
       <MainMenu
         ref="menuRef"
@@ -58,8 +58,8 @@ import accountsController from '@/controllers/accountsController';
 const menuRef = ref();
 
 const appName =
-  (import.meta as unknown as { env?: Record<string, string | undefined> }).env
-    ?.VITE_APP_NAME || 'Menú';
+  (import.meta as unknown as { env?: Record<string, string | undefined> }).env?.VITE_APP_NAME ||
+  'Menú';
 const router = useRouter();
 
 const needsNormalize = ref(false);
@@ -106,14 +106,11 @@ async function applyTheme() {
     document.body.classList.remove(
       'dark',
       'catppuccin-latte-maroon',
-      'catppuccin-macchiato-maroon'
+      'catppuccin-macchiato-maroon',
     );
   }
 
-  if (
-    theme === 'catppuccin-latte-maroon' ||
-    theme === 'catppuccin-macchiato-maroon'
-  ) {
+  if (theme === 'catppuccin-latte-maroon' || theme === 'catppuccin-macchiato-maroon') {
     if (document.body) {
       document.body.classList.add(theme);
     }
@@ -126,26 +123,26 @@ async function applyTheme() {
 }
 
 function setupThemeListener() {
-  window
-    .matchMedia('(prefers-color-scheme: dark)')
-    .addEventListener('change', async () => {
-      const theme = await systemController.getTheme();
-      if (theme === 'auto') {
-        const isDark = window.matchMedia(
-          '(prefers-color-scheme: dark)'
-        ).matches;
-        if (document.body) {
-          document.body.classList.toggle('dark', isDark);
-        }
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', async () => {
+    const theme = await systemController.getTheme();
+    if (theme === 'auto') {
+      const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (document.body) {
+        document.body.classList.toggle('dark', isDark);
       }
-    });
+    }
+  });
 }
 
 async function handleNavigate(params: { path?: string; name?: string }) {
   try {
     if (params.name) {
       try {
-        if ('hasRoute' in router && typeof router.hasRoute === 'function' && (router as VueRouter).hasRoute(params.name)) {
+        if (
+          'hasRoute' in router &&
+          typeof router.hasRoute === 'function' &&
+          (router as VueRouter).hasRoute(params.name)
+        ) {
           await router.push({ name: params.name });
         } else if (params.path) {
           await router.push(params.path);
@@ -155,10 +152,7 @@ async function handleNavigate(params: { path?: string; name?: string }) {
           } else if (params.name === 'MigrateDates') {
             await router.push('/admin/maintenance/migrate-dates');
           } else {
-            console.error(
-              'navigate: unknown route name and no path provided',
-              params.name
-            );
+            console.error('navigate: unknown route name and no path provided', params.name);
           }
         }
       } catch (err) {
@@ -180,8 +174,7 @@ function dismissMigrationNotice() {
 
 async function showMigrationToast() {
   try {
-    toast.message =
-      'Simulación iniciada: revisa la pantalla de migración para ver los detalles.';
+    toast.message = 'Simulación iniciada: revisa la pantalla de migración para ver los detalles.';
     toast.open = true;
     handleNavigate({ name: 'MigrateDates' });
     try {
@@ -214,10 +207,7 @@ onMounted(async () => {
     ]);
     needsNormalize.value = !!normalizeNeeded;
     needsEntries.value = !!entriesNeeded;
-    if (
-      (import.meta as unknown as { env?: Record<string, string | undefined> })
-        .env?.DEV
-    ) {
+    if ((import.meta as unknown as { env?: Record<string, string | undefined> }).env?.DEV) {
       try {
         const backups = await dixieController.listBackups();
       } catch (e) {
@@ -230,14 +220,8 @@ onMounted(async () => {
     needsEntries.value = false;
   }
 
-  if (
-    (needsEntries.value || needsNormalize.value) &&
-    !migrationDismissed.value
-  ) {
-    if (
-      (import.meta as unknown as { env?: Record<string, string | undefined> })
-        .env?.DEV
-    ) {
+  if ((needsEntries.value || needsNormalize.value) && !migrationDismissed.value) {
+    if ((import.meta as unknown as { env?: Record<string, string | undefined> }).env?.DEV) {
       console.log('App.onMounted: opening migration toast', {
         needsNormalize: needsNormalize.value,
         needsEntries: needsEntries.value,
@@ -245,10 +229,7 @@ onMounted(async () => {
     }
     migrationToast.open = true;
   } else {
-    if (
-      (import.meta as unknown as { env?: Record<string, string | undefined> })
-        .env?.DEV
-    ) {
+    if ((import.meta as unknown as { env?: Record<string, string | undefined> }).env?.DEV) {
     }
   }
 
@@ -262,8 +243,7 @@ onMounted(async () => {
         }
       }
     }
-  } catch (_e) {
-  }
+  } catch (_e) {}
 });
 // End Life cycle
 </script>

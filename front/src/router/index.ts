@@ -1,9 +1,6 @@
 import { createRouter, createWebHashHistory } from '@ionic/vue-router';
 import { RouteRecordRaw } from 'vue-router';
-import {
-  setupNavigationCleanup,
-  removeTemporaryElements,
-} from '@/utils/domCleanup';
+import { setupNavigationCleanup, removeTemporaryElements } from '@/utils/domCleanup';
 // Static imports (no relative paths) — match original file structure but using '@' alias
 import HomePage from '@/views/HomePage.vue';
 import BudgetView from '@/views/budget/BudgetView.vue';
@@ -163,18 +160,10 @@ router.beforeResolve(async (to, from) => {
   if (import.meta.env.DEV) return;
 
   // Define critical routes to prefetch (excluding statistics to prevent issues)
-  const criticalRoutes = [
-    'HomePage',
-    'BudgetView',
-    'AccountsPage',
-    'TemplatesView',
-  ];
+  const criticalRoutes = ['HomePage', 'BudgetView', 'AccountsPage', 'TemplatesView'];
 
   // Add safety check to prevent prefetching statistics routes
-  if (
-    String(to.name).includes('Statistics') ||
-    String(to.name).includes('Performance')
-  ) {
+  if (String(to.name).includes('Statistics') || String(to.name).includes('Performance')) {
     return;
   }
 

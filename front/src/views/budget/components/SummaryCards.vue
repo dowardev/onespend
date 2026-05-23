@@ -2,21 +2,16 @@
   <ion-row>
     <!-- income -->
     <ion-col size="12">
-      <ion-card
-        :style="`border: 1px solid var(--ion-color-success)`"
-        class="no-shadow"
-      >
+      <ion-card :style="`border: 1px solid var(--ion-color-success)`" class="no-shadow">
         <ion-item lines="none" class="transparent">
           <ion-label>Ingresos</ion-label>
 
-          <ion-button fill="clear"
-            ><ion-icon :icon="informationCircleOutline"
-          /></ion-button>
+          <ion-button fill="clear"><ion-icon :icon="informationCircleOutline" /></ion-button>
         </ion-item>
 
         <div class="ion-padding-start ion-padding-bottom">
           <ion-label color="success">
-            <h1>{{ formatCurrency(totalIngresosOnly) }}</h1>
+            <h1>{{ formatCurrency({ value: totalIngresosOnly }) }}</h1>
           </ion-label>
         </div>
       </ion-card>
@@ -24,21 +19,16 @@
 
     <!-- expenses -->
     <ion-col size="12">
-      <ion-card
-        :style="`border: 1px solid var(--ion-color-danger)`"
-        class="no-shadow"
-      >
+      <ion-card :style="`border: 1px solid var(--ion-color-danger)`" class="no-shadow">
         <ion-item lines="none" class="transparent">
           <ion-label>Egresos</ion-label>
 
-          <ion-button fill="clear"
-            ><ion-icon :icon="informationCircleOutline"
-          /></ion-button>
+          <ion-button fill="clear"><ion-icon :icon="informationCircleOutline" /></ion-button>
         </ion-item>
 
         <div class="ion-padding-start ion-padding-bottom">
           <ion-label color="danger">
-            <h1>{{ formatCurrency(totalEgresos) }}</h1>
+            <h1>{{ formatCurrency({ value: totalEgresos }) }}</h1>
           </ion-label>
         </div>
       </ion-card>
@@ -52,9 +42,7 @@
           style="display: flex; justify-content: space-between; height: 100%"
         >
           <div style="display: flex; align-items: center">
-            <ion-card-title :color="differenceColor">{{
-              differenceLabel
-            }}</ion-card-title>
+            <ion-card-title :color="differenceColor">{{ differenceLabel }}</ion-card-title>
           </div>
 
           <ion-button slot="end" fill="clear">
@@ -91,16 +79,9 @@
 </template>
 
 <script setup lang="ts">
-import {
-  IonRow,
-  IonCol,
-  IonCard,
-  IonItem,
-  IonLabel,
-  IonButton,
-  IonIcon,
-} from '@ionic/vue';
+import { IonRow, IonCol, IonCard, IonItem, IonLabel, IonButton, IonIcon } from '@ionic/vue';
 import { informationCircleOutline } from 'ionicons/icons';
+import { formatCurrency } from '@/utils/currency';
 import { computed } from 'vue';
 
 const props = defineProps<{
@@ -113,50 +94,40 @@ const props = defineProps<{
   faltante: number | string;
 }>();
 
-const totalIngresosOnly = computed(
-  () => Number(props.totalIngresosOnly || 0) || 0
-);
+const totalIngresosOnly = computed(() => Number(props.totalIngresosOnly || 0) || 0);
 const totalEgresos = computed(() => Number(props.totalEgresos || 0) || 0);
 const faltante = computed(() => Number(props.faltante || 0) || 0);
 
 const totalIngresosEfectivo = computed(() =>
-  props.totalIngresosEfectivo != null ? Number(props.totalIngresosEfectivo) : 0
+  props.totalIngresosEfectivo != null ? Number(props.totalIngresosEfectivo) : 0,
 );
 const totalIngresosTarjeta = computed(() =>
-  props.totalIngresosTarjeta != null ? Number(props.totalIngresosTarjeta) : 0
+  props.totalIngresosTarjeta != null ? Number(props.totalIngresosTarjeta) : 0,
 );
 const totalEgresosEfectivo = computed(() =>
-  props.totalEgresosEfectivo != null ? Number(props.totalEgresosEfectivo) : 0
+  props.totalEgresosEfectivo != null ? Number(props.totalEgresosEfectivo) : 0,
 );
 const totalEgresosTarjeta = computed(() =>
-  props.totalEgresosTarjeta != null ? Number(props.totalEgresosTarjeta) : 0
+  props.totalEgresosTarjeta != null ? Number(props.totalEgresosTarjeta) : 0,
 );
 
-const differenceEfectivo = computed(
-  () => totalIngresosEfectivo.value - totalEgresosEfectivo.value
-);
+const differenceEfectivo = computed(() => totalIngresosEfectivo.value - totalEgresosEfectivo.value);
 const colorDifferenceEfectivo = computed(() => {
   const diff = differenceEfectivo.value;
   if (diff > 0) return 'success';
   if (diff < 0) return 'danger';
   return 'medium';
 });
-const labelDifferenceEfectivo = computed(() =>
-  formatCurrency(Math.abs(differenceEfectivo.value))
-);
+const labelDifferenceEfectivo = computed(() => formatCurrency({ value: Math.abs(differenceEfectivo.value) }));
 
-const differenceTarjeta = computed(
-  () => totalIngresosTarjeta.value - totalEgresosTarjeta.value
-);
+const differenceTarjeta = computed(() => totalIngresosTarjeta.value - totalEgresosTarjeta.value);
 const colorDifferenceTarjeta = computed(() => {
   const diff = differenceTarjeta.value;
   if (diff > 0) return 'success';
   if (diff < 0) return 'danger';
   return 'medium';
 });
-const labelDifferenceTarjeta = computed(() =>
-  formatCurrency(Math.abs(differenceTarjeta.value))
-);
+const labelDifferenceTarjeta = computed(() => formatCurrency({ value: Math.abs(differenceTarjeta.value) }));
 
 const differenceColor = computed(() => {
   const diff = Number(faltante.value || 0);
@@ -172,17 +143,7 @@ const differenceLabel = computed(() => {
   return 'Cuadrado';
 });
 
-function formatCurrency(v: number | string) {
-  try {
-    const n = Number(v || 0) || 0;
-    return new Intl.NumberFormat('es-MX', {
-      style: 'currency',
-      currency: 'MXN',
-    }).format(n);
-  } catch (_e) {
-    return String(v || '0');
-  }
-}
+
 </script>
 
 <style scoped>

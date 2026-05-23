@@ -1,10 +1,5 @@
 <template>
-  <ion-menu
-    ref="menuRef"
-    content-id="main-content"
-    type="overlay"
-    menu-id="main-menu"
-  >
+  <ion-menu ref="menuRef" content-id="main-content" type="overlay" menu-id="main-menu">
     <ion-header mode="ios" class="ion-no-border">
       <ion-toolbar>
         <ion-title>{{ appName }}</ion-title>
@@ -50,7 +45,7 @@
       </div>
 
       <ion-list>
-        <div >
+        <div>
           <ion-item
             button
             lines="none"
@@ -104,11 +99,9 @@
           >
             <ion-icon slot="start" :icon="syncOutline"></ion-icon>
             <ion-label>Sincronización</ion-label>
-            <ion-badge
-              v-if="pendingChanges > 0"
-              slot="end"
-              color="secondary"
-            >{{ pendingChanges }}</ion-badge>
+            <ion-badge v-if="pendingChanges > 0" slot="end" color="secondary">{{
+              pendingChanges
+            }}</ion-badge>
           </ion-item>
         </div>
       </ion-list>
@@ -251,8 +244,8 @@ const syncController = new SyncController();
 const pendingChanges = computed(() => syncController.getPendingChanges());
 
 const appName =
-  (import.meta as unknown as { env?: Record<string, string | undefined> }).env
-    ?.VITE_APP_NAME || 'Menú';
+  (import.meta as unknown as { env?: Record<string, string | undefined> }).env?.VITE_APP_NAME ||
+  'Menú';
 
 // End Vars
 
@@ -260,23 +253,13 @@ const appName =
 const isBudget = computed(() => route.path === '/budget');
 const isTemplates = computed(() => route.path === '/templates');
 const isSuppliers = computed(() => route.path === '/suppliers');
-const isSuppliersAccounts = computed(
-  () => route.path === '/suppliers/accounts'
-);
+const isSuppliersAccounts = computed(() => route.path === '/suppliers/accounts');
 const isSync = computed(() => route.path === '/sync');
-const isStatisticsCashFlow = computed(
-  () => route.path === '/statistics/cash-flow'
-);
-const isStatisticsPerformance = computed(
-  () => route.path === '/statistics/performance'
-);
+const isStatisticsCashFlow = computed(() => route.path === '/statistics/cash-flow');
+const isStatisticsPerformance = computed(() => route.path === '/statistics/performance');
 const isAdmin = computed(() => route.path.startsWith('/admin/maintenance'));
-const isPersonalization = computed(
-  () => route.path === '/admin/personalization'
-);
-const isPerformanceTest = computed(
-  () => route.path === '/test/performance'
-);
+const isPersonalization = computed(() => route.path === '/admin/personalization');
+const isPerformanceTest = computed(() => route.path === '/test/performance');
 
 const isLogin = computed(() => route.path === '/login');
 const isRegister = computed(() => route.path === '/register');

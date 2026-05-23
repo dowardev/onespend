@@ -53,9 +53,7 @@
                     <ion-button
                       color="danger"
                       fill="clear"
-                      @click.stop="
-                        confirmRemoveAccount({ id: c.id, name: c.name })
-                      "
+                      @click.stop="confirmRemoveAccount({ id: c.id, name: c.name })"
                     >
                       <ion-icon :icon="trashOutline" color="danger"></ion-icon>
                     </ion-button>
@@ -73,11 +71,7 @@
         :backdrop-dismiss="false"
         @did-dismiss="cancelModal"
       >
-        <AddAccountComponent
-          :account="modalAccount"
-          @dismiss="cancelModal"
-          @saved="onModalSaved"
-        />
+        <AddAccountComponent :account="modalAccount" @dismiss="cancelModal" @saved="onModalSaved" />
       </ion-modal>
 
       <ion-alert
@@ -155,10 +149,7 @@ function cancelModal() {
   modalAccount.value = null;
 }
 
-function confirmRemoveAccount(params: {
-  id: string | number | null | undefined;
-  name?: string;
-}) {
+function confirmRemoveAccount(params: { id: string | number | null | undefined; name?: string }) {
   const { id, name } = params;
   deleteConfirmAccount.open = true;
   deleteConfirmAccount.accountId = id ?? null;
@@ -259,7 +250,7 @@ const groupedAccounts = computed(() => {
 
   return Array.from(map.keys())
     .sort()
-    .map(letter => ({ letter, items: map.get(letter) || [] }));
+    .map((letter) => ({ letter, items: map.get(letter) || [] }));
 });
 
 // End Computed

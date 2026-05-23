@@ -16,21 +16,21 @@
           class="transparent"
           lines="full"
           :button="acc.id != null"
-          @click="acc.id != null && edit(acc)"
+          @click="acc.id != null && edit({ acc })"
         >
           <ion-label>
             <h2>{{ acc.name }}</h2>
-            <p>Inicial: {{ formatCurrency(acc.initialBalance) }}</p>
+            <p>Inicial: {{ formatCurrency({ value: acc.initialBalance }) }}</p>
           </ion-label>
 
           <ion-label slot="end" class="ion-text-end">
             <h2 :color="acc.balance >= 0 ? 'success' : 'danger'">
-              {{ formatCurrency(acc.balance) }}
+              {{ formatCurrency({ value: acc.balance }) }}
             </h2>
             <p v-if="acc.ingresos > 0 || acc.egresos > 0">
-              <span color="success">+{{ formatCurrency(acc.ingresos) }}</span>
+              <span color="success">+{{ formatCurrency({ value: acc.ingresos }) }}</span>
               /
-              <span color="danger">-{{ formatCurrency(acc.egresos) }}</span>
+              <span color="danger">-{{ formatCurrency({ value: acc.egresos }) }}</span>
             </p>
           </ion-label>
 
@@ -51,16 +51,12 @@
       </template>
     </div>
 
-    <ion-modal
-      :is-open="showModal"
-      :backdrop-dismiss="false"
-      @did-dismiss="cancelModal"
-    >
+    <ion-modal :is-open="showModal" :backdrop-dismiss="false" @did-dismiss="cancelModal">
       <AddAccountComponent
         :account="modalAccount"
         @dismiss="cancelModal"
-        @saved="onModalSaved"
-        @delete="onDeleteAccount"
+        @saved="(p) => onModalSaved({ payload: p })"
+        @delete="(id) => onDeleteAccount({ id })"
       />
     </ion-modal>
   </ion-list>
@@ -80,6 +76,7 @@ import {
   IonModal,
 } from '@ionic/vue';
 import { addOutline } from 'ionicons/icons';
+import { formatCurrency } from '@/utils/currency';
 import accountsController from '@/controllers/accountsController';
 import budgetController from '@/controllers/budgetController';
 // End Imports
@@ -113,19 +110,13 @@ const modalAccount = ref<AccountWithBalance | null>(null);
 // End Vars
 
 // Functions
-function formatCurrency(v: number) {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-  }).format(v || 0);
-}
-
 function openModal() {
   modalAccount.value = null;
   showModal.value = true;
 }
 
-function edit(acc: AccountWithBalance) {
+function edit(params: { acc: AccountWithBalance }) {
+  const { acc } = params
   modalAccount.value = acc;
   showModal.value = true;
 }
@@ -135,18 +126,20 @@ function cancelModal() {
   modalAccount.value = null;
 }
 
-async function onModalSaved(payload: AccountWithBalance) {
+async function onModalSaved(params: { payload: AccountWithBalance }) {
+  const { payload } = params;
   if (!payload) return;
   if (payload.id != null) {
-    await updateAccount({ a: payload });
+    await updateAccount({ account: payload });
   } else {
-    await createAccount({ a: payload });
+    await createAccount({ account: payload });
   }
   cancelModal();
   await loadAll();
 }
 
-async function onDeleteAccount(id: string | number) {
+async function onDeleteAccount(params: { id: string | number }) {
+  const { id } = params;
   for (const entry of budgetController.getEntries()) {
     if (String(entry.accountId) === String(id)) {
       budgetController.updateIngreso({ id: entry.id, changes: { accountId: null } });
@@ -167,7 +160,8 @@ async function onDeleteAccount(id: string | number) {
 // End Computed
 
 // Watch
-// End Watch</script>
+// End Watch
+</script>
 
 <style scoped>
 .account-card {
@@ -184,5 +178,4 @@ async function onDeleteAccount(id: string | number) {
   height: 40px;
   margin-left: 8px;
 }
-
 </style>

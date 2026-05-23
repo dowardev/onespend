@@ -45,7 +45,7 @@ class PerformanceMonitor {
 
     const endTime = performance.now();
     const duration = endTime - startTime;
-    
+
     this.activeTimers.delete(name);
     this.recordMetric({
       memory: this.getMemoryUsage(),
@@ -63,19 +63,19 @@ class PerformanceMonitor {
   // JSON cloning performance test
   testJSONCloning(obj: any, iterations = 1000): void {
     this.startTimer('json-parse-stringify');
-    
+
     for (let i = 0; i < iterations; i++) {
       JSON.parse(JSON.stringify(obj));
     }
-    
+
     this.endTimer('json-parse-stringify');
 
     this.startTimer('structured-clone');
-    
+
     for (let i = 0; i < iterations; i++) {
       structuredClone ? structuredClone(obj) : JSON.parse(JSON.stringify(obj));
     }
-    
+
     this.endTimer('structured-clone');
   }
 
@@ -85,24 +85,24 @@ class PerformanceMonitor {
       this.startTimer('original-image-size');
       const reader = new FileReader();
       const objectURLs: string[] = []; // Track created URLs for cleanup
-      
+
       reader.onload = () => {
         const originalSize = String(reader.result).length;
         this.endTimer('original-image-size');
 
         this.startTimer('image-compression');
-        
+
         const img = new Image();
         const objectURL = URL.createObjectURL(file);
         objectURLs.push(objectURL);
-        
+
         img.onload = () => {
           const canvas = document.createElement('canvas');
           const ctx = canvas.getContext('2d')!;
-          
+
           const maxSize = 1024;
           let { width, height } = img;
-          
+
           if (width > height && width > maxSize) {
             height = (height * maxSize) / width;
             width = maxSize;
@@ -110,36 +110,38 @@ class PerformanceMonitor {
             width = (width * maxSize) / height;
             height = maxSize;
           }
-          
+
           canvas.width = width;
           canvas.height = height;
           ctx.drawImage(img, 0, 0, width, height);
-          
+
           const compressed = canvas.toDataURL('image/jpeg', 0.6);
           const compressedSize = compressed.length;
-          
+
           this.endTimer('image-compression');
-          
+
           console.log(`Image compression results:`);
           console.log(`Original size: ${(originalSize / 1024).toFixed(2)} KB`);
           console.log(`Compressed size: ${(compressedSize / 1024).toFixed(2)} KB`);
-          console.log(`Compression ratio: ${((1 - compressedSize / originalSize) * 100).toFixed(1)}%`);
-          
+          console.log(
+            `Compression ratio: ${((1 - compressedSize / originalSize) * 100).toFixed(1)}%`,
+          );
+
           // Cleanup object URLs to prevent memory leaks
-          objectURLs.forEach(url => {
+          objectURLs.forEach((url) => {
             try {
               URL.revokeObjectURL(url);
             } catch (e) {
               console.warn('Failed to revoke object URL:', e);
             }
           });
-          
+
           resolve();
         };
-        
+
         img.onerror = () => {
           // Cleanup on error
-          objectURLs.forEach(url => {
+          objectURLs.forEach((url) => {
             try {
               URL.revokeObjectURL(url);
             } catch (e) {
@@ -148,7 +150,7 @@ class PerformanceMonitor {
           });
           resolve();
         };
-        
+
         img.src = objectURL;
       };
       reader.readAsDataURL(file);
@@ -160,7 +162,7 @@ class PerformanceMonitor {
     const memoryBefore = this.getMemoryUsage();
     callback();
     const memoryAfter = this.getMemoryUsage();
-    
+
     const memoryDiff = memoryAfter.usedJSHeapSize - memoryBefore.usedJSHeapSize;
     console.log(`Memory usage change: ${(memoryDiff / 1024 / 1024).toFixed(2)} MB`);
   }
@@ -173,7 +175,7 @@ class PerformanceMonitor {
   // Generate report
   generateReport(): void {
     console.log('\n=== Performance Test Report ===');
-    
+
     // Memory metrics
     const currentMemory = this.getMemoryUsage();
     console.log('\n--- Current Memory Usage ---');
@@ -183,19 +185,20 @@ class PerformanceMonitor {
 
     // Timing metrics
     console.log('\n--- Performance Timings ---');
-    const timingMetrics = this.metrics.map(m => m.timing).filter(t => t.duration !== undefined);
-    timingMetrics.forEach(metric => {
+    const timingMetrics = this.metrics.map((m) => m.timing).filter((t) => t.duration !== undefined);
+    timingMetrics.forEach((metric) => {
       if (metric.duration !== undefined) {
         console.log(`${metric.name}: ${metric.duration.toFixed(2)} ms`);
       }
     });
 
     // Compare JSON cloning methods
-    const parseStringify = timingMetrics.find(t => t.name === 'json-parse-stringify');
-    const structuredClone = timingMetrics.find(t => t.name === 'structured-clone');
-    
+    const parseStringify = timingMetrics.find((t) => t.name === 'json-parse-stringify');
+    const structuredClone = timingMetrics.find((t) => t.name === 'structured-clone');
+
     if (parseStringify && structuredClone && parseStringify.duration && structuredClone.duration) {
-      const improvement = ((parseStringify.duration - structuredClone.duration) / parseStringify.duration) * 100;
+      const improvement =
+        ((parseStringify.duration - structuredClone.duration) / parseStringify.duration) * 100;
       console.log('\n--- JSON Cloning Comparison ---');
       console.log(`JSON.parse(JSON.stringify()): ${parseStringify.duration.toFixed(2)} ms`);
       console.log(`structuredClone(): ${structuredClone.duration.toFixed(2)} ms`);

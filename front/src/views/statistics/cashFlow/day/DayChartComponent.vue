@@ -1,10 +1,6 @@
 <template>
   <div>
-    <Bar
-      v-if="canRenderChart"
-      :data="safeChartData"
-      :options="safeChartOptions"
-    />
+    <Bar v-if="canRenderChart" :data="safeChartData" :options="safeChartOptions" />
   </div>
 </template>
 
@@ -32,12 +28,13 @@ const props = defineProps<Props>();
 const { loadChartDependencies, isLoaded } = useChart();
 
 // computed
-const hasData = computed(() => 
-  props.chartData && 
-  props.chartData.labels && 
-  props.chartData.labels.length > 0 &&
-  props.chartData.datasets && 
-  props.chartData.datasets.length > 0
+const hasData = computed(
+  () =>
+    props.chartData &&
+    props.chartData.labels &&
+    props.chartData.labels.length > 0 &&
+    props.chartData.datasets &&
+    props.chartData.datasets.length > 0,
 );
 
 const canRenderChart = computed(() => hasData.value && isLoaded.value);
@@ -45,14 +42,10 @@ const canRenderChart = computed(() => hasData.value && isLoaded.value);
 
 // vars
 const safeChartData = shallowRef<ChartData<'bar'>>(
-  props.chartData
-    ? JSON.parse(JSON.stringify(props.chartData))
-    : { labels: [], datasets: [] }
+  props.chartData ? JSON.parse(JSON.stringify(props.chartData)) : { labels: [], datasets: [] },
 );
 const safeChartOptions = shallowRef<ChartOptions<'bar'>>(
-  props.chartOptions
-    ? JSON.parse(JSON.stringify(props.chartOptions))
-    : ({} as ChartOptions<'bar'>)
+  props.chartOptions ? JSON.parse(JSON.stringify(props.chartOptions)) : ({} as ChartOptions<'bar'>),
 );
 // end vars
 
@@ -79,8 +72,7 @@ function translateDayLabel(params: { label: unknown }): string {
     const weekday = safeIntlFormat(d, 'es-MX', { weekday: 'short' }) || '';
     const dayNum = safeIntlFormat(d, 'es-MX', { day: 'numeric' }) || '';
     const weekdayNorm = weekday.replace(/\.$/, '');
-    const capitalized =
-      weekdayNorm.charAt(0).toUpperCase() + weekdayNorm.slice(1);
+    const capitalized = weekdayNorm.charAt(0).toUpperCase() + weekdayNorm.slice(1);
     return `${capitalized} ${dayNum}`;
   }
   const map: Record<string, string> = {
@@ -119,11 +111,9 @@ function translateDayLabel(params: { label: unknown }): string {
 // watch
 watch(
   () => props.chartData,
-  v => {
-    const cloned = v
-      ? JSON.parse(JSON.stringify(v))
-      : { labels: [], datasets: [] };
-    cloned.labels = (cloned.labels || []).map(l => translateDayLabel({ label: l }));
+  (v) => {
+    const cloned = v ? JSON.parse(JSON.stringify(v)) : { labels: [], datasets: [] };
+    cloned.labels = (cloned.labels || []).map((l) => translateDayLabel({ label: l }));
     safeChartData.value = applyNeonStyles(cloned);
     // Debug: show final chart data sent to vue-chartjs
     try {
@@ -133,17 +123,15 @@ watch(
       /* ignore */
     }
   },
-  { immediate: true, deep: true }
+  { immediate: true, deep: true },
 );
 
 watch(
   () => props.chartOptions,
-  v => {
-    safeChartOptions.value = v
-      ? JSON.parse(JSON.stringify(v))
-      : ({} as ChartOptions<'bar'>);
+  (v) => {
+    safeChartOptions.value = v ? JSON.parse(JSON.stringify(v)) : ({} as ChartOptions<'bar'>);
   },
-  { immediate: true, deep: true }
+  { immediate: true, deep: true },
 );
 // end watch
 </script>

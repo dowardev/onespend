@@ -43,7 +43,7 @@ export interface UsePeriodRangeReturn {
 
 export function usePeriodRange(
   period: Ref<PeriodType> | ComputedRef<PeriodType>,
-  options: UsePeriodRangeOptions = {}
+  options: UsePeriodRangeOptions = {},
 ): UsePeriodRangeReturn {
   const referenceDate = ref(options.initialDate ?? new Date());
   const weekStartDay = options.weekStartDay ?? ref(1);

@@ -5,9 +5,7 @@
         <ion-icon :icon="chevronBackOutline" />
       </ion-button>
 
-      <ion-button slot="end" fill="clear" @click="onDateClick($event)">{{
-        dateLabel
-      }}</ion-button>
+      <ion-button slot="end" fill="clear" @click="onDateClick($event)">{{ dateLabel }}</ion-button>
 
       <ion-button slot="end" fill="clear" @click="onNext()">
         <ion-icon :icon="chevronForwardOutline" />

@@ -57,20 +57,14 @@ const router = useRouter();
 
 // Functions
 function goToMigrateDates() {
-  if (
-    (import.meta as unknown as { env?: Record<string, string | undefined> }).env
-      ?.DEV
-  ) {
+  if ((import.meta as unknown as { env?: Record<string, string | undefined> }).env?.DEV) {
     console.log('MaintenancePage: navigating to migrate-dates');
   }
   router.push({ name: 'MigrateDates' });
 }
 
 function goToMigrateEntries() {
-  if (
-    (import.meta as unknown as { env?: Record<string, string | undefined> }).env
-      ?.DEV
-  ) {
+  if ((import.meta as unknown as { env?: Record<string, string | undefined> }).env?.DEV) {
     console.log('MaintenancePage: navigating to migrate-entries');
   }
   router.push({ name: 'MigrateEntries' });

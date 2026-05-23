@@ -35,7 +35,9 @@
         </ion-item>
         <ion-item lines="none">
           <ion-label><strong>Total</strong></ion-label>
-          <ion-note slot="end"><strong>{{ formatCurrency(totalAmount) }}</strong></ion-note>
+          <ion-note slot="end"
+            ><strong>{{ formatCurrency(totalAmount) }}</strong></ion-note
+          >
         </ion-item>
       </ion-list>
     </ion-content>
@@ -107,10 +109,10 @@ const totalAmount = computed(() => {
 });
 
 const chartData = computed(() => ({
-  labels: props.sources.map(source => source.name),
+  labels: props.sources.map((source) => source.name),
   datasets: [
     {
-      data: props.sources.map(source => source.amount || 0),
+      data: props.sources.map((source) => source.amount || 0),
       backgroundColor: props.sources.map((_, i) => colors[i % colors.length]),
     },
   ],

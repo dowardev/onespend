@@ -41,12 +41,7 @@
             {{ error }}
           </div>
 
-          <ion-button
-            type="submit"
-            expand="block"
-            :disabled="isLoading"
-            class="auth-button"
-          >
+          <ion-button type="submit" expand="block" :disabled="isLoading" class="auth-button">
             <ion-spinner v-if="isLoading" name="lines"></ion-spinner>
             <span v-else>Iniciar Sesión</span>
           </ion-button>

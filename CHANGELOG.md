@@ -1,3 +1,69 @@
+## [v0.65.0] - 2026-05-23
+
+### Refactor
+
+- **Extract attachment logic into reusable `useAttachments` composable**
+  - Centralizes open/save/delete logic for both entity types (`entries` | `providers`)
+  - Replaces ~200 lines of duplicated code in EntryEditPage and ProviderEditPage
+  - Infers `fkColumn` from `entityType` instead of receiving it as a parameter
+
+- **Consolidate attachment migrations into a single file**
+  - Merged `make_budget_entry_sync_id_nullable` into `add_providers_support_and_nullable_entry_to_attachments`
+  - Improved `down()` with proper cleanup: resets provider data, nullifies entry sync IDs before reverting columns
+
+### Added
+
+- **Batch delete endpoint for attachments**: `POST /attachments/batch-delete` (backend `batchDestroy` + frontend `deleteAttachments` service)
+
+### Changed
+
+- `AttachmentController::handleUpload` now infers `$fkColumn` from `$entityType` internally
+- `ProviderEditPage.confirmDelete` converted from async IIFE to regular async function
+- `budgetController.addProvider` return type annotated as `:void`
+
+## [v0.64.0] - 2026-05-23
+
+### Features
+
+- **Add provider attachments support**
+  - New backend API endpoints: `GET/POST /budget-providers/{providerId}/attachments`
+  - New `budget_provider_sync_id` column and `ENTITY_TYPE_PROVIDERS` in Attachment model
+  - Frontend: `listProviderAttachments()` and `uploadProviderAttachments()` in attachmentService
+  - Pending attachments refactored to support multiple entity types (`entries` | `providers`)
+  - Sync service routes provider attachments to the correct endpoint
+
+- **Add notes field to provider edit page**
+  - New textarea for provider notes in ProviderEditPage
+  - Notes passed via `addProvider` controller method
+
+- **Show pending attachments in entry attachment modal**
+  - EntryEditPage now displays pending (not-yet-uploaded) files when opening attachments
+  - Supports removing pending files directly from the modal
+
+### Changed
+
+- **Oxlint/oxfmt formatting applied across ~100 frontend files**
+  - Formatter config: changed `semi: false` → `semi: true`
+  - TypeScript type narrowing fixes (`as string` casting) and code cleanup
+  - ProductsModalComponent moved to `front/src/views/budget/modals/`
+  - CashFlow.vue reformatted imports and code for readability
+
+- **Backend: `budget_entry_sync_id` made nullable in attachments table**
+  - Required for provider attachments that have no entry association
+
+- **Backend: `user_id` added to `budget_entry_groups` table**
+  - New migration; createBudgetEntryGroups now accepts userId
+  - SyncController includes `user_id` in budget_entry_groups creation
+
+### Fixed
+
+- Resolved TypeScript errors in ProviderEditPage.vue (LBDS-21)
+- Fixed attachment deletion in EntryEditPage: server and pending file deletion handled separately
+
+### Chore
+
+- Updated `.gitignore` to exclude `.opencode/` and `.oxfmtrc.json`
+
 ## [v0.63.0] - 2026-05-20
 
 ### Features

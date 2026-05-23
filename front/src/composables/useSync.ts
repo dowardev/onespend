@@ -105,14 +105,17 @@ export function useSync() {
     return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   }
 
-  function syncEntry(params: { entry: SyncEntryParams; operation?: 'create' | 'update' | 'delete' }) {
+  function syncEntry(params: {
+    entry: SyncEntryParams;
+    operation?: 'create' | 'update' | 'delete';
+  }) {
     const { entry, operation = 'create' } = params;
     let syncId = entry.sync_id;
-    
+
     if (!syncId) {
       syncId = entry.sync_id = String(entry.id || generateSyncId());
     }
-    
+
     const syncItem: Omit<SyncItem, 'timestamp' | 'retryCount'> = {
       id: syncId,
       entityType: 'budget_entry',
@@ -136,8 +139,10 @@ export function useSync() {
   }
 
   function syncProvider(
-    paramsOrProvider: { provider?: SyncProviderParams; operation?: 'create' | 'update' | 'delete' } | SyncProviderParams,
-    maybeOperation?: 'create' | 'update' | 'delete'
+    paramsOrProvider:
+      | { provider?: SyncProviderParams; operation?: 'create' | 'update' | 'delete' }
+      | SyncProviderParams,
+    maybeOperation?: 'create' | 'update' | 'delete',
   ) {
     // Support two calling styles:
     // 1) syncProvider({ provider: {...}, operation: 'create' })
@@ -159,7 +164,10 @@ export function useSync() {
     }
 
     if (!provider) {
-      console.error('[useSync] syncProvider: provider is undefined or null', { paramsOrProvider, maybeOperation });
+      console.error('[useSync] syncProvider: provider is undefined or null', {
+        paramsOrProvider,
+        maybeOperation,
+      });
       return;
     }
 
@@ -185,7 +193,7 @@ export function useSync() {
       entityType: 'supplier',
       operation,
       data: {
-        name: prov?.name as string || null,
+        name: (prov?.name as string) || null,
         updated_at: Date.now(),
       },
     };
@@ -200,8 +208,10 @@ export function useSync() {
   }
 
   function syncAccount(
-    paramsOrAccount: { account?: SyncAccountParams; operation?: 'create' | 'update' | 'delete' } | SyncAccountParams,
-    maybeOperation?: 'create' | 'update' | 'delete'
+    paramsOrAccount:
+      | { account?: SyncAccountParams; operation?: 'create' | 'update' | 'delete' }
+      | SyncAccountParams,
+    maybeOperation?: 'create' | 'update' | 'delete',
   ) {
     // Support two calling styles for robustness:
     // 1) syncAccount({ account: {...}, operation: 'create' })
@@ -223,7 +233,10 @@ export function useSync() {
     }
 
     if (!account) {
-      console.error('[useSync] syncAccount: account is undefined or null', { paramsOrAccount, maybeOperation });
+      console.error('[useSync] syncAccount: account is undefined or null', {
+        paramsOrAccount,
+        maybeOperation,
+      });
       return;
     }
 
@@ -235,7 +248,10 @@ export function useSync() {
     const acc = (accRaw ?? (account as SyncAccountParams)) as SyncAccountParams | undefined;
 
     if (!acc) {
-      console.error('[useSync] syncAccount: resolved account is not an object', { paramsOrAccount, maybeOperation });
+      console.error('[useSync] syncAccount: resolved account is not an object', {
+        paramsOrAccount,
+        maybeOperation,
+      });
       return;
     }
 
@@ -267,14 +283,17 @@ export function useSync() {
     pendingChanges.value = syncService.getQueueCount();
   }
 
-  function syncTemplate(params: { template: SyncTemplateParams; operation?: 'create' | 'update' | 'delete' }) {
+  function syncTemplate(params: {
+    template: SyncTemplateParams;
+    operation?: 'create' | 'update' | 'delete';
+  }) {
     const { template, operation = 'create' } = params;
     let syncId = template.sync_id;
-    
+
     if (!syncId) {
       syncId = template.sync_id = String(template.id || generateSyncId());
     }
-    
+
     const syncItem: Omit<SyncItem, 'timestamp' | 'retryCount'> = {
       id: syncId,
       entityType: 'template',
@@ -293,8 +312,10 @@ export function useSync() {
   }
 
   function syncSupplierProduct(
-    paramsOrProduct: { product?: SyncSupplierProductParams; operation?: 'create' | 'update' | 'delete' } | SyncSupplierProductParams,
-    maybeOperation?: 'create' | 'update' | 'delete'
+    paramsOrProduct:
+      | { product?: SyncSupplierProductParams; operation?: 'create' | 'update' | 'delete' }
+      | SyncSupplierProductParams,
+    maybeOperation?: 'create' | 'update' | 'delete',
   ) {
     // Support two calling styles for robustness:
     // 1) syncSupplierProduct({ product: {...}, operation: 'create' })
@@ -316,7 +337,10 @@ export function useSync() {
     }
 
     if (!product) {
-      console.error('[useSync] syncSupplierProduct: product is undefined or null', { paramsOrProduct, maybeOperation });
+      console.error('[useSync] syncSupplierProduct: product is undefined or null', {
+        paramsOrProduct,
+        maybeOperation,
+      });
       return;
     }
 
@@ -324,11 +348,11 @@ export function useSync() {
       name: product?.name,
       operation,
       sync_id: product?.sync_id,
-      supplierId: product?.supplierId
+      supplierId: product?.supplierId,
     });
 
     let syncId = product.sync_id as string | undefined;
-    
+
     if (!syncId) {
       // Generate a unique sync_id for the product
       const baseId = product.supplierId
@@ -337,7 +361,7 @@ export function useSync() {
       syncId = product.sync_id = `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
       console.log('[useSync] syncId generado para producto:', syncId);
     }
-    
+
     const syncItem: Omit<SyncItem, 'timestamp' | 'retryCount'> = {
       id: syncId,
       entityType: 'supplier_product',
@@ -355,14 +379,19 @@ export function useSync() {
     pendingChanges.value = syncService.getQueueCount();
   }
 
-  function syncBudgetProvider(params: { provider: SyncBudgetProviderParams; operation?: 'create' | 'update' | 'delete'; products?: SyncBudgetProviderProductParams[]; supplierSyncId?: string }) {
+  function syncBudgetProvider(params: {
+    provider: SyncBudgetProviderParams;
+    operation?: 'create' | 'update' | 'delete';
+    products?: SyncBudgetProviderProductParams[];
+    supplierSyncId?: string;
+  }) {
     const { provider, operation = 'create', products, supplierSyncId } = params;
     let syncId = provider.sync_id;
-    
+
     if (!syncId) {
       syncId = provider.sync_id = String(provider.id || generateSyncId());
     }
-    
+
     const syncItem: Omit<SyncItem, 'timestamp' | 'retryCount'> = {
       id: syncId,
       entityType: 'budget_provider',
@@ -379,42 +408,56 @@ export function useSync() {
         visited: provider.visited as boolean,
         _supplier_id: provider._supplierId || supplierSyncId,
         _supplier_name: provider._supplierName as string,
-        products: products ? products.map((p: SyncBudgetProviderProductParams) => ({
-          sync_id: p.sync_id,
-          supplier_product_id: p.supplierProductId,
-          product_name: p.productName,
-          product_price: p.productPrice,
-          quantity: p.quantity,
-          updated_at: Date.now(),
-        })) : [],
+        products: products
+          ? products.map((p: SyncBudgetProviderProductParams) => ({
+              sync_id: p.sync_id,
+              supplier_product_id: p.supplierProductId,
+              product_name: p.productName,
+              product_price: p.productPrice,
+              quantity: p.quantity,
+              updated_at: Date.now(),
+            }))
+          : [],
         updated_at: Date.now(),
       },
     };
 
-    console.log('syncBudgetProvider - Enviando payload:', JSON.stringify({
-      id: syncItem.id,
-      entityType: syncItem.entityType,
-      operation: syncItem.operation,
-      data: syncItem.data,
-      productsDetails: (syncItem.data as any).products?.map((p: SyncBudgetProviderProductParams) => ({
-        supplierProductId: p.supplierProductId,
-        productName: p.productName,
-        quantity: p.quantity
-      }))
-    }, null, 2));
+    console.log(
+      'syncBudgetProvider - Enviando payload:',
+      JSON.stringify(
+        {
+          id: syncItem.id,
+          entityType: syncItem.entityType,
+          operation: syncItem.operation,
+          data: syncItem.data,
+          productsDetails: (syncItem.data as any).products?.map(
+            (p: SyncBudgetProviderProductParams) => ({
+              supplierProductId: p.supplierProductId,
+              productName: p.productName,
+              quantity: p.quantity,
+            }),
+          ),
+        },
+        null,
+        2,
+      ),
+    );
 
     syncService.queueOperation(syncItem);
     pendingChanges.value = syncService.getQueueCount();
   }
 
-  function syncBudgetProviderProduct(params: { product: SyncBudgetProviderProductParams; operation?: 'create' | 'update' | 'delete' }) {
+  function syncBudgetProviderProduct(params: {
+    product: SyncBudgetProviderProductParams;
+    operation?: 'create' | 'update' | 'delete';
+  }) {
     const { product, operation = 'create' } = params;
     let syncId = product.sync_id;
-    
+
     if (!syncId) {
       syncId = product.sync_id = String(product.id || generateSyncId());
     }
-    
+
     const syncItem: Omit<SyncItem, 'timestamp' | 'retryCount'> = {
       id: syncId,
       entityType: 'budget_provider_product',
@@ -444,16 +487,19 @@ export function useSync() {
 
     try {
       const result = await syncService.processQueue();
-      
+
       console.log('syncNow - result from server:', JSON.stringify(result, null, 2));
-      
+
       if (result) {
-        await applyServerChanges({ changes: (result as any).results || {}, serverTime: result.serverTime });
+        await applyServerChanges({
+          changes: (result as any).results || {},
+          serverTime: result.serverTime,
+        });
       }
 
       lastSyncTime.value = syncService.getLastSyncTime();
       pendingChanges.value = syncService.getQueueCount();
-      
+
       return true;
     } catch (error) {
       syncError.value = error instanceof Error ? error.message : 'Sync failed';
@@ -500,12 +546,16 @@ export function useSync() {
           const localId = entry.id;
           budgetStore.removeEntry(localId);
         } else {
-          const mappedGroups = (entry.groups as Array<{ id?: number; account_id?: number | null; amount: number }> | undefined)?.map(g => ({
+          const mappedGroups = (
+            entry.groups as
+              | Array<{ id?: number; account_id?: number | null; amount: number }>
+              | undefined
+          )?.map((g) => ({
             amount: g.amount,
             accountId: g.account_id,
           }));
-          
-          const existing = budgetStore.entries.find(e => String(e.id) === String(entry.id));
+
+          const existing = budgetStore.entries.find((e) => String(e.id) === String(entry.id));
           if (existing) {
             budgetStore.updateEntry(entry.id, {
               name: entry.name as string,
@@ -544,7 +594,7 @@ export function useSync() {
           const localId = supplier.id;
           budgetStore.removeProvider(localId);
         } else {
-          const existing = budgetStore.providers.find(p => String(p.id) === String(supplier.id));
+          const existing = budgetStore.providers.find((p) => String(p.id) === String(supplier.id));
           const s = supplier as any;
           if (existing) {
             budgetStore.updateProvider(supplier.id, {
@@ -615,7 +665,7 @@ export function useSync() {
           const localId = provider.id;
           budgetStore.removeProvider(localId);
         } else {
-          const existing = budgetStore.providers.find(p => String(p.id) === String(provider.id));
+          const existing = budgetStore.providers.find((p) => String(p.id) === String(provider.id));
           if (existing) {
             budgetStore.updateProvider(provider.id, {
               name: provider.name as string,
@@ -647,9 +697,11 @@ export function useSync() {
     }
 
     if (changes.budget_provider_product) {
-      const products = Array.isArray(changes.budget_provider_product) ? changes.budget_provider_product : [];
+      const products = Array.isArray(changes.budget_provider_product)
+        ? changes.budget_provider_product
+        : [];
       const productsByProvider: Record<string, BudgetProviderProduct[]> = {};
-      
+
       for (const product of products) {
         if (!product._deleted) {
           const providerId = product.budget_provider_id;
@@ -666,9 +718,9 @@ export function useSync() {
           });
         }
       }
-      
+
       for (const [providerId, prods] of Object.entries(productsByProvider)) {
-        const provider = budgetStore.providers.find(p => String(p.id) === String(providerId));
+        const provider = budgetStore.providers.find((p) => String(p.id) === String(providerId));
         if (provider) {
           budgetStore.updateProvider(Number(providerId), { products: prods });
         }

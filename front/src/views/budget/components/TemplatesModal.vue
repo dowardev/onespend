@@ -1,9 +1,5 @@
 <template>
-  <ion-modal
-    :is-open="isOpen"
-    :keep-contents-mounted="true"
-    @did-dismiss="$emit('dismiss')"
-  >
+  <ion-modal :is-open="isOpen" :keep-contents-mounted="true" @did-dismiss="$emit('dismiss')">
     <ion-header class="ion-no-border" mode="ios">
       <ion-toolbar>
         <ion-buttons>
@@ -90,4 +86,5 @@ defineEmits(['dismiss', 'select-template']);
 // End Computed
 
 // Watch
-// End Watch</script>
+// End Watch
+</script>

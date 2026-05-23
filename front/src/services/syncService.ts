@@ -47,7 +47,14 @@ export interface SyncItemData {
 
 export interface SyncItem {
   id: string;
-  entityType: 'account' | 'budget_provider' | 'budget_provider_product' | 'budget_entry' | 'supplier' | 'supplier_product' | 'template';
+  entityType:
+    | 'account'
+    | 'budget_provider'
+    | 'budget_provider_product'
+    | 'budget_entry'
+    | 'supplier'
+    | 'supplier_product'
+    | 'template';
   operation: 'create' | 'update' | 'delete';
   data: SyncItemData;
   timestamp: number;
@@ -152,22 +159,27 @@ class SyncService {
 
     for (const attachment of pending) {
       try {
-        console.log('[SyncService] Uploading attachments for:', attachment.entrySyncId);
-        const files = attachment.files.map(f =>
-          pendingAttachmentsService.base64ToFile(f.data, f.name, f.type)
+        console.log('[SyncService] Uploading attachments for:', attachment.entitySyncId);
+        const files = attachment.files.map((f) =>
+          pendingAttachmentsService.base64ToFile(f.data, f.name, f.type),
         );
-        await attachmentService.uploadAttachments(attachment.entrySyncId, files);
-        pendingAttachmentsService.removePendingAttachment(attachment.entrySyncId);
+        const uploadFn = attachment.entityType === 'providers'
+          ? attachmentService.uploadProviderAttachments
+          : attachmentService.uploadAttachments;
+        await uploadFn(attachment.entitySyncId, files);
+        pendingAttachmentsService.removePendingAttachment(attachment.entitySyncId, attachment.entityType);
         console.log('[SyncService] ✅ Attachments uploaded successfully');
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         console.error('[SyncService] ❌ Failed to upload pending attachments:', errorMessage);
-        
-        // Si el error es "Entry not found", eliminar el archivo pendiente
-        // (la entrada nunca se sincronizó o fue eliminada)
-        if (errorMessage.includes('Entry not found')) {
-          console.log('[SyncService] Removing orphaned pending attachment:', attachment.entrySyncId);
-          pendingAttachmentsService.removePendingAttachment(attachment.entrySyncId);
+
+        const notFoundMsg = attachment.entityType === 'providers' ? 'Provider not found' : 'Entry not found';
+        if (errorMessage.includes(notFoundMsg)) {
+          console.log(
+            '[SyncService] Removing orphaned pending attachment:',
+            attachment.entitySyncId,
+          );
+          pendingAttachmentsService.removePendingAttachment(attachment.entitySyncId, attachment.entityType);
         }
       }
     }
@@ -179,7 +191,7 @@ class SyncService {
   }
 
   private notifyOnlineListeners() {
-    this.onlineListeners.forEach(listener => listener(this.isOnline));
+    this.onlineListeners.forEach((listener) => listener(this.isOnline));
   }
 
   onOnlineChange(callback: (online: boolean) => void) {
@@ -198,13 +210,13 @@ class SyncService {
   private async getAuthHeaders(contentType = 'application/json'): Promise<HeadersInit> {
     const token = await getToken();
     const headers: HeadersInit = {
-      'Authorization': `Bearer ${token}`,
+      Authorization: `Bearer ${token}`,
     };
-    
+
     if (contentType) {
       headers['Content-Type'] = contentType;
     }
-    
+
     return headers;
   }
 
@@ -225,14 +237,19 @@ class SyncService {
       retryCount: 0,
     };
 
-    console.log('[SyncService] queueOperation:', syncItem.entityType, syncItem.operation, syncItem.id);
+    console.log(
+      '[SyncService] queueOperation:',
+      syncItem.entityType,
+      syncItem.operation,
+      syncItem.id,
+    );
     console.log('[SyncService] isOnline:', this.isOnline);
 
     const queue = this.getQueue();
     console.log('[SyncService] Current queue length:', queue.length);
 
     const existingIndex = queue.findIndex(
-      q => q.id === syncItem.id && q.entityType === syncItem.entityType
+      (q) => q.id === syncItem.id && q.entityType === syncItem.entityType,
     );
 
     if (existingIndex !== -1) {
@@ -263,8 +280,13 @@ class SyncService {
   }
 
   async processQueue(): Promise<SyncResult | null> {
-    console.log('[SyncService] processQueue called, isOnline:', this.isOnline, 'syncInProgress:', this.syncInProgress);
-    
+    console.log(
+      '[SyncService] processQueue called, isOnline:',
+      this.isOnline,
+      'syncInProgress:',
+      this.syncInProgress,
+    );
+
     if (this.syncInProgress || !this.isOnline) {
       console.log('[SyncService] processQueue - Skipping, not online or sync in progress');
       return null;
@@ -314,8 +336,12 @@ class SyncService {
         processedIds.push(item.id);
       }
 
-      console.log('[SyncService] processQueue - Sending to backend, items per type:', 
-        Object.entries(data).map(([k, v]) => `${k}: ${v.length}`).join(', '));
+      console.log(
+        '[SyncService] processQueue - Sending to backend, items per type:',
+        Object.entries(data)
+          .map(([k, v]) => `${k}: ${v.length}`)
+          .join(', '),
+      );
 
       const response = await fetch(`${API_URL}/api/sync/merge`, {
         method: 'POST',
@@ -324,7 +350,10 @@ class SyncService {
       });
 
       if (!response.ok) {
-        console.warn('[SyncService] Server sync failed, items will remain in queue for later:', response.statusText);
+        console.warn(
+          '[SyncService] Server sync failed, items will remain in queue for later:',
+          response.statusText,
+        );
         // Don't throw error, just return early so items stay in queue for later sync
         return false;
       }
@@ -338,10 +367,10 @@ class SyncService {
         console.warn('[SyncService] syncQueue - Server response without results:', result);
       }
 
-      const remainingQueue = queue.filter(item => !processedIds.includes(item.id));
+      const remainingQueue = queue.filter((item) => !processedIds.includes(item.id));
 
       for (const id of processedIds) {
-        const index = remainingQueue.findIndex(q => q.id === id);
+        const index = remainingQueue.findIndex((q) => q.id === id);
         if (index !== -1) {
           remainingQueue.splice(index, 1);
         }
@@ -394,7 +423,10 @@ class SyncService {
     }
   }
 
-  private async resolveConflictDialog(entityType: string, item: SyncConflictItem): Promise<SyncConflictResolution> {
+  private async resolveConflictDialog(
+    entityType: string,
+    item: SyncConflictItem,
+  ): Promise<SyncConflictResolution> {
     return {
       entity_type: entityType,
       entity_id: item.sync_id,
@@ -403,20 +435,22 @@ class SyncService {
     };
   }
 
-  private async updateLocalRecordsWithMysqlIds(results: Record<string, Record<string, Array<{ sync_id: string; id?: number | null }>>>): Promise<void> {
+  private async updateLocalRecordsWithMysqlIds(
+    results: Record<string, Record<string, Array<{ sync_id: string; id?: number | null }>>>,
+  ): Promise<void> {
     console.log('[SyncService] 🔵 updateLocalRecordsWithMysqlIds - Starting');
     console.log('[SyncService] Results structure:', JSON.stringify(results, null, 2));
 
     const { DixieController } = await import('@/controllers/dixie');
 
     const entityTypeToStore: Record<string, string> = {
-      'account': 'accounts',
-      'budget_provider': 'budget_providers',
-      'budget_provider_product': 'budget_provider_products',
-      'budget_entry': 'entries',
-      'supplier': 'suppliers',
-      'supplier_product': 'supplier_products',
-      'template': 'templates',
+      account: 'accounts',
+      budget_provider: 'budget_providers',
+      budget_provider_product: 'budget_provider_products',
+      budget_entry: 'entries',
+      supplier: 'suppliers',
+      supplier_product: 'supplier_products',
+      template: 'templates',
     };
 
     let updatedCount = 0;
@@ -427,10 +461,12 @@ class SyncService {
       for (const [entityType, ids] of Object.entries(entityMap)) {
         if (entityType === 'supplier_product' && Array.isArray(ids)) {
           for (const idEntry of ids) {
-              if (idEntry.sync_id && idEntry.id) {
-                allProductIds.set(idEntry.sync_id, idEntry.id);
-                console.log(`[SyncService] Mapped product sync_id ${idEntry.sync_id} -> serverId ${idEntry.id}`);
-              }
+            if (idEntry.sync_id && idEntry.id) {
+              allProductIds.set(idEntry.sync_id, idEntry.id);
+              console.log(
+                `[SyncService] Mapped product sync_id ${idEntry.sync_id} -> serverId ${idEntry.id}`,
+              );
+            }
           }
         }
       }
@@ -440,7 +476,7 @@ class SyncService {
     for (const [status, entityMap] of Object.entries(results)) {
       for (const [entityType, ids] of Object.entries(entityMap)) {
         if (entityType !== 'supplier') continue;
-        
+
         const storeName = 'suppliers';
         if (!Array.isArray(ids)) continue;
 
@@ -469,19 +505,25 @@ class SyncService {
 
               // Actualizar productos embebidos si existen
               if (existing.products && Array.isArray(existing.products)) {
-                console.log(`[SyncService] Processing ${existing.products.length} embedded products`);
-                
+                console.log(
+                  `[SyncService] Processing ${existing.products.length} embedded products`,
+                );
+
                 updatedEntry.products = existing.products.map((product: SupplierProduct) => {
                   const productServerId = allProductIds.get(product.sync_id);
                   if (productServerId) {
-                    console.log(`[SyncService] ✅ Product ${product.name} sync_id ${product.sync_id} got serverId ${productServerId}`);
+                    console.log(
+                      `[SyncService] ✅ Product ${product.name} sync_id ${product.sync_id} got serverId ${productServerId}`,
+                    );
                     return {
                       ...product,
                       serverId: productServerId,
                       synced_at: Date.now(),
                     };
                   }
-                  console.log(`[SyncService] Product ${product.name} sync_id ${product.sync_id} NOT found in server response`);
+                  console.log(
+                    `[SyncService] Product ${product.name} sync_id ${product.sync_id} NOT found in server response`,
+                  );
                   return product;
                 });
               }
@@ -499,7 +541,9 @@ class SyncService {
       }
     }
 
-    console.log(`[SyncService] 🔵 updateLocalRecordsWithMysqlIds - Complete. Updated ${updatedCount} records.`);
+    console.log(
+      `[SyncService] 🔵 updateLocalRecordsWithMysqlIds - Complete. Updated ${updatedCount} records.`,
+    );
   }
 
   getQueueCount(): number {
@@ -519,7 +563,7 @@ class SyncService {
   async getConflicts(): Promise<Record<string, SyncConflictItem[]>> {
     const lastSync = localStorage.getItem(LAST_SYNC_KEY) || '0';
     const changes = await this.pullChanges();
-    
+
     const conflicts: Record<string, SyncConflictItem[]> = {};
     for (const [entityType, items] of Object.entries(changes)) {
       if (Array.isArray(items)) {
@@ -552,8 +596,8 @@ class SyncService {
       });
 
       if (response.ok) {
-        const result = await response.json() as ServerSyncResponse;
-        
+        const result = (await response.json()) as ServerSyncResponse;
+
         if (result.changes || result.data) {
           const changes = result.changes || result.data || {};
           await this.saveChangesToLocalDb(changes);
@@ -576,8 +620,8 @@ class SyncService {
       throw new Error(`Failed to pull changes: ${fullResponse.statusText}`);
     }
 
-    const fullResult = await fullResponse.json() as ServerSyncResponse;
-    
+    const fullResult = (await fullResponse.json()) as ServerSyncResponse;
+
     if (fullResult.data || fullResult.changes) {
       const changes = fullResult.data || fullResult.changes || {};
       await this.saveChangesToLocalDb(changes);
@@ -589,22 +633,22 @@ class SyncService {
 
   private async saveChangesToLocalDb(changes: Record<string, SyncItemData[]>): Promise<void> {
     console.log('[SyncService] Saving changes to local DB:', Object.keys(changes));
-    
+
     const { DixieController } = await import('@/controllers/dixie');
-    
+
     const entityTypeToStore: Record<string, string> = {
-      'account': 'accounts',
-      'budget_provider': 'budget_providers',
-      'budget_provider_product': 'budget_provider_products',
-      'budget_entry': 'entries',
-      'supplier': 'suppliers',
-      'supplier_product': 'supplier_products',
-      'template': 'templates',
+      account: 'accounts',
+      budget_provider: 'budget_providers',
+      budget_provider_product: 'budget_provider_products',
+      budget_entry: 'entries',
+      supplier: 'suppliers',
+      supplier_product: 'supplier_products',
+      template: 'templates',
     };
 
     for (const [entityType, items] of Object.entries(changes)) {
       if (!Array.isArray(items) || items.length === 0) continue;
-      
+
       const storeName = entityTypeToStore[entityType];
       if (!storeName) {
         console.warn(`[SyncService] Unknown entity type: ${entityType}`);
@@ -612,7 +656,7 @@ class SyncService {
       }
 
       const ctrl = new DixieController({ name: 'ABOgazDB', storeName });
-      
+
       for (const item of items) {
         try {
           const syncId = item.sync_id;
@@ -645,7 +689,7 @@ class SyncService {
 
   async fullSyncAndSave(): Promise<void> {
     console.log('[SyncService] Starting full sync and save...');
-    
+
     if (!this.isOnline) {
       throw new Error('Cannot perform full sync while offline');
     }
@@ -661,13 +705,13 @@ class SyncService {
       // First, pull all changes from server
       await this.pullChanges();
       console.log('[SyncService] Pull changes completed');
-      
+
       // Then, process any pending local changes
       const queueResult = await this.processQueue();
       if (queueResult) {
         console.log('[SyncService] Queue processed successfully');
       }
-      
+
       console.log('[SyncService] Full sync and save completed');
     } catch (error) {
       console.error('[SyncService] Full sync and save failed:', error);

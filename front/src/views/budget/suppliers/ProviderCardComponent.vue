@@ -16,9 +16,7 @@
       </div>
     </ion-label>
 
-    <ion-label slot="end">{{
-      formatCurrency({ v: props.provider.estimated || 0 })
-    }}</ion-label>
+    <ion-label slot="end">{{ formatCurrency({ value: calcProviderProductsTotal({ provider: props.provider }) }) }}</ion-label>
   </ion-item>
 
   <!-- popovers -->
@@ -51,12 +49,7 @@
   >
     <ion-content>
       <ion-list>
-        <ion-item
-          v-if="!isClosed"
-          button
-          lines="none"
-          @click="onMoveFromOptions($event)"
-        >
+        <ion-item v-if="!isClosed" button lines="none" @click="onMoveFromOptions($event)">
           <ion-icon slot="start" :icon="swapHorizontalOutline"></ion-icon>
 
           <ion-label>Mover</ion-label>
@@ -79,12 +72,7 @@
           <ion-label>Notas</ion-label>
         </ion-item>
 
-        <ion-item
-          v-if="!isClosed"
-          button
-          lines="none"
-          @click="onDeleteFromOptions($event)"
-        >
+        <ion-item v-if="!isClosed" button lines="none" @click="onDeleteFromOptions($event)">
           <ion-icon slot="start" :icon="trashOutline" color="danger"></ion-icon>
 
           <ion-label class="danger">Eliminar</ion-label>
@@ -119,10 +107,8 @@
 <script setup lang="ts">
 // Imports
 import {
-  IonCard,
   IonItem,
   IonLabel,
-  IonButton,
   IonIcon,
   IonPopover,
   IonDatetime,
@@ -132,13 +118,12 @@ import {
   listOutline,
   bookOutline,
   trashOutline,
-  ellipsisVerticalOutline,
   swapHorizontalOutline,
   walletOutline,
-  businessOutline,
 } from 'ionicons/icons';
 import { reactive, computed } from 'vue';
 import { useAccountsStore } from '@/stores/accountsStore';
+import { formatCurrency, calcProviderProductsTotal } from '@/utils/currency';
 // End Imports
 
 // Components
@@ -160,6 +145,7 @@ interface Provider {
   estimated?: number;
   _supplierId?: string | number;
   _supplierName?: string;
+  products?: Array<{ quantity: number; productPrice: number }>;
 }
 
 type IonEvent = {
@@ -226,18 +212,6 @@ function closeOptionsPopover() {
   optionsPopover.open = false;
   optionsPopover.event = null;
   optionsPopover.provider = null;
-}
-
-function onEditFromOptions(e: Event) {
-  try {
-    emit('start-editing', {
-      provider: optionsPopover.provider ?? props.provider,
-    });
-  } catch (err) {
-    console.error('onEditFromOptions error', err);
-  } finally {
-    closeOptionsPopover();
-  }
 }
 
 function onNotesFromOptions(e: Event) {
@@ -330,9 +304,7 @@ function confirmDelete() {
   }
 }
 
-function onDateChange(
-  params: { value?: string | number | string[] | null } = {}
-) {
+function onDateChange(params: { value?: string | number | string[] | null } = {}) {
   let { value } = params;
 
   if (value == null) {
@@ -349,29 +321,6 @@ function onDateChange(
   popovers.open = false;
 }
 
-function isPaymentPrimary(params: { provider?: Provider } | any) {
-  try {
-    const p =
-      params && params.provider !== undefined ? params.provider : params;
-    const efectivo = Number(p?.efectivo || 0);
-    const tarjeta = Number(p?.tarjeta || 0);
-    return efectivo > 0 || tarjeta > 0;
-  } catch (_e) {
-    return false;
-  }
-}
-
-function formatCurrency(params: { v: number }) {
-  const { v } = params;
-  try {
-    return new Intl.NumberFormat('es-MX', {
-      style: 'currency',
-      currency: 'MXN',
-    }).format(Number(v) || 0);
-  } catch (_e) {
-    return String(Number(v) || 0);
-  }
-}
 // End Functions
 
 // Life cycle
@@ -383,9 +332,7 @@ const accountDisplay = computed(() => {
   const accountId = props.provider.accountId;
   if (!accountId) return '';
 
-  const account = accountsStore.accounts.find(
-    a => String(a.id) === String(accountId)
-  );
+  const account = accountsStore.accounts.find((a) => String(a.id) === String(accountId));
 
   if (!account) return '';
   return account.name;
@@ -397,95 +344,8 @@ const accountDisplay = computed(() => {
 </script>
 
 <style scoped>
-.provider-card {
-  margin: 8px 10px;
-  border-radius: 12px;
-  position: relative;
-  overflow: hidden;
-}
-
-.provider-card.provider-just-added {
-  animation: highlight 1s ease-out;
-}
-
-@keyframes highlight {
-  0% {
-    background-color: var(--ion-color-success-tint);
-  }
-  100% {
-    background-color: transparent;
-  }
-}
-
-.provider-disabled {
-  opacity: 0.6;
-  pointer-events: none;
-}
-
-.provider-content {
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.provider-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.provider-icon {
-  font-size: 24px;
-  color: var(--ion-color-primary);
-}
-
-.provider-name {
-  font-weight: 700;
-  font-size: 18px;
-  color: var(--ion-color-dark);
-}
-
-.provider-details {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding-left: 34px;
-}
-
-.detail-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
 .detail-icon {
   font-size: 16px;
   color: var(--ion-color-medium);
-}
-
-.account-label {
-  font-size: 14px;
-  color: var(--ion-color-medium);
-}
-
-.total-row {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  margin-top: 4px;
-}
-
-.total-label {
-  font-size: 20px;
-  font-weight: 600;
-}
-
-.options-btn {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  --padding-start: 8px;
-  --padding-end: 8px;
 }
 </style>

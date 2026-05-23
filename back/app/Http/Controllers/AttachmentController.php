@@ -4,9 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Attachment;
 use App\Models\BudgetEntry;
+use App\Models\BudgetProvider;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
@@ -25,110 +25,56 @@ class AttachmentController extends Controller
             return response()->json(['error' => 'Entry not found'], 404);
         }
 
-        $attachments = Attachment::forUser($user->id)
-            ->byEntry($entryId)
-            ->orderBy('created_at', 'desc')
-            ->get()
-            ->map(fn($a) => [
-                'id' => $a->id,
-                'sync_id' => $a->sync_id,
-                'name' => $a->name,
-                'mime_type' => $a->mime_type,
-                'size' => $a->size,
-                'download_url' => $a->getDownloadUrl(),
-                'created_at' => $a->created_at->toIso8601String(),
-            ]);
-
-        return response()->json([
-            'data' => $attachments,
-            'total' => $attachments->count(),
-        ]);
+        return $this->buildAttachmentListResponse(
+            Attachment::forUser($user->id)->byEntry($entryId)
+        );
     }
 
     public function store(Request $request, string $entryId): JsonResponse
     {
-        try {
-            $user = $request->user();
+        $user = $request->user();
 
-            $entry = BudgetEntry::forUser($user->id)
-                ->where('sync_id', $entryId)
-                ->first();
+        $entry = BudgetEntry::forUser($user->id)
+            ->where('sync_id', $entryId)
+            ->first();
 
-            if (!$entry) {
-                return response()->json(['error' => 'Entry not found'], 404);
-            }
-
-            $request->validate([
-                'files' => 'required',
-                'files.*' => 'file|mimes:jpeg,jpg,png,gif,webp,pdf|max:10240',
-            ]);
-
-            $uploaded = [];
-            $errors = [];
-
-            $files = $request->file('files');
-            if (!is_array($files)) {
-                $files = [$files];
-            }
-
-            foreach ($files as $index => $file) {
-                try {
-                    $extension = $file->getClientOriginalExtension();
-                    $attachmentId = Str::uuid()->toString();
-                    $filename = $attachmentId . '.' . $extension;
-                    $entityType = Attachment::ENTITY_TYPE_ENTRIES;
-                    $path = 'attachments/' . $user->id . '/' . $entityType . '/' . $filename;
-
-                    Storage::disk('local')->put($path, file_get_contents($file->getRealPath()));
-
-                    $attachment = Attachment::create([
-                        'user_id' => $user->id,
-                        'sync_id' => $attachmentId,
-                        'entity_type' => $entityType,
-                        'name' => $file->getClientOriginalName(),
-                        'path' => $path,
-                        'mime_type' => $file->getMimeType(),
-                        'size' => $file->getSize(),
-                        'budget_entry_sync_id' => $entryId,
-                    ]);
-
-                    $uploaded[] = [
-                        'id' => $attachment->id,
-                        'sync_id' => $attachment->sync_id,
-                        'name' => $attachment->name,
-                        'mime_type' => $attachment->mime_type,
-                        'size' => $attachment->size,
-                        'download_url' => $attachment->getDownloadUrl(),
-                        'created_at' => $attachment->created_at->toIso8601String(),
-                    ];
-                } catch (\Exception $e) {
-                    Log::error('Attachment upload failed', [
-                        'index' => $index,
-                        'file' => $file->getClientOriginalName(),
-                        'error' => $e->getMessage(),
-                    ]);
-                    $errors[] = [
-                        'index' => $index,
-                        'name' => $file->getClientOriginalName(),
-                        'error' => $e->getMessage(),
-                    ];
-                }
-            }
-
-            return response()->json([
-                'uploaded' => $uploaded,
-                'errors' => $errors,
-                'total_uploaded' => count($uploaded),
-                'total_errors' => count($errors),
-            ], count($errors) > 0 ? 207 : 201);
-        } catch (\Exception $e) {
-            Log::error('AttachmentController.store error', [
-                'entryId' => $entryId,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-            return response()->json(['error' => $e->getMessage()], 500);
+        if (!$entry) {
+            return response()->json(['error' => 'Entry not found'], 404);
         }
+
+        return $this->handleUpload($request, $user->id, $entryId, Attachment::ENTITY_TYPE_ENTRIES);
+    }
+
+    public function providerIndex(Request $request, string $providerId): JsonResponse
+    {
+        $user = $request->user();
+
+        $provider = BudgetProvider::forUser($user->id)
+            ->where('sync_id', $providerId)
+            ->first();
+
+        if (!$provider) {
+            return response()->json(['error' => 'Provider not found'], 404);
+        }
+
+        return $this->buildAttachmentListResponse(
+            Attachment::forUser($user->id)->byProvider($providerId)
+        );
+    }
+
+    public function providerStore(Request $request, string $providerId): JsonResponse
+    {
+        $user = $request->user();
+
+        $provider = BudgetProvider::forUser($user->id)
+            ->where('sync_id', $providerId)
+            ->first();
+
+        if (!$provider) {
+            return response()->json(['error' => 'Provider not found'], 404);
+        }
+
+        return $this->handleUpload($request, $user->id, $providerId, Attachment::ENTITY_TYPE_PROVIDERS);
     }
 
     public function download(Request $request, string $attachmentId): mixed
@@ -169,5 +115,134 @@ class AttachmentController extends Controller
         $attachment->forceDelete();
 
         return response()->json(['message' => 'Attachment deleted']);
+    }
+
+    public function batchDestroy(Request $request): JsonResponse
+    {
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'integer',
+        ]);
+
+        $user = $request->user();
+        $ids = $request->input('ids');
+
+        $attachments = Attachment::forUser($user->id)
+            ->whereIn('id', $ids)
+            ->get();
+
+        $deleted = 0;
+        foreach ($attachments as $attachment) {
+            $attachment->deleteFile();
+            $attachment->forceDelete();
+            $deleted++;
+        }
+
+        return response()->json([
+            'message' => 'Attachments deleted',
+            'deleted' => $deleted,
+        ]);
+    }
+
+    private function buildAttachmentListResponse($query): JsonResponse
+    {
+        $attachments = $query->orderBy('created_at', 'desc')
+            ->get()
+            ->map(fn($a) => [
+                'id' => $a->id,
+                'sync_id' => $a->sync_id,
+                'name' => $a->name,
+                'mime_type' => $a->mime_type,
+                'size' => $a->size,
+                'download_url' => $a->getDownloadUrl(),
+                'created_at' => $a->created_at->toIso8601String(),
+            ]);
+
+        return response()->json([
+            'data' => $attachments,
+            'total' => $attachments->count(),
+        ]);
+    }
+
+    private function handleUpload(Request $request, int $userId, string $entitySyncId, string $entityType): JsonResponse
+    {
+        try {
+            $request->validate([
+                'files' => 'required',
+                'files.*' => 'file|mimes:jpeg,jpg,png,gif,webp,pdf|max:10240',
+            ]);
+
+            $uploaded = [];
+            $errors = [];
+
+            $files = $request->file('files');
+            if (!is_array($files)) {
+                $files = [$files];
+            }
+
+            $fkColumn = $entityType === Attachment::ENTITY_TYPE_PROVIDERS
+                ? 'budget_provider_sync_id'
+                : 'budget_entry_sync_id';
+
+            foreach ($files as $index => $file) {
+                try {
+                    $extension = $file->getClientOriginalExtension();
+                    $attachmentId = Str::uuid()->toString();
+                    $filename = $attachmentId . '.' . $extension;
+                    $path = 'attachments/' . $userId . '/' . $entityType . '/' . $filename;
+
+                    Storage::disk('local')->put($path, file_get_contents($file->getRealPath()));
+
+                    $data = [
+                        'user_id' => $userId,
+                        'sync_id' => $attachmentId,
+                        'entity_type' => $entityType,
+                        'name' => $file->getClientOriginalName(),
+                        'path' => $path,
+                        'mime_type' => $file->getMimeType(),
+                        'size' => $file->getSize(),
+                        $fkColumn => $entitySyncId,
+                    ];
+
+                    $attachment = Attachment::create($data);
+
+                    $uploaded[] = [
+                        'id' => $attachment->id,
+                        'sync_id' => $attachment->sync_id,
+                        'name' => $attachment->name,
+                        'mime_type' => $attachment->mime_type,
+                        'size' => $attachment->size,
+                        'download_url' => $attachment->getDownloadUrl(),
+                        'created_at' => $attachment->created_at->toIso8601String(),
+                    ];
+                } catch (\Exception $e) {
+                    Log::error('Attachment upload failed', [
+                        'index' => $index,
+                        'file' => $file->getClientOriginalName(),
+                        'error' => $e->getMessage(),
+                    ]);
+                    $errors[] = [
+                        'index' => $index,
+                        'name' => $file->getClientOriginalName(),
+                        'error' => $e->getMessage(),
+                    ];
+                }
+            }
+
+            return response()->json([
+                'uploaded' => $uploaded,
+                'errors' => $errors,
+                'total_uploaded' => count($uploaded),
+                'total_errors' => count($errors),
+            ], count($errors) > 0 ? 207 : 201);
+        } catch (\Exception $e) {
+            Log::error('AttachmentController.store error', [
+                'entitySyncId' => $entitySyncId,
+                'entityType' => $entityType,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
     }
 }

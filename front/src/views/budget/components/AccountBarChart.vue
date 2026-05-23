@@ -13,7 +13,7 @@ import { useChart } from '@/composables/useChart';
 // Initialize chart dependencies
 const { loadChartDependencies, isLoaded } = useChart();
 onMounted(() => {
-  loadChartDependencies().catch(e => console.error('Failed to load chart dependencies:', e));
+  loadChartDependencies().catch((e) => console.error('Failed to load chart dependencies:', e));
 });
 
 // Only render chart when data exists AND Chart.js dependencies are loaded
