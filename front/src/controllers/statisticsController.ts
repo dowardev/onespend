@@ -61,8 +61,7 @@ class StatisticsController {
   setHover(key: string, value: boolean) {
     try {
       this.hovered[key] = value;
-    } catch (_e) {
-    }
+    } catch (_e) {}
   }
 
   getHovered() {
@@ -164,7 +163,7 @@ class StatisticsController {
       console.log('[StatisticsController] No containerRef');
       return false;
     }
-    
+
     // Handle both Ref and direct HTMLElement
     let el: HTMLElement;
     if (opts.containerRef instanceof HTMLElement) {
@@ -175,7 +174,7 @@ class StatisticsController {
       console.warn('[StatisticsController] container element not available');
       return false;
     }
-    
+
     if (!el) {
       console.warn('[StatisticsController] container element is null');
       return false;
@@ -190,12 +189,9 @@ class StatisticsController {
     try {
       console.log('[StatisticsController] Importing html2canvas and jspdf...');
       const html2canvasModule = await import('html2canvas');
-      const html2canvas =
-        html2canvasModule && (html2canvasModule.default ?? html2canvasModule);
+      const html2canvas = html2canvasModule && (html2canvasModule.default ?? html2canvasModule);
       const jsPDFModule = await import('jspdf');
-      const jsPDF =
-        jsPDFModule &&
-        (jsPDFModule.jsPDF ?? jsPDFModule.default ?? jsPDFModule);
+      const jsPDF = jsPDFModule && (jsPDFModule.jsPDF ?? jsPDFModule.default ?? jsPDFModule);
 
       console.log('[StatisticsController] html2canvas:', !!html2canvas, 'jspdf:', !!jsPDF);
 
@@ -210,7 +206,7 @@ class StatisticsController {
       // Apply white theme and hide elements not needed in PDF
       const originalClassName = el.className;
       el.classList.add('pdf-report-mode');
-      
+
       // Create a style element for PDF mode
       const styleEl = document.createElement('style');
       styleEl.textContent = `
@@ -262,7 +258,7 @@ class StatisticsController {
       document.head.appendChild(styleEl);
 
       console.log('[StatisticsController] Creating canvas...');
-      await new Promise(r => setTimeout(r, 50));
+      await new Promise((r) => setTimeout(r, 50));
 
       const canvas = await html2canvas(el, {
         scale: 2,
@@ -285,8 +281,7 @@ class StatisticsController {
       console.log('[StatisticsController] imgData length:', imgData.length);
 
       const pdf = new jsPDF({
-        orientation:
-          (opts.jspdfOptions && opts.jspdfOptions.orientation) || 'portrait',
+        orientation: (opts.jspdfOptions && opts.jspdfOptions.orientation) || 'portrait',
         unit: (opts.jspdfOptions && opts.jspdfOptions.unit) || 'pt',
         format: (opts.jspdfOptions && opts.jspdfOptions.format) || 'a4',
       });
@@ -305,14 +300,7 @@ class StatisticsController {
       const yOffset = 0;
 
       console.log('[StatisticsController] Adding image to PDF...');
-      pdf.addImage(
-        imgData,
-        'PNG',
-        xOffset,
-        yOffset,
-        renderedWidth,
-        renderedHeight
-      );
+      pdf.addImage(imgData, 'PNG', xOffset, yOffset, renderedWidth, renderedHeight);
 
       const filename = opts.filenameFactory
         ? opts.filenameFactory()
@@ -377,53 +365,91 @@ class StatisticsController {
 
       worksheet['!cols'] = [{ wch: 20 }, { wch: 20 }, { wch: 15 }];
 
-      XLSX.utils.sheet_add_aoa(worksheet, [[`Reporte de ${periodLabels[opts.period]} ${opts.dateLabel}`]], { origin: `A${row}` });
+      XLSX.utils.sheet_add_aoa(
+        worksheet,
+        [[`Reporte de ${periodLabels[opts.period]} ${opts.dateLabel}`]],
+        { origin: `A${row}` },
+      );
       row += 2;
 
       XLSX.utils.sheet_add_aoa(worksheet, [['INGRESOS']], { origin: `A${row}` });
       row++;
       XLSX.utils.sheet_add_aoa(worksheet, [['Concepto', 'Monto']], { origin: `A${row}` });
       row++;
-      XLSX.utils.sheet_add_aoa(worksheet, [['Salario', opts.incomeData.salary]], { origin: `A${row}` });
+      XLSX.utils.sheet_add_aoa(worksheet, [['Salario', opts.incomeData.salary]], {
+        origin: `A${row}`,
+      });
       row++;
-      XLSX.utils.sheet_add_aoa(worksheet, [['Inversiones', opts.incomeData.investments]], { origin: `A${row}` });
+      XLSX.utils.sheet_add_aoa(worksheet, [['Inversiones', opts.incomeData.investments]], {
+        origin: `A${row}`,
+      });
       row++;
-      XLSX.utils.sheet_add_aoa(worksheet, [['Otros', opts.incomeData.other]], { origin: `A${row}` });
+      XLSX.utils.sheet_add_aoa(worksheet, [['Otros', opts.incomeData.other]], {
+        origin: `A${row}`,
+      });
       row++;
-      XLSX.utils.sheet_add_aoa(worksheet, [['TOTAL INGRESOS', opts.incomeData.total]], { origin: `A${row}` });
+      XLSX.utils.sheet_add_aoa(worksheet, [['TOTAL INGRESOS', opts.incomeData.total]], {
+        origin: `A${row}`,
+      });
       row += 2;
 
       XLSX.utils.sheet_add_aoa(worksheet, [['GASTOS']], { origin: `A${row}` });
       row++;
       XLSX.utils.sheet_add_aoa(worksheet, [['Concepto', 'Monto']], { origin: `A${row}` });
       row++;
-      XLSX.utils.sheet_add_aoa(worksheet, [['Vivienda', opts.expensesData.housing]], { origin: `A${row}` });
+      XLSX.utils.sheet_add_aoa(worksheet, [['Vivienda', opts.expensesData.housing]], {
+        origin: `A${row}`,
+      });
       row++;
-      XLSX.utils.sheet_add_aoa(worksheet, [['Alimentación', opts.expensesData.food]], { origin: `A${row}` });
+      XLSX.utils.sheet_add_aoa(worksheet, [['Alimentación', opts.expensesData.food]], {
+        origin: `A${row}`,
+      });
       row++;
-      XLSX.utils.sheet_add_aoa(worksheet, [['Transporte', opts.expensesData.transport]], { origin: `A${row}` });
+      XLSX.utils.sheet_add_aoa(worksheet, [['Transporte', opts.expensesData.transport]], {
+        origin: `A${row}`,
+      });
       row++;
-      XLSX.utils.sheet_add_aoa(worksheet, [['Entretenimiento', opts.expensesData.entertainment]], { origin: `A${row}` });
+      XLSX.utils.sheet_add_aoa(worksheet, [['Entretenimiento', opts.expensesData.entertainment]], {
+        origin: `A${row}`,
+      });
       row++;
-      XLSX.utils.sheet_add_aoa(worksheet, [['Salud', opts.expensesData.health]], { origin: `A${row}` });
+      XLSX.utils.sheet_add_aoa(worksheet, [['Salud', opts.expensesData.health]], {
+        origin: `A${row}`,
+      });
       row++;
-      XLSX.utils.sheet_add_aoa(worksheet, [['Otros', opts.expensesData.other]], { origin: `A${row}` });
+      XLSX.utils.sheet_add_aoa(worksheet, [['Otros', opts.expensesData.other]], {
+        origin: `A${row}`,
+      });
       row++;
-      XLSX.utils.sheet_add_aoa(worksheet, [['TOTAL GASTOS', opts.expensesData.total]], { origin: `A${row}` });
+      XLSX.utils.sheet_add_aoa(worksheet, [['TOTAL GASTOS', opts.expensesData.total]], {
+        origin: `A${row}`,
+      });
       row += 2;
 
       XLSX.utils.sheet_add_aoa(worksheet, [['RESUMEN']], { origin: `A${row}` });
       row++;
-      XLSX.utils.sheet_add_aoa(worksheet, [['Balance', opts.summaryData.balance]], { origin: `A${row}` });
+      XLSX.utils.sheet_add_aoa(worksheet, [['Balance', opts.summaryData.balance]], {
+        origin: `A${row}`,
+      });
       row++;
-      XLSX.utils.sheet_add_aoa(worksheet, [['Ahorro', opts.summaryData.savings]], { origin: `A${row}` });
+      XLSX.utils.sheet_add_aoa(worksheet, [['Ahorro', opts.summaryData.savings]], {
+        origin: `A${row}`,
+      });
       row++;
-      XLSX.utils.sheet_add_aoa(worksheet, [['Porcentaje de ahorro', `${opts.summaryData.savingsPercentage}%`]], { origin: `A${row}` });
+      XLSX.utils.sheet_add_aoa(
+        worksheet,
+        [['Porcentaje de ahorro', `${opts.summaryData.savingsPercentage}%`]],
+        { origin: `A${row}` },
+      );
       row += 2;
 
       XLSX.utils.sheet_add_aoa(worksheet, [['CONFIGURACIÓN']], { origin: `A${row}` });
       row++;
-      XLSX.utils.sheet_add_aoa(worksheet, [['Porcentaje esperado', `${opts.configData.savingsPercent}%`]], { origin: `A${row}` });
+      XLSX.utils.sheet_add_aoa(
+        worksheet,
+        [['Porcentaje esperado', `${opts.configData.savingsPercent}%`]],
+        { origin: `A${row}` },
+      );
 
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Reporte');

@@ -4,7 +4,7 @@
       <ion-label>Resumen por cuenta</ion-label>
     </ion-list-header>
 
-<div class="list-content">
+    <div class="list-content">
       <template v-if="accountsSummary.length > 0">
         <ion-item
           v-for="(acc, index) in accountsSummary"
@@ -20,10 +20,7 @@
           <ion-label slot="end" class="ion-text-end">
             <h2
               :style="{
-                color:
-                  acc.diff >= 0
-                    ? 'var(--ion-color-success)'
-                    : 'var(--ion-color-danger)',
+                color: acc.diff >= 0 ? 'var(--ion-color-success)' : 'var(--ion-color-danger)',
               }"
             >
               {{ acc.diffLabel }}
@@ -34,9 +31,7 @@
                 >+{{ formatCurrency(acc.ingreso) }}</span
               >
               /
-              <span style="color: var(--ion-color-danger)"
-                >-{{ formatCurrency(acc.total) }}</span
-              >
+              <span style="color: var(--ion-color-danger)">-{{ formatCurrency(acc.total) }}</span>
             </p>
           </ion-label>
 
@@ -61,24 +56,20 @@
   <!-- Resultado Total Card -->
   <ion-card class="shadow1">
     <ion-card-header>
-      <ion-card-title :color="differenceColor">{{
-        differenceLabel
-      }}</ion-card-title>
+      <ion-card-title :color="differenceColor">{{ differenceLabel }}</ion-card-title>
     </ion-card-header>
 
     <ion-card-content>
       <ion-item class="transparent">
         <ion-label>Ingresos</ion-label>
 
-        <ion-label slot="end" color="success">{{
-          formatCurrency(totalIngresos)
-        }}</ion-label>
+        <ion-label slot="end" color="success">{{ formatCurrency(totalIngresos) }}</ion-label>
       </ion-item>
 
       <ion-item class="transparent">
         <ion-label>Egresos</ion-label>
 
-        <ion-label slot="end" color="danget">{{
+        <ion-label slot="end" color="danger">{{
           formatCurrency(totalProvidersRequired)
         }}</ion-label>
       </ion-item>
@@ -101,27 +92,21 @@ import {
 } from '@ionic/vue';
 import { informationCircleOutline } from 'ionicons/icons';
 import { computed } from 'vue';
-import { useBudgetStore } from '@/stores/budgetStore';
-import { useAccountsStore } from '@/stores/accountsStore';
+import budgetController from '@/controllers/budgetController';
+import accountsController from '@/controllers/accountsController';
+import type { Provider } from '@/stores/budgetStore';
 // End Imports
 
 // Components
 import AccountBarChart from './AccountBarChart.vue';
 // End Components
 
-// Vars
-const budgetStore = useBudgetStore();
-const accountsStore = useAccountsStore();
 // End Vars
 
 // Functions
-function getAccountNameById(
-  accountId: string | number | null | undefined
-): string {
+function getAccountNameById(accountId: string | number | null | undefined): string {
   if (!accountId) return '';
-  const account = accountsStore.accounts.find(
-    a => String(a.id) === String(accountId)
-  );
+  const account = accountsController.getAccounts().find((a) => String(a.id) === String(accountId));
   return account?.name || '';
 }
 
@@ -136,6 +121,17 @@ function formatCurrency(v: number | string) {
     return String(v || '0');
   }
 }
+
+function calcProviderProductsTotal(params: { provider: Provider }): number {
+  const { provider } = params;
+  if (provider.products && provider.products.length > 0) {
+    return provider.products.reduce(
+      (sum, p) => sum + (Number(p.quantity) || 0) * (Number(p.productPrice) || 0),
+      0,
+    );
+  }
+  return Number(provider.estimated || 0);
+}
 // End Functions
 
 // Life cycle
@@ -147,17 +143,17 @@ const accountsSummary = computed(() => {
   const accountMap = new Map<string, { total: number; ingreso: number }>();
 
   // First, add all existing accounts with zero values
-  for (const account of accountsStore.accounts) {
+  for (const account of accountsController.getAccounts()) {
     if (account.name && !accountMap.has(account.name)) {
       accountMap.set(account.name, { total: 0, ingreso: 0 });
     }
   }
 
   // Sum providers totals by account using 'estimated' and 'accountId'
-  for (const provider of budgetStore.providers) {
+  for (const provider of budgetController.getProviders()) {
     const accountName = getAccountNameById(provider.accountId);
     if (!accountName) continue; // Skip if no valid account
-    const providerTotal = Number(provider.estimated || 0);
+    const providerTotal = calcProviderProductsTotal({ provider });
 
     if (!accountMap.has(accountName)) {
       accountMap.set(accountName, { total: 0, ingreso: 0 });
@@ -166,7 +162,7 @@ const accountsSummary = computed(() => {
   }
 
   // Process entries (ingresos and egresos)
-  for (const entry of budgetStore.entries) {
+  for (const entry of budgetController.getEntries()) {
     // If entry has groups, use them
     if (entry.groups && entry.groups.length > 0) {
       for (const group of entry.groups) {
@@ -207,8 +203,7 @@ const accountsSummary = computed(() => {
         total: data.total,
         ingreso: data.ingreso,
         diff,
-        diffLabel:
-          diff === 0 ? '$0' : `${diff > 0 ? '+' : ''}${formatCurrency(diff)}`,
+        diffLabel: diff === 0 ? '$0' : `${diff > 0 ? '+' : ''}${formatCurrency(diff)}`,
         diffColor: diff === 0 ? undefined : diff > 0 ? 'success' : 'danger',
       };
     });
@@ -226,8 +221,7 @@ const totalIngresos = computed(() => {
 
 // difference: ingresos - required (positive => sobrante, negative => faltante)
 const difference = computed(
-  () =>
-    Number(totalIngresos.value || 0) - Number(totalProvidersRequired.value || 0)
+  () => Number(totalIngresos.value || 0) - Number(totalProvidersRequired.value || 0),
 );
 
 const differenceLabel = computed(() => {
@@ -244,7 +238,8 @@ const differenceColor = computed(() => {
 // End Computed
 
 // Watch
-// End Watch</script>
+// End Watch
+</script>
 
 <style scoped>
 ion-card {

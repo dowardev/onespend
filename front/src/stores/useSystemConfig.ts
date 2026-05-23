@@ -42,13 +42,9 @@ export const useSystemConfig = defineStore('systemConfig', () => {
     if (theme.value !== 'auto') return theme.value;
     const saved = await configController.getConfig({ key: 'theme' });
     if (
-      [
-        'light',
-        'dark',
-        'auto',
-        'catppuccin-latte-maroon',
-        'catppuccin-macchiato-maroon',
-      ].includes(saved as ThemeMode)
+      ['light', 'dark', 'auto', 'catppuccin-latte-maroon', 'catppuccin-macchiato-maroon'].includes(
+        saved as ThemeMode,
+      )
     ) {
       return saved as ThemeMode;
     }
@@ -63,12 +59,9 @@ export const useSystemConfig = defineStore('systemConfig', () => {
   async function getAutoLightTheme(): Promise<ThemeMode> {
     const saved = await configController.getConfig({ key: 'autoLightTheme' });
     if (
-      [
-        'light',
-        'dark',
-        'catppuccin-latte-maroon',
-        'catppuccin-macchiato-maroon',
-      ].includes(saved as ThemeMode)
+      ['light', 'dark', 'catppuccin-latte-maroon', 'catppuccin-macchiato-maroon'].includes(
+        saved as ThemeMode,
+      )
     ) {
       return saved as ThemeMode;
     }
@@ -83,12 +76,9 @@ export const useSystemConfig = defineStore('systemConfig', () => {
   async function getAutoDarkTheme(): Promise<ThemeMode> {
     const saved = await configController.getConfig({ key: 'autoDarkTheme' });
     if (
-      [
-        'light',
-        'dark',
-        'catppuccin-latte-maroon',
-        'catppuccin-macchiato-maroon',
-      ].includes(saved as ThemeMode)
+      ['light', 'dark', 'catppuccin-latte-maroon', 'catppuccin-macchiato-maroon'].includes(
+        saved as ThemeMode,
+      )
     ) {
       return saved as ThemeMode;
     }

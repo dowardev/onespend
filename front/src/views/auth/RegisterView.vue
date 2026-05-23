@@ -87,7 +87,9 @@
           </ion-item>
           <div v-if="v$.passwordConfirmation.$error" class="field-error">
             <span v-if="v$.passwordConfirmation.required.$invalid">Confirma tu contraseña</span>
-            <span v-else-if="v$.passwordConfirmation.sameAs.$invalid">Las contraseñas no coinciden</span>
+            <span v-else-if="v$.passwordConfirmation.sameAs.$invalid"
+              >Las contraseñas no coinciden</span
+            >
           </div>
 
           <div v-if="error" class="error-message">
@@ -204,13 +206,13 @@ const isDev = computed(() => import.meta.env.DEV);
 function generateRandomData() {
   const firstName = faker.person.firstName();
   const lastName = faker.person.lastName();
-  
+
   form.name = `${firstName} ${lastName}`;
   form.user = faker.internet.username();
   form.email = faker.internet.email({ firstName, lastName });
   form.password = 'Test1234';
   form.passwordConfirmation = 'Test1234';
-  
+
   v$.value.$validate();
 }
 

@@ -5,7 +5,20 @@ export type Html2CanvasOptions = Record<string, unknown>;
 
 export type JsPdfOrientation = 'portrait' | 'landscape';
 export type JsPdfUnit = 'pt' | 'mm' | 'cm' | 'in' | 'px';
-export type JsPdfFormat = 'a4' | 'letter' | 'legal' | 'tabloid' | 'executive' | 'a3' | 'a5' | 'a6' | 'b4' | 'b5' | 'b6' | 'c7' | 'custom';
+export type JsPdfFormat =
+  | 'a4'
+  | 'letter'
+  | 'legal'
+  | 'tabloid'
+  | 'executive'
+  | 'a3'
+  | 'a5'
+  | 'a6'
+  | 'b4'
+  | 'b5'
+  | 'b6'
+  | 'c7'
+  | 'custom';
 
 export type UsePdfReportOptions = {
   containerRef: Ref<HTMLElement | null>;
@@ -35,8 +48,7 @@ export function usePdfReport() {
 
     try {
       const html2canvasModule = await import('html2canvas');
-      const html2canvas =
-        html2canvasModule && (html2canvasModule.default ?? html2canvasModule);
+      const html2canvas = html2canvasModule && (html2canvasModule.default ?? html2canvasModule);
       const jsPDFModule = await import('jspdf');
       const jsPDF = (jsPDFModule as any).jsPDF || (jsPDFModule as any).default || jsPDFModule;
       const doc = new jsPDF();
@@ -49,7 +61,7 @@ export function usePdfReport() {
       if (downloadBtn) downloadBtn.style.display = 'none';
 
       // allow reflow
-      await new Promise(r => setTimeout(r, 50));
+      await new Promise((r) => setTimeout(r, 50));
 
       const canvas = await html2canvas(el, {
         scale: 2,
@@ -58,14 +70,12 @@ export function usePdfReport() {
         ...opts.html2canvasOptions,
       } as any);
 
-      if (downloadBtn && prevDisplay !== null)
-        downloadBtn.style.display = prevDisplay;
+      if (downloadBtn && prevDisplay !== null) downloadBtn.style.display = prevDisplay;
 
       const imgData = canvas.toDataURL('image/png');
 
       const pdf = new jsPDF({
-        orientation:
-          (opts.jspdfOptions && opts.jspdfOptions.orientation) || 'portrait',
+        orientation: (opts.jspdfOptions && opts.jspdfOptions.orientation) || 'portrait',
         unit: (opts.jspdfOptions && opts.jspdfOptions.unit) || 'pt',
         format: (opts.jspdfOptions && opts.jspdfOptions.format) || 'a4',
       });
@@ -83,14 +93,7 @@ export function usePdfReport() {
       const xOffset = Math.max(0, (pageWidth - renderedWidth) / 2);
       const yOffset = 0;
 
-      pdf.addImage(
-        imgData,
-        'PNG',
-        xOffset,
-        yOffset,
-        renderedWidth,
-        renderedHeight
-      );
+      pdf.addImage(imgData, 'PNG', xOffset, yOffset, renderedWidth, renderedHeight);
 
       const filename = opts.filenameFactory
         ? opts.filenameFactory()

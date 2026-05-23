@@ -1,11 +1,6 @@
 <template>
   <div>
-    <Bar
-      v-if="canRenderChart"
-      :key="chartKey"
-      :data="safeChartData"
-      :options="safeChartOptions"
-    />
+    <Bar v-if="canRenderChart" :key="chartKey" :data="safeChartData" :options="safeChartOptions" />
   </div>
 </template>
 
@@ -44,12 +39,13 @@ const props = withDefaults(defineProps<Props>(), {
 // end main
 
 // computed
-const hasData = computed(() => 
-  props.chartData && 
-  props.chartData.labels && 
-  props.chartData.labels.length > 0 &&
-  props.chartData.datasets && 
-  props.chartData.datasets.length > 0
+const hasData = computed(
+  () =>
+    props.chartData &&
+    props.chartData.labels &&
+    props.chartData.labels.length > 0 &&
+    props.chartData.datasets &&
+    props.chartData.datasets.length > 0,
 );
 
 const canRenderChart = computed(() => hasData.value && isLoaded.value);
@@ -64,14 +60,14 @@ const safeChartData = shallowRef<ChartData<'bar'>>(
           JSON.stringify({
             ...props.chartData,
             labels: (props.chartData.labels || []).map(translateDayLabel),
-          })
+          }),
         ),
-        props.colorIndex
+        props.colorIndex,
       )
-    : { labels: [], datasets: [] }
+    : { labels: [], datasets: [] },
 );
 const safeChartOptions = shallowRef<ChartOptions<'bar'>>(
-  props.chartOptions ? JSON.parse(JSON.stringify(props.chartOptions)) : ({} as ChartOptions<'bar'>)
+  props.chartOptions ? JSON.parse(JSON.stringify(props.chartOptions)) : ({} as ChartOptions<'bar'>),
 );
 
 // Force remount key to ensure vue-chartjs fully re-renders when data changes
@@ -82,13 +78,15 @@ const chartKey = ref(0);
 // update safeChartData whenever props.chartData changes
 watch(
   () => props.chartData,
-  v => {
+  (v) => {
     const cloned = v ? JSON.parse(JSON.stringify(v)) : { labels: [], datasets: [] };
     cloned.labels = (cloned.labels || []).map(translateDayLabel);
     safeChartData.value = applyNeonStyles(cloned, props.colorIndex);
-    try { chartKey.value = (chartKey.value || 0) + 1; } catch (_e) {}
+    try {
+      chartKey.value = (chartKey.value || 0) + 1;
+    } catch (_e) {}
   },
-  { immediate: true, deep: true }
+  { immediate: true, deep: true },
 );
 // end watch
 
@@ -104,9 +102,7 @@ function translateDayLabel(label: unknown): string {
   if (/^\d{4}$/.test(labelStr)) return labelStr;
 
   // Handle year and year-month labels like "2023-05", "202305" (month optional)
-  const ymMatch = labelStr.match(
-    /^(\d{4})(?:[-/]?(\d{1,2}))?(?:[-/]?\d{1,2})?$/
-  );
+  const ymMatch = labelStr.match(/^(\d{4})(?:[-/]?(\d{1,2}))?(?:[-/]?\d{1,2})?$/);
   if (ymMatch) {
     const year = ymMatch[1];
     const monthPart = ymMatch[2];
@@ -134,8 +130,7 @@ function translateDayLabel(label: unknown): string {
     const weekday = safeIntlFormat(d, 'es-MX', { weekday: 'short' }) || '';
     const dayNum = safeIntlFormat(d, 'es-MX', { day: 'numeric' }) || '';
     const weekdayNorm = weekday.replace(/\.$/, '');
-    const capitalized =
-      weekdayNorm.charAt(0).toUpperCase() + weekdayNorm.slice(1);
+    const capitalized = weekdayNorm.charAt(0).toUpperCase() + weekdayNorm.slice(1);
     return `${capitalized} ${dayNum}`;
   }
 

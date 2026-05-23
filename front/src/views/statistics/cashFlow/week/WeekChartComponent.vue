@@ -1,10 +1,6 @@
 <template>
   <div>
-    <Bar
-      v-if="canRenderChart"
-      :data="safeChartData"
-      :options="safeChartOptions"
-    />
+    <Bar v-if="canRenderChart" :data="safeChartData" :options="safeChartOptions" />
   </div>
 </template>
 
@@ -32,12 +28,13 @@ const props = defineProps<Props>();
 const { loadChartDependencies, isLoaded } = useChart();
 
 // computed
-const hasData = computed(() => 
-  props.chartData && 
-  props.chartData.labels && 
-  props.chartData.labels.length > 0 &&
-  props.chartData.datasets && 
-  props.chartData.datasets.length > 0
+const hasData = computed(
+  () =>
+    props.chartData &&
+    props.chartData.labels &&
+    props.chartData.labels.length > 0 &&
+    props.chartData.datasets &&
+    props.chartData.datasets.length > 0,
 );
 
 const canRenderChart = computed(() => hasData.value && isLoaded.value);
@@ -45,14 +42,10 @@ const canRenderChart = computed(() => hasData.value && isLoaded.value);
 
 // vars
 const safeChartData = shallowRef<ChartData<'bar'>>(
-  props.chartData
-    ? JSON.parse(JSON.stringify(props.chartData))
-    : { labels: [], datasets: [] }
+  props.chartData ? JSON.parse(JSON.stringify(props.chartData)) : { labels: [], datasets: [] },
 );
 const safeChartOptions = shallowRef<ChartOptions<'bar'>>(
-  props.chartOptions
-    ? JSON.parse(JSON.stringify(props.chartOptions))
-    : ({} as ChartOptions<'bar'>)
+  props.chartOptions ? JSON.parse(JSON.stringify(props.chartOptions)) : ({} as ChartOptions<'bar'>),
 );
 // end vars
 
@@ -68,25 +61,21 @@ onMounted(async () => {
 // watch
 watch(
   () => props.chartData,
-  v => {
-    const cloned = v
-      ? JSON.parse(JSON.stringify(v))
-      : { labels: [], datasets: [] };
+  (v) => {
+    const cloned = v ? JSON.parse(JSON.stringify(v)) : { labels: [], datasets: [] };
     cloned.labels = (cloned.labels || []).map(translateDayLabel);
     // Apply shared pastel-neon palette on updates
     safeChartData.value = applyNeonStyles(cloned, props.colorIndex);
   },
-  { immediate: true, deep: true }
+  { immediate: true, deep: true },
 );
 
 watch(
   () => props.chartOptions,
-  v => {
-    safeChartOptions.value = v
-      ? JSON.parse(JSON.stringify(v))
-      : ({} as ChartOptions<'bar'>);
+  (v) => {
+    safeChartOptions.value = v ? JSON.parse(JSON.stringify(v)) : ({} as ChartOptions<'bar'>);
   },
-  { immediate: true, deep: true }
+  { immediate: true, deep: true },
 );
 // end watch
 
@@ -156,8 +145,7 @@ function translateDayLabel(label: unknown): string {
   if (spanishMap[lower])
     return numMatch ? `${spanishMap[lower]} ${numMatch[1]}` : spanishMap[lower];
   const key3 = lower.slice(0, 3);
-  if (spanishMap[key3])
-    return numMatch ? `${spanishMap[key3]} ${numMatch[1]}` : spanishMap[key3];
+  if (spanishMap[key3]) return numMatch ? `${spanishMap[key3]} ${numMatch[1]}` : spanishMap[key3];
 
   // If input is just a number (e.g. "6"), return it as-is
   if (/^\d{1,2}$/.test(cleaned)) return cleaned;

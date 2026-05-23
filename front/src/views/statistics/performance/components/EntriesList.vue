@@ -7,11 +7,7 @@
 
       <div v-if="items.length > 0" class="list-content">
         <div class="ion-padding-bottom">
-          <EntriesChart
-            v-if="showChart && items.length > 0"
-            :items="items"
-            :colors="chartColors"
-          />
+          <EntriesChart v-if="showChart && items.length > 0" :items="items" :colors="chartColors" />
         </div>
 
         <ion-item
@@ -27,9 +23,7 @@
 
         <ion-item lines="full">
           <ion-label>{{ footerLabel }}</ion-label>
-          <ion-label slot="end" class="total-amount">{{
-            formatCurrency(total)
-          }}</ion-label>
+          <ion-label slot="end" class="total-amount">{{ formatCurrency(total) }}</ion-label>
         </ion-item>
       </div>
 
@@ -66,7 +60,7 @@ const props = withDefaults(
   {
     footerLabel: 'Total',
     showChart: false,
-  }
+  },
 );
 
 const emit = defineEmits<{

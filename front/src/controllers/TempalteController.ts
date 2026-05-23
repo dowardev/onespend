@@ -41,8 +41,8 @@ class TemplateController {
         }
       >;
       const templates = (all || [])
-        .filter(x => x && x.type === 'template')
-        .map(x => {
+        .filter((x) => x && x.type === 'template')
+        .map((x) => {
           const payload =
             x.payload && typeof x.payload === 'object'
               ? (x.payload as Record<string, unknown>)
@@ -64,7 +64,7 @@ class TemplateController {
       }
 
       const store = useTemplatesStore();
-      const mapped = templates.map(t => ({
+      const mapped = templates.map((t) => ({
         id: t.id || '',
         sync_id: t.sync_id,
         name: t.name,
@@ -149,14 +149,13 @@ class TemplateController {
 
   async deleteTemplate(params: { id: IDBValidKey }) {
     const { id } = params;
-    
+
     const store = useTemplatesStore();
     const templates = JSON.parse(JSON.stringify(store.templates)) as Array<TemplateRecord>;
-    const template = templates.find(t => String(t.id) === String(id));
+    const template = templates.find((t) => String(t.id) === String(id));
 
     try {
-      const numericId =
-        typeof id === 'string' && !Number.isNaN(Number(id)) ? Number(id) : id;
+      const numericId = typeof id === 'string' && !Number.isNaN(Number(id)) ? Number(id) : id;
 
       await this.dixie.deleteBackup({ id: numericId as IDBValidKey });
 

@@ -61,16 +61,16 @@
       ></ion-datetime>
 
       <ion-item>
-          <ion-button
-            slot="end"
-            fill="clear"
-            class="no-shadow"
-            color="primary"
-            size="small"
-            @click="resetToToday()"
-          >
-            Hoy
-          </ion-button>
+        <ion-button
+          slot="end"
+          fill="clear"
+          class="no-shadow"
+          color="primary"
+          size="small"
+          @click="resetToToday()"
+        >
+          Hoy
+        </ion-button>
       </ion-item>
     </ion-content>
   </ion-popover>

@@ -19,11 +19,7 @@
     </ion-header>
 
     <ion-content>
-      <ion-list
-        v-if="products && products.length"
-        style="height: 100%"
-        class="transparent"
-      >
+      <ion-list v-if="products && products.length" style="height: 100%" class="transparent">
         <ion-list-header>
           <ion-label>Productos({{ formattedTotal }})</ion-label>
 
@@ -33,8 +29,8 @@
 
           <ion-button
             @click="
-              popovers.filteProducts.event = $event;
-              popovers.filteProducts.open = true;
+              popovers.filterProducts.event = $event;
+              popovers.filterProducts.open = true;
             "
           >
             <ion-icon :icon="filterOutline"></ion-icon>
@@ -54,12 +50,10 @@
               placeholder="Buscar productos"
               :debounce="300"
               @ion-clear="searchQuery = ''"
-              @ion-input="e => (searchQuery = (e.target as HTMLIonSearchbarElement)?.value || '')"
+              @ion-input="(e) => (searchQuery = (e.target as HTMLIonSearchbarElement)?.value || '')"
             ></ion-searchbar>
 
-            <ion-button slot="end" fill="clear" @click="hideSearch"
-              >Cerrar</ion-button
-            >
+            <ion-button slot="end" fill="clear" @click="hideSearch">Cerrar</ion-button>
           </ion-item-divider>
 
           <template
@@ -81,14 +75,10 @@
 
                 <ion-input
                   :id="'prod-input-' + (item.prod.id ?? item.originalIndex)"
-                  v-model.number="
-                    localQuantities[item.prod.id ?? item.originalIndex]
-                  "
+                  v-model.number="localQuantities[item.prod.id ?? item.originalIndex]"
                   label-placement="floating"
                   :label="`${item.prod.name || item.prod.productName || item.prod.title || 'Producto'}(${formatCurrency({ v: Number(item.prod.price || item.prod.amount || 0) })})`"
-                  :enterkeyhint="
-                    visibleIdx < filteredProducts.length - 1 ? 'next' : 'done'
-                  "
+                  :enterkeyhint="visibleIdx < filteredProducts.length - 1 ? 'next' : 'done'"
                   @ion-focus="onInputFocus({ idx: item.originalIndex })"
                   @ion-blur="onInputBlur({ idx: item.originalIndex })"
                   @keydown.enter.prevent.stop="
@@ -118,9 +108,9 @@
 
       <!-- popovers -->
       <ion-popover
-        :is-open="popovers.filteProducts.open"
-        :event="popovers.filteProducts.event"
-        @did-dismiss="popovers.filteProducts.open = false"
+        :is-open="popovers.filterProducts.open"
+        :event="popovers.filterProducts.event"
+        @did-dismiss="popovers.filterProducts.open = false"
       >
         <ion-content>
           <ion-list>
@@ -128,21 +118,17 @@
               <ion-label>Visualizacion</ion-label>
             </ion-list-header>
 
-            <div class="list-conent">
+            <div class="list-content">
               <ion-item>
                 <ion-select
                   v-model="filterProductsMode"
                   label="Mostrar"
                   interface="popover"
-                  @ion-change="popovers.filteProducts.open = false"
+                  @ion-change="popovers.filterProducts.open = false"
                 >
                   <ion-select-option value="all">Todo</ion-select-option>
-                  <ion-select-option value="with-values"
-                    >Con valores</ion-select-option
-                  >
-                  <ion-select-option value="without-values"
-                    >Sin valores</ion-select-option
-                  >
+                  <ion-select-option value="with-values">Con valores</ion-select-option>
+                  <ion-select-option value="without-values">Sin valores</ion-select-option>
                 </ion-select>
               </ion-item>
             </div>
@@ -175,12 +161,7 @@ import {
   IonSelectOption,
   IonSearchbar,
 } from '@ionic/vue';
-import {
-  closeOutline,
-  filterOutline,
-  saveOutline,
-  searchOutline,
-} from 'ionicons/icons';
+import { closeOutline, filterOutline, saveOutline, searchOutline } from 'ionicons/icons';
 
 // interface
 interface Product {
@@ -215,13 +196,13 @@ onMounted(() => initLocalQuantities());
 watch(
   () => props.quantities,
   () => initLocalQuantities(),
-  { deep: true }
+  { deep: true },
 );
 
 watch(
   () => props.products,
   () => initLocalQuantities(),
-  { deep: true }
+  { deep: true },
 );
 // end watch
 
@@ -231,7 +212,7 @@ const localQuantities = reactive<Record<string | number, number>>({});
 // index of the currently focused input (null if none)
 const focusedIndex = ref<number | null>(null);
 const popovers = reactive({
-  filteProducts: { open: false, event: null as Event | null },
+  filterProducts: { open: false, event: null as Event | null },
 });
 const filterProductsMode = ref<'all' | 'with-values' | 'without-values'>('all');
 
@@ -272,7 +253,7 @@ const filteredProducts = computed(() => {
   const q = (searchQuery.value || '').toString().trim().toLowerCase();
   return list
     .map((p, idx) => ({ prod: p, originalIndex: idx }))
-    .filter(item => {
+    .filter((item) => {
       try {
         const key = item.prod?.id ?? item.originalIndex;
         const qty = Number(localQuantities[key] || 0) || 0;
@@ -280,10 +261,7 @@ const filteredProducts = computed(() => {
         // If there's a search query, filter by product name/title (case-insensitive)
         if (q) {
           const text = (
-            (item.prod?.name ||
-              item.prod?.productName ||
-              item.prod?.title ||
-              '') + ''
+            (item.prod?.name || item.prod?.productName || item.prod?.title || '') + ''
           ).toLowerCase();
           if (!text.includes(q)) return false;
         }
@@ -300,9 +278,7 @@ const filteredProducts = computed(() => {
 });
 
 // Array of original indices for quick lookup when navigating focus
-const filteredOriginalIndices = computed(() =>
-  filteredProducts.value.map(i => i.originalIndex)
-);
+const filteredOriginalIndices = computed(() => filteredProducts.value.map((i) => i.originalIndex));
 // end computed
 
 // functions
@@ -360,14 +336,10 @@ function onInputBlur({ idx }: { idx: number }) {
 // scroll animation if needed.
 async function ensureVisible({ index }: { index: number }) {
   try {
-    const container = document.getElementById(
-      'div-products'
-    ) as HTMLElement | null;
+    const container = document.getElementById('div-products') as HTMLElement | null;
     if (!container) return;
 
-    const el = document.getElementById(
-      `prod-input-${index}`
-    ) as HTMLElement | null;
+    const el = document.getElementById(`prod-input-${index}`) as HTMLElement | null;
     if (!el) return;
 
     // If we're trying to show the first element, snap to top explicitly.
@@ -376,7 +348,7 @@ async function ensureVisible({ index }: { index: number }) {
     if (index === 0) {
       // Use smooth animation but ensure we end exactly at top
       container.scrollTo({ top: 0, behavior: 'smooth' });
-      await new Promise(r => setTimeout(r, 220));
+      await new Promise((r) => setTimeout(r, 220));
       return;
     }
 
@@ -393,7 +365,7 @@ async function ensureVisible({ index }: { index: number }) {
     if (targetRect.top < containerRect.top) {
       const newTop = Math.max(0, offsetTop - 8);
       container.scrollTo({ top: newTop, behavior: 'smooth' });
-      await new Promise(r => setTimeout(r, 220));
+      await new Promise((r) => setTimeout(r, 220));
       return;
     }
 
@@ -401,10 +373,10 @@ async function ensureVisible({ index }: { index: number }) {
     if (targetRect.bottom > containerRect.bottom) {
       const newTop = Math.min(
         container.scrollHeight - container.clientHeight,
-        offsetTop - container.clientHeight + targetRect.height + 8
+        offsetTop - container.clientHeight + targetRect.height + 8,
       );
       container.scrollTo({ top: newTop, behavior: 'smooth' });
-      await new Promise(r => setTimeout(r, 220));
+      await new Promise((r) => setTimeout(r, 220));
       return;
     }
 
@@ -435,7 +407,7 @@ async function focusNext(params: { currentIndex: number; ev?: Event }) {
   if (currentPos >= 0 && currentPos < visible.length - 1) {
     const nextOriginalIndex = visible[currentPos + 1];
     const nextElement = document.getElementById(
-      `prod-input-${nextOriginalIndex}`
+      `prod-input-${nextOriginalIndex}`,
     ) as HTMLIonInputElement | null;
     if (nextElement) {
       if (typeof nextElement.getInputElement === 'function') {
@@ -454,7 +426,7 @@ async function focusNext(params: { currentIndex: number; ev?: Event }) {
 
   if (nextIndex < totalProducts) {
     const nextElement = document.getElementById(
-      `prod-input-${nextIndex}`
+      `prod-input-${nextIndex}`,
     ) as HTMLIonInputElement | null;
     if (nextElement) {
       if (typeof nextElement.getInputElement === 'function') {
@@ -467,7 +439,7 @@ async function focusNext(params: { currentIndex: number; ev?: Event }) {
     }
   } else {
     const currentElement = document.getElementById(
-      `prod-input-${currentIndex}`
+      `prod-input-${currentIndex}`,
     ) as HTMLIonInputElement | null;
     if (currentElement) {
       if (typeof currentElement.getInputElement === 'function') {
@@ -494,7 +466,7 @@ async function focusPrev(params: { currentIndex: number; ev?: Event }) {
   const prevIndex = currentIndex - 1;
   if (prevIndex >= 0) {
     const prevElement = document.getElementById(
-      `prod-input-${prevIndex}`
+      `prod-input-${prevIndex}`,
     ) as HTMLIonInputElement | null;
     if (prevElement) {
       if (typeof prevElement.getInputElement === 'function') {
@@ -508,7 +480,7 @@ async function focusPrev(params: { currentIndex: number; ev?: Event }) {
     }
   } else {
     const currentElement = document.getElementById(
-      `prod-input-${currentIndex}`
+      `prod-input-${currentIndex}`,
     ) as HTMLIonInputElement | null;
     if (currentElement) {
       if (typeof currentElement.getInputElement === 'function') {
@@ -538,7 +510,9 @@ function handleEnter(params: { currentIndex: number; ev?: Event }) {
   if (idx < total - 1) {
     focusNext({ currentIndex: idx, ev });
   } else {
-    const currentElement = document.getElementById(`prod-input-${idx}`) as HTMLIonInputElement | null;
+    const currentElement = document.getElementById(
+      `prod-input-${idx}`,
+    ) as HTMLIonInputElement | null;
     if (currentElement) {
       if (typeof currentElement.getInputElement === 'function') {
         currentElement.getInputElement().then((native: HTMLInputElement) => native.focus());
@@ -555,13 +529,14 @@ function handleArrowUp(params: { currentIndex: number; ev?: Event }) {
     ev?.preventDefault?.();
     ev?.stopPropagation?.();
     if (ev) ev.stopImmediatePropagation?.();
-  } catch (_e) {
-  }
+  } catch (_e) {}
 
   if (idx > 0) {
     focusPrev({ currentIndex: idx, ev });
   } else {
-    const currentElement = document.getElementById(`prod-input-${idx}`) as HTMLIonInputElement | null;
+    const currentElement = document.getElementById(
+      `prod-input-${idx}`,
+    ) as HTMLIonInputElement | null;
     if (currentElement) {
       if (typeof currentElement.getInputElement === 'function') {
         currentElement.getInputElement().then((native: HTMLInputElement) => native.focus());
@@ -578,14 +553,15 @@ function handleArrowDown(params: { currentIndex: number; ev?: Event }) {
     ev?.preventDefault?.();
     ev?.stopPropagation?.();
     if (ev) ev.stopImmediatePropagation?.();
-  } catch (_e) {
-  }
+  } catch (_e) {}
 
   const total = props.products?.length || 0;
   if (idx < total - 1) {
     focusNext({ currentIndex: idx, ev });
   } else {
-    const currentElement = document.getElementById(`prod-input-${idx}`) as HTMLIonInputElement | null;
+    const currentElement = document.getElementById(
+      `prod-input-${idx}`,
+    ) as HTMLIonInputElement | null;
     if (currentElement) {
       if (typeof currentElement.getInputElement === 'function') {
         currentElement.getInputElement().then((native: HTMLInputElement) => native.focus());
@@ -616,8 +592,7 @@ function toggleSearch({ ev }: { ev?: Event } = {}) {
             el.getInputElement().then((native: HTMLInputElement) => native.focus());
           }
         }
-      } catch (_e) {
-      }
+      } catch (_e) {}
     });
   } else {
     searchQuery.value = '';

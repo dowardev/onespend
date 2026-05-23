@@ -14,9 +14,7 @@
           <div class="list-content" style="flex: 1 1 auto; min-height: 0">
             <div
               class="color-legend"
-              style="
-                border-bottom: 1px solid var(--ion-background-color-step-200);
-              "
+              style="border-bottom: 1px solid var(--ion-background-color-step-200)"
             >
               <span class="legend-item">
                 <span class="legend-color success"></span>
@@ -31,15 +29,10 @@
 
             <div class="scroll-content">
               <template v-if="unifiedItems.length > 0">
-                <template
-                  v-for="(block, bIdx) in renderedEntries"
-                  :key="blockKey(block, bIdx)"
-                >
+                <template v-for="(block, bIdx) in renderedEntries" :key="blockKey(block, bIdx)">
                   <ion-item
                     v-if="block.type === 'unified'"
-                    :lines="
-                      bIdx === renderedEntries.length - 1 ? 'none' : 'full'
-                    "
+                    :lines="bIdx === renderedEntries.length - 1 ? 'none' : 'full'"
                     class="transparent"
                     button
                     :disabled="isDayClosed"
@@ -55,19 +48,15 @@
                       class="ion-text-end"
                       :style="`color: ${getItemColor(block.item)}`"
                     >
-                      {{ formatCurrencyLocal({ v: block.item.amount || 0 }) }}
+                      {{ formatCurrency({ value: block.item.amount || 0 }) }}
 
                       <p v-if="block.item.type === 'entry'">
                         {{ getUnifiedEntryInfo(block.item).name }}:
                         {{
-                          formatCurrencyLocal({
-                            v: getUnifiedAccountRemaining(block.item),
-                          })
+                          formatCurrency({ value: getUnifiedAccountRemaining(block.item) })
                         }}
                       </p>
-                      <p v-else>
-                        Proveedor
-                      </p>
+                      <p v-else>Egreso</p>
                     </ion-label>
                   </ion-item>
                 </template>
@@ -75,9 +64,7 @@
 
               <template v-else>
                 <div class="ion-padding">
-                  <ion-label
-                    >Pulsa el botón "+" para agregar un nuevo ingreso</ion-label
-                  >
+                  <ion-label>Pulsa el botón "+" para agregar un nuevo ingreso</ion-label>
                 </div>
               </template>
             </div>
@@ -85,18 +72,14 @@
         </ion-list>
       </ion-col>
 
-      <ion-col size="6" >
+      <ion-col size="6">
         <AccountCards :accounts="accountsWithBalance" />
 
         <!-- Resultado Total Card -->
         <ion-card class="shadow1">
           <div
             class="ion-padding-start ion-padding-top"
-            style="
-              display: flex;
-              justify-content: space-between;
-              align-items: center;
-            "
+            style="display: flex; justify-content: space-between; align-items: center"
           >
             <div style="display: flex; align-items: center">
               <ion-card-title :color="totalDifferenceColor">{{
@@ -112,11 +95,11 @@
           <ion-card-content>
             <p>
               <span style="color: var(--ion-color-success)"
-                >Ingresos: {{ formatCurrencyLocal({ v: totalIngresos }) }}</span
+                >Ingresos: {{ formatCurrency({ value: totalIngresos }) }}</span
               >
               <br />
               <span style="color: var(--ion-color-danger)"
-                >Gastos: {{ formatCurrencyLocal({ v: totalEgresos }) }}</span
+                >Gastos: {{ formatCurrency({ value: totalEgresos }) }}</span
               >
             </p>
           </ion-card-content>
@@ -178,11 +161,9 @@ import AccountCards from '../components/AccountCards.vue';
 import budgetController from '@/controllers/budgetController';
 import accountsController from '@/controllers/accountsController';
 import type { Account } from '@/stores/accountsStore';
-import type {
-  Income,
-  Provider,
-} from '@/stores/budgetStore';
-import type { AccountWithBalance, EntryGroup } from '../components/EditEntryModal.vue';
+import type { Income, Provider } from '@/stores/budgetStore';
+import type { AccountWithBalance, EntryGroup } from '@/utils/budgetTypes';
+import { formatCurrency, calcProviderProductsTotal } from '@/utils/currency';
 
 interface UnifiedItem {
   id: string | number;
@@ -228,9 +209,7 @@ function calculateAccountBalance(acc: Account, accountId: string | number) {
   const entriesForAccount = entries.filter((e: Income) => {
     if (String(e.accountId) === String(accountId)) return true;
     if (e.groups && Array.isArray(e.groups)) {
-      return e.groups.some(
-        (g: EntryGroup) => String(g.accountId) === String(accountId)
-      );
+      return e.groups.some((g: EntryGroup) => String(g.accountId) === String(accountId));
     }
     return false;
   });
@@ -254,21 +233,15 @@ function calculateAccountBalance(acc: Account, accountId: string | number) {
 }
 
 const accountsWithBalance = computed(() => {
-  const result = accountsList.value.map((acc: Account) =>
-    calculateAccountBalance(acc, acc.id)
-  );
+  const result = accountsList.value.map((acc: Account) => calculateAccountBalance(acc, acc.id));
 
   const withTransactions = result
     .filter((acc: AccountWithBalance) => acc.hasTransactions)
-    .sort(
-      (a: AccountWithBalance, b: AccountWithBalance) => b.balance - a.balance
-    );
+    .sort((a: AccountWithBalance, b: AccountWithBalance) => b.balance - a.balance);
 
   const withoutTransactions = result
     .filter((acc: AccountWithBalance) => !acc.hasTransactions)
-    .sort((a: AccountWithBalance, b: AccountWithBalance) =>
-      a.name.localeCompare(b.name)
-    );
+    .sort((a: AccountWithBalance, b: AccountWithBalance) => a.name.localeCompare(b.name));
 
   return [...withTransactions, ...withoutTransactions];
 });
@@ -288,9 +261,16 @@ const totalEgresos = computed(() => {
     isDayClosed.value && frozenSnapshot.value
       ? frozenSnapshot.value.entries
       : budgetController.getEntries();
-  return entries
+  const entriesTotal = entries
     .filter((e: Income) => e.entryType === 'egreso')
     .reduce((sum: number, e: Income) => sum + Number(e.amount || 0), 0);
+
+  const providersTotal = providersToday.value.reduce(
+    (sum, p) => sum + calcProviderProductsTotal({ provider: p }),
+    0,
+  );
+
+  return entriesTotal + providersTotal;
 });
 
 const totalDifference = computed(() => {
@@ -300,7 +280,7 @@ const totalDifference = computed(() => {
 const totalDifferenceLabel = computed(() => {
   const d = totalDifference.value;
   if (d === 0) return '$0';
-  const formatted = formatCurrencyLocal({ v: Math.abs(d) });
+  const formatted = formatCurrency({ value: Math.abs(d) });
   return d > 0 ? `+${formatted}` : `-${formatted}`;
 });
 
@@ -325,9 +305,9 @@ const unifiedItems = computed((): UnifiedItem[] => {
       : budgetController.getEntries();
 
   const selectedDateStr = String(budgetController.getSelectedDate() || '').slice(0, 10);
-  const providers: Provider[] = budgetController.getProviders().filter(
-    (p: Provider) => String(p.date || '').slice(0, 10) === selectedDateStr
-  );
+  const providers: Provider[] = budgetController
+    .getProviders()
+    .filter((p: Provider) => String(p.date || '').slice(0, 10) === selectedDateStr);
 
   const entryItems: UnifiedItem[] = entries.map((entry: Income) => ({
     id: entry.id,
@@ -344,7 +324,7 @@ const unifiedItems = computed((): UnifiedItem[] => {
   const providerItems: UnifiedItem[] = providers.map((provider: Provider) => ({
     id: provider.id,
     name: provider._supplierName || provider.name || '-',
-    amount: Number(provider.efectivo || 0) + Number(provider.tarjeta || 0),
+    amount: calcProviderProductsTotal({ provider }),
     date: provider.date,
     type: 'provider',
     accountId: provider.accountId,
@@ -352,9 +332,7 @@ const unifiedItems = computed((): UnifiedItem[] => {
     _providerName: provider._supplierName,
   }));
 
-  return [...entryItems, ...providerItems].sort(
-    (a, b) => (a.createdAt || 0) - (b.createdAt || 0)
-  );
+  return [...entryItems, ...providerItems].sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
 });
 
 const renderedEntries = computed(() => {
@@ -370,14 +348,6 @@ const renderedEntries = computed(() => {
 function getDefaultAccountId() {
   const accounts = accountsList.value;
   return accounts.length > 0 ? accounts[0].id : null;
-}
-
-function formatCurrencyLocal(params: { v: number }) {
-  const { v } = params || { v: 0 };
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-  }).format(v || 0);
 }
 
 function formatTimeLocal(ms?: number) {
@@ -406,11 +376,9 @@ function handleUnifiedItemClick(item: UnifiedItem) {
 
 function getItemColor(item: UnifiedItem): string {
   if (item.type === 'provider') {
-    return 'var(--ion-color-warning)';
+    return 'var(--ion-color-danger)';
   }
-  return item.entryType === 'egreso'
-    ? 'var(--ion-color-danger)'
-    : 'var(--ion-color-success)';
+  return item.entryType === 'egreso' ? 'var(--ion-color-danger)' : 'var(--ion-color-success)';
 }
 
 function navigateToEditEntry(item: Income) {
@@ -418,7 +386,7 @@ function navigateToEditEntry(item: Income) {
 }
 
 function formatProviderAmount(provider: Provider) {
-  return formatCurrencyLocal({ v: Number(provider?.estimated) || 0 });
+  return formatCurrency({ value: calcProviderProductsTotal({ provider }) });
 }
 
 function blockKey(block: { type: string; item: Income }, idx: number) {
@@ -428,9 +396,7 @@ function blockKey(block: { type: string; item: Income }, idx: number) {
 
 function getAccountName(accountId: string | number | null | undefined) {
   if (!accountId) return '';
-  const account = accountsList.value.find(
-    (a: Account) => String(a.id) === String(accountId)
-  );
+  const account = accountsList.value.find((a: Account) => String(a.id) === String(accountId));
   return account?.name || '';
 }
 
@@ -444,8 +410,7 @@ function getEntryAccountInfo(item: Income) {
     if (uniqueAccountIds.length > 1) {
       return { name: 'Varios', accountId: null };
     }
-    const accountId =
-      (uniqueAccountIds[0] as string | number | undefined) ?? null;
+    const accountId = (uniqueAccountIds[0] as string | number | undefined) ?? null;
     return { name: getAccountName(accountId), accountId };
   }
   return {
@@ -473,12 +438,10 @@ function getUnifiedAccountRemaining(item: UnifiedItem): number {
 
 function getAccountRemaining(
   accountId: string | number | null | undefined,
-  entryId?: string | number | null
+  entryId?: string | number | null,
 ) {
   if (!accountId) return 0;
-  const account = accountsList.value.find(
-    (a: Account) => String(a.id) === String(accountId)
-  );
+  const account = accountsList.value.find((a: Account) => String(a.id) === String(accountId));
   if (!account) return 0;
 
   const initialBalance = Number(account.initialBalance) || 0;
@@ -491,18 +454,14 @@ function getAccountRemaining(
   const entriesForAccount = entries.filter((e: Income) => {
     if (String(e.accountId) === String(accountId)) return true;
     if (e.groups && Array.isArray(e.groups)) {
-      return e.groups.some(
-        (g: EntryGroup) => String(g.accountId) === String(accountId)
-      );
+      return e.groups.some((g: EntryGroup) => String(g.accountId) === String(accountId));
     }
     return false;
   });
 
   let cutoffTime = Infinity;
   if (entryId) {
-    const currentEntry = entriesForAccount.find(
-      (e: Income) => e.id === entryId
-    );
+    const currentEntry = entriesForAccount.find((e: Income) => e.id === entryId);
     if (currentEntry) {
       cutoffTime = Number(currentEntry.createdAt) || Infinity;
     }
@@ -511,9 +470,7 @@ function getAccountRemaining(
   const filteredEntries =
     cutoffTime === Infinity
       ? entriesForAccount
-      : entriesForAccount.filter(
-          (e: Income) => Number(e.createdAt) <= cutoffTime
-        );
+      : entriesForAccount.filter((e: Income) => Number(e.createdAt) <= cutoffTime);
 
   const ingresos = filteredEntries
     .filter((e: Income) => e.entryType === 'ingreso')

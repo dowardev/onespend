@@ -53,9 +53,7 @@
                     <ion-button
                       color="danger"
                       fill="clear"
-                      @click.stop="
-                        confirmRemoveSupplier({ id: s.id, name: s.name })
-                      "
+                      @click.stop="confirmRemoveSupplier({ id: s.id, name: s.name })"
                     >
                       <ion-icon :icon="trashOutline" color="danger"></ion-icon>
                     </ion-button>
@@ -167,10 +165,7 @@ function cancelModal() {
   modalSupplier.value = null;
 }
 
-function confirmRemoveSupplier(params: {
-  id: string | number | null | undefined;
-  name?: string;
-}) {
+function confirmRemoveSupplier(params: { id: string | number | null | undefined; name?: string }) {
   const { id, name } = params;
   deleteConfirmSupplier.open = true;
   deleteConfirmSupplier.supplierId = id ?? null;
@@ -215,7 +210,9 @@ async function onModalSaved(payload: Supplier) {
 
   try {
     if (payload.id != null) {
-      const existingSupplier = suppliers.value.find((s: Supplier) => String(s.id) === String(payload.id));
+      const existingSupplier = suppliers.value.find(
+        (s: Supplier) => String(s.id) === String(payload.id),
+      );
       if (existingSupplier && existingSupplier.sync_id) {
         payload.sync_id = existingSupplier.sync_id;
       }
@@ -259,7 +256,7 @@ const groupedSuppliers = computed(() => {
 
   return Array.from(map.keys())
     .sort()
-    .map(letter => ({ letter, items: map.get(letter) || [] }));
+    .map((letter) => ({ letter, items: map.get(letter) || [] }));
 });
 
 // End Life cycle

@@ -1,4 +1,5 @@
-templa<template>
+templa
+<template>
   <ion-page>
     <ion-header class="ion-no-border" mode="ios">
       <ion-toolvar>
@@ -25,8 +26,7 @@ templa<template>
 <script lang="ts" setup>
 // imports
 // Ejemplo: ionic,vue,ionicons
-// end 
-
+// end
 
 // controllers
 // end controllers

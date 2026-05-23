@@ -27,6 +27,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Attachments API
     Route::get('/budget-entries/{entryId}/attachments', [AttachmentController::class, 'index']);
     Route::post('/budget-entries/{entryId}/attachments', [AttachmentController::class, 'store']);
+    Route::get('/budget-providers/{providerId}/attachments', [AttachmentController::class, 'providerIndex']);
+    Route::post('/budget-providers/{providerId}/attachments', [AttachmentController::class, 'providerStore']);
     Route::get('/attachments/{attachmentId}/download', [AttachmentController::class, 'download']);
     Route::delete('/attachments/{attachmentId}', [AttachmentController::class, 'destroy']);
+    Route::post('/attachments/batch-delete', [AttachmentController::class, 'batchDestroy']);
 });

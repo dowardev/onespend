@@ -16,25 +16,11 @@ export function useChart() {
 
     try {
       // Explicitly import Chart.js components
-      const { 
-        Chart, 
-        CategoryScale, 
-        LinearScale, 
-        BarElement, 
-        Title, 
-        Tooltip, 
-        Legend 
-      } = await import('chart.js');
+      const { Chart, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } =
+        await import('chart.js');
 
       // Explicitly register components to ensure LinearScale is available
-      Chart.register(
-        CategoryScale,
-        LinearScale,
-        BarElement,
-        Title,
-        Tooltip,
-        Legend
-      );
+      Chart.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
       ChartJSInstance = Chart;
       chartComponents = {
@@ -43,7 +29,7 @@ export function useChart() {
         BarElement,
         Title,
         Tooltip,
-        Legend
+        Legend,
       };
 
       isLoaded.value = true;
@@ -59,6 +45,6 @@ export function useChart() {
   return {
     loadChartDependencies,
     isLoaded,
-    loading
+    loading,
   };
 }

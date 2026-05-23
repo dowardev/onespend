@@ -10,13 +10,9 @@ class RequestCache {
   private defaultTTL = 5 * 60 * 1000; // 5 minutes default
 
   // Get cached data or fetch fresh data
-  async get<T>(
-    key: string,
-    fetchFn: () => Promise<T>,
-    ttl: number = this.defaultTTL
-  ): Promise<T> {
+  async get<T>(key: string, fetchFn: () => Promise<T>, ttl: number = this.defaultTTL): Promise<T> {
     const cached = this.cache.get(key);
-    
+
     // Return cached data if valid
     if (cached && this.isValid(cached)) {
       console.debug(`[RequestCache] Cache hit for: ${key}`);
@@ -26,10 +22,10 @@ class RequestCache {
     // Fetch fresh data
     console.debug(`[RequestCache] Cache miss for: ${key}`);
     const data = await fetchFn();
-    
+
     // Cache the fresh data
     this.set(key, data, ttl);
-    
+
     return data;
   }
 
@@ -38,7 +34,7 @@ class RequestCache {
     this.cache.set(key, {
       data,
       timestamp: Date.now(),
-      ttl
+      ttl,
     });
   }
 
@@ -61,7 +57,7 @@ class RequestCache {
   getStats(): { size: number; keys: string[] } {
     return {
       size: this.cache.size,
-      keys: Array.from(this.cache.keys())
+      keys: Array.from(this.cache.keys()),
     };
   }
 
@@ -69,14 +65,14 @@ class RequestCache {
   cleanup(): void {
     let cleaned = 0;
     const now = Date.now();
-    
+
     for (const [key, entry] of this.cache.entries()) {
       if (now - entry.timestamp >= entry.ttl) {
         this.cache.delete(key);
         cleaned++;
       }
     }
-    
+
     console.debug(`[RequestCache] Cleaned up ${cleaned} expired entries`);
   }
 }
@@ -86,9 +82,12 @@ export const requestCache = new RequestCache();
 
 // Cleanup expired entries periodically (every 10 minutes)
 if (typeof window !== 'undefined') {
-  setInterval(() => {
-    requestCache.cleanup();
-  }, 10 * 60 * 1000);
+  setInterval(
+    () => {
+      requestCache.cleanup();
+    },
+    10 * 60 * 1000,
+  );
 }
 
 // Utility functions for common API patterns
@@ -139,7 +138,7 @@ export const cacheUtils = {
     requestCache.clear(`statistics_data_${dateKey}`);
     requestCache.clear(`budget_data_${dateKey}`);
     console.debug(`[RequestCache] Cleared caches for date: ${dateKey}`);
-  }
+  },
 };
 
 // Export for use in components
@@ -151,6 +150,6 @@ export function useRequestCache() {
     clearAll: requestCache.clearAll.bind(requestCache),
     getStats: requestCache.getStats.bind(requestCache),
     cleanup: requestCache.cleanup.bind(requestCache),
-    cacheUtils
+    cacheUtils,
   };
 }

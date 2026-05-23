@@ -22,7 +22,9 @@
           <ion-label>
             <div class="total-label">Total</div>
             <div class="total-amount" :class="amountClass">{{ formatCurrency(totalAmount) }}</div>
-            <div class="total-count">{{ items.length }} registro{{ items.length !== 1 ? 's' : '' }}</div>
+            <div class="total-count">
+              {{ items.length }} registro{{ items.length !== 1 ? 's' : '' }}
+            </div>
           </ion-label>
         </ion-item>
       </div>
@@ -32,11 +34,7 @@
           <ion-label>Detalle</ion-label>
         </ion-list-header>
 
-        <ion-item
-          v-for="(item, index) in sortedItems"
-          :key="index"
-          lines="full"
-        >
+        <ion-item v-for="(item, index) in sortedItems" :key="index" lines="full">
           <ion-label>
             <div class="item-name">{{ item.name }}</div>
             <div v-if="item.time" class="item-time">{{ formatTime(item.time) }}</div>

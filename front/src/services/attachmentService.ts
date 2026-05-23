@@ -52,15 +52,42 @@ export async function listAttachments(entrySyncId: string): Promise<AttachmentLi
 
 export async function uploadAttachments(
   entrySyncId: string,
-  files: File[]
+  files: File[],
 ): Promise<AttachmentUploadResponse> {
   const headers = await getHeaders();
   const formData = new FormData();
-  files.forEach(file => {
+  files.forEach((file) => {
     formData.append('files', file);
   });
 
   const response = await fetch(`${API_URL}/api/budget-entries/${entrySyncId}/attachments`, {
+    method: 'POST',
+    headers,
+    body: formData,
+  });
+  return handleResponse<AttachmentUploadResponse>(response);
+}
+
+export async function listProviderAttachments(providerSyncId: string): Promise<AttachmentListResponse> {
+  const headers = await getHeaders();
+  const response = await fetch(`${API_URL}/api/budget-providers/${providerSyncId}/attachments`, {
+    method: 'GET',
+    headers,
+  });
+  return handleResponse<AttachmentListResponse>(response);
+}
+
+export async function uploadProviderAttachments(
+  providerSyncId: string,
+  files: File[],
+): Promise<AttachmentUploadResponse> {
+  const headers = await getHeaders();
+  const formData = new FormData();
+  files.forEach((file) => {
+    formData.append('files', file);
+  });
+
+  const response = await fetch(`${API_URL}/api/budget-providers/${providerSyncId}/attachments`, {
     method: 'POST',
     headers,
     body: formData,
@@ -92,9 +119,26 @@ export async function deleteAttachment(attachmentId: number): Promise<void> {
   }
 }
 
+export async function deleteAttachments(ids: number[]): Promise<void> {
+  if (ids.length === 0) return;
+  const headers = await getHeaders();
+  const response = await fetch(`${API_URL}/api/attachments/batch-delete`, {
+    method: 'POST',
+    headers: { ...headers, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids }),
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ message: 'Batch delete failed' }));
+    throw new Error(error.message || error.error || `HTTP ${response.status}`);
+  }
+}
+
 export default {
   listAttachments,
   uploadAttachments,
+  listProviderAttachments,
+  uploadProviderAttachments,
   downloadAttachment,
   deleteAttachment,
+  deleteAttachments,
 };

@@ -26,13 +26,9 @@
                 <ion-item lines="none" class="transparent">
                   <ion-buttons>
                     <ion-segment v-model="activeView" scrollable>
-                      <ion-segment-button value="inicio"
-                        >Inicio</ion-segment-button
-                      >
+                      <ion-segment-button value="inicio">Inicio</ion-segment-button>
 
-                      <ion-segment-button value="proveedores"
-                        >Proveedores</ion-segment-button
-                      >
+                      <ion-segment-button value="proveedores">Proveedores</ion-segment-button>
                     </ion-segment>
                   </ion-buttons>
 
@@ -86,13 +82,7 @@
             @ion-change="onDateSelected"
           ></ion-datetime>
           <ion-item>
-            <ion-button
-              slot="end"
-              fill="clear"
-              color="primary"
-              size="small"
-              @click="goToToday"
-            >
+            <ion-button slot="end" fill="clear" color="primary" size="small" @click="goToToday">
               Hoy
             </ion-button>
           </ion-item>
@@ -107,19 +97,11 @@
       >
         <ion-content>
           <ion-item button @click="confirmClearDay">
-            <ion-icon
-              slot="start"
-              :icon="trashOutline"
-              color="danger"
-            ></ion-icon>
+            <ion-icon slot="start" :icon="trashOutline" color="danger"></ion-icon>
             <ion-label>Vaciar día</ion-label>
           </ion-item>
           <ion-item v-if="isDev" button @click="insertTestData">
-            <ion-icon
-              slot="start"
-              :icon="addOutline"
-              color="success"
-            ></ion-icon>
+            <ion-icon slot="start" :icon="addOutline" color="success"></ion-icon>
             <ion-label color="success">Insertar datos prueba</ion-label>
           </ion-item>
         </ion-content>
@@ -261,8 +243,7 @@ function openMoreOptions(params: { event: Event }) {
   showMoreOptions.value = true;
 }
 
-function onDateSelected(params: { e: CustomEvent }) {
-  const { e } = params;
+function onDateSelected(e: CustomEvent) {
   const value = e.detail?.value;
   if (value) {
     const d = new Date(value);

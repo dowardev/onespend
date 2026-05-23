@@ -8,9 +8,12 @@ import { parseISO } from 'date-fns';
  * Date or date-like string. If no argument is provided, returns today's date
  * in local timezone formatted as YYYY-MM-DD.
  */
-export function formatLocalDate(params: { d?: Date | string | null } | Date | string | null): string {
+export function formatLocalDate(
+  params: { d?: Date | string | null } | Date | string | null,
+): string {
   // Support both shapes: formatLocalDate({ d }) and formatLocalDate(d)
-  const d = (params && typeof params === 'object' && 'd' in (params as any)) ? (params as any).d : params;
+  const d =
+    params && typeof params === 'object' && 'd' in (params as any) ? (params as any).d : params;
   try {
     let dateObj: Date;
     if (d == null) {
@@ -52,7 +55,7 @@ export function formatLocalDate(params: { d?: Date | string | null } | Date | st
       const now = new Date();
       return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(
         2,
-        '0'
+        '0',
       )}-${String(now.getDate()).padStart(2, '0')}`;
     } catch (_err) {
       return '';
@@ -68,7 +71,8 @@ export function formatLocalDate(params: { d?: Date | string | null } | Date | st
  */
 export function parseLocalDate(params: { d?: Date | string | null } | Date | string | null): Date {
   // Support both shapes: parseLocalDate({ d }) and parseLocalDate(d)
-  const d = (params && typeof params === 'object' && 'd' in (params as any)) ? (params as any).d : params;
+  const d =
+    params && typeof params === 'object' && 'd' in (params as any) ? (params as any).d : params;
   if (d == null) return new Date();
   if (d instanceof Date) return d;
   const s = String(d).trim();
@@ -122,7 +126,7 @@ export function normalizeName(params: { name: string | undefined | null }): stri
 export function safeIntlFormat(
   date: Date | number | string | undefined | null,
   locale: string,
-  options?: Intl.DateTimeFormatOptions
+  options?: Intl.DateTimeFormatOptions,
 ): string {
   try {
     if (date == null) return '';

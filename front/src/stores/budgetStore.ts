@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed, reactive, watch } from 'vue';
 import { formatLocalDate } from '@/utils/date';
+import type { Supplier } from '@/controllers/suppliersController';
 
 export type PaymentType = 'cash' | 'digital';
 export type EntryType = 'ingreso' | 'egreso';
@@ -20,13 +21,16 @@ export interface Income {
   synced_at?: number;
   supplierId?: string;
   supplierName?: string;
+  _providerName?: string;
+  _supplierId?: string | number;
+  _fromProviderGroupId?: string | number;
 }
 
 export interface BudgetProviderProduct {
   id?: string | number;
   sync_id?: string;
   serverId?: number | null;
-  supplierProductId: string | number;
+  supplierProductId?: string | number | null;
   productName: string;
   productPrice: number;
   quantity: number;
@@ -143,11 +147,9 @@ export const useBudgetStore = defineStore('budget', () => {
     };
   });
 
-  const ingresos = computed(() =>
-    entries.filter(e => e.entryType === 'ingreso')
-  );
+  const ingresos = computed(() => entries.filter((e) => e.entryType === 'ingreso'));
 
-  const egresos = computed(() => entries.filter(e => e.entryType === 'egreso'));
+  const egresos = computed(() => entries.filter((e) => e.entryType === 'egreso'));
 
   const totalIngresos = computed(() => financialSummary.value.ingresos);
 
@@ -155,38 +157,23 @@ export const useBudgetStore = defineStore('budget', () => {
 
   const netTotal = computed(() => financialSummary.value.netTotal);
 
-  const totalEfectivo = computed(() =>
-    providers.reduce((s, p) => s + Number(p.efectivo || 0), 0)
-  );
+  const totalEfectivo = computed(() => providers.reduce((s, p) => s + Number(p.efectivo || 0), 0));
 
-  const totalTarjeta = computed(() =>
-    providers.reduce((s, p) => s + Number(p.tarjeta || 0), 0)
-  );
+  const totalTarjeta = computed(() => providers.reduce((s, p) => s + Number(p.tarjeta || 0), 0));
 
-  const totalCredito = computed(() =>
-    providers.reduce((s, p) => s + Number(p.credito || 0), 0)
-  );
+  const totalCredito = computed(() => providers.reduce((s, p) => s + Number(p.credito || 0), 0));
 
   const totalEstimacion = computed(() =>
-    providers.reduce(
-      (s, p) => s + Number(p.efectivo || 0) + Number(p.tarjeta || 0),
-      0
-    )
+    providers.reduce((s, p) => s + Number(p.efectivo || 0) + Number(p.tarjeta || 0), 0),
   );
 
   const faltante = computed(() => netTotal.value - totalEstimacion.value);
 
-  const ingresosEfectivo = computed(
-    () => financialSummary.value.ingresosEfectivo
-  );
+  const ingresosEfectivo = computed(() => financialSummary.value.ingresosEfectivo);
 
-  const ingresosTarjeta = computed(
-    () => financialSummary.value.ingresosTarjeta
-  );
+  const ingresosTarjeta = computed(() => financialSummary.value.ingresosTarjeta);
 
-  const egresosEfectivo = computed(
-    () => financialSummary.value.egresosEfectivo
-  );
+  const egresosEfectivo = computed(() => financialSummary.value.egresosEfectivo);
 
   const egresosTarjeta = computed(() => financialSummary.value.egresosTarjeta);
 
@@ -251,69 +238,56 @@ export const useBudgetStore = defineStore('budget', () => {
   }
 
   function updateEntry(id: string | number, changes: Partial<Income>) {
-    const idx = entries.findIndex(e => e.id === id);
+    const idx = entries.findIndex((e) => e.id === id);
     if (idx === -1) return;
     const updated = { ...entries[idx], ...changes };
     entries.splice(idx, 1, updated);
   }
 
   function removeEntry(id: string | number) {
-    const idx = entries.findIndex(e => e.id === id);
+    const idx = entries.findIndex((e) => e.id === id);
     if (idx >= 0) entries.splice(idx, 1);
   }
 
   function removeEgresosGroup(supplierId: string | number) {
+    const targetId = String(supplierId);
     for (let i = entries.length - 1; i >= 0; i--) {
       const it = entries[i];
-      if (it.supplierId === supplierId) {
+      if (String(it.supplierId) === targetId) {
         entries.splice(i, 1);
       }
     }
   }
 
   function updateProvider(id: string | number, changes: Partial<Provider>) {
-    const idx = providers.findIndex(p => p.id === id);
+    const idx = providers.findIndex((p) => p.id === id);
     if (idx === -1) return;
 
     const provider = providers[idx];
     const updatedProvider = { ...provider };
 
-    const numericFields = [
-      'estimated',
-      'accountId',
-      'efectivo',
-      'tarjeta',
-      'credito',
-    ];
+    const numericFields = ['estimated', 'accountId', 'efectivo', 'tarjeta', 'credito'];
     for (const field of numericFields) {
       if (changes[field as keyof Provider] !== undefined) {
-        (updatedProvider as Provider)[field] =
-          Number(changes[field as keyof Provider]) || 0;
+        (updatedProvider as Provider)[field] = Number(changes[field as keyof Provider]) || 0;
       }
     }
 
     if (changes.name !== undefined) updatedProvider.name = String(changes.name);
     if (changes.date !== undefined) updatedProvider.date = String(changes.date);
-    if (changes.notes !== undefined)
-      updatedProvider.notes = String(changes.notes);
-    if (changes.visited !== undefined)
-      updatedProvider.visited = !!changes.visited;
-    if (changes._justAdded !== undefined)
-      updatedProvider._justAdded = changes._justAdded;
-    if (changes._supplierId !== undefined)
-      updatedProvider._supplierId = changes._supplierId;
-    if (changes._supplierName !== undefined)
-      updatedProvider._supplierName = changes._supplierName;
-    if (changes.products !== undefined)
-      updatedProvider.products = changes.products;
-    if (changes.items !== undefined)
-      updatedProvider.items = changes.items;
+    if (changes.notes !== undefined) updatedProvider.notes = String(changes.notes);
+    if (changes.visited !== undefined) updatedProvider.visited = !!changes.visited;
+    if (changes._justAdded !== undefined) updatedProvider._justAdded = changes._justAdded;
+    if (changes._supplierId !== undefined) updatedProvider._supplierId = changes._supplierId;
+    if (changes._supplierName !== undefined) updatedProvider._supplierName = changes._supplierName;
+    if (changes.products !== undefined) updatedProvider.products = changes.products;
+    if (changes.items !== undefined) updatedProvider.items = changes.items;
 
     providers.splice(idx, 1, updatedProvider);
   }
 
   function removeProvider(id: string | number) {
-    const idx = providers.findIndex(p => p.id === id);
+    const idx = providers.findIndex((p) => p.id === id);
     if (idx >= 0) providers.splice(idx, 1);
   }
 
@@ -340,9 +314,8 @@ export const useBudgetStore = defineStore('budget', () => {
       if (provider._supplierId) {
         const supplierSyncId = provider._supplierId;
         const matchingSupplier = suppliers.find(
-          s =>
-            String(s.sync_id) === String(supplierSyncId) ||
-            String(s.id) === String(supplierSyncId)
+          (s) =>
+            String(s.sync_id) === String(supplierSyncId) || String(s.id) === String(supplierSyncId),
         );
 
         if (matchingSupplier) {
@@ -354,18 +327,13 @@ export const useBudgetStore = defineStore('budget', () => {
             needsUpdate = true;
           }
 
-          if (
-            matchingSupplier.products &&
-            matchingSupplier.products.length > 0
-          ) {
+          if (matchingSupplier.products && matchingSupplier.products.length > 0) {
             const serverProducts = matchingSupplier.products;
             const localProducts = provider._supplierProducts || [];
 
-            const syncedProducts = serverProducts.map(serverProduct => {
+            const syncedProducts = serverProducts.map((serverProduct) => {
               const localMatch = localProducts.find(
-                lp =>
-                  lp.name === serverProduct.name &&
-                  lp.price === serverProduct.price
+                (lp) => lp.name === serverProduct.name && lp.price === serverProduct.price,
               );
               return {
                 ...serverProduct,

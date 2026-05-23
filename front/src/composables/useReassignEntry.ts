@@ -27,24 +27,39 @@ export async function reassignEntry(params: {
   try {
     const destDate = toShortDate(newDate);
 
-    const prevSelected = (budgetController.getSelectedDate && budgetController.getSelectedDate()) || null;
+    const prevSelected =
+      (budgetController.getSelectedDate && budgetController.getSelectedDate()) || null;
 
     // resolve original date
     let srcDate = originalDate ? toShortDate(originalDate) : null;
     if (!srcDate) {
-      const storeFound = (budgetController.getEntries() || []).find((en: any) => String(en.id) === String(entryId));
+      const storeFound = (budgetController.getEntries() || []).find(
+        (en: any) => String(en.id) === String(entryId),
+      );
       if (storeFound && storeFound.date) srcDate = toShortDate(storeFound.date);
     }
     if (!srcDate) srcDate = prevSelected || toShortDate(new Date());
 
-    if (verbose) console.log('reassignEntry: srcDate ->', srcDate, 'destDate ->', destDate, 'entryId ->', entryId);
+    if (verbose)
+      console.log(
+        'reassignEntry: srcDate ->',
+        srcDate,
+        'destDate ->',
+        destDate,
+        'entryId ->',
+        entryId,
+      );
 
     // load source bucket
-    try { budgetController.setDate({ date: srcDate }); } catch (_) {}
+    try {
+      budgetController.setDate({ date: srcDate });
+    } catch (_) {}
     await budgetController.loadDataForDate({ date: srcDate });
 
     // find entry in source
-    const storeEntry = (budgetController.getEntries() || []).find((en: any) => String(en.id) === String(entryId));
+    const storeEntry = (budgetController.getEntries() || []).find(
+      (en: any) => String(en.id) === String(entryId),
+    );
     idToUse = storeEntry ? storeEntry.id : entryId;
 
     if (verbose) console.log('reassignEntry: idToUse ->', idToUse);
@@ -84,7 +99,9 @@ export async function reassignEntry(params: {
         budgetController.removeIngreso({ id: idToUse });
         await budgetController.saveData();
 
-        try { budgetController.setDate({ date: destDate }); } catch (_) {}
+        try {
+          budgetController.setDate({ date: destDate });
+        } catch (_) {}
         await budgetController.loadDataForDate({ date: destDate });
         if ((srcEntry as any).entryType === 'ingreso') {
           const created = budgetController.addIngreso(payload) as any;
@@ -103,13 +120,17 @@ export async function reassignEntry(params: {
 
     // restore selected date if requested
     if (restoreSelectedDate && prevSelected) {
-      try { budgetController.setDate({ date: prevSelected }); } catch (_) {}
+      try {
+        budgetController.setDate({ date: prevSelected });
+      } catch (_) {}
       await budgetController.loadDataForDate({ date: prevSelected });
     }
 
     return { moved, id: idToUse };
   } catch (error) {
-    try { console.error('reassignEntry error', error); } catch (e) {}
+    try {
+      console.error('reassignEntry error', error);
+    } catch (e) {}
     return { moved: false, id: idToUse, error };
   }
 }

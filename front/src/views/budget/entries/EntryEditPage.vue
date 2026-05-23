@@ -9,15 +9,10 @@
           </ion-button>
         </ion-buttons>
 
-        <ion-title>{{
-          isEditing ? 'Editar Entrada' : 'Nueva Entrada'
-        }}</ion-title>
+        <ion-title>{{ isEditing ? 'Editar Entrada' : 'Nueva Entrada' }}</ion-title>
 
         <ion-buttons slot="end">
-          <ion-button
-            :disabled="!isFormValid || isDayClosed"
-            @click="handleSave"
-          >
+          <ion-button :disabled="!isFormValid || isDayClosed" @click="handleSave">
             <ion-icon :icon="saveOutline"></ion-icon>
           </ion-button>
 
@@ -58,42 +53,28 @@
             >
               <ion-list>
                 <ion-list-header>
-                  <ion-label>Provedores</ion-label>
+                  <ion-label>Proveedores</ion-label>
                   <ion-button @click="refreshProviders">
                     <ion-icon :icon="refreshOutline"></ion-icon>
                   </ion-button>
                 </ion-list-header>
 
                 <template v-if="providersTodayWithData.length">
-                  <ion-card
-                    v-for="p in providersTodayWithData"
-                    :key="p.id"
-                    class="shadow1"
-                  >
+                  <ion-card v-for="p in providersTodayWithData" :key="p.id" class="shadow1">
                     <ion-item
                       class="transparent"
                       lines="full"
                       :button="!!p.accountId && !isDayClosed"
                       :disabled="!p.accountId || isDayClosed"
-                      @click="
-                        p.accountId &&
-                        !isDayClosed &&
-                        selectProvider({ provider: p })
-                      "
+                      @click="p.accountId && !isDayClosed && selectProvider({ provider: p })"
                     >
                       <ion-label>
                         {{ p.name }}
-                        <p
-                          v-if="!p.accountId"
-                          style="color: var(--ion-color-warning)"
-                        >
+                        <p v-if="!p.accountId" style="color: var(--ion-color-warning)">
                           Sin cuenta asignada
                         </p>
                       </ion-label>
-                      <ion-note
-                        slot="end"
-                        :color="p.accountId ? 'primary' : 'medium'"
-                      >
+                      <ion-note slot="end" :color="p.accountId ? 'primary' : 'medium'">
                         {{ formatProviderAmount({ provider: p }) }}
                       </ion-note>
                     </ion-item>
@@ -116,12 +97,8 @@
                       label="Tipo"
                       label-placement="stacked"
                     >
-                      <ion-select-option value="ingreso"
-                        >Ingreso</ion-select-option
-                      >
-                      <ion-select-option value="egreso"
-                        >Egreso</ion-select-option
-                      >
+                      <ion-select-option value="ingreso">Ingreso</ion-select-option>
+                      <ion-select-option value="egreso">Egreso</ion-select-option>
                     </ion-select>
                   </ion-item>
 
@@ -134,16 +111,9 @@
                     ></ion-input>
                   </ion-item>
 
-                  <ion-item
-                    lines="full"
-                    class="transparent"
-                    button
-                    @click="openEntryDatePopover"
-                  >
+                  <ion-item lines="full" class="transparent" button @click="openEntryDatePopover">
                     <ion-label>Fecha</ion-label>
-                    <ion-label slot="end">{{
-                      formatShortDate(entryDateISO)
-                    }}</ion-label>
+                    <ion-label slot="end">{{ formatShortDate(entryDateISO) }}</ion-label>
                   </ion-item>
                 </ion-card>
               </ion-list>
@@ -151,10 +121,7 @@
               <ion-list class="transparent">
                 <ion-list-header>
                   <ion-label>Cuentas</ion-label>
-                  <ion-button
-                    :disabled="!canAddMoreItems || isDayClosed"
-                    @click="addEntryItem"
-                  >
+                  <ion-button :disabled="!canAddMoreItems || isDayClosed" @click="addEntryItem">
                     <ion-icon :icon="addOutline"></ion-icon>
                     Agregar
                   </ion-button>
@@ -172,10 +139,7 @@
                         size="small"
                         @click="removeEntryItem(index)"
                       >
-                        <ion-icon
-                          :icon="closeOutline"
-                          color="danger"
-                        ></ion-icon>
+                        <ion-icon :icon="closeOutline" color="danger"></ion-icon>
                       </ion-button>
                     </div>
 
@@ -234,12 +198,7 @@
                 </ion-list-header>
 
                 <ion-card class="shadow1">
-                  <ion-item
-                    class="transparent"
-                    lines="full"
-                    button
-                    @click="handleOpenAttachments"
-                  >
+                  <ion-item class="transparent" lines="full" button @click="handleOpenAttachments">
                     <ion-label>Adjuntos</ion-label>
                   </ion-item>
 
@@ -287,11 +246,7 @@
           </ion-item>
 
           <ion-item lines="full" style="margin-top: 8px">
-            <ion-button
-              slot="start"
-              fill="clear"
-              size="small"
-              @click="popoverState.open = false"
+            <ion-button slot="start" fill="clear" size="small" @click="popoverState.open = false"
               >Cancelar</ion-button
             >
             <ion-button
@@ -299,7 +254,7 @@
               size="small"
               color="primary"
               :disabled="!reassignDate"
-              @click="applyPopoverReassign"
+              @click="applyPopoverReassignAction"
               >Aplicar</ion-button
             >
           </ion-item>
@@ -324,9 +279,7 @@
         >
           <ion-buttons slot="buttons">
             <ion-button color="primary" @click="goToToday"> Hoy </ion-button>
-            <ion-button color="primary" @click="confirmPicker">
-              Aplicar
-            </ion-button>
+            <ion-button color="primary" @click="confirmPicker"> Aplicar </ion-button>
           </ion-buttons>
         </ion-datetime>
       </ion-content>
@@ -340,11 +293,7 @@
       @did-dismiss="optionsPopoverState.open = false"
     >
       <ion-content>
-        <ion-item
-          button
-          :disabled="isDayClosed"
-          @click="handleDeleteFromPopover"
-        >
+        <ion-item button :disabled="isDayClosed" @click="handleDeleteFromPopover">
           <ion-icon slot="start" :icon="trashOutline" color="danger"></ion-icon>
           <ion-label color="danger">Eliminar</ion-label>
         </ion-item>
@@ -375,8 +324,8 @@
       :is-open="showAttachmentsModal"
       :initial-files="pendingAttachments"
       :existing-attachments="existingAttachments"
-      @dismiss="showAttachmentsModal = false"
-      @save="handleAttachmentsSave"
+      @dismiss="closeAttachmentsModal"
+      @save="onAttachmentsSave"
     />
     <!-- end components -->
   </ion-page>
@@ -426,8 +375,7 @@ import { useRouter, useRoute } from 'vue-router';
 import { format } from 'date-fns';
 import budgetController from '@/controllers/budgetController';
 import accountsController from '@/controllers/accountsController';
-import pendingAttachmentsService from '@/services/pendingAttachmentsService';
-import attachmentService from '@/services/attachmentService';
+import { useAttachments } from '@/composables/useAttachments';
 import AttachmentsModal from './componentes/AttachmentsModal.vue';
 // end imports
 
@@ -460,9 +408,9 @@ const route = useRoute();
 
 // vars and const
 const addEntrySegment = ref('entry');
-const entryItems = ref<
-  Array<{ amount: number | string; accountId: string | number | null }>
->([{ amount: '', accountId: null }]);
+const entryItems = ref<Array<{ amount: number | string; accountId: string | number | null }>>([
+  { amount: '', accountId: null },
+]);
 
 const entryData = ref({
   id: null as string | number | null,
@@ -472,11 +420,18 @@ const entryData = ref({
 });
 
 const entryNotes = ref('');
-const showAttachmentsModal = ref(false);
 const entrySyncId = ref<string | null>(null);
-const pendingAttachments = ref<File[]>([]);
-const existingAttachments = ref<Array<{ id: number; name: string; size: number }>>([]);
-const deletedAttachments = ref<number[]>([]);
+const {
+  showAttachmentsModal,
+  pendingAttachments,
+  existingAttachments,
+  deletedAttachments,
+  openAttachments: handleOpenAttachments,
+  handleAttachmentsSave,
+  saveAttachments,
+  deleteAllAttachments,
+  dismissModal: closeAttachmentsModal,
+} = useAttachments({ entityType: 'entries', syncId: entrySyncId });
 
 // reassignDate holds the short date (yyyy-MM-dd) used for persistence
 const reassignDate = ref<string | null>(null);
@@ -530,10 +485,7 @@ const quickAccountButtons = [
       if (!data.accountName || data.accountName.trim() === '') {
         return false;
       }
-      createQuickAccount(
-        data.accountName.trim(),
-        Number(data.initialBalance) || 0
-      );
+      createQuickAccount(data.accountName.trim(), Number(data.initialBalance) || 0);
       return true;
     },
   },
@@ -588,14 +540,9 @@ const isFormValid = computed(() => {
     entryData.value.name.trim().length > 0 &&
     entryData.value.entryType &&
     entryItems.value.length > 0 &&
-    entryItems.value.every(item => {
+    entryItems.value.every((item) => {
       const val = String(item.amount).trim();
-      return (
-        val !== '' &&
-        !isNaN(Number(val)) &&
-        Number(val) > 0 &&
-        item.accountId != null
-      );
+      return val !== '' && !isNaN(Number(val)) && Number(val) > 0 && item.accountId != null;
     })
   );
 });
@@ -674,10 +621,6 @@ function handleBack() {
   router.back();
 }
 
-function handleDelete() {
-  showDeleteAlert.value = true;
-}
-
 function openOptionsPopover(e: Event) {
   optionsPopoverState.event = e;
   optionsPopoverState.open = true;
@@ -690,19 +633,8 @@ function handleDeleteFromPopover() {
 
 async function confirmDelete() {
   if (entryData.value.id) {
-    // Eliminar adjuntos del backend si existe sync_id
     if (entrySyncId.value) {
-      try {
-        const response = await attachmentService.listAttachments(entrySyncId.value);
-        for (const attachment of response.data) {
-          await attachmentService.deleteAttachment(attachment.id);
-        }
-      } catch (error) {
-        console.error('Failed to delete attachments:', error);
-      }
-
-      // Eliminar archivos pendientes de localStorage
-      pendingAttachmentsService.removePendingAttachment(entrySyncId.value);
+      await deleteAllAttachments();
     }
 
     budgetController.removeIngreso({ id: entryData.value.id });
@@ -757,13 +689,9 @@ function getDefaultAccountId() {
 const availableAccountsForItem = (currentIndex: number) => {
   const usedAccountIds = entryItems.value
     .filter((_: unknown, idx: number) => idx !== currentIndex)
-    .map((item: { accountId: string | number | null }) =>
-      String(item.accountId)
-    )
+    .map((item: { accountId: string | number | null }) => String(item.accountId))
     .filter((id: string) => id !== 'null' && id !== 'undefined' && id !== '');
-  return accountsList.value.filter(
-    (acc: any) => !usedAccountIds.includes(String(acc.id))
-  );
+  return accountsList.value.filter((acc: any) => !usedAccountIds.includes(String(acc.id)));
 };
 
 function formatProviderAmount(params: { provider: ProviderSummary }) {
@@ -806,10 +734,7 @@ function removeEntryItem(index: number) {
 async function handleSave() {
   if (!isFormValid.value) return;
 
-  const totalAmount = entryItems.value.reduce(
-    (sum, item) => sum + (Number(item.amount) || 0),
-    0
-  );
+  const totalAmount = entryItems.value.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
 
   const payload: any = {
     entryType: entryData.value.entryType,
@@ -848,10 +773,13 @@ async function handleSave() {
           amount: payload.amount,
           accountId: payload.accountId,
           groups: payload.groups,
+          notes: payload.notes,
         },
       });
     }
-    savedEntry = budgetController.getEntries().find((e: any) => String(e.id) === String(entryData.value.id));
+    savedEntry = budgetController
+      .getEntries()
+      .find((e: any) => String(e.id) === String(entryData.value.id));
   } else {
     if (totalAmount > 0) {
       const entryDataAny: any = {
@@ -877,40 +805,8 @@ async function handleSave() {
   const isNewEntry = !entryData.value.id;
 
   if (entrySyncIdValue) {
-    for (const attachmentId of deletedAttachments.value) {
-      try {
-        await attachmentService.deleteAttachment(attachmentId);
-      } catch (error) {
-        console.error('Failed to delete attachment:', error);
-      }
-    }
-
-    if (pendingAttachments.value.length > 0) {
-      // Para entradas nuevas: siempre guardar en pendingAttachments (se subirá al sincronizar)
-      // Para entradas existentes: intentar subir inmediatamente si hay conexión
-      console.log('[EntryEditPage] Saving attachments:', { isNewEntry, entrySyncIdValue, count: pendingAttachments.value.length });
-      if (!isNewEntry && navigator.onLine) {
-        try {
-          await attachmentService.uploadAttachments(entrySyncIdValue, pendingAttachments.value);
-          console.log('[EntryEditPage] Attachments uploaded successfully');
-        } catch (error) {
-          console.error('[EntryEditPage] Failed to upload, saving to pending:', error);
-          await pendingAttachmentsService.addPendingAttachment(
-            entrySyncIdValue,
-            pendingAttachments.value
-          );
-        }
-      } else {
-        console.log('[EntryEditPage] Saving to pendingAttachmentsService');
-        await pendingAttachmentsService.addPendingAttachment(
-          entrySyncIdValue,
-          pendingAttachments.value
-        );
-      }
-    }
-
-    pendingAttachments.value = [];
-    deletedAttachments.value = [];
+    entrySyncId.value = entrySyncIdValue;
+    await saveAttachments({ isSynced: !isNewEntry });
   }
 
   router.back();
@@ -955,22 +851,8 @@ function goToToday() {
   pickerDateKey.value++;
 }
 
-async function handleOpenAttachments() {
-  if (entrySyncId.value) {
-    try {
-      const response = await attachmentService.listAttachments(entrySyncId.value);
-      existingAttachments.value = response.data;
-    } catch (error) {
-      console.error('Failed to load existing attachments:', error);
-      existingAttachments.value = [];
-    }
-  }
-  showAttachmentsModal.value = true;
-}
-
-function handleAttachmentsSave(newFiles: File[], deletedIds: number[]) {
-  pendingAttachments.value = newFiles;
-  deletedAttachments.value = deletedIds;
+function onAttachmentsSave(newFiles: File[], deletedIds: number[]) {
+  handleAttachmentsSave({ newFiles, deletedIds });
 }
 
 async function openReassignPopover(e: Event) {
@@ -981,10 +863,8 @@ async function openReassignPopover(e: Event) {
       } else if (entryData.value.date) {
         const raw = entryData.value.date;
         if (typeof raw === 'string' && raw.includes('T'))
-          reassignDateISO.value =
-            raw.length >= 19 ? raw.slice(0, 19) : raw + 'T00:00:00';
-        else if (typeof raw === 'string')
-          reassignDateISO.value = `${raw.slice(0, 10)}T00:00:00`;
+          reassignDateISO.value = raw.length >= 19 ? raw.slice(0, 19) : raw + 'T00:00:00';
+        else if (typeof raw === 'string') reassignDateISO.value = `${raw.slice(0, 10)}T00:00:00`;
       } else {
         reassignDateISO.value = format(new Date(), 'yyyy-MM-dd') + 'T00:00:00';
       }
@@ -997,15 +877,11 @@ async function openReassignPopover(e: Event) {
     showPicker.value = false;
     await nextTick();
     showPicker.value = true;
-    await new Promise(res => setTimeout(res, 30));
+    await new Promise((res) => setTimeout(res, 30));
   } catch (err) {}
 
   popoverState.event = e;
   popoverState.open = true;
-}
-
-function applyPopoverReassign() {
-  popoverState.open = false;
 }
 
 function onReassignDatetimeChange(e: any) {
@@ -1014,10 +890,7 @@ function onReassignDatetimeChange(e: any) {
     if (!val) return;
     let iso: string | null = null;
     if (typeof val === 'string') {
-      iso =
-        val.length >= 10 && val.includes('T')
-          ? val
-          : `${String(val).slice(0, 10)}T00:00:00`;
+      iso = val.length >= 10 && val.includes('T') ? val : `${String(val).slice(0, 10)}T00:00:00`;
     } else if (val instanceof Date) {
       iso = format(val, 'yyyy-MM-dd') + 'T00:00:00';
     } else {

@@ -16,9 +16,7 @@
       <template v-if="summary.incomeCount + summary.expenseCount === 0">
         <ion-card class="shadow1">
           <ion-card-content>
-            <p class="ion-padding">
-              No hay registros para la fecha seleccionada.
-            </p>
+            <p class="ion-padding">No hay registros para la fecha seleccionada.</p>
           </ion-card-content>
         </ion-card>
       </template>
@@ -64,11 +62,9 @@
                 <p>Total del día</p>
               </ion-label>
 
-              <ion-note
-                slot="end"
-                :color="summary.balance >= 0 ? 'success' : 'danger'"
-                >{{ formatCurrency({ value: summary.balance }) }}</ion-note
-              >
+              <ion-note slot="end" :color="summary.balance >= 0 ? 'success' : 'danger'">{{
+                formatCurrency({ value: summary.balance })
+              }}</ion-note>
             </ion-item>
           </div>
         </ion-list>
@@ -80,11 +76,7 @@
 
           <div class="list-content">
             <template v-if="topExpenseProviders.length">
-              <ion-item
-                v-for="p in topExpenseProviders"
-                :key="p.id"
-                class="transparent"
-              >
+              <ion-item v-for="p in topExpenseProviders" :key="p.id" class="transparent">
                 <ion-label>
                   <h3>{{ resolveProviderName(p.id) }}</h3>
                   <p>{{ p.count }} registros</p>
@@ -109,18 +101,12 @@
 
           <div class="list-content">
             <template v-if="topAccounts.length">
-              <ion-item
-                v-for="a in topAccounts"
-                :key="a.id"
-                class="transparent"
-              >
+              <ion-item v-for="a in topAccounts" :key="a.id" class="transparent">
                 <ion-label>
                   <h3>{{ resolveAccountName(a.id) }}</h3>
                 </ion-label>
 
-                <ion-note slot="end">{{
-                  formatCurrency({ value: a.total })
-                }}</ion-note>
+                <ion-note slot="end">{{ formatCurrency({ value: a.total }) }}</ion-note>
               </ion-item>
             </template>
 
@@ -215,9 +201,6 @@ import { format } from 'date-fns';
 import { es as esLocale } from 'date-fns/locale';
 import {
   IonCard,
-  IonCardHeader,
-  IonCardTitle,
-  IonCardSubtitle,
   IonCardContent,
   IonList,
   IonItem,
@@ -233,15 +216,8 @@ import {
 } from '@ionic/vue';
 import budgetController from '@/controllers/budgetController';
 import accountsController from '@/controllers/accountsController';
-import { closeOutline, codeSlashOutline } from 'ionicons/icons';
-
-function formatCurrency(params: { value: number }) {
-  const { value } = params;
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-  }).format(value || 0);
-}
+import { closeOutline } from 'ionicons/icons';
+import { formatCurrency } from '@/utils/currency';
 
 function formatTime(params: { timestamp: number }) {
   const { timestamp } = params;
@@ -256,15 +232,15 @@ const summary = computed(() => {
   const entries = budgetController.getEntries();
   const providers = budgetController.getProviders();
 
-  const ingresos = entries.filter(e => e.entryType === 'ingreso');
-  const egresos = entries.filter(e => e.entryType === 'egreso');
+  const ingresos = entries.filter((e) => e.entryType === 'ingreso');
+  const egresos = entries.filter((e) => e.entryType === 'egreso');
 
   const totalIncome = ingresos.reduce((s, e) => s + Number(e.amount || 0), 0);
   const totalExpense = egresos.reduce((s, e) => s + Number(e.amount || 0), 0);
 
   const allTimestamps = entries
-    .map(e => Number(e.createdAt))
-    .filter(t => t > 0)
+    .map((e) => Number(e.createdAt))
+    .filter((t) => t > 0)
     .sort((a, b) => a - b);
 
   return {
@@ -276,9 +252,7 @@ const summary = computed(() => {
     incomes: ingresos,
     expenses: egresos,
     providers,
-    startTime: allTimestamps.length
-      ? formatTime({ timestamp: allTimestamps[0] })
-      : '--:--',
+    startTime: allTimestamps.length ? formatTime({ timestamp: allTimestamps[0] }) : '--:--',
     endTime: allTimestamps.length
       ? formatTime({ timestamp: allTimestamps[allTimestamps.length - 1] })
       : '--:--',
@@ -307,7 +281,7 @@ const rawJson = computed(() => {
         providers: budgetController.getProviders(),
       },
       null,
-      2
+      2,
     );
   } catch (e) {
     return '{}';
@@ -332,19 +306,15 @@ function groupBySum(items: any[], key: string) {
       acc[k].count += 1;
       return acc;
     },
-    {} as Record<string, any>
+    {} as Record<string, any>,
   );
 }
 
 const topExpenseProviders = computed(() => {
   const expenses = summary.value.expenses || [];
   if (expenses.length === 0) return [];
-  const sample = expenses.find(e => e != null) || {};
-  const key = sample._providerName
-    ? '_providerName'
-    : sample.name
-      ? 'name'
-      : 'providerName';
+  const sample = expenses.find((e) => e != null) || {};
+  const key = sample._providerName ? '_providerName' : sample.name ? 'name' : 'providerName';
   const map = groupBySum(expenses, key);
   return Object.entries(map)
     .map(([id, v]) => ({ id, total: v.total, count: v.count }))
@@ -365,7 +335,7 @@ const largestIncome = computed(() => {
   if (!ins || ins.length === 0) return null;
   return ins.reduce(
     (p: any, c: any) => (Number(c.amount || 0) > Number(p.amount || 0) ? c : p),
-    ins[0]
+    ins[0],
   );
 });
 
@@ -374,7 +344,7 @@ const largestExpense = computed(() => {
   if (!eg || eg.length === 0) return null;
   return eg.reduce(
     (p: any, c: any) => (Number(c.amount || 0) > Number(p.amount || 0) ? c : p),
-    eg[0]
+    eg[0],
   );
 });
 
@@ -386,7 +356,7 @@ function resolveProviderName(id: string) {
 function resolveAccountName(id: string) {
   if (id === 'unknown' || id === 'null' || id == null) return 'Sin cuenta';
   const accounts = accountsController.getAccounts();
-  const acc = accounts.find(a => String(a.id) === String(id));
+  const acc = accounts.find((a) => String(a.id) === String(id));
   return acc ? acc.name : String(id);
 }
 

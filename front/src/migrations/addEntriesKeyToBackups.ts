@@ -100,14 +100,9 @@ export async function needsEntriesKeyCheck() {
         continue;
       }
       const data = entry && entry.data ? entry.data : null;
-      if (data && Array.isArray(data.ingresos) && !Array.isArray(data.entries))
-        return true;
+      if (data && Array.isArray(data.ingresos) && !Array.isArray(data.entries)) return true;
     } catch (e) {
-      console.error(
-        'needsEntriesKeyCheck: error checking entry',
-        entry && entry.id,
-        e
-      );
+      console.error('needsEntriesKeyCheck: error checking entry', entry && entry.id, e);
       // ignore and continue
     }
   }

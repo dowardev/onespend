@@ -106,11 +106,7 @@
       </ion-modal>
 
       <ion-modal :keep-contents-mounted="true">
-        <ion-datetime
-          id="datetime"
-          v-model="applySelectedDate"
-          presentation="date"
-        ></ion-datetime>
+        <ion-datetime id="datetime" v-model="applySelectedDate" presentation="date"></ion-datetime>
       </ion-modal>
       <!-- end modals -->
 
@@ -151,11 +147,7 @@
       <!-- end alerts -->
 
       <!-- toasts -->
-      <ion-toast
-        v-model:is-open="toast.open"
-        :message="toast.message"
-        duration="2000"
-      ></ion-toast>
+      <ion-toast v-model:is-open="toast.open" :message="toast.message" duration="2000"></ion-toast>
       <!-- end toasts -->
     </ion-content>
   </ion-page>
@@ -267,7 +259,7 @@ const pendingApplyPayload = ref<TemplateApplicationPayload | null>(null);
 
 // Functions
 function getSupplierNameById(id: IDBValidKey): string | null {
-  const s = suppliers.find(x => x.id === id);
+  const s = suppliers.find((x) => x.id === id);
   return s ? s.name : null;
 }
 
@@ -283,7 +275,7 @@ function removeDeletedSupplier(id: IDBValidKey) {
   }
 
   if (Array.isArray(tmpl.suppliersSnapshot)) {
-    const snapIdx = tmpl.suppliersSnapshot.findIndex(s => s.id === id);
+    const snapIdx = tmpl.suppliersSnapshot.findIndex((s) => s.id === id);
     if (snapIdx !== -1) {
       tmpl.suppliersSnapshot.splice(snapIdx, 1);
     }
@@ -310,11 +302,7 @@ async function editTemplate(params: { tmpl: TemplateSummary }) {
 
   await loadSuppliers();
 
-  if (
-    tmpl.suppliers &&
-    Array.isArray(tmpl.suppliers) &&
-    tmpl.suppliers.length
-  ) {
+  if (tmpl.suppliers && Array.isArray(tmpl.suppliers) && tmpl.suppliers.length) {
     form.supplierIds.length = 0;
     for (const id of tmpl.suppliers as IDBValidKey[]) {
       form.supplierIds.push(id);
@@ -322,14 +310,10 @@ async function editTemplate(params: { tmpl: TemplateSummary }) {
   } else {
     const names = parseProvidersFromDescription(tmpl.description);
     const matchedIds = (names || [])
-      .map((n: string) => suppliers.find(s => s.name === n))
+      .map((n: string) => suppliers.find((s) => s.name === n))
       .filter((x): x is Supplier => !!x)
       .map((s: Supplier) => s.id as IDBValidKey);
-    form.supplierIds.splice(
-      0,
-      form.supplierIds.length,
-      ...(matchedIds.length ? matchedIds : [])
-    );
+    form.supplierIds.splice(0, form.supplierIds.length, ...(matchedIds.length ? matchedIds : []));
   }
 
   form.name = tmpl.name || '';
@@ -357,8 +341,7 @@ function applyTemplate(params: { tmpl: TemplateSummary }) {
   try {
     toast.message = `Aplicando template: ${tmpl?.name || 'n/a'}`;
     toast.open = true;
-  } catch (e) {
-  }
+  } catch (e) {}
 
   if (!tmpl) return;
   applyTargetTemplate.value = tmpl;
@@ -385,12 +368,9 @@ async function confirmApply() {
   };
 
   try {
-    const result = await buildAndSaveTemplateApplication(
-      tmpl,
-      dateISO,
-      getSupplierNameById,
-      { conflictStrategy: 'ask' }
-    );
+    const result = await buildAndSaveTemplateApplication(tmpl, dateISO, getSupplierNameById, {
+      conflictStrategy: 'ask',
+    });
 
     if (result && result.conflict) {
       try {
@@ -411,8 +391,7 @@ async function confirmApply() {
     if (result && result.success) {
       try {
         localStorage.setItem(STORAGE_KEY, formatLocalDate({ d: dateISO }));
-      } catch (_e) {
-      }
+      } catch (_e) {}
 
       showApplyModal.value = false;
       applyTargetTemplate.value = null;
@@ -440,8 +419,7 @@ function onApplyConflictDismiss() {
   try {
     showApplyConflict.value = false;
     pendingApplyPayload.value = null;
-  } catch (_e) {
-  }
+  } catch (_e) {}
 }
 
 async function handleApplyConflictCombine() {
@@ -454,13 +432,12 @@ async function handleApplyConflictCombine() {
       applyTargetTemplate.value,
       dateISO,
       getSupplierNameById,
-      { conflictStrategy: 'combine' }
+      { conflictStrategy: 'combine' },
     );
     if (res && res.success) {
       try {
         localStorage.setItem(STORAGE_KEY, formatLocalDate({ d: dateISO }));
-      } catch (_e) {
-      }
+      } catch (_e) {}
 
       showApplyConflict.value = false;
       pendingApplyPayload.value = null;
@@ -496,16 +473,15 @@ async function handleApplyConflictOverwrite() {
       applyTargetTemplate.value,
       dateISO,
       getSupplierNameById,
-      { conflictStrategy: 'overwrite' }
+      { conflictStrategy: 'overwrite' },
     );
     if (res && res.success) {
       try {
         localStorage.setItem(
           STORAGE_KEY,
-          formatLocalDate({ d: String(payloadToSave.data?.selectedDate) })
+          formatLocalDate({ d: String(payloadToSave.data?.selectedDate) }),
         );
-      } catch (_e) {
-      }
+      } catch (_e) {}
 
       showApplyConflict.value = false;
       pendingApplyPayload.value = null;
@@ -619,12 +595,13 @@ const groupedTemplates = computed(() => {
 
   return Array.from(map.keys())
     .sort()
-    .map(letter => ({ letter, items: map.get(letter) || [] }));
+    .map((letter) => ({ letter, items: map.get(letter) || [] }));
 });
 // End Computed
 
 // Watch
-// End Watch</script>
+// End Watch
+</script>
 
 <style scoped>
 /* Hide action buttons by default on non-touch devices */

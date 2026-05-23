@@ -36,10 +36,7 @@
         </ion-col>
 
         <ion-col size="6">
-          <MonthChartComponent
-            :chart-data="chartData"
-            :chart-options="chartOptions"
-          />
+          <MonthChartComponent :chart-data="chartData" :chart-options="chartOptions" />
         </ion-col>
       </ion-row>
     </div>

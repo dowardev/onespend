@@ -8,9 +8,7 @@
           </ion-button>
         </ion-buttons>
 
-        <ion-title>{{
-          isEditMode ? 'Editar template' : 'Nuevo template'
-        }}</ion-title>
+        <ion-title>{{ isEditMode ? 'Editar template' : 'Nuevo template' }}</ion-title>
 
         <ion-buttons slot="end">
           <ion-button @click="submitTemplate">
@@ -36,30 +34,17 @@
           <ion-label>Proveedores</ion-label>
 
           <ion-buttons>
-            <ion-button
-              color="primary"
-              fill="clear"
-              :disabled="searchVisible"
-              @click="openSearch"
-            >
+            <ion-button color="primary" fill="clear" :disabled="searchVisible" @click="openSearch">
               <ion-icon :icon="searchOutline"></ion-icon>
             </ion-button>
           </ion-buttons>
         </ion-list-header>
 
-        <div
-          class="list-content templates__suppliers-content"
-          style="overflow-y: auto"
-        >
+        <div class="list-content templates__suppliers-content" style="overflow-y: auto">
           <template v-if="searchVisible">
             <ion-item
               lines="none"
-              style="
-                position: sticky;
-                top: 0;
-                background-color: white;
-                z-index: 1000;
-              "
+              style="position: sticky; top: 0; background-color: white; z-index: 1000"
             >
               <ion-searchbar
                 ref="supplierSearchbar"
@@ -172,7 +157,7 @@ onMounted(async () => {
 // populate form when editingTmpl changes
 watch(
   () => props.editingTmpl,
-  tmpl => {
+  (tmpl) => {
     if (!tmpl) {
       form.name = '';
       form.supplierIds.splice(0, form.supplierIds.length);
@@ -187,14 +172,13 @@ watch(
       // try to match names from description
       const names = parseProvidersFromDescription(tmpl.description);
       const matchedIds = (names || [])
-        .map((n: string) => suppliers.value.find(s => s.name === n))
+        .map((n: string) => suppliers.value.find((s) => s.name === n))
         .filter((x): x is SupplierOption => !!x)
-        .map(s => s.id);
-      if (matchedIds.length)
-        form.supplierIds.splice(0, form.supplierIds.length, ...matchedIds);
+        .map((s) => s.id);
+      if (matchedIds.length) form.supplierIds.splice(0, form.supplierIds.length, ...matchedIds);
     }
   },
-  { immediate: true }
+  { immediate: true },
 );
 // end watch
 
@@ -202,9 +186,7 @@ watch(
 const filteredSuppliers = computed(() => {
   const q = (supplierQuery.value || '').toLowerCase().trim();
   if (!q) return suppliers.value.slice();
-  return suppliers.value.filter(
-    s => s && s.name && String(s.name).toLowerCase().includes(q)
-  );
+  return suppliers.value.filter((s) => s && s.name && String(s.name).toLowerCase().includes(q));
 });
 // end computed
 
@@ -213,7 +195,9 @@ async function loadSuppliers() {
   try {
     const list = await suppliersController.listSuppliers();
     // Ensure we only keep valid supplier objects
-    suppliers.value = ((list as SupplierOption[]) || []).filter(s => s && (s as any).id != null && (s as any).name);
+    suppliers.value = ((list as SupplierOption[]) || []).filter(
+      (s) => s && (s as any).id != null && (s as any).name,
+    );
   } catch (_e) {
     console.error('AddTemplateComponent.loadSuppliers error', _e);
   }
@@ -237,9 +221,16 @@ function onSearchCancel() {
   searchVisible.value = false;
 }
 
-function toggleSupplierSelection(params: { supplier?: SupplierOption } | SupplierOption | null | undefined) {
+function toggleSupplierSelection(
+  params: { supplier?: SupplierOption } | SupplierOption | null | undefined,
+) {
   // Accept either an object { supplier } or the supplier directly to be defensive
-  const supplier = params && (typeof params === 'object' && 'supplier' in params ? (params as any).supplier : params) as SupplierOption | undefined | null;
+  const supplier =
+    params &&
+    ((typeof params === 'object' && 'supplier' in params ? (params as any).supplier : params) as
+      | SupplierOption
+      | undefined
+      | null);
   if (props.dayClosed) return;
   if (!supplier) return; // defensive guard
 
@@ -252,8 +243,9 @@ function toggleSupplierSelection(params: { supplier?: SupplierOption } | Supplie
 
 function getSupplierNameById(param: { id: IDBValidKey } | IDBValidKey): string | null {
   // Allow calling with either the id or an object { id }
-  const id = param && typeof param === 'object' && 'id' in param ? (param as any).id : (param as any);
-  const s = suppliers.value.find(x => x.id === id);
+  const id =
+    param && typeof param === 'object' && 'id' in param ? (param as any).id : (param as any);
+  const s = suppliers.value.find((x) => x.id === id);
   return s ? s.name : null;
 }
 
@@ -271,13 +263,9 @@ async function submitTemplate() {
     const exists = (list || []).some((t: TemplateSummary) => {
       const tName = t && t.name ? String(t.name).trim().toLowerCase() : '';
       const editingId =
-        props.editingTmpl && props.editingTmpl.id
-          ? String(props.editingTmpl.id)
-          : '';
+        props.editingTmpl && props.editingTmpl.id ? String(props.editingTmpl.id) : '';
       const compareId = t.id == null ? '' : String(t.id);
-      return (
-        tName && tName === newName.toLowerCase() && compareId !== editingId
-      );
+      return tName && tName === newName.toLowerCase() && compareId !== editingId;
     });
 
     if (exists) {
@@ -292,28 +280,26 @@ async function submitTemplate() {
     .map((id: IDBValidKey) => getSupplierNameById({ id }))
     .filter((n: unknown): n is string => !!(typeof n === 'string' && n.trim()));
 
-  const description = selectedNames.length
-    ? `Proveedores: ${selectedNames.join(', ')}`
-    : undefined;
+  const description = selectedNames.length ? `Proveedores: ${selectedNames.join(', ')}` : undefined;
 
   interface PayloadTemplate {
-  name: string;
-  description?: string;
-  suppliers: IDBValidKey[];
-  suppliersSnapshot: Array<{ id: IDBValidKey; name: string }>;
-  id?: string | number | null;
-  sync_id?: string;
-}
+    name: string;
+    description?: string;
+    suppliers: IDBValidKey[];
+    suppliersSnapshot: Array<{ id: IDBValidKey; name: string }>;
+    id?: string | number | null;
+    sync_id?: string;
+  }
 
-try {
+  try {
     const payloadTemplate: PayloadTemplate = {
       name: newName,
       description,
       suppliers: form.supplierIds.slice(),
-        suppliersSnapshot: form.supplierIds.map((id: IDBValidKey) => ({
-          id,
-          name: getSupplierNameById({ id }) || '',
-        })),
+      suppliersSnapshot: form.supplierIds.map((id: IDBValidKey) => ({
+        id,
+        name: getSupplierNameById({ id }) || '',
+      })),
     };
 
     if (isEditMode.value && props.editingTmpl && props.editingTmpl.id) {

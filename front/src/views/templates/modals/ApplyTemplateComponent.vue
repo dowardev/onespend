@@ -26,11 +26,7 @@
           </ion-card-header>
 
           <ion-card-content>
-            <ion-item
-              class="transparent"
-              button
-              @click="openDatePopover({ ev: $event })"
-            >
+            <ion-item class="transparent" button @click="openDatePopover({ ev: $event })">
               <ion-label>Fecha</ion-label>
               <ion-label slot="end">{{ formattedApplyDate }}</ion-label>
             </ion-item>
@@ -43,10 +39,7 @@
               <div class="content">
                 <!-- Si el template tiene IDs -->
                 <template
-                  v-if="
-                    applyTargetTemplate.suppliers &&
-                    applyTargetTemplate.suppliers.length
-                  "
+                  v-if="applyTargetTemplate.suppliers && applyTargetTemplate.suppliers.length"
                 >
                   <ion-item
                     v-for="(id, idx) in applyTargetTemplate.suppliers"
@@ -77,7 +70,7 @@
                 <template v-else>
                   <ion-item
                     v-for="(name, idx) in parseProvidersFromDescription(
-                      applyTargetTemplate?.description
+                      applyTargetTemplate?.description,
                     )"
                     :key="idx"
                     lines="none"
@@ -199,8 +192,7 @@ function closeDatePopover() {
 }
 
 function onDateChange(ev: CustomEvent) {
-  const val =
-    (ev.detail && ev.detail.value) || (ev.target as HTMLInputElement)?.value || '';
+  const val = (ev.detail && ev.detail.value) || (ev.target as HTMLInputElement)?.value || '';
   if (!val) return;
   selectedDate.value = val;
   // Emit update for v-model style binding
@@ -219,9 +211,7 @@ function supplierDisplayName(params: { id: IDBValidKey }): string {
   if (s && s.name) return s.name;
 
   const snapshotList = props.applyTargetTemplate?.suppliersSnapshot || [];
-  const snap = (snapshotList as { id: IDBValidKey; name?: string }[]).find(
-    ss => ss.id === id
-  );
+  const snap = (snapshotList as { id: IDBValidKey; name?: string }[]).find((ss) => ss.id === id);
   if (snap && snap.name) return snap.name || String(id);
 
   return String(id);

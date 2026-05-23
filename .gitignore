@@ -39,3 +39,9 @@ coverage/
 build/
 *.exe
 *.dmg
+
+# OpenCode (agente CLI)
+.opencode/
+
+# Oxfmtrc
+.oxfmtrc.json

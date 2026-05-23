@@ -41,15 +41,18 @@ class SuppliersController {
 
   async addSupplier(params: { s: Omit<Supplier, 'id' | 'createdAt' | 'updatedAt'> }) {
     const { s } = params;
-    console.log('%c[suppliersController] 🔵 addSupplier INICIADO', 'color: blue; font-size: 14px; font-weight: bold');
+    console.log(
+      '%c[suppliersController] 🔵 addSupplier INICIADO',
+      'color: blue; font-size: 14px; font-weight: bold',
+    );
     console.log('%c[suppliersController] Datos recibidos:', 'color: blue', s);
-    
+
     const store = this.getStore();
     store.loading = true;
     store.error = null;
     try {
       console.log('[suppliersController] addSupplier called with:', JSON.stringify(s, null, 2));
-      
+
       const ctrl = this.getController();
       const now = Date.now();
 
@@ -59,16 +62,18 @@ class SuppliersController {
           return structuredClone ? structuredClone(obj) : JSON.parse(JSON.stringify(obj));
         } catch (e) {
           // Fallback to manual deep clone for problematic objects
-          return JSON.parse(JSON.stringify(obj, (key, value) => {
-            // Handle circular references and non-serializable values
-            if (typeof value === 'function' || value instanceof Error) {
-              return undefined;
-            }
-            return value;
-          }));
+          return JSON.parse(
+            JSON.stringify(obj, (key, value) => {
+              // Handle circular references and non-serializable values
+              if (typeof value === 'function' || value instanceof Error) {
+                return undefined;
+              }
+              return value;
+            }),
+          );
         }
       };
-      
+
       const clean = safeClone(s) as Omit<Supplier, 'id' | 'createdAt' | 'updatedAt'>;
 
       const entry: Supplier = {
@@ -78,22 +83,28 @@ class SuppliersController {
       };
 
       console.log('[suppliersController] Entry before sync:', JSON.stringify(entry, null, 2));
-      console.log('[suppliersController] Products in entry:', entry.products ? entry.products.length : 0);
+      console.log(
+        '[suppliersController] Products in entry:',
+        entry.products ? entry.products.length : 0,
+      );
       if (entry.products && entry.products.length > 0) {
-        console.log('[suppliersController] First product:', JSON.stringify(entry.products[0], null, 2));
+        console.log(
+          '[suppliersController] First product:',
+          JSON.stringify(entry.products[0], null, 2),
+        );
       } else {
         console.log('[suppliersController] ⚠️ NO hay productos en entry');
       }
 
       const { syncProvider, syncSupplierProduct } = useSync();
       console.log('[suppliersController] useSync imported');
-      
+
       if (!entry.sync_id) {
         entry.sync_id = generateSyncId();
       }
-      
+
       console.log('[suppliersController] 🔵 Sincronizando proveedor:', entry.sync_id);
-      
+
       // Sincronizar productos PRIMERO
       if (entry.products && entry.products.length > 0) {
         console.log('[suppliersController] 🔵 Sincronizando', entry.products.length, 'productos');
@@ -107,7 +118,7 @@ class SuppliersController {
               ...product,
               sync_id: tempProductSyncId,
             },
-            operation: 'create'
+            operation: 'create',
           });
           console.log('[suppliersController] ✅ syncSupplierProduct completado');
           return {
@@ -119,7 +130,7 @@ class SuppliersController {
       } else {
         console.log('[suppliersController] ⚠️ NO hay productos para sincronizar');
       }
-      
+
       // Luego sincronizar el proveedor
       console.log('[suppliersController] 🔵 LLAMANDO syncProvider');
       // Ensure provider shape expected by useSync
@@ -136,13 +147,22 @@ class SuppliersController {
       store.suppliers = [result, ...store.suppliers];
 
       console.log('[suppliersController] Esperando sincronizacion...');
-      console.log('%c[suppliersController] 🔄 LLAMANDO syncService.processQueue()', 'color: orange; font-size: 14px');
+      console.log(
+        '%c[suppliersController] 🔄 LLAMANDO syncService.processQueue()',
+        'color: orange; font-size: 14px',
+      );
       await syncService.processQueue();
-      console.log('%c[suppliersController] ✅ Sincronizacion completada', 'color: green; font-size: 14px');
-      
+      console.log(
+        '%c[suppliersController] ✅ Sincronizacion completada',
+        'color: green; font-size: 14px',
+      );
+
       console.log('[suppliersController] Recargando proveedores...');
       await this.listSuppliers();
-      console.log('%c[suppliersController] 🔵 addSupplier FINALIZADO', 'color: blue; font-size: 14px; font-weight: bold');
+      console.log(
+        '%c[suppliersController] 🔵 addSupplier FINALIZADO',
+        'color: blue; font-size: 14px; font-weight: bold',
+      );
 
       return result;
     } catch (e) {
@@ -169,16 +189,18 @@ class SuppliersController {
           return structuredClone ? structuredClone(obj) : JSON.parse(JSON.stringify(obj));
         } catch (e) {
           // Fallback to manual deep clone for problematic objects
-          return JSON.parse(JSON.stringify(obj, (key, value) => {
-            // Handle circular references and non-serializable values
-            if (typeof value === 'function' || value instanceof Error) {
-              return undefined;
-            }
-            return value;
-          }));
+          return JSON.parse(
+            JSON.stringify(obj, (key, value) => {
+              // Handle circular references and non-serializable values
+              if (typeof value === 'function' || value instanceof Error) {
+                return undefined;
+              }
+              return value;
+            }),
+          );
         }
       };
-      
+
       const clean = safeClone(s) as Supplier;
 
       const entry: Supplier = {
@@ -202,7 +224,7 @@ class SuppliersController {
               ...product,
               sync_id: tempProductSyncId,
             },
-            operation: 'create'
+            operation: 'create',
           });
           return {
             ...product,
@@ -213,7 +235,7 @@ class SuppliersController {
 
       await ctrl.putEntry({ entry });
 
-      store.suppliers = store.suppliers.map(s => s.id === entry.id ? entry : s);
+      store.suppliers = store.suppliers.map((s) => (s.id === entry.id ? entry : s));
 
       return entry;
     } catch (e) {
@@ -232,10 +254,10 @@ class SuppliersController {
     try {
       const ctrl = this.getController();
       const allSuppliers = store.suppliers;
-      const supplier = allSuppliers.find(s => s.id === id);
+      const supplier = allSuppliers.find((s) => s.id === id);
       await ctrl.deleteBackup({ id });
 
-      store.suppliers = allSuppliers.filter(s => s.id !== id);
+      store.suppliers = allSuppliers.filter((s) => s.id !== id);
 
       if (supplier) {
         const { syncProvider } = useSync();
@@ -258,31 +280,39 @@ class SuppliersController {
       const ctrl = this.getController();
       const all = (await ctrl.listBackups()) as Supplier[];
 
-      console.log('suppliersController.listSuppliers - IndexedDB suppliers count:', all?.length || 0);
+      console.log(
+        'suppliersController.listSuppliers - IndexedDB suppliers count:',
+        all?.length || 0,
+      );
 
       // If no suppliers in IndexedDB, check authentication before doing full sync
       if (!all || all.length === 0) {
-        console.log('suppliersController.listSuppliers - No suppliers in IndexedDB, checking auth...');
-        
+        console.log(
+          'suppliersController.listSuppliers - No suppliers in IndexedDB, checking auth...',
+        );
+
         // Check if user has authentication token before attempting sync
         const { hasToken } = await import('@/services/tokenStorage');
-        
+
         if (!hasToken()) {
           console.log('suppliersController.listSuppliers - No authentication token, skipping sync');
           store.suppliers = [];
           return [];
         }
-        
+
         console.log('suppliersController.listSuppliers - Token found, fetching from backend...');
         try {
           const { syncService } = await import('@/services/syncService');
           console.log('suppliersController.listSuppliers - Calling fullSyncAndSave...');
           await syncService.fullSyncAndSave();
           console.log('suppliersController.listSuppliers - fullSyncAndSave completed');
-          
+
           // Retry reading from IndexedDB after sync
           const allAfterSync = (await ctrl.listBackups()) as Supplier[];
-          console.log('suppliersController.listSuppliers - Suppliers after sync:', allAfterSync?.length || 0);
+          console.log(
+            'suppliersController.listSuppliers - Suppliers after sync:',
+            allAfterSync?.length || 0,
+          );
           store.suppliers = allAfterSync;
           return allAfterSync;
         } catch (syncError) {
@@ -293,23 +323,26 @@ class SuppliersController {
         }
       }
 
-      const sorted = (all || [])
-        .slice()
-        .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      const sorted = (all || []).slice().sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 
-      console.log('suppliersController.listSuppliers - Suppliers loaded:', sorted.map((s: Supplier) => ({
-        id: s.id,
-        sync_id: s.sync_id,
-        serverId: s.serverId,
-        name: s.name,
-        productsCount: s.products?.length || 0,
-        firstProduct: s.products?.[0] ? {
-          id: s.products[0].id,
-          sync_id: s.products[0].sync_id,
-          name: s.products[0].name,
-          price: s.products[0].price
-        } : null
-      })));
+      console.log(
+        'suppliersController.listSuppliers - Suppliers loaded:',
+        sorted.map((s: Supplier) => ({
+          id: s.id,
+          sync_id: s.sync_id,
+          serverId: s.serverId,
+          name: s.name,
+          productsCount: s.products?.length || 0,
+          firstProduct: s.products?.[0]
+            ? {
+                id: s.products[0].id,
+                sync_id: s.products[0].sync_id,
+                name: s.products[0].name,
+                price: s.products[0].price,
+              }
+            : null,
+        })),
+      );
 
       store.suppliers = sorted;
       return sorted;
@@ -326,7 +359,12 @@ class SuppliersController {
     const store = this.getStore();
     // If the store exposes a ref, return its inner value (array); otherwise return as-is
     try {
-      if (store && store.suppliers && typeof store.suppliers === 'object' && 'value' in store.suppliers) {
+      if (
+        store &&
+        store.suppliers &&
+        typeof store.suppliers === 'object' &&
+        'value' in store.suppliers
+      ) {
         return (store.suppliers as any).value;
       }
     } catch (_e) {
@@ -343,8 +381,6 @@ class SuppliersController {
   getError() {
     return null;
   }
-
-
 }
 
 const suppliersController = new SuppliersController();

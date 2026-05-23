@@ -40,12 +40,7 @@ export function buildPayloadFromTemplate(params: {
 }) {
   const { tmpl, dateISO, resolveSupplierNameById } = params;
   let providerNames: string[] = [];
-  if (
-    tmpl &&
-    tmpl.suppliers &&
-    Array.isArray(tmpl.suppliers) &&
-    tmpl.suppliers.length
-  ) {
+  if (tmpl && tmpl.suppliers && Array.isArray(tmpl.suppliers) && tmpl.suppliers.length) {
     const resolved: string[] = [];
     for (const id of tmpl.suppliers as Array<string | number>) {
       const n = resolveSupplierNameById ? resolveSupplierNameById(id) : null;
@@ -64,19 +59,16 @@ export function buildPayloadFromTemplate(params: {
     providerNames = resolved;
   } else {
     // Fallback: try suppliersSnapshot first, then parse description
-    if (
-      Array.isArray(tmpl?.suppliersSnapshot) &&
-      tmpl?.suppliersSnapshot.length
-    ) {
-        providerNames = tmpl.suppliersSnapshot
-          .map((s: { id: IDBValidKey; name?: string }) => s.name || '')
-          .filter(Boolean);
+    if (Array.isArray(tmpl?.suppliersSnapshot) && tmpl?.suppliersSnapshot.length) {
+      providerNames = tmpl.suppliersSnapshot
+        .map((s: { id: IDBValidKey; name?: string }) => s.name || '')
+        .filter(Boolean);
     } else {
       providerNames = parseProvidersFromDescription({ desc: tmpl?.description });
     }
   }
 
-  const proveedores = (providerNames || []).map(name => ({
+  const proveedores = (providerNames || []).map((name) => ({
     id: Date.now() + Math.random(),
     name,
     date: formatLocalDate({ d: dateISO }),
@@ -95,10 +87,7 @@ export function buildPayloadFromTemplate(params: {
     selectedDate: formatLocalDate({ d: dateISO }),
     totals: {
       totalIngresos: 0,
-      totalProviders: proveedores.reduce(
-        (s, p) => s + Number(p.estimated || 0),
-        0
-      ),
+      totalProviders: proveedores.reduce((s, p) => s + Number(p.estimated || 0), 0),
       totalVisitedProviders: 0,
     },
   };
@@ -106,14 +95,15 @@ export function buildPayloadFromTemplate(params: {
   return payload;
 }
 
-export function hasBackupMeaningfulContent(params: { data: Record<string, unknown> | null }): boolean {
+export function hasBackupMeaningfulContent(params: {
+  data: Record<string, unknown> | null;
+}): boolean {
   const { data } = params;
   try {
     if (!data) return false;
-    if (Array.isArray(data.proveedores) && data.proveedores.length > 0)
-      return true;
+    if (Array.isArray(data.proveedores) && data.proveedores.length > 0) return true;
     if (data.totals) {
-      const t = data.totals as Record<string, number> || {};
+      const t = (data.totals as Record<string, number>) || {};
       if ((Number(t.totalProviders) || 0) > 0) return true;
       if ((Number(t.totalVisitedProviders) || 0) > 0) return true;
     }
@@ -157,10 +147,12 @@ export async function buildAndSaveTemplateApplication(params: {
   }
 
   // Check existing
-  const existing = await backupController.getLatestBackupForDate(
-    String(dateISO)
-  );
-  if (existing && existing.data && hasBackupMeaningfulContent({ data: existing.data as Record<string, unknown> })) {
+  const existing = await backupController.getLatestBackupForDate(String(dateISO));
+  if (
+    existing &&
+    existing.data &&
+    hasBackupMeaningfulContent({ data: existing.data as Record<string, unknown> })
+  ) {
     if (strategy === 'ask') {
       return { conflict: true, payloadToSave, existing };
     }
@@ -185,9 +177,7 @@ export async function buildAndSaveTemplateApplication(params: {
     if (strategy === 'overwrite') {
       const existingData = existing.data as TemplateApplicationData | null;
       const payloadData = payloadToSave.data as TemplateApplicationData;
-      const existingIngresos = Array.isArray(existingData?.ingresos)
-        ? existingData.ingresos
-        : [];
+      const existingIngresos = Array.isArray(existingData?.ingresos) ? existingData.ingresos : [];
       const finalData: TemplateApplicationData = Object.assign({}, payloadData, {
         ingresos: existingIngresos,
         entries: existingIngresos,
