@@ -379,7 +379,7 @@ class BudgetController {
     }>;
     items?: Array<{ amount: number; accountId: string | number | null }>;
     date?: string;
-  }): void {
+  }): Provider | undefined {
     const {
       name = '',
       estimated = 0,
