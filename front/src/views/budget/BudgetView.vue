@@ -24,14 +24,6 @@
             <ion-col size="8">
               <section class="ion-padding-top">
                 <ion-item lines="none" class="transparent">
-                  <ion-buttons>
-                    <ion-segment v-model="activeView" scrollable>
-                      <ion-segment-button value="inicio">Inicio</ion-segment-button>
-
-                      <ion-segment-button value="proveedores">Proveedores</ion-segment-button>
-                    </ion-segment>
-                  </ion-buttons>
-
                   <ion-buttons slot="end">
                     <ion-button title="Retroceder" @click="goBack">
                       <ion-icon :icon="chevronBackOutline"></ion-icon>
@@ -52,12 +44,8 @@
               </section>
 
               <section>
-                <template v-if="activeView === 'inicio' && isDataLoaded">
+                <template v-if="isDataLoaded">
                   <InicioViewComponent />
-                </template>
-
-                <template v-if="activeView === 'proveedores'">
-                  <ProvidersComponent />
                 </template>
               </section>
             </ion-col>
@@ -112,7 +100,7 @@
       <ion-alert
         :is-open="showClearConfirm"
         header="Vaciar día"
-        message="¿Deseas eliminar todos los proveedores e ingresos de la fecha seleccionada?"
+        message="¿Deseas eliminar todos los registros de la fecha seleccionada?"
         :buttons="[
           {
             text: 'Cancelar',
@@ -131,8 +119,6 @@
 <script lang="ts" setup>
 // imports
 import {
-  IonSegment,
-  IonSegmentButton,
   IonButton,
   IonButtons,
   IonMenuButton,
@@ -175,7 +161,6 @@ import pendingAttachmentsService from '@/services/pendingAttachmentsService';
 
 // components
 import InicioViewComponent from './entries/InicioViewComponent.vue';
-import ProvidersComponent from './suppliers/ProvidersComponent.vue';
 // end components
 
 // interface and types imports
@@ -185,7 +170,6 @@ import ProvidersComponent from './suppliers/ProvidersComponent.vue';
 // end main
 
 // vars and const
-const activeView = ref<'inicio' | 'proveedores'>('inicio');
 const showDatePicker = ref(false);
 const showMoreOptions = ref(false);
 const showClearConfirm = ref(false);

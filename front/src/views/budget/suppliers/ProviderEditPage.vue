@@ -1,32 +1,13 @@
 <template>
   <ion-page>
-    <ion-header class="ion-no-border" mode="ios">
-      <ion-toolbar>
-        <ion-buttons>
-          <ion-button @click="handleBack">
-            <ion-icon :icon="arrowBackOutline"></ion-icon>
-          </ion-button>
-        </ion-buttons>
-
-        <ion-title>{{ pageTitle }}</ion-title>
-
-        <ion-buttons slot="end">
-          <ion-button
-            :disabled="
-              !isFormValid ||
-              (!isEntryMode && hasProductsWithQuantity && productsCoverage.falta > 0)
-            "
-            @click="handleSave"
-          >
-            <ion-icon :icon="saveOutline"></ion-icon>
-          </ion-button>
-
-          <ion-button @click="openHeaderPopover({ e: $event })">
-            <ion-icon :icon="ellipsisVerticalOutline"></ion-icon>
-          </ion-button>
-        </ion-buttons>
-      </ion-toolbar>
-    </ion-header>
+    <EditPageHeader
+      :title="pageTitle"
+      :is-save-disabled="!isFormValid || (!isEntryMode && hasProductsWithQuantity && productsCoverage.falta > 0)"
+      show-options-button
+      @back="handleBack"
+      @save="handleSave"
+      @options="openHeaderPopover({ e: $event })"
+    />
     <!-- end header -->
 
     <!-- content -->
@@ -54,9 +35,7 @@
                   @click="openReassignFromMenu({ e: $event })"
                 >
                   <ion-label>Fecha</ion-label>
-                  <ion-label slot="end">{{
-                    formatShortDate({ isoDate: reassignDateISO })
-                  }}</ion-label>
+                  <ion-label slot="end">{{ toShortDate({ isoDate: reassignPicker.dateISO.value }) }}</ion-label>
                 </ion-item>
               </ion-card>
             </ion-list>
@@ -233,67 +212,26 @@
             <!-- Items by account section -->
             <template v-if="selectedProvider && !isEntryMode">
               <div class="ion-padding-start ion-padding-end ion-margin-top">
-                <ion-list class="transparent">
-                  <ion-list-header>
-                    <ion-label>
-                      Distribución por Cuenta
-                      <p class="ion-note" style="margin-top: 4px; opacity: 0.7">
-                        Distribuye el monto entre las cuentas
-                      </p>
-                    </ion-label>
-
-                    <ion-button @click="handleAddItem">
-                      <ion-icon :icon="addOutline"></ion-icon>
-                    </ion-button>
-                  </ion-list-header>
-
-                  <template v-for="(item, index) in reversedItems" :key="index">
-                    <ion-card class="shadow1">
-                      <div v-if="items.length > 1" style="display: flex; justify-content: flex-end">
-                        <ion-button
-                          fill="clear"
-                          size="small"
-                          @click="removeItem({ index: items.length - 1 - index })"
-                        >
-                          <ion-icon :icon="closeOutline" color="danger"></ion-icon>
-                        </ion-button>
-                      </div>
-
-                      <ion-item
-                        lines="full"
-                        class="transparent"
-                        button
-                        @click="openAccountModal({ index: items.length - 1 - index })"
-                      >
-                        <ion-label>
-                          Cuenta
-                          <p>
-                            {{ getAccountName({ accountId: item.accountId }) || 'Seleccionar cuenta' }}
-                          </p>
-                        </ion-label>
-                      </ion-item>
-
-                      <ion-item lines="full" class="transparent">
-                        <ion-input
-                          v-model="item.amount"
-                          label="Cantidad"
-                          label-placement="floating"
-                          type="number"
-                          placeholder="0"
-                          :class="{
-                            'ion-invalid': isAmountInvalid({
-                              index: items.length - 1 - index,
-                            }),
-                            'ion-touched': isAmountTouched({
-                              index: items.length - 1 - index,
-                            }),
-                          }"
-                          :error-text="getAmountError({ index: items.length - 1 - index })"
-                        ></ion-input>
-                      </ion-item>
-                    </ion-card>
+                <AccountDistributionSection
+                  :items="items"
+                  header-label="Distribución por Cuenta"
+                  header-subtitle="Distribuye el monto entre las cuentas"
+                  :can-add-more="true"
+                  :is-day-closed="false"
+                  reverse-order
+                  @add-item="handleAddItem"
+                  @remove-item="removeItem"
+                  @update-item-amount="updateItemAmount"
+                >
+                  <template #accountSelect="{ index }">
+                    <ion-item lines="full" class="transparent" button @click="openAccountModal({ index })">
+                      <ion-label>
+                        Cuenta
+                        <p>{{ getAccountName({ accountId: items[index].accountId }) || 'Seleccionar cuenta' }}</p>
+                      </ion-label>
+                    </ion-item>
                   </template>
-                </ion-list>
+                </AccountDistributionSection>
               </div>
             </template>
           </ion-col>
@@ -301,27 +239,17 @@
 
         <ion-row class="ion-justify-content-center">
           <ion-col size="4">
-            <ion-list class="ion-padding-start ion-padding-end">
-              <ion-list-header>
-                <ion-label> Detalles </ion-label>
-              </ion-list-header>
-
-              <ion-card class="shadow1">
-                <ion-item class="transparent" lines="full" button @click="handleOpenAttachments">
-                  <ion-label>Adjuntos</ion-label>
-                </ion-item>
-                <ion-item class="transparent" lines="none">
-                  <ion-textarea
-                    v-model="providerNotes"
-                    label="Notas"
-                    label-placement="stacked"
-                    placeholder="Agregar notas..."
-                    :auto-grow="true"
-                    :rows="3"
-                  ></ion-textarea>
-                </ion-item>
-              </ion-card>
-            </ion-list>
+            <DetailsSection
+              :notes="providerNotes"
+              :show-attachments-modal="showAttachmentsModal"
+              :pending-attachments="pendingAttachments"
+              :existing-attachments="existingAttachments"
+              list-class="ion-padding-start ion-padding-end"
+              @update:notes="providerNotes = $event"
+              @open-attachments="handleOpenAttachments"
+              @dismiss-attachments="closeAttachmentsModal"
+              @save-attachments="onAttachmentsSave"
+            />
           </ion-col>
         </ion-row>
       </ion-grid>
@@ -385,7 +313,7 @@
           </ion-buttons>
           <ion-title>Seleccionar Cuenta</ion-title>
           <ion-buttons slot="end">
-            <ion-button @click="openQuickAccountAlert">
+            <ion-button @click="quickAccount.openQuickAccountAlert({})">
               <ion-icon :icon="addOutline"></ion-icon>
             </ion-button>
           </ion-buttons>
@@ -440,35 +368,15 @@
     </ion-modal>
 
     <!-- popovers -->
-    <ion-popover
-      :is-open="popoverReassign.open"
-      :event="popoverReassign.event"
-      @did-dismiss="closeReassignPopover"
-    >
-      <ion-content class="ion-padding">
-        <ion-datetime
-          v-if="showPicker"
-          :key="tempPickerDateISO"
-          v-model="tempPickerDateISO"
-          presentation="date"
-          style="background: transparent; width: 100%"
-        ></ion-datetime>
-
-        <ion-item>
-          <ion-button slot="start" fill="clear" size="small" @click="closeReassignPopover"
-            >Cancelar</ion-button
-          >
-          <ion-button
-            slot="end"
-            size="small"
-            color="primary"
-            :disabled="!canApplyReassign"
-            @click="applyPopoverReassign"
-            >Aplicar</ion-button
-          >
-        </ion-item>
-      </ion-content>
-    </ion-popover>
+    <DatePickerPopover
+      :popover-state="reassignPicker.popoverState"
+      :show-picker="reassignPicker.showPicker.value"
+      :temp-picker-date-iso="reassignPicker.tempPickerDateISO.value"
+      :can-apply="reassignPicker.canApply.value"
+      @did-dismiss="reassignPicker.closePopover()"
+      @cancel="reassignPicker.closePopover()"
+      @apply="applyReassignDate"
+    />
 
     <ion-popover
       :is-open="popoverMenu.open"
@@ -487,21 +395,19 @@
     <!-- end popovers -->
 
     <!-- alerts -->
-    <ion-alert
-      :is-open="showDeleteAlert"
-      header="Confirmar eliminación"
+    <DeleteConfirmAlert
+      :is-open="deleteConfirm.showDeleteAlert.value"
       message="¿Estás seguro de que deseas eliminar este proveedor?"
-      :buttons="deleteAlertButtons"
-      @did-dismiss="showDeleteAlert = false"
-    ></ion-alert>
+      :buttons="deleteConfirm.deleteAlertButtons"
+      @did-dismiss="deleteConfirm.showDeleteAlert.value = false"
+    />
 
-    <ion-alert
-      :is-open="showQuickAccountAlert"
-      header="Nueva Cuenta"
-      :inputs="quickAccountInputs"
-      :buttons="quickAccountButtons"
-      @did-dismiss="showQuickAccountAlert = false"
-    ></ion-alert>
+    <QuickAccountAlert
+      :is-open="quickAccount.showQuickAccountAlert.value"
+      :inputs="quickAccount.quickAccountInputs"
+      :buttons="quickAccount.quickAccountButtons"
+      @did-dismiss="quickAccount.showQuickAccountAlert.value = false"
+    />
 
     <ion-alert
       :is-open="showCoverageAlert"
@@ -521,14 +427,7 @@
     ></ion-toast>
     <!-- end alerts -->
 
-    <!-- components -->
-    <AttachmentsModal
-      :is-open="showAttachmentsModal"
-      :initial-files="pendingAttachments"
-      :existing-attachments="existingAttachments"
-      @dismiss="closeAttachmentsModal"
-      @save="onAttachmentsSave"
-    />
+    <!-- attachments modal is inside DetailsSection -->
     <!-- end components -->
   </ion-page>
 </template>
@@ -552,28 +451,28 @@ import {
   IonInput,
   IonCard,
   IonPopover,
-  IonDatetime,
   IonAlert,
   IonModal,
   IonGrid,
   IonRow,
   IonCol,
   IonToast,
-  IonTextarea,
 } from '@ionic/vue';
 import {
-  arrowBackOutline,
   closeOutline,
   trashOutline,
   addOutline,
   warningOutline,
-  saveOutline,
-  ellipsisVerticalOutline,
   checkmarkCircleOutline,
 } from 'ionicons/icons';
 import { ref, computed, reactive, nextTick, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { format } from 'date-fns';
+import { parseDateValue, toShortDate } from '@/utils/dateHelpers';
+import { isNumericValue } from '@/utils/amountValidation';
+import { useQuickAccount } from '@/composables/useQuickAccount';
+import { useDeleteConfirm } from '@/composables/useDeleteConfirm';
+import { useDatePicker } from '@/composables/useDatePicker';
 import accountsController from '@/controllers/accountsController';
 import { type Supplier, type Product } from '@/controllers/suppliersController';
 import { type Account } from '@/controllers/accountsController';
@@ -593,7 +492,12 @@ import { useAttachments } from '@/composables/useAttachments';
 // end composables
 
 // components
-import AttachmentsModal from '@/views/budget/entries/componentes/AttachmentsModal.vue';
+import EditPageHeader from '@/views/budget/components/EditPageHeader.vue';
+import AccountDistributionSection from '@/views/budget/components/AccountDistributionSection.vue';
+import DetailsSection from '@/views/budget/components/DetailsSection.vue';
+import DatePickerPopover from '@/views/budget/components/DatePickerPopover.vue';
+import DeleteConfirmAlert from '@/views/budget/components/DeleteConfirmAlert.vue';
+import QuickAccountAlert from '@/views/budget/components/QuickAccountAlert.vue';
 // end components
 
 // interface and types imports
@@ -683,12 +587,7 @@ const items = ref<
     accountId: string | number | { id: string | number } | null;
   }>
 >([{ amount: '', accountId: null }]);
-const popoverReassign = reactive({ open: false, event: null as Event | null });
 const popoverMenu = reactive({ open: false, event: null as Event | null });
-const reassignDate = ref<string | null>(null);
-const reassignDateISO = ref<string | null>(null);
-const showPicker = ref(true);
-const tempPickerDateISO = ref<string | null>(null);
 
 const productQuantityRawValues = ref<Map<string | number, string>>(new Map());
 const temporaryProductCounter = ref(0);
@@ -697,65 +596,16 @@ const showProviderModal = ref(false);
 const showAccountModal = ref(false);
 const selectedAccountIndex = ref<number | null>(null);
 const accountSearchQuery = ref('');
-const showQuickAccountAlert = ref(false);
-const showDeleteAlert = ref(false);
 const showCoverageAlert = ref(false);
 const showIncompleteGroupToast = ref(false);
-const quickAccountTargetIndex = ref<number | null>(null);
 
-const quickAccountInputs = ref([
-  {
-    name: 'accountName',
-    type: 'text',
-    placeholder: 'Nombre de la cuenta',
-    value: '',
-  },
-  {
-    name: 'initialBalance',
-    type: 'number',
-    placeholder: 'Balance inicial (opcional)',
-    value: 0,
-  },
-]);
-
-const quickAccountButtons = [
-  {
-    text: 'Cancelar',
-    role: 'cancel',
-  },
-  {
-    text: 'Crear',
-    handler: (data: { accountName: string; initialBalance: string }) => {
-      if (!data.accountName || data.accountName.trim() === '') {
-        return false;
-      }
-      createQuickAccount({ name: data.accountName.trim(), initialBalance: Number(data.initialBalance) || 0 });
-      return true;
-    },
-  },
-];
-
-const deleteAlertButtons = [
-  {
-    text: 'Cancelar',
-    role: 'cancel',
-    handler: () => {
-      showDeleteAlert.value = false;
-    },
-  },
-  {
-    text: 'Eliminar',
-    cssClass: 'danger-alert-btn',
-    handler: confirmDelete,
-  },
-];
+// quick account and delete confirm moved to composables
 
 // Data from route params
-const routeMode = computed(() => route.query.mode as string | undefined);
 const routeEntryId = computed(() => route.query.entryId as string | number | undefined);
 const routeProviderId = computed(() => route.query.providerId as string | number | undefined);
 
-const isEntryMode = computed(() => routeMode.value === 'entry');
+const isEntryMode = computed(() => route.query.mode === 'entry');
 // Suppliers list
 const allSuppliersList = ref<Supplier[]>([]);
 
@@ -766,7 +616,7 @@ const {
   showAttachmentsModal,
   pendingAttachments,
   existingAttachments,
-  deletedAttachments,
+  deletedAttachments: _deletedAttachments,
   openAttachments: handleOpenAttachments,
   handleAttachmentsSave,
   saveAttachments,
@@ -774,6 +624,23 @@ const {
   dismissModal: closeAttachmentsModal,
 } = useAttachments({ entityType: 'providers', syncId: providerSyncId });
 // end attachment state
+
+// composable instances
+const quickAccount = useQuickAccount({
+  onAccountCreated: ({ newAccount, targetIndex }) => {
+    if (items.value[targetIndex]) {
+      const accountIdValue = newAccount.id as string | number;
+      items.value[targetIndex].accountId = isEntryMode.value ? accountIdValue : { id: accountIdValue };
+    }
+  },
+});
+
+const deleteConfirm = useDeleteConfirm({
+  onConfirm: confirmDelete,
+});
+
+const reassignPicker = useDatePicker();
+// end composable instances
 
 // Notes state
 const providerNotes = ref('');
@@ -943,8 +810,7 @@ async function initializeFromProvider() {
 
   // Initialize date
   if (provider.date) {
-    reassignDateISO.value = parseDateValue({ raw: provider.date });
-    reassignDate.value = String(reassignDateISO.value).slice(0, 10);
+    reassignPicker.setDate({ date: parseDateValue({ raw: provider.date }) });
   } else {
     await setTodayDate();
   }
@@ -1038,10 +904,6 @@ const productsCoverage = computed(() => {
   };
 });
 
-const reversedItems = computed(() => {
-  return [...items.value].reverse();
-});
-
 const isItemsValid = computed(() => {
   return items.value.every((item) => {
     const val = String(item.amount).trim();
@@ -1054,10 +916,6 @@ const isFormValid = computed(() => {
   return isItemsValid.value;
 });
 
-const canApplyReassign = computed(() => {
-  const short = tempPickerDateISO.value?.slice(0, 10);
-  return short?.length === 10;
-});
 // end computed
 
 // functions
@@ -1070,14 +928,12 @@ async function setTodayDate() {
   const { default: budgetController } = await import('@/controllers/budgetController');
   const selectedDate = budgetController.getSelectedDate();
   const dateToUse = selectedDate || format(new Date(), 'yyyy-MM-dd');
-  reassignDateISO.value = dateToUse + 'T00:00:00';
-  reassignDate.value = dateToUse;
+  reassignPicker.setDate({ date: dateToUse });
 }
 
 function initReassignDate() {
   const now = new Date();
-  reassignDateISO.value = format(now, 'yyyy-MM-dd') + 'T00:00:00';
-  reassignDate.value = String(reassignDateISO.value).slice(0, 10);
+  reassignPicker.setDate({ date: format(now, 'yyyy-MM-dd') });
 }
 
 async function initializeNewProviderMode() {
@@ -1088,73 +944,7 @@ async function initializeNewProviderMode() {
   await setTodayDate();
 }
 
-function parseDateValue(params: { raw: string | number | null | undefined }): string {
-  const { raw } = params;
-  if (!raw) return format(new Date(), 'yyyy-MM-dd') + 'T00:00:00';
-
-  if (typeof raw === 'string') {
-    if (raw.includes('T')) {
-      return raw.length >= 19 ? raw.slice(0, 19) : raw + 'T00:00:00';
-    }
-    return `${raw.slice(0, 10)}T00:00:00`;
-  }
-
-  if (typeof raw === 'number') {
-    return format(new Date(raw), 'yyyy-MM-dd') + 'T00:00:00';
-  }
-
-  return format(new Date(), 'yyyy-MM-dd') + 'T00:00:00';
-}
-
-// Format ISO date to short localized string (dd/MM/yy)
-function formatShortDate(params: { isoDate: string | null }): string {
-  const { isoDate } = params;
-  if (!isoDate) return '';
-  try {
-    const date = new Date(isoDate);
-    return date.toLocaleDateString('es-MX', {
-      day: '2-digit',
-      month: '2-digit',
-      year: '2-digit',
-    });
-  } catch {
-    return String(isoDate).slice(0, 10);
-  }
-}
-
-// Validation functions
-function isNumericValue(params: { value: string | number | null | undefined }): boolean {
-  const { value } = params;
-  if (value === null || value === undefined || value === '') return true;
-  return /^-?\d*\.?\d+$/.test(String(value));
-}
-
-function isPositiveValue(params: { value: string | number | null | undefined }): boolean {
-  const { value } = params;
-  if (value === null || value === undefined || value === '') return true;
-  const num = Number(value);
-  return !isNaN(num) && num > 0;
-}
-
-function getAmountError(params: { index: number }): string {
-  const { index } = params;
-  const amount = items.value[index]?.amount;
-  if (!isNumericValue({ value: amount })) return 'Solo se permiten números';
-  if (!isPositiveValue({ value: amount })) return 'El valor debe ser mayor a 0';
-  return '';
-}
-
-function isAmountInvalid(params: { index: number }): boolean {
-  const { index } = params;
-  const amount = items.value[index]?.amount;
-  return !isNumericValue({ value: amount }) || !isPositiveValue({ value: amount });
-}
-
-function isAmountTouched(params: { index: number }): boolean {
-  const { index } = params;
-  const amount = items.value[index]?.amount;
-  return amount !== null && amount !== undefined && String(amount) !== '';
-}
+// Validation functions moved to shared utils
 
 // Product quantity validation functions
 function getProductRawValue(params: { productId: string | number }): string {
@@ -1289,6 +1079,11 @@ function removeItem(params: { index: number }) {
   }
 }
 
+function updateItemAmount(params: { index: number; amount: string }) {
+  const { index, amount } = params;
+  items.value[index].amount = amount;
+}
+
 function getProductQuantity(params: { product: Product }): number {
   const { product } = params;
   const productId = product?.sync_id ?? product?.id;
@@ -1389,7 +1184,7 @@ async function handleSave() {
       supplierProductId: p.isTemporary ? null : p.supplierProductId,
     }));
 
-  const selectedDate = reassignDate.value || reassignDateISO.value?.slice(0, 10);
+  const selectedDate = reassignPicker.dateISO.value?.slice(0, 10);
 
   const payload = {
     providerId: selectedProvider.value?.sync_id || selectedProvider.value?.id,
@@ -1489,29 +1284,11 @@ function handleBack() {
 // Reassign date functions
 async function openReassignPopover(params: { e: Event }) {
   const { e } = params;
-  if (!reassignDateISO.value) {
-    reassignDateISO.value = format(new Date(), 'yyyy-MM-dd') + 'T00:00:00';
-  }
-
-  tempPickerDateISO.value = reassignDateISO.value;
-
-  showPicker.value = false;
-  await nextTick();
-  showPicker.value = true;
-
-  popoverReassign.event = e;
-  popoverReassign.open = true;
+  await reassignPicker.openPopover({ e });
 }
 
-function applyPopoverReassign() {
-  const finalDate = tempPickerDateISO.value?.slice(0, 10);
-  if (!finalDate) return;
-
-  reassignDateISO.value = tempPickerDateISO.value;
-  reassignDate.value = finalDate;
-
-  popoverReassign.open = false;
-  popoverReassign.event = null;
+function applyReassignDate() {
+  reassignPicker.applyDate();
 }
 
 function openHeaderPopover(params: { e: Event }) {
@@ -1527,11 +1304,6 @@ async function openReassignFromMenu(params: { e: Event }) {
   openReassignPopover({ e });
 }
 
-function closeReassignPopover() {
-  popoverReassign.open = false;
-  popoverReassign.event = null;
-}
-
 function closeMenuPopover() {
   popoverMenu.open = false;
   popoverMenu.event = null;
@@ -1539,7 +1311,7 @@ function closeMenuPopover() {
 
 function handleDeleteFromPopover() {
   closeMenuPopover();
-  showDeleteAlert.value = true;
+  deleteConfirm.openDeleteAlert();
 }
 
 async function confirmDelete() {
@@ -1555,56 +1327,12 @@ async function confirmDelete() {
     budgetController.saveData();
   }
 
-  showDeleteAlert.value = false;
   router.back();
 }
 
-function openQuickAccountAlert(itemIndex?: number) {
-  quickAccountInputs.value = [
-    {
-      name: 'accountName',
-      type: 'text',
-      placeholder: 'Nombre de la cuenta',
-      value: '',
-    },
-    {
-      name: 'initialBalance',
-      type: 'number',
-      placeholder: 'Balance inicial (opcional)',
-      value: 0,
-    },
-  ];
-  const indexToUse = itemIndex ?? selectedAccountIndex.value;
-  if (indexToUse !== null) {
-    quickAccountTargetIndex.value = indexToUse;
-  }
-  showQuickAccountAlert.value = true;
-}
-
-async function createQuickAccount(params: { name: string; initialBalance: number }) {
-  const { name, initialBalance } = params;
-  const newAccount = await accountsController.addAccount({
-    a: {
-      name,
-      initialBalance,
-    },
-  });
-
-  if (newAccount) {
-    if (quickAccountTargetIndex.value !== null) {
-      const idx = quickAccountTargetIndex.value;
-      if (items.value[idx]) {
-        const accountIdValue = newAccount.id as string | number;
-        items.value[idx].accountId = isEntryMode.value ? accountIdValue : { id: accountIdValue };
-      }
-    }
-  }
-
-  quickAccountTargetIndex.value = null;
-}
-
 // Attachment handlers
-function onAttachmentsSave(newFiles: File[], deletedIds: number[]) {
+function onAttachmentsSave(params: { newFiles: File[]; deletedIds: number[] }) {
+  const { newFiles, deletedIds } = params;
   handleAttachmentsSave({ newFiles, deletedIds });
 }
 // end attachment handlers
@@ -1707,8 +1435,3 @@ function getAccountIdAsNumber(
 }
 </style>
 
-<style>
-button.alert-button.danger-alert-btn {
-  color: var(--ion-color-danger);
-}
-</style>

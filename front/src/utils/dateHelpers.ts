@@ -1,0 +1,38 @@
+import { format } from 'date-fns';
+
+export function parseDateValue(params: { raw: string | number | Date | null | undefined }): string {
+  const { raw } = params;
+  if (!raw) return format(new Date(), 'yyyy-MM-dd') + 'T00:00:00';
+
+  if (raw instanceof Date) {
+    return format(raw, 'yyyy-MM-dd') + 'T00:00:00';
+  }
+
+  if (typeof raw === 'string') {
+    if (raw.includes('T')) {
+      return raw.length >= 19 ? raw.slice(0, 19) : raw + 'T00:00:00';
+    }
+    return `${raw.slice(0, 10)}T00:00:00`;
+  }
+
+  if (typeof raw === 'number') {
+    return format(new Date(raw), 'yyyy-MM-dd') + 'T00:00:00';
+  }
+
+  return format(new Date(), 'yyyy-MM-dd') + 'T00:00:00';
+}
+
+export function toShortDate(params: { isoDate: string | null }): string {
+  const { isoDate } = params;
+  if (!isoDate) return '';
+  try {
+    const date = new Date(isoDate);
+    return date.toLocaleDateString('es-MX', {
+      day: '2-digit',
+      month: '2-digit',
+      year: '2-digit',
+    });
+  } catch {
+    return String(isoDate).slice(0, 10);
+  }
+}

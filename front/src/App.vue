@@ -254,4 +254,8 @@ onMounted(async () => {
     --side-width: 300px;
   }
 }
+
+button.alert-button.danger-alert-btn {
+  color: var(--ion-color-danger);
+}
 </style>
