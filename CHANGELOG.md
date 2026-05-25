@@ -1,3 +1,45 @@
+## [v0.66.0] - 2026-05-25
+
+### Refactor
+
+- **Extract shared logic into reusable composables and utilities**
+  - `useAccountSelection` — account sorting, available/selected filtering, default account fallback
+  - `useDatePicker` — date ISO state management, popover lifecycle (open/apply/cancel)
+  - `useDeleteConfirm` — alert state and button configuration for delete confirmation
+  - `useQuickAccount` — quick account creation alert flow
+  - `amountValidation.ts` — `isNumericValue`, `isPositiveValue`, `getAmountError`, `isAmountInvalid`, `isAmountTouched`
+  - `dateHelpers.ts` — `parseDateValue`, `toShortDate`
+
+- **Extract shared UI into reusable components**
+  - `EditPageHeader.vue` — unified header with back/save/options buttons
+  - `AccountDistributionSection.vue` — items list with add/remove, amount validation, account slot
+  - `DetailsSection.vue` — notes textarea + attachments modal integration
+  - `DatePickerPopover.vue` — date picker popover with apply/cancel
+  - `DeleteConfirmAlert.vue` — confirmation alert wrapper
+  - `QuickAccountAlert.vue` — quick account creation alert wrapper
+
+- **Simplify EntryEditPage and ProviderEditPage** by consuming the new composables and components (~1775 lines removed net across both pages)
+
+### Added
+
+- `front/pnpm-workspace.yaml` — pnpm workspace build allowlist configuration
+
+### Changed
+
+- **BudgetView**: Remove "Inicio/Proveedores" segment toggle; providers now shown exclusively in the unified `InicioViewComponent` list
+- **BudgetView**: Update clear-day confirmation message from "proveedores e ingresos" to "registros"
+- **AGENTS.md**: Rewritten for OneSpend project with architecture overview, multi-platform commands, MariaDB setup, and updated code conventions
+- **guides/TemplateView.vue**: Fix typos (`templa<template>` → `<template>`, `<ion-toolvar>` → `<ion-toolbar>`)
+- **budgetController.addProvider**: Return type annotated as `: Provider | undefined`
+- **App.vue**: Add `.danger-alert-btn` global CSS class for consistent delete button styling
+
+### Removed
+
+- `ProvidersSummary.vue` — functionality absorbed into unified entry list
+- `ProductsModalComponent.vue` — products logic integrated into ProviderEditPage
+- `ProviderCardComponent.vue` — card display replaced by unified list items
+- `ProvidersComponent.vue` — providers tab removed; view merged into InicioViewComponent
+
 ## [v0.65.0] - 2026-05-23
 
 ### Refactor
