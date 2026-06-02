@@ -505,7 +505,6 @@ case 'budget_entry':
                             $productSyncId = $product['sync_id'] ?? uniqid('rrp_', true);
                             $isDeleted = isset($item['_deleted']) && $item['_deleted'] === true;
                             $existingProduct = RecurringRecordProduct::where('sync_id', $productSyncId)->first();
-                            $productOperation = $isDeleted ? 'delete' : ($existingProduct ? 'update' : 'create');
 
                             $productData = [
                                 'id' => $productSyncId,
@@ -665,7 +664,6 @@ case 'budget_entry':
                             // Determine operation: check if item was marked for deletion or if product already exists
                             $isDeleted = isset($item['_deleted']) && $item['_deleted'] === true;
                             $existingProduct = BudgetProviderProduct::where('sync_id', $productSyncId)->first();
-                            $productOperation = $isDeleted ? 'delete' : ($existingProduct ? 'update' : 'create');
                             
                             // Build product data directly (processItem expects flat structure with 'id' as sync_id)
                             $productData = [

@@ -93,13 +93,13 @@ class RecurringController {
     return all.filter((r) => r.status === 'active');
   }
 
-  async addRecord(params: { record: Omit<RecurringRecord, 'id' | 'sync_id' | 'createdAt'> }): Promise<RecurringRecord> {
+  async addRecord(params: { record: RecurringRecord }): Promise<RecurringRecord> {
     const { record } = params;
     const newRecord: RecurringRecord = {
       ...record,
-      sync_id: generateId(),
-      createdAt: Date.now(),
-      status: 'active',
+      sync_id: record.sync_id || generateId(),
+      createdAt: record.createdAt || Date.now(),
+      status: record.status || 'active',
     };
     const id = await this.dixie.addEntry({ entry: newRecord });
     newRecord.id = typeof id === 'number' ? id : String(id);

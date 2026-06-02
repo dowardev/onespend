@@ -121,7 +121,7 @@ import { addOutline, trashOutline } from 'ionicons/icons';
 
 // Components
 import AddSupliersComponent from '../suppliers/modals/AddSupliersComponent.vue';
-import type { Product } from '../controllers/suppliersController';
+import type { Product } from '@/controllers/suppliersController';
 
 interface SupplierGroup {
   letter: string;
@@ -232,7 +232,7 @@ async function onModalSaved(payload: Supplier) {
   }
 }
 
-async function remove(id: IDBValidKey | undefined) {
+async function remove(id: string | number | undefined) {
   if (id == null) return;
   await suppliersController.deleteSupplier({ id });
   await suppliersController.listSuppliers();

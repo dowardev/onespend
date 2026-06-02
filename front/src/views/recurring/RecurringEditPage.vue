@@ -585,8 +585,8 @@
           :model-value="tempTime"
           presentation="time"
           style="background: transparent; width: 100%"
-          @ionValueChange="onTimeWheelChange"
-          @ionChange="onTimeWheelChange"
+          @ion-value-change="onTimeWheelChange"
+          @ion-change="onTimeWheelChange"
         />
         <ion-item>
           <ion-button slot="end" fill="clear" size="small" @click="cancelTime">
@@ -661,7 +661,6 @@ import {
   IonSearchbar,
   IonDatetime,
   IonNote,
-  IonToast,
 } from '@ionic/vue';
 import {
   addOutline,
@@ -865,11 +864,11 @@ const accountsList = computed(() => {
   return list.filter((acc: any) => acc != null && acc.id != null);
 });
 
-const filteredSuppliers = computed(() => {
+const filteredSuppliers = computed<Supplier[]>(() => {
   if (!supplierSearchQuery.value) return allSuppliers.value;
   return allSuppliers.value.filter((s) =>
     s.name.toLowerCase().includes(supplierSearchQuery.value.toLowerCase()),
-  );
+  ) as Supplier[];
 });
 
 const selectedAccountIds = computed(() => {
