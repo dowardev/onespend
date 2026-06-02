@@ -453,7 +453,6 @@ class SyncService {
       budget_provider_product: 'budget_provider_products',
       budget_entry: 'entries',
       recurring_record: 'recurring_records',
-      recurring_record_product: 'recurring_records',
       supplier: 'suppliers',
       supplier_product: 'supplier_products',
       template: 'templates',
@@ -461,7 +460,7 @@ class SyncService {
 
     let updatedCount = 0;
 
-    // Primero,收集 todos los IDs de productos de todos los statuses
+    // Primero, recolectar todos los IDs de productos de todos los statuses
     const allProductIds: Map<string, number> = new Map();
     for (const [status, entityMap] of Object.entries(results)) {
       for (const [entityType, ids] of Object.entries(entityMap)) {
@@ -720,7 +719,6 @@ class SyncService {
       budget_provider_product: 'budget_provider_products',
       budget_entry: 'entries',
       recurring_record: 'recurring_records',
-      recurring_record_product: 'recurring_records',
       supplier: 'suppliers',
       supplier_product: 'supplier_products',
       template: 'templates',

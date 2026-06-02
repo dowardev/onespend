@@ -4,7 +4,7 @@ import dixieController from '@/controllers/dixie';
 import { useSync } from '@/composables/useSync';
 
 export type Account = {
-  id?: IDBValidKey;
+  id?: string | number;
   sync_id?: string;
   serverId?: number | null;
   name: string;
@@ -55,7 +55,7 @@ export const useAccountsStore = defineStore('accounts', () => {
     syncAccount(newAccount, 'create');
   }
 
-  function updateAccount(params: { id: IDBValidKey; changes: Partial<Account> }) {
+  function updateAccount(params: { id: string | number; changes: Partial<Account> }) {
     const { id, changes } = params;
     const idx = accounts.value.findIndex((a) => a.id === id);
     if (idx === -1) return;
@@ -64,7 +64,7 @@ export const useAccountsStore = defineStore('accounts', () => {
     syncAccount(updated, 'update');
   }
 
-  function removeAccount(params: { id: IDBValidKey }) {
+  function removeAccount(params: { id: string | number }) {
     const { id } = params;
     const idx = accounts.value.findIndex((a) => a.id === id);
     if (idx === -1) return;
