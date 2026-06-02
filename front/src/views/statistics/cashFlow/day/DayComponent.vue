@@ -50,6 +50,7 @@
   <ion-popover
     :is-open="popovers.mainDate.open"
     :event="popovers.mainDate.event"
+    keep-contents-mounted
     @did-dismiss="popovers.mainDate.open = false"
   >
     <ion-content>

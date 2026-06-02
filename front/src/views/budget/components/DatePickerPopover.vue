@@ -1,18 +1,18 @@
 <template>
-  <ion-popover
-    :is-open="popoverState.open"
-    :event="popoverState.event"
-    @did-dismiss="$emit('didDismiss')"
-  >
+<ion-popover
+  :is-open="popoverState.open"
+  :event="popoverState.event"
+  keep-contents-mounted
+  style="--width: 350px"
+  @did-dismiss="$emit('didDismiss')"
+>
     <ion-content class="ion-padding">
-      <ion-datetime
-        v-if="showPicker"
-        :key="tempPickerDateISO"
-        :model-value="tempPickerDateISO"
-        presentation="date"
-        style="background: transparent; width: 100%"
-        @update:model-value="$emit('update:tempPickerDateISO', $event)"
-      />
+    <ion-datetime
+      :model-value="tempPickerDateISO"
+      presentation="date"
+      style="background: transparent; width: 100%"
+      @update:model-value="$emit('update:tempPickerDateISO', $event)"
+    />
       <ion-item>
         <ion-button slot="start" fill="clear" size="small" @click="$emit('cancel')">
           Cancelar
@@ -36,7 +36,6 @@ import { IonPopover, IonContent, IonDatetime, IonItem, IonButton } from '@ionic/
 
 defineProps({
   popoverState: { type: Object, default: () => ({ open: false, event: null }) },
-  showPicker: { type: Boolean, default: false },
   tempPickerDateISO: { type: String, default: null },
   canApply: { type: Boolean, default: false },
 });
