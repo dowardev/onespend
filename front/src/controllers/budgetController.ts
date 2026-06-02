@@ -196,6 +196,7 @@ class BudgetController {
     accountId?: string | number | null;
     groups?: Array<{ amount: number; accountId: string | number | null }>;
     date?: string;
+    _fromRecurringId?: string;
   }) {
     const {
       name = '',
@@ -204,6 +205,7 @@ class BudgetController {
       accountId = null,
       groups = [],
       date,
+      _fromRecurringId,
     } = params;
 
     const finalDate = date || this.store.selectedDate;
@@ -227,6 +229,7 @@ class BudgetController {
       accountId,
       groups,
       createdAt: Date.now(),
+      _fromRecurringId,
     };
 
     // If date is different from selectedDate, save to the correct bucket
@@ -251,6 +254,7 @@ class BudgetController {
     accountId?: string | number | null;
     groups?: Array<{ amount: number; accountId: string | number | null }>;
     date?: string;
+    _fromRecurringId?: string;
   }) {
     const {
       name = '',
@@ -259,6 +263,7 @@ class BudgetController {
       accountId = null,
       groups = [],
       date,
+      _fromRecurringId,
     } = params;
 
     const newEgreso: Income = {
@@ -272,6 +277,7 @@ class BudgetController {
       accountId,
       groups,
       createdAt: Date.now(),
+      _fromRecurringId,
     };
 
     // If date is different from selectedDate, save to the correct bucket
@@ -379,6 +385,7 @@ class BudgetController {
     }>;
     items?: Array<{ amount: number; accountId: string | number | null }>;
     date?: string;
+    _fromRecurringId?: string;
   }): Provider | undefined {
     const {
       name = '',
@@ -392,6 +399,7 @@ class BudgetController {
       products,
       items,
       date,
+      _fromRecurringId,
     } = params;
     if (!name && !allowEmpty) return;
 
@@ -428,6 +436,7 @@ class BudgetController {
       items,
       _supplier: _supplier ? JSON.parse(JSON.stringify(_supplier)) : undefined,
       createdAt: Date.now(),
+      _fromRecurringId,
     };
 
     const { syncBudgetProvider } = useSync();

@@ -1,4 +1,4 @@
-import { ref, reactive, nextTick, computed } from 'vue';
+import { ref, reactive, computed } from 'vue';
 import { format } from 'date-fns';
 
 export function useDatePicker(params?: {
@@ -8,7 +8,6 @@ export function useDatePicker(params?: {
 
   const dateISO = ref<string | null>(initialDate);
   const tempPickerDateISO = ref<string | null>(null);
-  const showPicker = ref(true);
   const popoverState = reactive({ open: false, event: null as Event | null });
 
   const canApply = computed(() => {
@@ -16,16 +15,12 @@ export function useDatePicker(params?: {
     return short?.length === 10;
   });
 
-  async function openPopover(params: { e: Event }) {
+  function openPopover(params: { e: Event }) {
     const { e } = params;
     if (!dateISO.value) {
       dateISO.value = format(new Date(), 'yyyy-MM-dd') + 'T00:00:00';
     }
     tempPickerDateISO.value = dateISO.value;
-
-    showPicker.value = false;
-    await nextTick();
-    showPicker.value = true;
 
     popoverState.event = e;
     popoverState.open = true;
@@ -53,7 +48,6 @@ export function useDatePicker(params?: {
   return {
     dateISO,
     tempPickerDateISO,
-    showPicker,
     popoverState,
     canApply,
     openPopover,

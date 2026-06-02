@@ -4,6 +4,36 @@ import { useBudgetStore } from '@/stores/budgetStore';
 import { useAccountsStore } from '@/stores/accountsStore';
 import { useSuppliersStore } from '@/stores/suppliersStore';
 import { useTemplatesStore } from '@/stores/templatesStore';
+import { recurringController, type RecurringRecord, RECURRING_FIELD_MAP } from '@/controllers/recurringController';
+
+function mapServerRecurringToLocal(params: { item: Record<string, unknown> }): RecurringRecord {
+  const { item } = params;
+  const mapped: Record<string, unknown> = {};
+
+  const directFields = new Set([
+    'sync_id', 'serverId', 'type', 'entryType', 'name', 'amount',
+    'accountId', 'repeatFrequency', 'repeatInterval', 'repeatDays',
+    'repeatMonthDay', 'repeatMonthWeekdayMode', 'repeatMonthWeekday',
+    'repeatMonthWeekdayOrdinal', 'repeatYearMonth', 'repeatYearDay',
+    'time', 'autoInsert', 'startDate', 'endDate', 'estimated',
+    'products', 'items', 'notes', 'status', 'createdAt', 'synced_at', '_synced',
+  ]);
+
+  for (const [key, value] of Object.entries(item)) {
+    if (key === '_deleted') continue;
+    if (RECURRING_FIELD_MAP[key]) {
+      mapped[RECURRING_FIELD_MAP[key]] = value;
+    } else if (directFields.has(key)) {
+      mapped[key] = value;
+    }
+  }
+
+  if (item.id && !mapped.sync_id) {
+    mapped.sync_id = String(item.id);
+  }
+
+  return mapped as unknown as RecurringRecord;
+}
 
 export interface SyncEntryParams {
   id?: string | number;
@@ -476,6 +506,61 @@ export function useSync() {
     pendingChanges.value = syncService.getQueueCount();
   }
 
+  function syncRecurringRecord(params: {
+    record: RecurringRecord;
+    operation?: 'create' | 'update' | 'delete';
+  }) {
+    const { record, operation = 'create' } = params;
+    let syncId = record.sync_id;
+
+    if (!syncId) {
+      syncId = record.sync_id = String(record.id || generateSyncId());
+    }
+
+    const syncItem: Omit<SyncItem, 'timestamp' | 'retryCount'> = {
+      id: syncId,
+      entityType: 'recurring_record',
+      operation,
+      data: {
+        type: record.type,
+        entry_type: record.entryType,
+        name: record.name,
+        amount: record.amount,
+        account_id: record.accountId as string,
+        repeat_frequency: record.repeatFrequency,
+        repeat_interval: record.repeatInterval,
+        repeat_days: record.repeatDays,
+        repeat_month_day: record.repeatMonthDay,
+        repeat_month_weekday_mode: record.repeatMonthWeekdayMode,
+        repeat_month_weekday: record.repeatMonthWeekday,
+        repeat_month_weekday_ordinal: record.repeatMonthWeekdayOrdinal,
+        repeat_year_month: record.repeatYearMonth,
+        repeat_year_day: record.repeatYearDay,
+        time: record.time,
+        auto_insert: record.autoInsert,
+        start_date: record.startDate,
+        end_date: record.endDate,
+        estimated: record.estimated,
+        items: record.items,
+        notes: record.notes,
+        status: record.status,
+        products: record.products
+          ? record.products.map((p) => ({
+              sync_id: p.sync_id,
+              supplier_product_id: p.supplierProductId,
+              product_name: p.productName,
+              product_price: p.productPrice,
+              quantity: p.quantity,
+            }))
+          : [],
+        updated_at: Date.now(),
+      },
+    };
+
+    syncService.queueOperation(syncItem);
+    pendingChanges.value = syncService.getQueueCount();
+  }
+
   async function syncNow(): Promise<boolean> {
     if (!isOnline.value) {
       syncError.value = 'Cannot sync while offline';
@@ -696,6 +781,26 @@ export function useSync() {
       }
     }
 
+  if (changes.recurring_record) {
+    const records = Array.isArray(changes.recurring_record) ? changes.recurring_record : [];
+    for (const item of records) {
+      if (item._deleted) {
+        const localId = item.id;
+        await recurringController.removeRecord({ id: localId });
+      } else {
+        const localRecord = mapServerRecurringToLocal({ item: item as Record<string, unknown> });
+        const syncId = localRecord.sync_id || String(item.id);
+        const existing = await recurringController.getRecordBySyncId({ syncId });
+        if (existing) {
+          const { id: _id, ...safeChanges } = localRecord;
+          await recurringController.updateRecord({ id: existing.id, changes: safeChanges });
+        } else {
+          await recurringController.addRecord({ record: localRecord });
+        }
+      }
+    }
+  }
+
     if (changes.budget_provider_product) {
       const products = Array.isArray(changes.budget_provider_product)
         ? changes.budget_provider_product
@@ -770,6 +875,7 @@ export function useSync() {
     syncTemplate,
     syncBudgetProvider,
     syncBudgetProviderProduct,
+    syncRecurringRecord,
     syncSupplierProduct,
     syncNow,
     pullFromServer,

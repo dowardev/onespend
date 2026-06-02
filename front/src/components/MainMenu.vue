@@ -82,6 +82,17 @@
           <ion-item
             button
             lines="none"
+            :class="{ 'menu-active': isRecurring }"
+            :aria-current="isRecurring ? 'page' : undefined"
+            @click="navigate({ name: 'RecurringPage' })"
+          >
+            <ion-icon slot="start" :icon="repeatOutline"></ion-icon>
+            <ion-label>Cargos Recurrentes</ion-label>
+          </ion-item>
+
+          <ion-item
+            button
+            lines="none"
             :class="{ 'menu-active': isSuppliersAccounts }"
             :aria-current="isSuppliersAccounts ? 'page' : undefined"
             @click="navigate({ name: 'AccountsPage' })"
@@ -211,6 +222,7 @@ import {
   documentTextOutline,
   businessOutline,
   layersOutline,
+  repeatOutline,
   syncOutline,
   statsChartOutline,
   speedometerOutline,
@@ -253,6 +265,7 @@ const appName =
 const isBudget = computed(() => route.path === '/budget');
 const isTemplates = computed(() => route.path === '/templates');
 const isSuppliers = computed(() => route.path === '/suppliers');
+const isRecurring = computed(() => route.path.startsWith('/recurring'));
 const isSuppliersAccounts = computed(() => route.path === '/suppliers/accounts');
 const isSync = computed(() => route.path === '/sync');
 const isStatisticsCashFlow = computed(() => route.path === '/statistics/cash-flow');

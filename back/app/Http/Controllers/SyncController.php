@@ -11,6 +11,8 @@ use App\Models\Supplier;
 use App\Models\SupplierProduct;
 use App\Models\Template;
 use App\Models\SyncMetadata;
+use App\Models\RecurringRecord;
+use App\Models\RecurringRecordProduct;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -27,6 +29,8 @@ class SyncController extends Controller
         'supplier' => Supplier::class,
         'supplier_product' => SupplierProduct::class,
         'template' => Template::class,
+        'recurring_record' => RecurringRecord::class,
+        'recurring_record_product' => RecurringRecordProduct::class,
     ];
 
     public function getChanges(Request $request): JsonResponse
@@ -83,6 +87,9 @@ case 'budget_entry':
                     break;
                 case 'budget_provider_product':
                     $query->with(['budgetProvider:id,name', 'supplierProduct:id,name,price']);
+                    break;
+                case 'recurring_record':
+                    $query->with('products');
                     break;
             }
 
@@ -461,6 +468,76 @@ case 'budget_entry':
                 }
             }
 
+            // Process recurring_records with nested products (same pattern as budget_provider)
+            if (isset($data['recurring_record'])) {
+                $items = $data['recurring_record'];
+                Log::info("SyncController::merge - Processing entityType: recurring_record", ['items_count' => count($items)]);
+
+                foreach ($items as $item) {
+                    $result = $this->processItem('recurring_record', $item, $user->id);
+                    $syncId = $result['sync_id'];
+
+                    if ($result['status'] === 'created') {
+                        $results['created']['recurring_record'][] = ['sync_id' => $syncId, 'id' => $result['id']];
+                    } elseif ($result['status'] === 'updated') {
+                        $results['updated']['recurring_record'][] = ['sync_id' => $syncId, 'id' => $result['id'] ?? null];
+                    } elseif ($result['status'] === 'deleted') {
+                        $results['deleted']['recurring_record'][] = $syncId;
+                    } elseif ($result['status'] === 'conflict') {
+                        $results['conflicts']['recurring_record'][] = $result;
+                    }
+
+                    // Get the real MySQL ID after creating/updating
+                    $recurringRecordId = $result['id'] ?? null;
+                    if (!$recurringRecordId) {
+                        $recurringRecord = RecurringRecord::where('sync_id', $syncId)->first();
+                        if ($recurringRecord) {
+                            $recurringRecordId = $recurringRecord->id;
+                        }
+                    }
+
+                    // Process products if included
+                    if (isset($item['products']) && is_array($item['products'])) {
+                        $products = $item['products'];
+                        Log::info("SyncController::merge - Processing products for recurring_record {$syncId}", ['products_count' => count($products)]);
+
+                        foreach ($products as $product) {
+                            $productSyncId = $product['sync_id'] ?? uniqid('rrp_', true);
+                            $isDeleted = isset($item['_deleted']) && $item['_deleted'] === true;
+                            $existingProduct = RecurringRecordProduct::where('sync_id', $productSyncId)->first();
+                            $productOperation = $isDeleted ? 'delete' : ($existingProduct ? 'update' : 'create');
+
+                            $productData = [
+                                'id' => $productSyncId,
+                                'user_id' => $user->id,
+                                'recurring_record_id' => $recurringRecordId,
+                                'supplier_product_id' => $product['supplier_product_id'] ?? $product['supplierProductId'] ?? null,
+                                'product_name' => $product['product_name'] ?? $product['productName'] ?? null,
+                                'product_price' => $product['product_price'] ?? $product['productPrice'] ?? null,
+                                'quantity' => $product['quantity'] ?? 0,
+                                'updated_at' => $product['updated_at'] ?? now()->getTimestampMs(),
+                            ];
+
+                            if ($isDeleted) {
+                                $productData['_deleted'] = true;
+                            }
+
+                            $productResult = $this->processItem('recurring_record_product', $productData, $user->id);
+
+                            if ($productResult['status'] === 'created') {
+                                $results['created']['recurring_record_product'][] = ['sync_id' => $productResult['sync_id'], 'id' => $productResult['id']];
+                            } elseif ($productResult['status'] === 'updated') {
+                                $results['updated']['recurring_record_product'][] = ['sync_id' => $productResult['sync_id'], 'id' => $productResult['id'] ?? null];
+                            } elseif ($productResult['status'] === 'deleted') {
+                                $results['deleted']['recurring_record_product'][] = $productResult['sync_id'];
+                            } elseif ($productResult['status'] === 'conflict') {
+                                $results['conflicts']['recurring_record_product'][] = $productResult;
+                            }
+                        }
+                    }
+                }
+            }
+
             // Process suppliers (for dependency) - using bulk operations
             if (isset($data['supplier'])) {
                 $items = $data['supplier'];
@@ -653,7 +730,8 @@ case 'budget_entry':
             // Process remaining entity types
             foreach ($data as $entityType => $items) {
                 if ($entityType === 'account' || $entityType === 'supplier' || $entityType === 'supplier_product' || 
-                    $entityType === 'budget_provider' || $entityType === 'budget_provider_product') {
+                    $entityType === 'budget_provider' || $entityType === 'budget_provider_product' ||
+                    $entityType === 'recurring_record' || $entityType === 'recurring_record_product') {
                     continue;
                 }
                 
@@ -740,6 +818,13 @@ case 'budget_entry':
                     ->get(['id', 'sync_id', 'user_id', 'supplier_id', 'name', 'price', 'status', 'updated_at']),
                 'templates' => Template::forUser($userId)->active()
                     ->get(['id', 'sync_id', 'user_id', 'name', 'status', 'updated_at']),
+                'recurring_records' => RecurringRecord::forUser($userId)->active()
+                    ->with('products')
+                    ->get(['id', 'sync_id', 'user_id', 'type', 'entry_type', 'name', 'amount', 'account_id',
+                           'repeat_frequency', 'repeat_interval', 'repeat_days', 'repeat_month_day',
+                           'repeat_month_weekday_mode', 'repeat_month_weekday', 'repeat_month_weekday_ordinal',
+                           'repeat_year_month', 'repeat_year_day', 'time', 'auto_insert', 'start_date',
+                           'end_date', 'estimated', 'items', 'notes', 'status', 'updated_at']),
             ];
 
             $formatted = [];
@@ -822,6 +907,16 @@ case 'budget_entry':
             Log::info("formatItem - formatted products: " . count($data['products']));
         }
 
+        if ($entityType === 'recurring_record' || $entityType === 'recurring_records') {
+            $data['products'] = $item->products->map(fn($p) => [
+                'sync_id' => $p->sync_id,
+                'supplier_product_id' => $p->supplier_product_id,
+                'product_name' => $p->product_name,
+                'product_price' => (float)$p->product_price,
+                'quantity' => $p->quantity,
+            ])->toArray();
+        }
+
         return $data;
     }
 
@@ -838,7 +933,11 @@ case 'budget_entry':
 
         if (isset($item['_deleted']) && $item['_deleted'] === true) {
             if ($existing) {
-                $existing->update(['status' => 'deleted', 'deleted_at' => now()]);
+                if ($entityType === 'recurring_record_product') {
+                    $existing->delete();
+                } else {
+                    $existing->update(['status' => 'deleted', 'deleted_at' => now()]);
+                }
                 $this->updateSyncMetadata($entityType, $syncId, 'deleted', $userId);
             }
             return ['status' => 'deleted', 'sync_id' => $syncId];
@@ -858,8 +957,21 @@ case 'budget_entry':
             
             $createData = $item;
             unset($createData['id'], $createData['products']);
-            
-            if ($entityType === 'budget_provider_product' && isset($createData['supplier_product_id'])) {
+            if ($entityType === 'recurring_record_product') {
+                unset($createData['user_id']);
+            }
+
+            if ($entityType === 'recurring_record_product' && isset($createData['recurring_record_id'])) {
+                $rrId = $createData['recurring_record_id'];
+                if (!is_numeric($rrId)) {
+                    $rr = RecurringRecord::where('sync_id', $rrId)->first();
+                    $createData['recurring_record_id'] = $rr ? $rr->id : null;
+                } else {
+                    $createData['recurring_record_id'] = (int)$rrId;
+                }
+            }
+
+            if (in_array($entityType, ['budget_provider_product', 'recurring_record_product']) && isset($createData['supplier_product_id'])) {
                 $spId = $createData['supplier_product_id'];
                 if (!is_numeric($spId)) {
                     $sp = SupplierProduct::where('sync_id', $spId)->first();
@@ -913,6 +1025,9 @@ case 'budget_entry':
         
         $updateData = $data;
         unset($updateData['id'], $updateData['sync_id'], $updateData['products']);
+        if ($entityType === 'recurring_record_product') {
+            unset($updateData['user_id']);
+        }
         
         foreach ($updateData as $key => $value) {
             if (in_array($key, ['updated_at']) && is_numeric($value)) {

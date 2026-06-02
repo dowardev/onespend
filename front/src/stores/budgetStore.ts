@@ -24,6 +24,7 @@ export interface Income {
   _providerName?: string;
   _supplierId?: string | number;
   _fromProviderGroupId?: string | number;
+  _fromRecurringId?: string;
 }
 
 export interface BudgetProviderProduct {
@@ -61,6 +62,7 @@ export interface Provider {
   _supplierName?: string;
   _supplierProducts?: BudgetProviderProduct[];
   _supplier?: Supplier;
+  _fromRecurringId?: string;
 }
 
 interface FinishDayData {

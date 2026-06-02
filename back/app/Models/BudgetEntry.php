@@ -16,6 +16,7 @@ class BudgetEntry extends Model
     protected $fillable = [
         'user_id',
         'sync_id',
+        '_from_recurring_id',
         'name',
         'amount',
         'date',
