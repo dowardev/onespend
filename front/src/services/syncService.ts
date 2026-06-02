@@ -52,6 +52,8 @@ export interface SyncItem {
     | 'budget_provider'
     | 'budget_provider_product'
     | 'budget_entry'
+    | 'recurring_record'
+    | 'recurring_record_product'
     | 'supplier'
     | 'supplier_product'
     | 'template';
@@ -309,6 +311,8 @@ class SyncService {
         budget_provider: [],
         budget_provider_product: [],
         budget_entry: [],
+        recurring_record: [],
+        recurring_record_product: [],
         supplier: [],
         supplier_product: [],
         template: [],
@@ -448,6 +452,8 @@ class SyncService {
       budget_provider: 'budget_providers',
       budget_provider_product: 'budget_provider_products',
       budget_entry: 'entries',
+      recurring_record: 'recurring_records',
+      recurring_record_product: 'recurring_records',
       supplier: 'suppliers',
       supplier_product: 'supplier_products',
       template: 'templates',
@@ -459,7 +465,10 @@ class SyncService {
     const allProductIds: Map<string, number> = new Map();
     for (const [status, entityMap] of Object.entries(results)) {
       for (const [entityType, ids] of Object.entries(entityMap)) {
-        if (entityType === 'supplier_product' && Array.isArray(ids)) {
+        if (
+          (entityType === 'supplier_product' || entityType === 'recurring_record_product')
+          && Array.isArray(ids)
+        ) {
           for (const idEntry of ids) {
             if (idEntry.sync_id && idEntry.id) {
               allProductIds.set(idEntry.sync_id, idEntry.id);
@@ -536,6 +545,75 @@ class SyncService {
             }
           } catch (error) {
             console.error(`[SyncService] Failed to update supplier ${syncId}:`, error);
+          }
+        }
+      }
+    }
+
+    // Procesar recurring_records y actualizar sus productos embebidos
+    for (const [status, entityMap] of Object.entries(results)) {
+      for (const [entityType, ids] of Object.entries(entityMap)) {
+        if (entityType !== 'recurring_record') continue;
+
+        const storeName = 'recurring_records';
+        if (!Array.isArray(ids)) continue;
+
+        console.log(`[SyncService] Processing recurring_record (${status}), count: ${ids.length}`);
+
+        const ctrl = new DixieController({ name: 'ABOgazDB', storeName });
+
+        for (const idEntry of ids) {
+          const syncId = idEntry.sync_id;
+          const mysqlId = idEntry.id;
+
+          if (!syncId) continue;
+
+          console.log(`[SyncService] Looking for recurring_record sync_id: ${syncId}`);
+
+          try {
+            const existing = await ctrl.getEntry(syncId);
+            if (existing) {
+              console.log(`[SyncService] Found recurring_record ${existing.name}`);
+
+              const updatedEntry = {
+                ...existing,
+                serverId: mysqlId,
+                synced_at: Date.now(),
+              };
+
+              // Actualizar productos embebidos si existen
+              if (existing.products && Array.isArray(existing.products)) {
+                console.log(
+                  `[SyncService] Processing ${existing.products.length} embedded products`,
+                );
+
+                updatedEntry.products = existing.products.map((product: SupplierProduct) => {
+                  const productServerId = allProductIds.get(product.sync_id);
+                  if (productServerId) {
+                    console.log(
+                      `[SyncService] ✅ Product ${product.productName ?? product.product_name} sync_id ${product.sync_id} got serverId ${productServerId}`,
+                    );
+                    return {
+                      ...product,
+                      serverId: productServerId,
+                      synced_at: Date.now(),
+                    };
+                  }
+                  console.log(
+                    `[SyncService] Product ${product.productName ?? product.product_name} sync_id ${product.sync_id} NOT found in server response`,
+                  );
+                  return product;
+                });
+              }
+
+              await ctrl.putEntry({ entry: updatedEntry });
+              console.log(`[SyncService] ✅ Updated recurring_record ${syncId} with serverId ${mysqlId}`);
+              updatedCount++;
+            } else {
+              console.warn(`[SyncService] No existing recurring_record found for sync_id: ${syncId}`);
+            }
+          } catch (error) {
+            console.error(`[SyncService] Failed to update recurring_record ${syncId}:`, error);
           }
         }
       }
@@ -641,6 +719,8 @@ class SyncService {
       budget_provider: 'budget_providers',
       budget_provider_product: 'budget_provider_products',
       budget_entry: 'entries',
+      recurring_record: 'recurring_records',
+      recurring_record_product: 'recurring_records',
       supplier: 'suppliers',
       supplier_product: 'supplier_products',
       template: 'templates',
@@ -671,7 +751,7 @@ class SyncService {
           } else {
             const existing = await ctrl.getEntry(syncId);
             if (existing) {
-              const updated = { ...existing, ...item, synced_at: Date.now() };
+              const updated = { ...existing, ...item, id: existing.id, synced_at: Date.now() };
               await ctrl.putEntry({ entry: updated });
               console.log(`[SyncService] Updated ${entityType} with sync_id: ${syncId}`);
             } else {

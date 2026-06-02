@@ -22,6 +22,8 @@ import PerformancePage from '@/views/statistics/performance/PerformancePage.vue'
 
 import ProviderEditPage from '@/views/budget/suppliers/ProviderEditPage.vue';
 import EntryEditPage from '@/views/budget/entries/EntryEditPage.vue';
+import RecurringPage from '@/views/recurring/RecurringPage.vue';
+import RecurringEditPage from '@/views/recurring/RecurringEditPage.vue';
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -57,6 +59,16 @@ const routes: Array<RouteRecordRaw> = [
     path: '/budget/entry/edit',
     name: 'BudgetEntryEdit',
     component: EntryEditPage,
+  },
+  {
+    path: '/recurring',
+    name: 'RecurringPage',
+    component: RecurringPage,
+  },
+  {
+    path: '/recurring/edit',
+    name: 'RecurringEdit',
+    component: RecurringEditPage,
   },
   {
     path: '/statistics/cash-flow',

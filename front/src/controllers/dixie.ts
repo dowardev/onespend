@@ -23,6 +23,7 @@ class DixieController {
           'backups',
           'config',
           'personalFinanceConfig',
+          'recurring_records',
         ];
         for (const store of allStores) {
           if (!d.objectStoreNames.contains(store)) {
@@ -44,6 +45,7 @@ class DixieController {
           'backups',
           'config',
           'personalFinanceConfig',
+          'recurring_records',
         ];
         const missingStores = allStores.filter((store) => !db.objectStoreNames.contains(store));
 
@@ -125,6 +127,7 @@ class DixieController {
           'backups',
           'config',
           'personalFinanceConfig',
+          'recurring_records',
         ];
         for (const store of allStores) {
           if (!d.objectStoreNames.contains(store)) {
@@ -179,6 +182,23 @@ class DixieController {
     }
   }
 
+  private cloneEntry(params: { entry: unknown }): unknown {
+    const { entry } = params;
+    try {
+      if (typeof self.structuredClone === 'function') {
+        try {
+          return self.structuredClone(entry);
+        } catch (_e) {
+          return this.sanitizeForIndexedDB({ value: entry });
+        }
+      } else {
+        return this.sanitizeForIndexedDB({ value: entry });
+      }
+    } catch (_e) {
+      return this.sanitizeForIndexedDB({ value: entry });
+    }
+  }
+
   async addEntry(params: { entry: unknown }): Promise<IDBValidKey> {
     const { entry } = params;
     const db = await this.openDB();
@@ -186,20 +206,7 @@ class DixieController {
       const tx = db.transaction(this.storeName, 'readwrite');
       const store = tx.objectStore(this.storeName);
 
-      let safeEntry: unknown = undefined;
-      try {
-        if (typeof self.structuredClone === 'function') {
-          try {
-            safeEntry = self.structuredClone(entry);
-          } catch (_e) {
-            safeEntry = this.sanitizeForIndexedDB({ value: entry });
-          }
-        } else {
-          safeEntry = this.sanitizeForIndexedDB({ value: entry });
-        }
-      } catch (_e) {
-        safeEntry = this.sanitizeForIndexedDB({ value: entry });
-      }
+      const safeEntry = this.cloneEntry({ entry });
 
       let req: IDBRequest;
       let entryToStore: unknown;
@@ -342,11 +349,14 @@ class DixieController {
     return new Promise((resolve, reject) => {
       const tx = db.transaction(this.storeName, 'readwrite');
       const store = tx.objectStore(this.storeName);
+
+      const safeEntry = this.cloneEntry({ entry });
+
       let entryToPut: unknown;
-      if (entry && typeof entry === 'object') {
-        entryToPut = Object.assign({}, entry);
+      if (safeEntry && typeof safeEntry === 'object') {
+        entryToPut = Object.assign({}, safeEntry as Record<string, unknown>);
       } else {
-        entryToPut = { value: entry };
+        entryToPut = { value: safeEntry };
       }
 
       const req = store.put(entryToPut);

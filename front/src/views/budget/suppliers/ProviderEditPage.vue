@@ -368,15 +368,14 @@
     </ion-modal>
 
     <!-- popovers -->
-    <DatePickerPopover
-      :popover-state="reassignPicker.popoverState"
-      :show-picker="reassignPicker.showPicker.value"
-      :temp-picker-date-iso="reassignPicker.tempPickerDateISO.value"
-      :can-apply="reassignPicker.canApply.value"
-      @did-dismiss="reassignPicker.closePopover()"
-      @cancel="reassignPicker.closePopover()"
-      @apply="applyReassignDate"
-    />
+  <DatePickerPopover
+    :popover-state="reassignPicker.popoverState"
+    :temp-picker-date-iso="reassignPicker.tempPickerDateISO.value"
+    :can-apply="reassignPicker.canApply.value"
+    @did-dismiss="reassignPicker.closePopover()"
+    @cancel="reassignPicker.closePopover()"
+    @apply="applyReassignDate"
+  />
 
     <ion-popover
       :is-open="popoverMenu.open"

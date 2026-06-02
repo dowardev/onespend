@@ -88,6 +88,7 @@
       <ion-popover
         :is-open="datePopoverOpen"
         :event="datePopoverEvent"
+        keep-contents-mounted
         @did-dismiss="closeDatePopover"
       >
         <ion-content>

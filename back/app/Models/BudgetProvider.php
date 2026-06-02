@@ -16,6 +16,7 @@ class BudgetProvider extends Model
     protected $fillable = [
         'user_id',
         'sync_id',
+        '_from_recurring_id',
         'date',
         'name',
         'estimated',

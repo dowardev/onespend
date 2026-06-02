@@ -106,22 +106,20 @@
     </ion-content>
 
     <!-- popovers -->
-    <DatePickerPopover
-      :popover-state="reassignPicker.popoverState"
-      :show-picker="reassignPicker.showPicker.value"
-      :temp-picker-date-iso="reassignPicker.tempPickerDateISO.value"
-      :can-apply="reassignPicker.canApply.value"
-      @did-dismiss="reassignPicker.closePopover()"
-      @cancel="reassignPicker.closePopover()"
-      @apply="applyReassignDate"
-      @update:temp-picker-date-iso="reassignPicker.tempPickerDateISO.value = $event"
-    />
+  <DatePickerPopover
+    :popover-state="reassignPicker.popoverState"
+    :temp-picker-date-iso="reassignPicker.tempPickerDateISO.value"
+    :can-apply="reassignPicker.canApply.value"
+    @did-dismiss="reassignPicker.closePopover()"
+    @cancel="reassignPicker.closePopover()"
+    @apply="applyReassignDate"
+    @update:temp-picker-date-iso="reassignPicker.tempPickerDateISO.value = $event"
+  />
 
-    <DatePickerPopover
-      :popover-state="entryDatePicker.popoverState"
-      :show-picker="entryDatePicker.showPicker.value"
-      :temp-picker-date-iso="entryDatePicker.tempPickerDateISO.value"
-      :can-apply="entryDatePicker.canApply.value"
+  <DatePickerPopover
+    :popover-state="entryDatePicker.popoverState"
+    :temp-picker-date-iso="entryDatePicker.tempPickerDateISO.value"
+    :can-apply="entryDatePicker.canApply.value"
       @did-dismiss="entryDatePicker.closePopover()"
       @cancel="entryDatePicker.closePopover()"
       @apply="confirmEntryDate"

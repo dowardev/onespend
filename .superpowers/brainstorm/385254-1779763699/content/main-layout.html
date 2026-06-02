@@ -1,0 +1,180 @@
+<h2>Gastos Recurrentes — Diseño Propuesto</h2>
+<p class="subtitle">Página principal con lista + formularios de creación</p>
+
+<div class="section">
+  <h3>1. Lista principal</h3>
+  <p>Ruta: <code>/recurring</code>. Muestra todos los registros recurrentes.</p>
+  <div class="mockup" style="max-width:700px">
+    <div class="mockup-header">
+      <span style="font-weight:600">Gastos Recurrentes</span>
+      <span style="display:flex;gap:6px;margin-left:auto">
+        <span class="mock-button" style="font-size:11px;padding:2px 8px">Todos</span>
+        <span class="mock-button" style="font-size:11px;padding:2px 8px">Cargos</span>
+        <span class="mock-button" style="font-size:11px;padding:2px 8px">Provedores</span>
+      </span>
+    </div>
+    <div class="mockup-body" style="padding:12px">
+      <!-- Pending section -->
+      <div style="background:#fff3cd;border-radius:8px;padding:10px;margin-bottom:12px">
+        <span style="font-size:12px;font-weight:600;color:#856404">Pendientes de aplicar</span>
+        <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:11px">
+          <span>• Netflix - $199 - <strong>Hoy</strong></span>
+          <span class="mock-button" style="font-size:10px;padding:1px 6px">Aplicar</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:11px">
+          <span>• Proveedor Frutas - $450 - <strong>Hoy</strong></span>
+          <span class="mock-button" style="font-size:10px;padding:1px 6px">Aplicar</span>
+        </div>
+      </div>
+      
+      <!-- Recurring items -->
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #eee">
+        <div>
+          <span style="font-weight:500">Netflix</span>
+          <span style="font-size:11px;color:#666;margin-left:8px">$199/mes - Gasto</span>
+          <div style="font-size:10px;color:#999">Cada 1 mes · Próximo: 15/06/2026</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="width:8px;height:8px;border-radius:50%;background:#2ecc71"></span>
+          <span style="font-size:10px;color:#666">Cargo</span>
+        </div>
+      </div>
+      
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #eee">
+        <div>
+          <span style="font-weight:500">Proveedor Frutas</span>
+          <span style="font-size:11px;color:#666;margin-left:8px">~$450/mes - Gasto</span>
+          <div style="font-size:10px;color:#999">Cada 1 semana (mar, jue) · Próximo: 28/05/2026</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="width:8px;height:8px;border-radius:50%;background:#3498db"></span>
+          <span style="font-size:10px;color:#666">Provedor</span>
+        </div>
+      </div>
+      
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0">
+        <div>
+          <span style="font-weight:500;color:#999">Sueldo freelance</span>
+          <span style="font-size:11px;color:#999;margin-left:8px">$5,000/mes - Ingreso</span>
+          <div style="font-size:10px;color:#ccc">Cada 1 mes (día 15) · Inactivo</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="width:8px;height:8px;border-radius:50%;background:#ccc"></span>
+          <span style="font-size:10px;color:#999">Cargo</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>2. Formulario — Cargo Recurrente</h3>
+  <div class="mockup" style="max-width:700px">
+    <div class="mockup-header">
+      <span>← Nuevo Cargo Recurrente</span>
+      <span class="mock-button" style="margin-left:auto">Guardar</span>
+    </div>
+    <div class="mockup-body" style="padding:12px">
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <span class="mock-button" style="flex:1;text-align:center;background:#e8f4fd;border-color:#3498db">Cargo</span>
+        <span class="mock-button" style="flex:1;text-align:center">Provedor</span>
+      </div>
+      
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <span class="mock-button" style="flex:1;text-align:center;background:#e8f8e8;border-color:#27ae60">Ingreso</span>
+        <span class="mock-button" style="flex:1;text-align:center">Gasto</span>
+      </div>
+      
+      <div style="margin-bottom:12px">
+        <div style="font-size:11px;color:#666;margin-bottom:4px">Nombre</div>
+        <input class="mock-input" value="Netflix" style="width:100%">
+      </div>
+      
+      <div style="margin-bottom:12px">
+        <div style="font-size:11px;color:#666;margin-bottom:4px">Monto</div>
+        <input class="mock-input" value="199" style="width:100%">
+      </div>
+      
+      <div style="margin-bottom:12px">
+        <div style="font-size:11px;color:#666;margin-bottom:4px">Cuenta</div>
+        <select class="mock-input" style="width:100%">
+          <option>Efectivo</option>
+        </select>
+      </div>
+      
+      <div style="margin-bottom:8px;border-top:1px solid #eee;padding-top:12px">
+        <div style="font-size:12px;font-weight:600;margin-bottom:8px">Repetición</div>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <select class="mock-input" style="flex:0 0 80px">
+            <option>Cada</option>
+          </select>
+          <input class="mock-input" value="1" style="flex:0 0 50px">
+          <select class="mock-input" style="flex:1">
+            <option>Mes(es)</option>
+          </select>
+        </div>
+        
+        <!-- Monthly options (conditional) -->
+        <div style="font-size:11px;color:#666;margin-bottom:4px">Opción mensual:</div>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <span class="mock-button" style="font-size:10px;padding:3px 8px;background:#e8f4fd">Día fijo</span>
+          <span class="mock-button" style="font-size:10px;padding:3px 8px">Día de semana</span>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span style="font-size:11px">Día</span>
+          <input class="mock-input" value="15" style="flex:0 0 50px">
+        </div>
+        
+        <!-- Weekly options (conditional) -->
+        <!-- Day selector chips: L M M J V S D -->
+        
+        <!-- Yearly options (conditional) -->
+        <!-- month selector + day -->
+      </div>
+      
+      <div style="margin-bottom:12px;border-top:1px solid #eee;padding-top:12px">
+        <div style="font-size:12px;font-weight:600;margin-bottom:8px">Hora (opcional)</div>
+        <input type="time" class="mock-input" value="10:00" style="width:100%">
+        <div style="margin-top:8px">
+          <label style="font-size:11px;display:flex;align-items:center;gap:6px">
+            <input type="checkbox" checked> Insertar automáticamente al llegar la fecha
+          </label>
+          <div style="font-size:10px;color:#999;margin-top:4px">Si no activas esto, se enviará una notificación. Si no pones hora, aparecerá en pendientes.</div>
+        </div>
+      </div>
+      
+      <div style="margin-bottom:12px">
+        <div style="font-size:11px;color:#666;margin-bottom:4px">Fecha de inicio</div>
+        <input class="mock-input" value="26/05/2026" style="width:100%">
+      </div>
+      
+      <div style="margin-bottom:12px">
+        <div style="font-size:11px;color:#666;margin-bottom:4px">Notas</div>
+        <textarea class="mock-input" rows="2" style="width:100%;resize:none" placeholder="Opcional"></textarea>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="pros-cons">
+  <div class="pros">
+    <h4>Lo que muestra esta propuesta</h4>
+    <ul>
+      <li>Lista con filtro (Todos/Cargos/Provedores)</li>
+      <li>Sección de pendientes para aplicar hoy</li>
+      <li>Formulario con selector tipo (Cargo/Provedor)</li>
+      <li>Sistema de repetición dinámico según frecuencia</li>
+      <li>Hora opcional + auto-insert/notificar/pendiente</li>
+    </ul>
+  </div>
+  <div class="cons">
+    <h4>Pendiente de definir</h4>
+    <ul>
+      <li>¿Dónde se muestran los pendientes? ¿En la misma página o en un modal/notificación?</li>
+      <li>Al aplicar un pendiente, ¿se crea el entry/provedor en el budget de hoy?</li>
+      <li>¿Fecha de término o indefinido?</li>
+    </ul>
+  </div>
+</div>
+
+<p class="subtitle" style="margin-top:20px">Míralo y dime qué te parece. ¿Vamos bien o quieres cambios?</p>
