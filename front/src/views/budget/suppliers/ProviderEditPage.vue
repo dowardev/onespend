@@ -212,26 +212,17 @@
             <!-- Items by account section -->
             <template v-if="selectedProvider && !isEntryMode">
               <div class="ion-padding-start ion-padding-end ion-margin-top">
-                <AccountDistributionSection
+                <AccountDistributionPicker
                   :items="items"
                   header-label="Distribución por Cuenta"
                   header-subtitle="Distribuye el monto entre las cuentas"
                   :can-add-more="true"
-                  :is-day-closed="false"
                   reverse-order
                   @add-item="handleAddItem"
                   @remove-item="removeItem"
                   @update-item-amount="updateItemAmount"
-                >
-                  <template #accountSelect="{ index }">
-                    <ion-item lines="full" class="transparent" button @click="openAccountModal({ index })">
-                      <ion-label>
-                        Cuenta
-                        <p>{{ getAccountName({ accountId: items[index].accountId }) || 'Seleccionar cuenta' }}</p>
-                      </ion-label>
-                    </ion-item>
-                  </template>
-                </AccountDistributionSection>
+                  @update-item-account="onUpdateItemAccount"
+                />
               </div>
             </template>
           </ion-col>
@@ -302,70 +293,7 @@
       </ion-content>
     </ion-modal>
 
-    <!-- Account Selection Modal -->
-    <ion-modal :is-open="showAccountModal" @will-dismiss="onAccountModalDismiss">
-      <ion-header class="ion-no-border" mode="ios">
-        <ion-toolbar>
-          <ion-buttons>
-            <ion-button @click="showAccountModal = false">
-              <ion-icon :icon="closeOutline"></ion-icon>
-            </ion-button>
-          </ion-buttons>
-          <ion-title>Seleccionar Cuenta</ion-title>
-          <ion-buttons slot="end">
-            <ion-button @click="quickAccount.openQuickAccountAlert({})">
-              <ion-icon :icon="addOutline"></ion-icon>
-            </ion-button>
-          </ion-buttons>
-        </ion-toolbar>
-      </ion-header>
-      <ion-content>
-        <ion-item lines="none">
-          <ion-searchbar
-            v-model="accountSearchQuery"
-            mode="ios"
-            placeholder="Buscar cuenta"
-            class="ion-no-padding"
-          ></ion-searchbar>
-        </ion-item>
-
-        <ion-list
-          v-if="sortedAccounts.available.length || sortedAccounts.selected.length"
-          class="transparent ion-padding-start ion-padding-end"
-        >
-          <ion-card class="shadow1">
-            <ion-item
-              v-for="acc in sortedAccounts.available"
-              :key="'avail-' + acc.id"
-              lines="full"
-              button
-              class="transparent"
-              @click="selectAccount({ acc })"
-            >
-              <ion-label>{{ acc.name }}</ion-label>
-              <ion-label slot="end">{{ acc.type || '' }}</ion-label>
-            </ion-item>
-            <ion-item
-              v-for="acc in sortedAccounts.selected"
-              :key="'sel-' + acc.id"
-              lines="full"
-              class="transparent"
-              :disabled="true"
-            >
-              <ion-label>{{ acc.name }}</ion-label>
-              <ion-note slot="end" color="medium">Seleccionada</ion-note>
-            </ion-item>
-          </ion-card>
-        </ion-list>
-
-        <div
-          v-if="!sortedAccounts.available.length && !sortedAccounts.selected.length"
-          class="ion-text-center ion-padding"
-        >
-          <ion-label color="medium"> Presiona '+' para agregar una nueva cuenta </ion-label>
-        </div>
-      </ion-content>
-    </ion-modal>
+    <!-- Account Selection Modal is inside AccountDistributionPicker -->
 
     <!-- popovers -->
   <DatePickerPopover
@@ -399,13 +327,6 @@
       message="¿Estás seguro de que deseas eliminar este proveedor?"
       :buttons="deleteConfirm.deleteAlertButtons"
       @did-dismiss="deleteConfirm.showDeleteAlert.value = false"
-    />
-
-    <QuickAccountAlert
-      :is-open="quickAccount.showQuickAccountAlert.value"
-      :inputs="quickAccount.quickAccountInputs"
-      :buttons="quickAccount.quickAccountButtons"
-      @did-dismiss="quickAccount.showQuickAccountAlert.value = false"
     />
 
     <ion-alert
@@ -469,18 +390,10 @@ import { useRouter, useRoute } from 'vue-router';
 import { format } from 'date-fns';
 import { parseDateValue, toShortDate } from '@/utils/dateHelpers';
 import { isNumericValue } from '@/utils/amountValidation';
-import { useQuickAccount } from '@/composables/useQuickAccount';
 import { useDeleteConfirm } from '@/composables/useDeleteConfirm';
 import { useDatePicker } from '@/composables/useDatePicker';
-import accountsController from '@/controllers/accountsController';
 import { type Supplier, type Product } from '@/controllers/suppliersController';
-import { type Account } from '@/controllers/accountsController';
 import type { EntryGroup } from '@/utils/budgetTypes';
-
-interface AccountWithId extends Account {
-  id: string | number;
-  type?: string;
-}
 // end imports
 
 // controllers
@@ -492,11 +405,10 @@ import { useAttachments } from '@/composables/useAttachments';
 
 // components
 import EditPageHeader from '@/views/budget/components/EditPageHeader.vue';
-import AccountDistributionSection from '@/views/budget/components/AccountDistributionSection.vue';
+import AccountDistributionPicker from '@/views/budget/components/AccountDistributionPicker.vue';
 import DetailsSection from '@/views/budget/components/DetailsSection.vue';
 import DatePickerPopover from '@/views/budget/components/DatePickerPopover.vue';
 import DeleteConfirmAlert from '@/views/budget/components/DeleteConfirmAlert.vue';
-import QuickAccountAlert from '@/views/budget/components/QuickAccountAlert.vue';
 // end components
 
 // interface and types imports
@@ -592,13 +504,8 @@ const productQuantityRawValues = ref<Map<string | number, string>>(new Map());
 const temporaryProductCounter = ref(0);
 
 const showProviderModal = ref(false);
-const showAccountModal = ref(false);
-const selectedAccountIndex = ref<number | null>(null);
-const accountSearchQuery = ref('');
 const showCoverageAlert = ref(false);
 const showIncompleteGroupToast = ref(false);
-
-// quick account and delete confirm moved to composables
 
 // Data from route params
 const routeEntryId = computed(() => route.query.entryId as string | number | undefined);
@@ -625,15 +532,6 @@ const {
 // end attachment state
 
 // composable instances
-const quickAccount = useQuickAccount({
-  onAccountCreated: ({ newAccount, targetIndex }) => {
-    if (items.value[targetIndex]) {
-      const accountIdValue = newAccount.id as string | number;
-      items.value[targetIndex].accountId = isEntryMode.value ? accountIdValue : { id: accountIdValue };
-    }
-  },
-});
-
 const deleteConfirm = useDeleteConfirm({
   onConfirm: confirmDelete,
 });
@@ -644,12 +542,6 @@ const reassignPicker = useDatePicker();
 // Notes state
 const providerNotes = ref('');
 // end notes state
-
-// Compute accounts from controller
-const accounts = computed(() => {
-  const list = accountsController.getAccounts();
-  return list ? JSON.parse(JSON.stringify(list)) : [];
-});
 // end vars and const
 
 // onMounted - initialize form based on route params
@@ -792,7 +684,7 @@ async function initializeFromProvider() {
         amount: Number(item.amount) || 0,
         accountId: accountIdValue
           ? typeof accountIdValue === 'object'
-            ? { id: (accountIdValue as Account).id }
+            ? { id: (accountIdValue as any).id }
             : { id: accountIdValue }
           : null,
       });
@@ -800,7 +692,7 @@ async function initializeFromProvider() {
   } else {
     items.value.push({
       amount: provider.estimated ?? '',
-      accountId: provider.accountId ? { id: provider.accountId } : getDefaultAccountId(),
+      accountId: provider.accountId ? { id: provider.accountId } : null,
     });
   }
 
@@ -838,36 +730,6 @@ const filteredProviders = computed(() => {
   return allSuppliersList.value.filter((p: Supplier) =>
     p.name.toLowerCase().includes(searchQuery.value.toLowerCase()),
   );
-});
-
-const selectedAccountIds = computed(() => {
-  const skipIndex = selectedAccountIndex.value;
-  return new Set(
-    items.value
-      .filter((_, i) => i !== skipIndex)
-      .map((item) => {
-        if (!item.accountId) return null;
-        return typeof item.accountId === 'object'
-          ? (item.accountId as { id: string | number }).id
-          : item.accountId;
-      })
-      .filter((id): id is string | number => id !== null),
-  );
-});
-
-const sortedAccounts = computed(() => {
-  const query = accountSearchQuery.value?.toLowerCase() || '';
-  const available: AccountWithId[] = [];
-  const selected: AccountWithId[] = [];
-  for (const acc of accounts.value as AccountWithId[]) {
-    if (query && !acc.name.toLowerCase().includes(query)) continue;
-    if (selectedAccountIds.value.has(acc.id)) {
-      selected.push(acc);
-    } else {
-      available.push(acc);
-    }
-  }
-  return { available, selected };
 });
 
 const productsTotal = computed(() => {
@@ -918,11 +780,6 @@ const isFormValid = computed(() => {
 // end computed
 
 // functions
-function getDefaultAccountId() {
-  if (accounts.value.length === 0) return null;
-  return isEntryMode.value ? accounts.value[0].id : accounts.value[0];
-}
-
 async function setTodayDate() {
   const { default: budgetController } = await import('@/controllers/budgetController');
   const selectedDate = budgetController.getSelectedDate();
@@ -982,12 +839,6 @@ function onProviderModalDismiss() {
   searchQuery.value = '';
 }
 
-function onAccountModalDismiss() {
-  showAccountModal.value = false;
-  accountSearchQuery.value = '';
-  selectedAccountIndex.value = null;
-}
-
 function selectProvider(params: { p: Supplier | SelectProviderData }) {
   const { p } = params;
   selectedProvider.value = p as Supplier;
@@ -1022,33 +873,11 @@ function selectProvider(params: { p: Supplier | SelectProviderData }) {
   }
 }
 
-function openAccountModal(params: { index: number }) {
-  const { index } = params;
-  selectedAccountIndex.value = index;
-  accountSearchQuery.value = '';
-  showAccountModal.value = true;
-}
-
-function selectAccount(params: { acc: AccountWithId }) {
-  const { acc } = params;
-  if (selectedAccountIndex.value !== null) {
-    const accountIdValue = acc.id as string | number;
-    items.value[selectedAccountIndex.value].accountId = isEntryMode.value
-      ? accountIdValue
-      : { id: accountIdValue };
+function onUpdateItemAccount(params: { index: number; accountId: { id: string | number } | null }) {
+  const { index, accountId } = params;
+  if (items.value[index]) {
+    items.value[index].accountId = accountId;
   }
-  showAccountModal.value = false;
-  selectedAccountIndex.value = null;
-}
-
-function getAccountName(params: {
-  accountId: string | number | Account | { id: string | number } | null,
-}): string {
-  const { accountId } = params;
-  if (!accountId) return '';
-  const id = typeof accountId === 'object' ? (accountId as { id: string | number }).id : accountId;
-  const acc = accounts.value.find((a: Account) => String(a.id) === String(id));
-  return acc?.name || '';
 }
 
 function formatPrice(price: number | { price: number }): string {
@@ -1191,9 +1020,7 @@ async function handleSave() {
     entryId: routeEntryId.value,
     items: items.value.map((item) => ({
       amount: Number(item.amount) || 0,
-      accountId: isEntryMode.value
-        ? (item.accountId as string | number | null)
-        : (((item.accountId as Account)?.id ?? item.accountId) as string | number | null),
+      accountId: getAccountIdValue(item.accountId),
     })) as ProviderItem[],
     totalAmount,
     products: products.length > 0 ? products : undefined,
