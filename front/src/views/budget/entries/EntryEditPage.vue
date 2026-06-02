@@ -45,7 +45,7 @@
                 </ion-card>
               </ion-list>
 
-              <AccountDistributionSection
+              <AccountDistributionPicker
                 :items="entryItems"
                 header-label="Cuentas"
                 :can-add-more="canAddMoreItems"
@@ -53,41 +53,8 @@
                 @add-item="addEntryItem"
                 @remove-item="removeEntryItem"
                 @update-item-amount="updateItemAmount"
-              >
-                <template #accountSelect="{ index, item }">
-                  <ion-item class="transparent" lines="none">
-                    <ion-select
-                      :model-value="item.accountId"
-                      interface="popover"
-                      style="--border-width: 0px"
-                      label="Cuenta"
-                      label-placement="stacked"
-                      :validate="true"
-                      error-text="Selecciona una cuenta"
-                      :disabled="accountsList.length === 0"
-                      @update:model-value="setItemAccountId({ index, accountId: $event })"
-                    >
-                      <ion-select-option
-                        v-for="acc in availableAccountsForItem(index)"
-                        :key="acc.id"
-                        :value="acc.id"
-                      >
-                        {{ acc.name }}
-                      </ion-select-option>
-                    </ion-select>
-
-                    <ion-button
-                      slot="end"
-                      fill="clear"
-                      size="small"
-                      :disabled="isDayClosed"
-                      @click="quickAccount.openQuickAccountAlert({ targetIndex: index })"
-                    >
-                      <ion-icon :icon="addOutline" />
-                    </ion-button>
-                  </ion-item>
-                </template>
-              </AccountDistributionSection>
+                @update-item-account="onUpdateItemAccount"
+              />
 
               <DetailsSection
                 :notes="entryNotes"
@@ -152,12 +119,6 @@
       @did-dismiss="deleteConfirm.showDeleteAlert.value = false"
     />
 
-    <QuickAccountAlert
-      :is-open="quickAccount.showQuickAccountAlert.value"
-      :inputs="quickAccount.quickAccountInputs"
-      :buttons="quickAccount.quickAccountButtons"
-      @did-dismiss="quickAccount.showQuickAccountAlert.value = false"
-    />
     <!-- end alerts -->
   </ion-page>
 </template>
@@ -181,29 +142,26 @@ import {
   IonCard,
   IonPopover,
 } from '@ionic/vue';
-import { addOutline, trashOutline } from 'ionicons/icons';
+import { trashOutline } from 'ionicons/icons';
 import { computed, ref, onMounted, reactive } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { format } from 'date-fns';
 import budgetController from '@/controllers/budgetController';
-import accountsController from '@/controllers/accountsController';
 import { useAttachments } from '@/composables/useAttachments';
 import { parseDateValue, toShortDate } from '@/utils/dateHelpers';
-import { useQuickAccount } from '@/composables/useQuickAccount';
 import { useDeleteConfirm } from '@/composables/useDeleteConfirm';
 import { useDatePicker } from '@/composables/useDatePicker';
 import EditPageHeader from '@/views/budget/components/EditPageHeader.vue';
-import QuickAccountAlert from '@/views/budget/components/QuickAccountAlert.vue';
+import AccountDistributionPicker from '@/views/budget/components/AccountDistributionPicker.vue';
 import DeleteConfirmAlert from '@/views/budget/components/DeleteConfirmAlert.vue';
 import DatePickerPopover from '@/views/budget/components/DatePickerPopover.vue';
 import DetailsSection from '@/views/budget/components/DetailsSection.vue';
-import AccountDistributionSection from '@/views/budget/components/AccountDistributionSection.vue';
 // end imports
 
 // interface and types imports
 interface EntryGroup {
   amount: number;
-  accountId: string | number | null;
+  accountId: string | number | { id: string | number } | null;
 }
 // end interface and types imports
 
@@ -213,7 +171,7 @@ const route = useRoute();
 // end router
 
 // vars and const
-const entryItems = ref<Array<{ amount: number | string; accountId: string | number | null }>>([
+const entryItems = ref<Array<{ amount: number | string; accountId: string | number | { id: string | number } | null }>>([
   { amount: '', accountId: null },
 ]);
 
@@ -238,14 +196,6 @@ const {
   dismissModal: closeAttachmentsModal,
 } = useAttachments({ entityType: 'entries', syncId: entrySyncId });
 
-const quickAccount = useQuickAccount({
-  onAccountCreated: ({ newAccount, targetIndex }) => {
-    if (entryItems.value[targetIndex]) {
-      entryItems.value[targetIndex].accountId = newAccount.id as string | number;
-    }
-  },
-});
-
 const deleteConfirm = useDeleteConfirm({
   onConfirm: confirmDelete,
 });
@@ -265,12 +215,6 @@ const optionsPopoverState = reactive({
 const isEditing = computed(() => !!route.query.entryId);
 const isDayClosed = computed(() => false);
 
-const accountsList = computed(() => {
-  const list = accountsController.getAccounts();
-  if (!list || !Array.isArray(list)) return [];
-  return list.filter((acc: any) => acc != null && acc.id != null);
-});
-
 // computed
 const isFormValid = computed(() => {
   return (
@@ -284,9 +228,7 @@ const isFormValid = computed(() => {
   );
 });
 
-const canAddMoreItems = computed(() => {
-  return entryItems.value.length < accountsList.value.length;
-});
+const canAddMoreItems = computed(() => true);
 // end computed
 
 // onmounted
@@ -294,8 +236,7 @@ onMounted(async () => {
   if (isEditing.value && route.query.entryId) {
     await loadEntry(route.query.entryId as string);
   } else {
-    const defaultAccountId = getDefaultAccountId();
-    entryItems.value = [{ amount: '', accountId: defaultAccountId }];
+    entryItems.value = [{ amount: '', accountId: null }];
     const selectedDate = budgetController.getSelectedDate();
     const dateStr = selectedDate
       ? selectedDate.slice(0, 10) + 'T00:00:00'
@@ -323,18 +264,24 @@ async function loadEntry(entryId: string) {
   entryNotes.value = entryAny.notes || '';
   entrySyncId.value = entryAny.sync_id || null;
 
-  const defaultAccountId = getDefaultAccountId();
+  function normalizeAccountId(accountId: unknown): { id: string | number } | null {
+    if (!accountId) return null;
+    if (typeof accountId === 'object' && accountId !== null && 'id' in accountId) {
+      return { id: (accountId as { id: string | number }).id };
+    }
+    return { id: accountId as string | number };
+  }
 
   if (entryAny.groups && Array.isArray(entryAny.groups) && entryAny.groups.length > 0) {
     entryItems.value = entryAny.groups.map((g: EntryGroup) => ({
       amount: g.amount ?? '',
-      accountId: g.accountId ?? defaultAccountId,
+      accountId: normalizeAccountId(g.accountId),
     }));
   } else {
     entryItems.value = [
       {
         amount: entryAny.amount ?? '',
-        accountId: entryAny.accountId || defaultAccountId,
+        accountId: normalizeAccountId(entryAny.accountId),
       },
     ];
   }
@@ -385,22 +332,8 @@ function resolveEntryDate(entry: any): string {
   return format(new Date(), 'yyyy-MM-dd');
 }
 
-function getDefaultAccountId() {
-  return accountsList.value.length > 0 ? accountsList.value[0].id : null;
-}
-
-const availableAccountsForItem = (currentIndex: number) => {
-  const usedAccountIds = entryItems.value
-    .filter((_: unknown, idx: number) => idx !== currentIndex)
-    .map((item: { accountId: string | number | null }) => String(item.accountId))
-    .filter((id: string) => id !== 'null' && id !== 'undefined' && id !== '');
-  return accountsList.value.filter((acc: any) => !usedAccountIds.includes(String(acc.id)));
-};
-
 function addEntryItem() {
-  if (canAddMoreItems.value) {
-    entryItems.value.push({ amount: '', accountId: getDefaultAccountId() });
-  }
+  entryItems.value.push({ amount: '', accountId: null });
 }
 
 function removeEntryItem(params: { index: number }) {
@@ -413,12 +346,23 @@ function updateItemAmount(params: { index: number; amount: string }) {
   entryItems.value[params.index].amount = params.amount;
 }
 
-function setItemAccountId(params: { index: number; accountId: string | number | null }) {
-  entryItems.value[params.index].accountId = params.accountId;
+function onUpdateItemAccount(params: { index: number; accountId: { id: string | number } | null }) {
+  const { index, accountId } = params;
+  if (entryItems.value[index]) {
+    entryItems.value[index].accountId = accountId;
+  }
 }
 
 async function handleSave() {
   if (!isFormValid.value) return;
+
+  function getAccountIdValue(accountId: unknown): string | number | null {
+    if (!accountId) return null;
+    if (typeof accountId === 'object' && accountId !== null && 'id' in accountId) {
+      return (accountId as { id: string | number }).id ?? null;
+    }
+    return accountId as string | number;
+  }
 
   const totalAmount = entryItems.value.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
 
@@ -426,8 +370,11 @@ async function handleSave() {
     entryType: entryData.value.entryType,
     name: entryData.value.name,
     amount: totalAmount,
-    accountId: entryItems.value[0]?.accountId ?? null,
-    groups: entryItems.value,
+    accountId: getAccountIdValue(entryItems.value[0]?.accountId),
+    groups: entryItems.value.map((item) => ({
+      amount: Number(item.amount) || 0,
+      accountId: getAccountIdValue(item.accountId),
+    })),
     notes: entryNotes.value,
   };
 
