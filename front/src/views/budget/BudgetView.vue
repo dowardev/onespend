@@ -406,11 +406,11 @@ async function processRecurringForDate() {
             })),
           });
         }
-        budgetController.saveData();
       } else {
         pendientes.push(record);
       }
     }
+    budgetController.saveData();
 
     pendingRecurringRecords.value = pendientes;
     if (pendientes.some((r) => r.autoInsert && r.time)) {

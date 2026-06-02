@@ -19,7 +19,7 @@ export type Product = {
 };
 
 export type Supplier = {
-  id?: IDBValidKey;
+  id?: string | number;
   sync_id?: string;
   serverId?: number | null;
   name: string;
@@ -138,7 +138,7 @@ class SuppliersController {
       console.log('[suppliersController] ✅ syncProvider ejecutado');
 
       const localId = await ctrl.addEntry({ entry });
-      entry.id = localId;
+      entry.id = typeof localId === 'number' ? localId : String(localId);
       const result = entry as Supplier;
       console.log('[suppliersController] Guardado en IndexedDB con localId:', localId);
 
@@ -246,7 +246,7 @@ class SuppliersController {
     }
   }
 
-  async deleteSupplier(params: { id: IDBValidKey }) {
+  async deleteSupplier(params: { id: string | number }) {
     const { id } = params;
     const store = this.getStore();
     store.loading = true;

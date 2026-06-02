@@ -127,6 +127,7 @@ import { addOutline, trashOutline, pauseOutline, playOutline, flaskOutline } fro
 import systemController from '@/controllers/systemConfigController';
 import { recurringController, type RecurringRecord } from '@/controllers/recurringController';
 import accountsController from '@/controllers/accountsController';
+import { useSync } from '@/composables/useSync';
 // End Controllers
 
 // Components
@@ -156,6 +157,7 @@ const weekDayShort = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
 const weekDayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 const ordinalNames = ['', 'Primer', 'Segundo', 'Tercer', 'Cuarto', 'Quinto', 'Sexto', 'Séptimo', 'Octavo'];
+const { syncRecurringRecord } = useSync();
 // End Vars and const
 
 // Watch
@@ -281,6 +283,7 @@ async function toggleRecord(params: { record: RecurringRecord }) {
   const { record } = params;
   if (record.id == null) return;
   await recurringController.toggleActive({ id: record.id });
+  await syncRecurringRecord({ record: { ...record, status: record.status === 'active' ? 'paused' : 'active' as const } });
   await loadRecords();
 }
 
@@ -299,12 +302,15 @@ function onDeleteAlertDidDismiss() {
 
 async function removeConfirmed() {
   const id = deleteConfirm.recordId;
+  const recordToDelete = id != null ? await recurringController.getRecordById({ id }) : null;
+
   deleteConfirm.open = false;
   deleteConfirm.recordId = null;
   deleteConfirm.recordName = '';
 
-  if (id == null) return;
-  await recurringController.removeRecord({ id });
+  if (!recordToDelete) return;
+  await recurringController.removeRecord({ id: id! });
+  await syncRecurringRecord({ record: { ...recordToDelete, status: 'deleted' as const } });
   await loadRecords();
 }
 
