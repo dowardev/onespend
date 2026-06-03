@@ -193,6 +193,7 @@ import {
   IonItem,
   IonSearchbar,
   IonThumbnail,
+  useIonToast,
 } from '@ionic/vue';
 import { reactive, ref, computed, watch, toRaw } from 'vue';
 import { addOutline, closeOutline, saveOutline, searchOutline, trashOutline } from 'ionicons/icons';
@@ -206,7 +207,7 @@ interface SupplierProduct {
 
 interface SavedPayload {
   name: string;
-  products?: SupplierProduct[];
+  products: SupplierProduct[];
   id?: IDBValidKey;
   sync_id?: string;
 }
@@ -235,6 +236,7 @@ const productSearchTerm = ref('');
 const showProductSearch = ref(false);
 const selectedId = computed(() => props.supplier?.id ?? null);
 // end vars
+const [presentToast] = useIonToast();
 const fileInput = ref<HTMLInputElement | null>(null);
 
 // file helpers with compression
@@ -451,30 +453,31 @@ function editProduct(params: { idx: number }) {
 }
 
 function onSubmit() {
-  console.log('[AddSupliersComponent] 🔵 onSubmit llamado');
-  console.log('[AddSupliersComponent] form.name:', form.name);
-  console.log('[AddSupliersComponent] form.products.length:', form.products.length);
-
   if (!form.name) {
-    console.log('[AddSupliersComponent] ⚠️ form.name está vacío');
+    return;
+  }
+
+  if (!form.products || form.products.length === 0) {
+    showNewProductFields.value = true;
+    presentToast({
+      message: 'Debes agregar al menos un producto',
+      duration: 2000,
+      color: 'warning',
+      position: 'bottom',
+    });
     return;
   }
 
   const payload: SavedPayload = {
     name: form.name,
-    products: form.products && form.products.length ? form.products : undefined,
+    products: form.products,
   };
-
-  console.log('[AddSupliersComponent] Payload a emitir:', JSON.stringify(payload, null, 2));
 
   if (selectedId.value != null) payload.id = selectedId.value;
   if (props.supplier?.sync_id) payload.sync_id = props.supplier.sync_id;
 
   emit('saved', payload);
-  console.log('[AddSupliersComponent] ✅ emitted saved');
-  // Also request modal dismissal to ensure it closes even if parent handler has errors
   emit('dismiss');
-  console.log('[AddSupliersComponent] ✅ emitted dismiss');
 }
 </script>
 
