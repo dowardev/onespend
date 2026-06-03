@@ -1,3 +1,11 @@
+## [v0.67.1] - 2026-06-03
+
+### Fixed
+
+- **AddSupplierComponent** — Replaced `useIonToast` with `toastController`
+
+  `@ionic/vue` v8 does not export `useIonToast`. Replaced the non-existent composable import with `toastController.create()` + `.present()` to fix the `SyntaxError` at runtime.
+
 ## [v0.67.0] - 2026-06-02
 
 ### Removed

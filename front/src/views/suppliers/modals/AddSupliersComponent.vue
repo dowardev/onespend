@@ -193,7 +193,7 @@ import {
   IonItem,
   IonSearchbar,
   IonThumbnail,
-  useIonToast,
+  toastController,
 } from '@ionic/vue';
 import { reactive, ref, computed, watch, toRaw } from 'vue';
 import { addOutline, closeOutline, saveOutline, searchOutline, trashOutline } from 'ionicons/icons';
@@ -236,7 +236,10 @@ const productSearchTerm = ref('');
 const showProductSearch = ref(false);
 const selectedId = computed(() => props.supplier?.id ?? null);
 // end vars
-const [presentToast] = useIonToast();
+async function presentToast(params: { message: string; duration: number; color: string; position: 'bottom' | 'top' | 'middle' }) {
+  const toast = await toastController.create(params);
+  await toast.present();
+}
 const fileInput = ref<HTMLInputElement | null>(null);
 
 // file helpers with compression
