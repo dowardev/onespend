@@ -9,7 +9,6 @@ use App\Models\BudgetEntry;
 use App\Models\BudgetEntryGroup;
 use App\Models\Supplier;
 use App\Models\SupplierProduct;
-use App\Models\Template;
 use App\Models\SyncMetadata;
 use App\Models\RecurringRecord;
 use App\Models\RecurringRecordProduct;
@@ -28,7 +27,6 @@ class SyncController extends Controller
         'budget_entry' => BudgetEntry::class,
         'supplier' => Supplier::class,
         'supplier_product' => SupplierProduct::class,
-        'template' => Template::class,
         'recurring_record' => RecurringRecord::class,
         'recurring_record_product' => RecurringRecordProduct::class,
     ];
@@ -836,8 +834,6 @@ case 'budget_entry':
                 'suppliers' => $suppliers,
                 'supplier_products' => SupplierProduct::forUser($userId)->active()
                     ->get(['id', 'sync_id', 'user_id', 'supplier_id', 'name', 'price', 'status', 'updated_at']),
-                'templates' => Template::forUser($userId)->active()
-                    ->get(['id', 'sync_id', 'user_id', 'name', 'status', 'updated_at']),
                 'recurring_records' => RecurringRecord::forUser($userId)->active()
                     ->with('products')
                     ->get(['id', 'sync_id', 'user_id', 'type', 'entry_type', 'name', 'amount', 'account_id',
