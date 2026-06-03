@@ -55,8 +55,7 @@ export interface SyncItem {
     | 'recurring_record'
     | 'recurring_record_product'
     | 'supplier'
-    | 'supplier_product'
-    | 'template';
+    | 'supplier_product';
   operation: 'create' | 'update' | 'delete';
   data: SyncItemData;
   timestamp: number;
@@ -316,7 +315,6 @@ class SyncService {
         recurring_record_product: [],
         supplier: [],
         supplier_product: [],
-        template: [],
       };
 
       const processedIds: string[] = [];
@@ -460,7 +458,6 @@ class SyncService {
       recurring_record: 'recurring_records',
       supplier: 'suppliers',
       supplier_product: 'supplier_products',
-      template: 'templates',
     };
 
     let updatedCount = 0;
@@ -726,7 +723,6 @@ class SyncService {
       recurring_record: 'recurring_records',
       supplier: 'suppliers',
       supplier_product: 'supplier_products',
-      template: 'templates',
     };
 
     for (const [entityType, items] of Object.entries(changes)) {

@@ -55,7 +55,6 @@ export interface Provider {
   synced_at?: number;
   createdAt?: number;
   _justAdded?: boolean;
-  _fromTemplate?: boolean;
   _pendingProducts?: BudgetProviderProduct[];
   _supplierKey?: string;
   _supplierId?: string | number;

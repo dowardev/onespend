@@ -18,7 +18,7 @@ class DixieController {
         const allStores = [
           'suppliers',
           'accounts',
-          'templates',
+
           'budget',
           'backups',
           'config',
@@ -40,7 +40,7 @@ class DixieController {
         const allStores = [
           'suppliers',
           'accounts',
-          'templates',
+
           'budget',
           'backups',
           'config',
@@ -122,7 +122,7 @@ class DixieController {
         const allStores = [
           'suppliers',
           'accounts',
-          'templates',
+
           'budget',
           'backups',
           'config',
