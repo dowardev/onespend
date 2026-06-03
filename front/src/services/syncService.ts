@@ -86,6 +86,7 @@ export interface ServerSyncResponse {
   changes?: Record<string, SyncItemData[]>;
   data?: Record<string, SyncItemData[]>;
   conflicts?: Record<string, SyncConflictItem[]>;
+  errors?: Record<string, Array<{ sync_id: string; error: string }>>;
   serverTime?: number;
   server_time?: number;
 }
@@ -367,6 +368,10 @@ class SyncService {
       if (result.success && result.results) {
         console.log('[SyncService] syncQueue - Server response:', result);
         await this.updateLocalRecordsWithMysqlIds(result.results);
+
+        if (result.errors) {
+          console.warn('[SyncService] syncQueue - Server errors:', result.errors);
+        }
       } else {
         console.warn('[SyncService] syncQueue - Server response without results:', result);
       }

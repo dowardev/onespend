@@ -123,12 +123,13 @@ case 'budget_entry':
     private function bulkCreateSuppliers(array $items, int $userId): array
     {
         $results = [];
+        $errors = [];
         if (empty($items)) {
-            return $results;
+            return ['results' => $results, 'errors' => $errors];
         }
         
         $insertData = [];
-        $productsToCreate = []; // Store products to create after suppliers
+        $productsToCreate = [];
         $now = now();
         
         $validFields = ['name', 'user_id', 'sync_id', 'created_at', 'updated_at', 'deleted_at'];
@@ -137,10 +138,16 @@ case 'budget_entry':
             $syncId = $item['id'] ?? null;
             if (!$syncId) continue;
             
-            // Extract products before filtering
             $products = $item['products'] ?? [];
             
-            // Filter only valid fields
+            if (empty($products)) {
+                $errors[] = [
+                    'sync_id' => $syncId,
+                    'error' => 'At least one product is required',
+                ];
+                continue;
+            }
+            
             $data = array_intersect_key($item, array_flip($validFields));
             
             $data['user_id'] = $userId;
@@ -148,7 +155,6 @@ case 'budget_entry':
             $data['created_at'] = $now;
             $data['updated_at'] = $now;
             
-            // Convert timestamp fields
             if (isset($data['updated_at']) && is_numeric($data['updated_at'])) {
                 $timestamp = $data['updated_at'];
                 if ($timestamp > 10000000000) {
@@ -159,7 +165,6 @@ case 'budget_entry':
             
             $insertData[] = $data;
             
-            // Store products for later creation
             if (!empty($products)) {
                 $productsToCreate[$syncId] = $products;
             }
@@ -168,7 +173,6 @@ case 'budget_entry':
         if (!empty($insertData)) {
             Supplier::insert($insertData);
             
-            // Get inserted records to return their IDs
             $syncIds = array_column($insertData, 'sync_id');
             $createdRecords = Supplier::whereIn('sync_id', $syncIds)->get(['id', 'sync_id']);
             
@@ -176,14 +180,13 @@ case 'budget_entry':
                 $results[] = ['sync_id' => $record->sync_id, 'id' => $record->id];
                 $this->updateSyncMetadata('supplier', $record->sync_id, 'synced', $userId);
                 
-                // Create supplier_products for this supplier
                 if (isset($productsToCreate[$record->sync_id])) {
                     $this->createSupplierProducts($record->sync_id, $record->id, $productsToCreate[$record->sync_id], $userId);
                 }
             }
         }
         
-        return $results;
+        return ['results' => $results, 'errors' => $errors];
     }
     
     /**
@@ -221,8 +224,9 @@ case 'budget_entry':
     private function bulkUpdateSuppliers(array $items, int $userId): array
     {
         $results = [];
+        $errors = [];
         if (empty($items)) {
-            return $results;
+            return ['results' => $results, 'errors' => $errors];
         }
         
         $validFields = ['name', 'updated_at', 'deleted_at'];
@@ -232,13 +236,18 @@ case 'budget_entry':
             $syncId = $itemData['sync_id'];
             $existing = $itemData['existing'];
             
-            // Extract products before filtering
             $products = $item['products'] ?? [];
             
-            // Filter only valid fields
+            if (empty($products)) {
+                $errors[] = [
+                    'sync_id' => $syncId,
+                    'error' => 'At least one product is required',
+                ];
+                continue;
+            }
+            
             $updateFields = array_intersect_key($item, array_flip($validFields));
             
-            // Convert timestamp fields
             foreach ($updateFields as $key => $value) {
                 if (in_array($key, ['updated_at']) && is_numeric($value)) {
                     $timestamp = $value;
@@ -253,13 +262,12 @@ case 'budget_entry':
             $this->updateSyncMetadata('supplier', $syncId, 'synced', $userId);
             $results[] = ['sync_id' => $syncId];
             
-            // Update supplier products if provided
             if (!empty($products)) {
                 $this->updateSupplierProducts($syncId, $existing->id, $products, $userId);
             }
         }
         
-        return $results;
+        return ['results' => $results, 'errors' => $errors];
     }
     
     /**
@@ -443,6 +451,7 @@ case 'budget_entry':
             'updated' => [],
             'deleted' => [],
             'conflicts' => [],
+            'errors' => [],
         ];
 
         DB::beginTransaction();
@@ -572,14 +581,27 @@ case 'budget_entry':
                 }
                 
                 // Process bulk operations
-                $created = $this->bulkCreateSuppliers($toCreate, $user->id);
-                $updated = $this->bulkUpdateSuppliers($toUpdate, $user->id);
+                $createResult = $this->bulkCreateSuppliers($toCreate, $user->id);
+                $updateResult = $this->bulkUpdateSuppliers($toUpdate, $user->id);
                 $deleted = $this->bulkDeleteSuppliers($toDelete, $user->id);
                 
-                $results['created']['supplier'] = $created;
-                $results['updated']['supplier'] = $updated;
+                $results['created']['supplier'] = $createResult['results'];
+                $results['updated']['supplier'] = $updateResult['results'];
                 $results['deleted']['supplier'] = $deleted;
                 $results['conflicts']['supplier'] = $conflicts;
+                
+                if (!empty($createResult['errors'])) {
+                    $results['errors']['supplier'] = array_merge(
+                        $results['errors']['supplier'],
+                        $createResult['errors']
+                    );
+                }
+                if (!empty($updateResult['errors'])) {
+                    $results['errors']['supplier'] = array_merge(
+                        $results['errors']['supplier'],
+                        $updateResult['errors']
+                    );
+                }
             }
 
             // Process supplier_products second (depends on suppliers) - using individual for now due to complexity
