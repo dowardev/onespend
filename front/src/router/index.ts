@@ -4,7 +4,6 @@ import { setupNavigationCleanup, removeTemporaryElements } from '@/utils/domClea
 // Static imports (no relative paths) — match original file structure but using '@' alias
 import HomePage from '@/views/HomePage.vue';
 import BudgetView from '@/views/budget/BudgetView.vue';
-import TemplatesView from '@/views/templates/TemplatesView.vue';
 import SuppliersPage from '@/views/suppliers/SuppliersPage.vue';
 import AccountsPage from '@/views/suppliers/accounts/AccountsPage.vue';
 import StatisticsPage from '@/views/statistics/StatisticsPage.vue';
@@ -91,11 +90,6 @@ const routes: Array<RouteRecordRaw> = [
     component: AccountsPage,
   },
   {
-    path: '/templates',
-    name: 'TemplatesView',
-    component: TemplatesView,
-  },
-  {
     path: '/sync',
     name: 'SyncView',
     component: SyncView,
@@ -172,7 +166,7 @@ router.beforeResolve(async (to, from) => {
   if (import.meta.env.DEV) return;
 
   // Define critical routes to prefetch (excluding statistics to prevent issues)
-  const criticalRoutes = ['HomePage', 'BudgetView', 'AccountsPage', 'TemplatesView'];
+  const criticalRoutes = ['HomePage', 'BudgetView', 'AccountsPage'];
 
   // Add safety check to prevent prefetching statistics routes
   if (String(to.name).includes('Statistics') || String(to.name).includes('Performance')) {

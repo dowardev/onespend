@@ -223,7 +223,6 @@ function getEntityLabel(entity: string) {
     entry: 'Entradas',
     supplier: 'Proveedores',
     supplier_product: 'Productos de proveedores',
-    template: 'Plantillas',
   };
   return labels[entity] || entity;
 }

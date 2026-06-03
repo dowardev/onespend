@@ -60,17 +60,6 @@
           <ion-item
             button
             lines="none"
-            :class="{ 'menu-active': isTemplates }"
-            :aria-current="isTemplates ? 'page' : undefined"
-            @click="navigate({ name: 'TemplatesView' })"
-          >
-            <ion-icon slot="start" :icon="documentTextOutline"></ion-icon>
-            <ion-label>Templates</ion-label>
-          </ion-item>
-
-          <ion-item
-            button
-            lines="none"
             :class="{ 'menu-active': isSuppliers }"
             :aria-current="isSuppliers ? 'page' : undefined"
             @click="navigate({ name: 'SuppliersPage' })"
@@ -219,7 +208,6 @@ import { ref, computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import {
   walletOutline,
-  documentTextOutline,
   businessOutline,
   layersOutline,
   repeatOutline,
@@ -263,7 +251,6 @@ const appName =
 
 // Computed
 const isBudget = computed(() => route.path === '/budget');
-const isTemplates = computed(() => route.path === '/templates');
 const isSuppliers = computed(() => route.path === '/suppliers');
 const isRecurring = computed(() => route.path.startsWith('/recurring'));
 const isSuppliersAccounts = computed(() => route.path === '/suppliers/accounts');

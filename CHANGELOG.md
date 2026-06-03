@@ -1,3 +1,29 @@
+## [v0.67.0] - 2026-06-02
+
+### Removed
+
+- **Templates feature** — Complete removal from both frontend and backend
+
+  **Backend:**
+  - `app/Models/Template.php` — Model removed
+  - `database/migrations/2026_01_16_000005_create_templates_table.php` — Migration deleted
+  - `database/migrations/2026_06_02_000001_drop_templates_table.php` — New migration to drop the `templates` table
+  - `app/Http/Controllers/SyncController.php` — Removed Template import, ENTITY_TYPES mapping, and fullSync query
+
+  **Frontend:**
+  - `stores/templatesStore.ts` — Pinia store removed
+  - `controllers/TempalteController.ts` — Controller removed
+  - `controllers/templateService.ts` — Service removed
+  - `views/templates/` — Entire view directory (TemplatesView, AddTemplateComponent, ApplyTemplateComponent) removed
+  - `views/budget/components/TemplatesModal.vue` — Budget template picker modal removed
+  - `router/index.ts` — `/templates` route and prefetch removed
+  - `components/MainMenu.vue` — "Templates" menu item removed
+  - `composables/useSync.ts` — `syncTemplate()` function and pull-change integration removed
+  - `services/syncService.ts` — Template entity type removed from queue and data mapping
+  - `views/sync/SyncView.vue` — "Plantillas" entity label removed
+  - `stores/budgetStore.ts` — `_fromTemplate` flag removed from Provider interface
+  - `controllers/dixie.ts` — `'templates'` IndexedDB object store removed
+
 ## [v0.66.0] - 2026-05-25
 
 ### Refactor

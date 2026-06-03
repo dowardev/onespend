@@ -3,7 +3,6 @@ import { syncService, type SyncItem, type SyncItemData } from '@/services/syncSe
 import { useBudgetStore } from '@/stores/budgetStore';
 import { useAccountsStore } from '@/stores/accountsStore';
 import { useSuppliersStore } from '@/stores/suppliersStore';
-import { useTemplatesStore } from '@/stores/templatesStore';
 import { recurringController, type RecurringRecord, RECURRING_FIELD_MAP } from '@/controllers/recurringController';
 
 function mapServerRecurringToLocal(params: { item: Record<string, unknown> }): RecurringRecord {
@@ -71,14 +70,6 @@ export interface SyncAccountParams {
   [key: string]: unknown;
 }
 
-export interface SyncTemplateParams {
-  name?: string | null;
-  description?: string | null;
-  suppliers?: string[];
-  suppliersSnapshot?: string[];
-  [key: string]: unknown;
-}
-
 export interface SyncSupplierProductParams {
   supplierId?: number | string | null;
   name?: string | null;
@@ -127,8 +118,6 @@ export function useSync() {
   const budgetStore = useBudgetStore();
   const accountsStore = useAccountsStore();
   const suppliersStore = useSuppliersStore();
-  const templatesStore = useTemplatesStore();
-
   let cleanupOnlineListener: (() => void) | null = null;
 
   function generateSyncId(): string {
@@ -305,34 +294,6 @@ export function useSync() {
       data: {
         name: acc.name || null,
         initial_balance: acc.initialBalance ?? null,
-        updated_at: Date.now(),
-      },
-    };
-
-    syncService.queueOperation(syncItem);
-    pendingChanges.value = syncService.getQueueCount();
-  }
-
-  function syncTemplate(params: {
-    template: SyncTemplateParams;
-    operation?: 'create' | 'update' | 'delete';
-  }) {
-    const { template, operation = 'create' } = params;
-    let syncId = template.sync_id;
-
-    if (!syncId) {
-      syncId = template.sync_id = String(template.id || generateSyncId());
-    }
-
-    const syncItem: Omit<SyncItem, 'timestamp' | 'retryCount'> = {
-      id: syncId,
-      entityType: 'template',
-      operation,
-      data: {
-        name: template.name,
-        description: template.description,
-        suppliers: template.suppliers,
-        suppliers_snapshot: template.suppliersSnapshot,
         updated_at: Date.now(),
       },
     };
@@ -727,22 +688,6 @@ export function useSync() {
       }
     }
 
-    if (changes.template) {
-      const templates = Array.isArray(changes.template) ? changes.template : [];
-      for (const template of templates) {
-        if (!template._deleted) {
-          templatesStore.upsertTemplate({
-            id: template.id,
-            sync_id: template.id,
-            name: template.name,
-            description: template.description,
-            suppliers: template.suppliers,
-            suppliersSnapshot: template.suppliers_snapshot,
-          });
-        }
-      }
-    }
-
     if (changes.budget_provider) {
       const providers = Array.isArray(changes.budget_provider) ? changes.budget_provider : [];
       for (const provider of providers) {
@@ -872,7 +817,7 @@ export function useSync() {
     syncEntry,
     syncProvider,
     syncAccount,
-    syncTemplate,
+
     syncBudgetProvider,
     syncBudgetProviderProduct,
     syncRecurringRecord,
