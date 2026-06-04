@@ -12,15 +12,25 @@ use App\Models\SupplierProduct;
 use App\Models\SyncMetadata;
 use App\Models\RecurringRecord;
 use App\Models\RecurringRecordProduct;
-use Illuminate\Http\Request;
+use App\Http\Requests\Sync\SyncMergeRequest;
+use App\Http\Requests\Sync\SyncResolveConflictRequest;
+use App\Http\Requests\Sync\AccountSyncRequest;
+use App\Http\Requests\Sync\BudgetEntrySyncRequest;
+use App\Http\Requests\Sync\BudgetProviderProductSyncRequest;
+use App\Http\Requests\Sync\BudgetProviderSyncRequest;
+use App\Http\Requests\Sync\RecurringRecordProductSyncRequest;
+use App\Http\Requests\Sync\RecurringRecordSyncRequest;
+use App\Http\Requests\Sync\SupplierProductSyncRequest;
+use App\Http\Requests\Sync\SupplierSyncRequest;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
 
 class SyncController extends Controller
 {
-    private const ENTITY_TYPES = [
+    public const ENTITY_TYPES = [
         'account' => Account::class,
         'budget_provider' => BudgetProvider::class,
         'budget_provider_product' => BudgetProviderProduct::class,
@@ -323,7 +333,7 @@ case 'budget_entry':
         foreach ($syncIds as $syncId) {
             $existing = Supplier::where('sync_id', $syncId)->first();
             if ($existing) {
-                $existing->update(['status' => 'deleted', 'deleted_at' => now()]);
+                $existing->update(['deleted_at' => now()]);
                 $this->updateSyncMetadata('supplier', $syncId, 'deleted', $userId);
                 $results[] = $syncId;
             }
@@ -397,6 +407,7 @@ case 'budget_entry':
             }
             
             unset($data['id']);
+            $data = $this->filterToFillable($entityType, $data);
             $insertData[] = $data;
         }
         
@@ -437,10 +448,55 @@ case 'budget_entry':
         }
     }
 
-    public function merge(Request $request): JsonResponse
+    private function validateEntityData(string $entityType, array $items): void
+    {
+        $requestClass = match($entityType) {
+            'account' => AccountSyncRequest::class,
+            'supplier' => SupplierSyncRequest::class,
+            'supplier_product' => SupplierProductSyncRequest::class,
+            'budget_entry' => BudgetEntrySyncRequest::class,
+            'budget_provider' => BudgetProviderSyncRequest::class,
+            'budget_provider_product' => BudgetProviderProductSyncRequest::class,
+            'recurring_record' => RecurringRecordSyncRequest::class,
+            'recurring_record_product' => RecurringRecordProductSyncRequest::class,
+            default => null,
+        };
+
+        if ($requestClass === null) {
+            return;
+        }
+
+        $rules = $requestClass::validationRules();
+
+        foreach ($items as $index => $item) {
+            $validator = Validator::make($item, $rules);
+
+            if ($validator->fails()) {
+                throw new \Illuminate\Validation\ValidationException(
+                    $validator,
+                    response()->json([
+                        'message' => "Validation failed for item at index {$index} in {$entityType}",
+                        'errors' => $validator->errors(),
+                        'index' => $index,
+                        'entity_type' => $entityType,
+                    ], 422)
+                );
+            }
+        }
+    }
+
+    public function merge(SyncMergeRequest $request): JsonResponse
     {
         $user = $request->user();
-        $data = $request->input('data', []);
+        $data = $request->input('data');
+
+        // Validate each entity type against its FormRequest
+        foreach ($data as $entityType => $items) {
+            if (!is_array($items)) {
+                continue;
+            }
+            $this->validateEntityData($entityType, $items);
+        }
 
         Log::info('SyncController::merge - Received data', ['data' => $data]);
 
@@ -701,7 +757,7 @@ case 'budget_entry':
                                 $productData['_deleted'] = true;
                             }
                             
-                            Log::info("SyncController::merge - Product item data", ['productData' => $productData, 'operation' => $productOperation]);
+                            Log::info("SyncController::merge - Product item data", ['productData' => $productData]);
                             
                             $productResult = $this->processItem('budget_provider_product', $productData, $user->id);
                             
@@ -858,7 +914,7 @@ case 'budget_entry':
         ]);
     }
 
-    public function resolveConflict(Request $request): JsonResponse
+    public function resolveConflict(SyncResolveConflictRequest $request): JsonResponse
     {
         $user = $request->user();
         $entityType = $request->input('entity_type');
@@ -875,6 +931,11 @@ case 'budget_entry':
                 'success' => false,
                 'error' => 'Conflict not found',
             ], 404);
+        }
+
+        // Validate client_data against the entity's FormRequest
+        if ($clientData !== null) {
+            $this->validateEntityData($entityType, [$clientData]);
         }
 
         if ($resolution === 'client' && $clientData) {
@@ -951,8 +1012,10 @@ case 'budget_entry':
             if ($existing) {
                 if ($entityType === 'recurring_record_product') {
                     $existing->delete();
+                } elseif ($entityType === 'recurring_record') {
+                    $existing->update(['deleted_at' => now(), 'status' => 'deleted']);
                 } else {
-                    $existing->update(['status' => 'deleted', 'deleted_at' => now()]);
+                    $existing->update(['deleted_at' => now()]);
                 }
                 $this->updateSyncMetadata($entityType, $syncId, 'deleted', $userId);
             }
@@ -1035,6 +1098,29 @@ case 'budget_entry':
         return ['status' => 'skipped', 'sync_id' => $syncId];
     }
 
+    private function filterToFillable(string $entityType, array $data, array $allowedFields = []): array
+    {
+        $modelClass = self::ENTITY_TYPES[$entityType] ?? null;
+
+        if ($modelClass === null || !is_subclass_of($modelClass, \Illuminate\Database\Eloquent\Model::class)) {
+            return $data;
+        }
+
+        $model = new $modelClass();
+        $fillable = $model->getFillable();
+
+        if (!empty($allowedFields)) {
+            $allowedFields = array_intersect($allowedFields, $fillable);
+            return array_intersect_key($data, array_flip($allowedFields));
+        }
+
+        if (empty($fillable)) {
+            return $data;
+        }
+
+        return array_intersect_key($data, array_flip($fillable));
+    }
+
     private function updateEntity(string $entityType, string $syncId, array $data, int $userId, $existing = null): void
     {
         $modelClass = self::ENTITY_TYPES[$entityType];
@@ -1065,6 +1151,8 @@ case 'budget_entry':
             }
         }
         
+        $updateData = $this->filterToFillable($entityType, $updateData);
+
         $modelClass::where('sync_id', $syncId)->update($updateData);
     }
 

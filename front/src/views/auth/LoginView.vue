@@ -25,6 +25,9 @@
               required
               placeholder="tu@email.com o usuario"
             ></ion-input>
+            <div v-if="v$.login.$error" class="validation-error">
+              <span v-if="v$.login.required.$invalid">El email o usuario es obligatorio</span>
+            </div>
           </ion-item>
 
           <ion-item>
@@ -35,6 +38,10 @@
               required
               placeholder="Tu contraseña"
             ></ion-input>
+            <div v-if="v$.password.$error" class="validation-error">
+              <span v-if="v$.password.required.$invalid">La contraseña es obligatoria</span>
+              <span v-else-if="v$.password.minLength.$invalid">La contraseña debe tener al menos 6 caracteres</span>
+            </div>
           </ion-item>
 
           <div v-if="error" class="error-message">
@@ -72,8 +79,10 @@ import {
   IonSpinner,
   alertController,
 } from '@ionic/vue';
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
+import { required, minLength } from '@vuelidate/validators';
+import { useVuelidate } from '@vuelidate/core';
 import authController from '@/controllers/authController';
 
 // End Imports
@@ -90,9 +99,22 @@ const isLoading = ref(false);
 
 // End Vars
 
+// Computed
+const rules = computed(() => ({
+  login: { required },
+  password: { required, minLength: minLength(6) },
+}))
+
+const v$ = useVuelidate(rules, { login, password })
+// End Computed
+
 // Functions
 async function handleLogin() {
   error.value = null;
+
+  const isValid = await v$.value.$validate()
+  if (!isValid) return
+
   isLoading.value = true;
 
   try {

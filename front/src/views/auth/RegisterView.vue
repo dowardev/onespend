@@ -145,7 +145,7 @@ import {
 } from '@ionic/vue';
 import { ref, reactive, computed } from 'vue';
 import { useRouter } from 'vue-router';
-import { required, email, minLength, sameAs, helpers } from '@vuelidate/validators';
+import { required, email, minLength, sameAs, maxLength, helpers } from '@vuelidate/validators';
 import useVuelidate from '@vuelidate/core';
 import { faker } from '@faker-js/faker';
 import authController from '@/controllers/authController';
@@ -174,13 +174,16 @@ const isLoading = ref(false);
 const formRules = computed(() => ({
   name: {
     required: helpers.withMessage('El nombre es obligatorio', required),
+    maxLength: maxLength(255),
   },
   user: {
     required: helpers.withMessage('El usuario es obligatorio', required),
+    maxLength: maxLength(255),
   },
   email: {
     required: helpers.withMessage('El email es obligatorio', required),
     email: helpers.withMessage('Ingresa un email válido', email),
+    maxLength: maxLength(255),
   },
   password: {
     required: helpers.withMessage('La contraseña es obligatoria', required),

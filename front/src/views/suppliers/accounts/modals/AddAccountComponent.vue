@@ -69,7 +69,7 @@ import {
 } from '@ionic/vue';
 import { reactive, computed, watch, ref } from 'vue';
 import { closeOutline, saveOutline, trashOutline } from 'ionicons/icons';
-import { required, minValue, helpers } from '@vuelidate/validators';
+import { required, minValue, maxLength, helpers } from '@vuelidate/validators';
 import useVuelidate from '@vuelidate/core';
 
 interface AccountPayload {
@@ -97,7 +97,7 @@ const selectedId = computed(() => props.account?.id ?? null);
 const showDeleteAlert = ref(false);
 
 const formRules = computed(() => ({
-  name: { required: helpers.withMessage('El nombre es obligatorio', required) },
+  name: { required: helpers.withMessage('El nombre es obligatorio', required), maxLength: maxLength(255) },
   initialBalance: { minValue: minValue(0) },
 }));
 

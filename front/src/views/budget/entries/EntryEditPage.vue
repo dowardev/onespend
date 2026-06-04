@@ -2,7 +2,7 @@
   <ion-page>
     <EditPageHeader
       :title="isEditing ? 'Editar Entrada' : 'Nueva Entrada'"
-      :is-save-disabled="!isFormValid || isDayClosed"
+      :is-save-disabled="v$.$invalid || isDayClosed"
       :show-options-button="isEditing"
       :is-options-disabled="isDayClosed"
       @back="handleBack"
@@ -38,10 +38,19 @@
                     />
                   </ion-item>
 
+                    <div v-if="v$.name.$error" class="validation-error">
+                      <span v-if="v$.name.required?.$invalid">El nombre es obligatorio</span>
+                    </div>
+
                   <ion-item lines="full" class="transparent" button @click="entryDatePicker.openPopover({ e: $event })">
                     <ion-label>Fecha</ion-label>
                     <ion-label slot="end">{{ toShortDate({ isoDate: entryDatePicker.dateISO.value }) }}</ion-label>
                   </ion-item>
+
+                    <div v-if="v$.date.$error" class="validation-error">
+                      <span v-if="v$.date.required?.$invalid">La fecha es obligatoria</span>
+                    </div>
+
                 </ion-card>
               </ion-list>
 
@@ -151,6 +160,8 @@ import { useAttachments } from '@/composables/useAttachments';
 import { parseDateValue, toShortDate } from '@/utils/dateHelpers';
 import { useDeleteConfirm } from '@/composables/useDeleteConfirm';
 import { useDatePicker } from '@/composables/useDatePicker';
+import { required, helpers } from '@vuelidate/validators'
+import { useVuelidate } from '@vuelidate/core'
 import EditPageHeader from '@/views/budget/components/EditPageHeader.vue';
 import AccountDistributionPicker from '@/views/budget/components/AccountDistributionPicker.vue';
 import DeleteConfirmAlert from '@/views/budget/components/DeleteConfirmAlert.vue';
@@ -211,22 +222,36 @@ const optionsPopoverState = reactive({
 });
 // end vars and const
 
+// vuelidate
+const itemsValid = (items: Array<{ amount: number | string; accountId: unknown }>) => {
+  if (!items || items.length === 0) return false
+  return items.every(item => {
+    const val = String(item.amount).trim()
+    return val !== '' && !isNaN(Number(val)) && Number(val) > 0 && item.accountId != null
+  })
+}
+
+const rules = computed(() => ({
+  name: { required },
+  date: { required },
+  entryType: { required },
+  items: { itemsValid: helpers.withMessage('Todos los items deben tener un monto válido y una cuenta asignada', itemsValid) },
+}))
+
+const v$ = useVuelidate(rules, computed(() => {
+  const pickerDate = entryDatePicker.dateISO.value
+  return {
+    name: entryData.value.name,
+    date: entryData.value.date || (pickerDate ? pickerDate.slice(0, 10) : ''),
+    entryType: entryData.value.entryType,
+    items: entryItems.value,
+  }
+}))
+// end vuelidate
+
 // Computed from route
 const isEditing = computed(() => !!route.query.entryId);
 const isDayClosed = computed(() => false);
-
-// computed
-const isFormValid = computed(() => {
-  return (
-    entryData.value.name.trim().length > 0 &&
-    entryData.value.entryType &&
-    entryItems.value.length > 0 &&
-    entryItems.value.every((item) => {
-      const val = String(item.amount).trim();
-      return val !== '' && !isNaN(Number(val)) && Number(val) > 0 && item.accountId != null;
-    })
-  );
-});
 
 const canAddMoreItems = computed(() => true);
 // end computed
@@ -354,7 +379,8 @@ function onUpdateItemAccount(params: { index: number; accountId: { id: string | 
 }
 
 async function handleSave() {
-  if (!isFormValid.value) return;
+  const isValid = await v$.value.$validate()
+  if (!isValid) return
 
   function getAccountIdValue(accountId: unknown): string | number | null {
     if (!accountId) return null;
@@ -485,3 +511,6 @@ function confirmEntryDate() {
 }
 // end functions
 </script>
+
+<style scoped>
+</style>
