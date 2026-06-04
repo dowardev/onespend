@@ -44,7 +44,7 @@ export interface Provider {
   name: string;
   date: string;
   estimated: number;
-  accountId: number;
+  accountId: number | null;
   efectivo: number;
   tarjeta: number;
   credito: number;

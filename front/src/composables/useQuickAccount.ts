@@ -41,7 +41,7 @@ export function useQuickAccount(params: {
         if (!data.accountName || data.accountName.trim() === '') {
           return false;
         }
-        createQuickAccount({ name: data.accountName.trim(), initialBalance: Number(data.initialBalance) || 0 });
+        createQuickAccount({ name: data.accountName.trim(), initialBalance: Math.max(0, Number(data.initialBalance) || 0) });
         return true;
       },
     },

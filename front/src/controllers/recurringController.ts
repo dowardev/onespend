@@ -101,6 +101,14 @@ class RecurringController {
       createdAt: record.createdAt || Date.now(),
       status: record.status || 'active',
     };
+
+    if (newRecord.items) {
+      newRecord.items = newRecord.items.map(item => ({
+        ...item,
+        amount: Number(item.amount) || 0,
+      }));
+    }
+
     const id = await this.dixie.addEntry({ entry: newRecord });
     newRecord.id = typeof id === 'number' ? id : String(id);
     return newRecord;

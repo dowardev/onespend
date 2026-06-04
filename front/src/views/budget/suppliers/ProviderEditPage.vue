@@ -2,7 +2,7 @@
   <ion-page>
     <EditPageHeader
       :title="pageTitle"
-      :is-save-disabled="!isFormValid || (!isEntryMode && hasProductsWithQuantity && productsCoverage.falta > 0)"
+      :is-save-disabled="v$.$invalid || (!isEntryMode && hasProductsWithQuantity && productsCoverage.falta > 0)"
       show-options-button
       @back="handleBack"
       @save="handleSave"
@@ -18,6 +18,10 @@
             <!-- Provider form -->
             <ion-list class="ion-padding-start ion-padding-end">
               <ion-card class="shadow1">
+                <div v-if="v$.name.$error" class="validation-error">
+                  <span v-if="v$.name.required?.$invalid">Debes seleccionar un proveedor</span>
+                </div>
+
                 <ion-item class="transparent" button lines="full" @click="showProviderModal = true">
                   <ion-label class="truncate">
                     Proveedor
@@ -424,6 +428,8 @@ import { parseDateValue, toShortDate } from '@/utils/dateHelpers';
 import { isNumericValue } from '@/utils/amountValidation';
 import { useDeleteConfirm } from '@/composables/useDeleteConfirm';
 import { useDatePicker } from '@/composables/useDatePicker';
+import { required, helpers } from '@vuelidate/validators'
+import { useVuelidate } from '@vuelidate/core'
 import { type Supplier, type Product } from '@/controllers/suppliersController';
 import type { EntryGroup } from '@/utils/budgetTypes';
 import type { SupplierFormPayload } from '@/views/suppliers/modals/SupplierFormComponent.vue';
@@ -579,6 +585,25 @@ const reassignPicker = useDatePicker();
 const providerNotes = ref('');
 // end notes state
 // end vars and const
+
+// vuelidate
+const itemsValidator = (items: Array<{ amount: number | string; accountId: unknown }>) => {
+  return items.length > 0 && items.every(item => {
+    const val = String(item.amount).trim()
+    return val !== '' && !isNaN(Number(val)) && Number(val) > 0 && item.accountId != null
+  })
+}
+
+const rules = computed(() => ({
+  name: { required: isEntryMode.value ? (() => true) : required },
+  items: { itemsValid: helpers.withMessage('Todos los items deben tener un monto válido y una cuenta asignada', itemsValidator) },
+}))
+
+const v$ = useVuelidate(rules, computed(() => ({
+  name: selectedProvider.value?.name || '',
+  items: items.value,
+})))
+// end vuelidate
 
 // onMounted - initialize form based on route params
 onMounted(async () => {
@@ -801,17 +826,7 @@ const productsCoverage = computed(() => {
   };
 });
 
-const isItemsValid = computed(() => {
-  return items.value.every((item) => {
-    const val = String(item.amount).trim();
-    return val !== '' && !isNaN(Number(val)) && Number(val) > 0 && item.accountId != null;
-  });
-});
 
-const isFormValid = computed(() => {
-  if (!isEntryMode.value && !selectedProvider.value) return false;
-  return isItemsValid.value;
-});
 
 // end computed
 
@@ -974,7 +989,7 @@ function addItem() {
 }
 
 function handleAddItem() {
-  if (!isItemsValid.value) {
+  if (!itemsValidator(items.value)) {
     showIncompleteGroupToast.value = true;
     return;
   }
@@ -1082,6 +1097,9 @@ function updateTemporaryProduct(params: {
 }
 
 async function handleSave() {
+  const isValid = await v$.value.$validate()
+  if (!isValid) return
+
   const { default: budgetController } = await import('@/controllers/budgetController');
 
   const totalAmount = items.value.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
@@ -1340,5 +1358,6 @@ function getAccountIdAsNumber(
   border-radius: 4px;
   transition: width 0.4s ease;
 }
+
 </style>
 

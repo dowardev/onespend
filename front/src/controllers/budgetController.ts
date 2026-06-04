@@ -12,7 +12,7 @@ interface BudgetData {
     totalSalesEfectivo: number;
     totalSalesTarjeta: number;
     totalSalesCredito: number;
-    type: 'fixed' | '%' | string;
+    type: '%' | 'fixed';
     margin: number;
   };
 }
@@ -189,7 +189,7 @@ class BudgetController {
     this.setDate({ date: formatLocalDate({ d }) });
   }
 
-  addIngreso(params: {
+  async addIngreso(params: {
     name?: string;
     amount?: number;
     paymentType?: 'cash' | 'digital';
@@ -208,46 +208,21 @@ class BudgetController {
       _fromRecurringId,
     } = params;
 
-    const finalDate = date || this.store.selectedDate;
-    console.log(
-      '💰 budgetController.addIngreso - date received:',
-      date,
-      'selectedDate:',
-      this.store.selectedDate,
-      'finalDate:',
-      finalDate,
-    );
-
-    const newIngreso: Income = {
-      id: Date.now() + Math.random(),
-      sync_id: generateSyncId(),
+    const entry = this.createEntry({
       name,
       amount: Number(amount) || 0,
-      date: finalDate,
       paymentType,
-      entryType: 'ingreso',
       accountId,
       groups,
-      createdAt: Date.now(),
+      date,
+      entryType: 'ingreso' as const,
       _fromRecurringId,
-    };
+    });
 
-    // If date is different from selectedDate, save to the correct bucket
-    if (date && date !== this.store.selectedDate) {
-      console.log('💾 Saving entry to different date bucket:', date);
-      this.saveEntryToDate(newIngreso, date);
-    } else {
-      this.store.addEntry(newIngreso);
-      this.saveData();
-    }
-
-    const { syncEntry } = useSync();
-    syncEntry({ entry: newIngreso, operation: 'create' });
-
-    return newIngreso;
+    await this.continueAdd({ entry });
   }
 
-  addEgreso(params: {
+  async addEgreso(params: {
     name?: string;
     amount?: number;
     paymentType?: 'cash' | 'digital';
@@ -266,33 +241,18 @@ class BudgetController {
       _fromRecurringId,
     } = params;
 
-    const newEgreso: Income = {
-      id: Date.now() + Math.random(),
-      sync_id: generateSyncId(),
+    const entry = this.createEntry({
       name,
       amount: Number(amount) || 0,
-      date: date || this.store.selectedDate,
       paymentType,
-      entryType: 'egreso',
       accountId,
       groups,
-      createdAt: Date.now(),
+      date,
+      entryType: 'egreso' as const,
       _fromRecurringId,
-    };
+    });
 
-    // If date is different from selectedDate, save to the correct bucket
-    if (date && date !== this.store.selectedDate) {
-      console.log('💾 Saving entry to different date bucket:', date);
-      this.saveEntryToDate(newEgreso, date);
-    } else {
-      this.store.addEntry(newEgreso);
-      this.saveData();
-    }
-
-    const { syncEntry } = useSync();
-    syncEntry({ entry: newEgreso, operation: 'create' });
-
-    return newEgreso;
+    return this.continueAdd({ entry });
   }
 
   addProviderEgresos(params: { provider: Provider }) {
@@ -642,6 +602,49 @@ class BudgetController {
     } catch (e) {
       console.error('[BudgetController.saveData] Error:', e);
     }
+  }
+
+  private createEntry(params: {
+    name: string;
+    amount: number;
+    paymentType: string;
+    accountId: string | number | null;
+    groups: Array<{ amount: number; accountId: string | number | null }>;
+    date?: string;
+    entryType: 'ingreso' | 'egreso';
+    _fromRecurringId?: string;
+  }): Income {
+    const { name, amount, paymentType, accountId, groups, date, entryType, _fromRecurringId } = params;
+    return {
+      id: Date.now() + Math.random(),
+      sync_id: generateSyncId(),
+      name,
+      amount: Number(amount) || 0,
+      date: date || this.store.selectedDate,
+      paymentType: paymentType as 'cash' | 'digital',
+      entryType,
+      accountId,
+      groups,
+      createdAt: Date.now(),
+      _fromRecurringId,
+    };
+  }
+
+  private async continueAdd(params: { entry: Income }) {
+    const { entry } = params;
+    const { date } = entry;
+
+    if (date && date !== this.store.selectedDate) {
+      this.saveEntryToDate(entry, date);
+    } else {
+      this.store.addEntry(entry);
+      this.saveData();
+    }
+
+    const { syncEntry } = useSync();
+    syncEntry({ entry, operation: 'create' });
+
+    return entry;
   }
 
   // Save an entry to a specific date bucket (different from current selected date)
