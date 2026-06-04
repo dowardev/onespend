@@ -403,15 +403,33 @@
     <!-- Supplier Selection Modal -->
     <ion-modal :is-open="showSupplierModal" @will-dismiss="onSupplierModalDismiss">
       <ion-header class="ion-no-border" mode="ios">
-        <ion-toolbar>
+        <ion-toolbar v-if="!showCreateSupplierView">
           <ion-buttons>
             <ion-button @click="showSupplierModal = false">
               <ion-icon :icon="closeOutline" />
             </ion-button>
           </ion-buttons>
           <ion-title>Seleccionar Proveedor</ion-title>
+          <ion-buttons slot="end">
+            <ion-button @click="showCreateSupplierView = true">
+              <ion-icon :icon="addOutline" />
+            </ion-button>
+          </ion-buttons>
         </ion-toolbar>
-        <ion-toolbar>
+        <ion-toolbar v-else>
+          <ion-buttons>
+            <ion-button @click="showCreateSupplierView = false">
+              <ion-icon :icon="arrowBackOutline" />
+            </ion-button>
+          </ion-buttons>
+          <ion-title>Crear Proveedor</ion-title>
+          <ion-buttons slot="end">
+            <ion-button @click="onCreateSupplier">
+              <ion-icon :icon="saveOutline" />
+            </ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+        <ion-toolbar v-if="!showCreateSupplierView">
           <div class="ion-padding-start ion-padding-end">
             <ion-searchbar
               v-model="supplierSearchQuery"
@@ -424,26 +442,34 @@
       </ion-header>
 
       <ion-content>
-        <ion-list class="transparent ion-padding-start ion-padding-end">
-          <ion-list-header>
-            <ion-label>Proveedores</ion-label>
-          </ion-list-header>
-          <ion-card class="shadow1">
-            <ion-item
-              v-for="s in filteredSuppliers"
-              :key="s.id"
-              lines="full"
-              button
-              class="transparent"
-              @click="
-                selectSupplier({ supplier: s });
-                showSupplierModal = false;
-              "
-            >
-              <ion-label>{{ s.name }}</ion-label>
-            </ion-item>
-          </ion-card>
-        </ion-list>
+        <template v-if="!showCreateSupplierView">
+          <ion-list class="transparent ion-padding-start ion-padding-end">
+            <ion-list-header>
+              <ion-label>Proveedores</ion-label>
+            </ion-list-header>
+            <ion-card class="shadow1">
+              <ion-item
+                v-for="s in filteredSuppliers"
+                :key="s.id"
+                lines="full"
+                button
+                class="transparent"
+                @click="
+                  selectSupplier({ supplier: s });
+                  showSupplierModal = false;
+                "
+              >
+                <ion-label>{{ s.name }}</ion-label>
+              </ion-item>
+            </ion-card>
+          </ion-list>
+        </template>
+        <SupplierFormComponent
+          v-else
+          :submit-trigger="submitTrigger"
+          @saved="onSupplierFormSaved"
+          @dismiss="showCreateSupplierView = false"
+        />
       </ion-content>
     </ion-modal>
 
@@ -570,6 +596,7 @@ import { useDatePicker } from '@/composables/useDatePicker';
 import { useSync } from '@/composables/useSync';
 import recurringController from '@/controllers/recurringController';
 import type { Supplier, Product } from '@/controllers/suppliersController';
+import type { SupplierFormPayload } from '@/views/suppliers/modals/SupplierFormComponent.vue';
 import type {
   RecurringType,
   RepeatFrequency,
@@ -583,6 +610,7 @@ import type {
 import AccountDistributionPicker from '@/views/budget/components/AccountDistributionPicker.vue';
 import DatePickerPopover from '@/views/budget/components/DatePickerPopover.vue';
 import DeleteConfirmAlert from '@/views/budget/components/DeleteConfirmAlert.vue';
+import SupplierFormComponent from '@/views/suppliers/modals/SupplierFormComponent.vue';
 // end components
 
 // interface and types imports
@@ -648,9 +676,11 @@ const tempTime = ref('');
 
 // Supplier modal state
 const showSupplierModal = ref(false);
+const showCreateSupplierView = ref(false);
 const supplierSearchQuery = ref('');
 const allSuppliers = ref<Supplier[]>([]);
 const selectedSupplierName = ref('');
+const submitTrigger = ref(0);
 
 // Popover menu state
 const popoverMenu = reactive({ open: false, event: null as Event | null });
@@ -1030,6 +1060,50 @@ function updateProductField(params: { index: number; field: string; value: strin
   }
 }
 
+function onCreateSupplier() {
+  submitTrigger.value++;
+}
+
+async function onSupplierFormSaved(payload: SupplierFormPayload) {
+  try {
+    console.log('[RecurringEditPage] onSupplierFormSaved', payload);
+    const { toastController } = await import('@ionic/vue');
+    const { SuppliersController } = await import('@/controllers/suppliersController');
+    const suppliersCtrl = new SuppliersController();
+    await suppliersCtrl.addSupplier({ s: payload });
+    const suppliers = await suppliersCtrl.listSuppliers();
+    allSuppliers.value = suppliers || [];
+
+    const newSupplier = allSuppliers.value.find(
+      (s: Supplier) => s.name === payload.name,
+    );
+    if (newSupplier) {
+      selectSupplier({ supplier: newSupplier });
+    }
+
+    const successToast = await toastController.create({
+      message: 'Proveedor creado',
+      duration: 1500,
+      color: 'success',
+      position: 'bottom',
+    });
+    await successToast.present();
+
+    showCreateSupplierView.value = false;
+    showSupplierModal.value = false;
+  } catch (err) {
+    console.error('[RecurringEditPage] onSupplierFormSaved error', err);
+    const { toastController } = await import('@ionic/vue');
+    const errorToast = await toastController.create({
+      message: 'Error al crear proveedor',
+      duration: 2000,
+      color: 'danger',
+      position: 'bottom',
+    });
+    await errorToast.present();
+  }
+}
+
 function selectSupplier(params: { supplier: Supplier }) {
   const { supplier } = params;
   selectedSupplierName.value = supplier.name;
@@ -1049,6 +1123,7 @@ function selectSupplier(params: { supplier: Supplier }) {
 function onSupplierModalDismiss() {
   showSupplierModal.value = false;
   supplierSearchQuery.value = '';
+  showCreateSupplierView.value = false;
 }
 
 function onUpdateItemAccount(params: { index: number; accountId: { id: string | number } | null }) {

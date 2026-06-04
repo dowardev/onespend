@@ -111,16 +111,23 @@ class SuppliersController {
         entry.products = entry.products.map((product: Product) => {
           const tempProductSyncId = generateSyncId();
           console.log('[suppliersController] 🔵 syncSupplierProduct para:', product.name);
-          // call syncSupplierProduct with product object and operation
-          syncSupplierProduct({
-            product: {
-              supplierId: entry.sync_id,
-              ...product,
-              sync_id: tempProductSyncId,
-            },
-            operation: 'create',
-          });
-          console.log('[suppliersController] ✅ syncSupplierProduct completado');
+          try {
+            syncSupplierProduct({
+              product: {
+                supplierId: entry.sync_id,
+                ...product,
+                sync_id: tempProductSyncId,
+              },
+              operation: 'create',
+            });
+            console.log('[suppliersController] ✅ syncSupplierProduct completado');
+          } catch (prodSyncErr) {
+            console.warn(
+              '[suppliersController] syncSupplierProduct falló para',
+              product.name,
+              prodSyncErr,
+            );
+          }
           return {
             ...product,
             sync_id: tempProductSyncId,
@@ -133,9 +140,12 @@ class SuppliersController {
 
       // Luego sincronizar el proveedor
       console.log('[suppliersController] 🔵 LLAMANDO syncProvider');
-      // Ensure provider shape expected by useSync
-      syncProvider({ provider: entry }, 'create');
-      console.log('[suppliersController] ✅ syncProvider ejecutado');
+      try {
+        syncProvider({ provider: entry }, 'create');
+        console.log('[suppliersController] ✅ syncProvider ejecutado');
+      } catch (syncErr) {
+        console.warn('[suppliersController] syncProvider falló (se reintentará después):', syncErr);
+      }
 
       const localId = await ctrl.addEntry({ entry });
       entry.id = typeof localId === 'number' ? localId : String(localId);
@@ -151,11 +161,18 @@ class SuppliersController {
         '%c[suppliersController] 🔄 LLAMANDO syncService.processQueue()',
         'color: orange; font-size: 14px',
       );
-      await syncService.processQueue();
-      console.log(
-        '%c[suppliersController] ✅ Sincronizacion completada',
-        'color: green; font-size: 14px',
-      );
+      try {
+        await syncService.processQueue();
+        console.log(
+          '%c[suppliersController] ✅ Sincronizacion completada',
+          'color: green; font-size: 14px',
+        );
+      } catch (queueErr) {
+        console.warn(
+          '[suppliersController] processQueue falló (se reintentará después):',
+          queueErr,
+        );
+      }
 
       console.log('[suppliersController] Recargando proveedores...');
       await this.listSuppliers();
