@@ -1,3 +1,73 @@
+## [v0.67.2] - 2026-06-04
+
+### Fixed
+
+- **SyncController soft-delete** — Unify deletion mechanism across entity types
+
+  `bulkDeleteSuppliers` removed `status => 'deleted'` (column doesn't exist in `suppliers` table). `processItem` now uses `deleted_at` only for all entities except `recurring_record`, which requires both `deleted_at` and `status => 'deleted'` for frontend filtering (`r.status !== 'deleted'`).
+
+- **SyncResolveConflictRequest client_data** — Fix contradictory validation rule
+
+  Removed `nullable` from `required_if:resolution,client|array` rule — `nullable` was effectively making `required_if` useless by allowing `null` values.
+
+- **Vuelidate validation unification (EntryEditPage, RecurringEditPage, ProviderEditPage)**
+
+  Replaced custom `isFormValid`/`isItemsValid` computed properties with Vuelidate `v$.$invalid` in templates. Added `itemsValid`/`itemsValidator` custom validators for items arrays. Removed redundant `isFormValid` and `isItemsValid` computeds. Token `ProviderEditPage` name validation conditionally required only in non-entry mode.
+
+- **budgetController addEgreso** — Refactor to use `createEntry` + `continueAdd` pattern
+
+  Unified the expense creation flow to match `addIngreso`. Added missing `createEntry` and `continueAdd` private methods.
+
+- **RegisterView & AddAccountComponent** — Add `maxLength(255)` validation
+
+  Prevent fields from exceeding database column limits.
+
+- **useQuickAccount** — Prevent negative initial balance
+
+  Wrapped `initialBalance` with `Math.max(0, ...)` to clamp negative values to zero.
+
+- **recurringController** — Normalize item amounts on creation
+
+  Added `Number(item.amount) || 0` coercion when creating recurring record items.
+
+- **budgetStore** — Fix `accountId` type in Provider interface
+
+  Changed from `number` to `number | null` to reflect nullable database column.
+
+- **LoginView.vue** — Remove unused `email` import
+
+- **recurringController** — Add missing semicolon in items `map` callback
+
+### Refactored
+
+- **Sync FormRequest classes** — Extract static `validationRules()` method
+
+  All 8 Sync FormRequests (Account, BudgetEntry, BudgetProviderProduct, BudgetProvider, RecurringRecordProduct, RecurringRecord, SupplierProduct, Supplier) now expose a public static `validationRules(): array` method. SyncController `validateEntityData` calls `$requestClass::validationRules()` instead of instantiating and calling `->rules()`.
+
+- **SyncController** — Replace inline `Request` injection with typed FormRequests
+
+  `merge()` now receives `SyncMergeRequest`, `resolveConflict()` receives `SyncResolveConflictRequest`. Merge endpoint validates all 8 entity types before processing.
+
+### Changed
+
+- **SyncController validation errors** — Include item index and entity type
+
+  Failed validation now returns `{ message, errors, index, entity_type }` for precise error identification.
+
+- **SyncController bulk operations** — Filter data to model fillable fields
+
+  New `filterToFillable()` helper strips non-fillable fields before insert/update in `bulkCreateItems` and `updateEntity`.
+
+- **CSS deduplication** — Move `.validation-error` to global stylesheet
+
+  Added global `.validation-error` class in `variables.css`. Removed 5 duplicate blocks from LoginView.vue, EntryEditPage.vue, ProviderEditPage.vue, SupplierFormComponent.vue, and RecurringEditPage.vue.
+
+### Added
+
+- **SyncMergeRequest** — New FormRequest for merge endpoint validation
+
+  Validates `data` structure with typed sub-arrays for all 8 entity types.
+
 ## [v0.67.1] - 2026-06-03
 
 ### Fixed

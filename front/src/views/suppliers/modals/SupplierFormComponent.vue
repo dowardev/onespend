@@ -8,6 +8,9 @@
         required
       ></ion-input>
     </ion-item>
+    <ion-note v-if="v$.name.$error" color="danger" class="validation-error">
+      El nombre es obligatorio (máx. 255 caracteres)
+    </ion-note>
   </ion-card>
 
   <ion-list v-if="!showNewProductFields" class="transparent suppliers__products-list">
@@ -162,10 +165,13 @@ import {
   IonButtons,
   IonButton,
   IonIcon,
+  IonNote,
   toastController,
 } from '@ionic/vue';
 import { reactive, ref, computed, watch } from 'vue';
 import { addOutline, closeOutline, saveOutline, searchOutline, trashOutline } from 'ionicons/icons';
+import { useVuelidate } from '@vuelidate/core';
+import { required, maxLength } from '@vuelidate/validators';
 
 import type { Supplier } from '@/controllers/suppliersController';
 
@@ -193,6 +199,10 @@ const emit = defineEmits<{
 type Product = { name: string; price: number; imageBase64?: string | null };
 
 const form = reactive({ name: '', products: [] as Product[] });
+const rules = computed(() => ({
+  name: { required, maxLength: maxLength(255) },
+}));
+const v$ = useVuelidate(rules, form);
 const newProduct = reactive({
   name: '',
   price: 0,
@@ -398,15 +408,8 @@ function editProduct(params: { idx: number }) {
 
 function onSubmit() {
   console.log('[SupplierFormComponent] onSubmit called', { name: form.name, productsCount: form.products?.length });
-  if (!form.name) {
-    presentToast({
-      message: 'Debes ingresar un nombre',
-      duration: 2000,
-      color: 'warning',
-      position: 'bottom',
-    });
-    return;
-  }
+  v$.value.$touch();
+  if (v$.value.$invalid) return;
   if (!form.products || form.products.length === 0) {
     showNewProductFields.value = true;
     presentToast({
@@ -469,4 +472,5 @@ ion-item:focus-within .supplier-actions {
     pointer-events: auto;
   }
 }
+
 </style>

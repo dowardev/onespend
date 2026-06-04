@@ -12,7 +12,7 @@
         <ion-title>{{ pageTitle }}</ion-title>
 
         <ion-buttons slot="end">
-          <ion-button :disabled="!isFormValid" @click="handleSave">
+          <ion-button :disabled="v$.$invalid" @click="handleSave">
             <ion-icon :icon="saveOutline" />
           </ion-button>
           <ion-button v-if="isEditing" fill="clear" @click="openHeaderPopover({ e: $event })">
@@ -43,6 +43,9 @@
                     placeholder="Nombre del registro"
                   />
                 </ion-item>
+                <ion-note v-if="v$.name.$error" color="danger" class="validation-error">
+                  El nombre es obligatorio
+                </ion-note>
 
                 <ion-item lines="full" class="transparent">
                   <ion-select
@@ -121,6 +124,9 @@
                     <ion-select-option value="year">Año</ion-select-option>
                   </ion-select>
                 </ion-item>
+                <ion-note v-if="v$.repeatFrequency.$error" color="danger" class="validation-error">
+                  La frecuencia es obligatoria
+                </ion-note>
 
                 <ion-item lines="full" class="transparent">
                   <ion-input
@@ -253,6 +259,9 @@
                     toShortDate({ isoDate: startDatePicker.dateISO.value })
                   }}</ion-label>
                 </ion-item>
+                <ion-note v-if="v$.startDate.$error" color="danger" class="validation-error">
+                  La fecha de inicio es obligatoria
+                </ion-note>
 
                 <ion-item
                   lines="full"
@@ -589,6 +598,8 @@ import {
 } from 'ionicons/icons';
 import { ref, computed, reactive, onMounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
+import { useVuelidate } from '@vuelidate/core';
+import { required, numeric, minValue, helpers } from '@vuelidate/validators';
 import { format, getHours, getMinutes } from 'date-fns';
 import { toShortDate } from '@/utils/dateHelpers';
 import { useDeleteConfirm } from '@/composables/useDeleteConfirm';
@@ -664,6 +675,25 @@ const formData = ref({
   products: [] as RecurringProduct[],
   items: [{ amount: '', accountId: null }] as RecurringItem[],
 });
+
+const itemsValidator = (items: RecurringItem[]) => {
+  return items.every(item => {
+    const val = String(item.amount).trim()
+    return val !== '' && !isNaN(Number(val)) && Number(val) > 0 && item.accountId != null
+  })
+}
+
+const rules = computed(() => ({
+  name: { required },
+  amount: { numeric, minValue: minValue(0) },
+  startDate: { required },
+  repeatFrequency: { required },
+  items: { itemsValid: helpers.withMessage('Todos los items deben tener un monto válido y cuenta asignada', itemsValidator) },
+}));
+const v$ = useVuelidate(rules, computed(() => ({
+  ...formData.value,
+  items: isCargo.value ? cargoItems.value : formData.value.items,
+})));
 
 const cargoItems = ref<RecurringItem[]>([{ amount: '', accountId: null }]);
 
@@ -758,29 +788,6 @@ const filteredSuppliers = computed<Supplier[]>(() => {
   ) as Supplier[];
 });
 
-const isItemsValid = computed(() => {
-  if (isCargo.value) {
-    return cargoItems.value.every((item) => {
-      const val = String(item.amount).trim();
-      return val !== '' && !isNaN(Number(val)) && Number(val) > 0 && item.accountId != null;
-    });
-  }
-  if (isProvedor.value) {
-    return formData.value.items.every((item) => {
-      const val = String(item.amount).trim();
-      return val !== '' && !isNaN(Number(val)) && Number(val) > 0 && item.accountId != null;
-    });
-  }
-  return true;
-});
-
-const isFormValid = computed(() => {
-  const data = formData.value;
-  if (!data.name.trim()) return false;
-  if (!startDatePicker.dateISO.value) return false;
-  if (!isItemsValid.value) return false;
-  return true;
-});
 // end computed
 
 // watch
@@ -870,7 +877,8 @@ function handleBack() {
 }
 
 async function handleSave() {
-  if (!isFormValid.value) return;
+  v$.value.$touch();
+  if (!await v$.value.$validate()) return;
 
   const data = formData.value;
 
@@ -1145,7 +1153,7 @@ function addItem() {
 }
 
 function handleAddItem() {
-  if (!isItemsValid.value) return;
+  if (!itemsValidator(formData.value.items)) return;
   addItem();
 }
 
@@ -1162,7 +1170,7 @@ function updateItemAmount(params: { index: number; amount: string }) {
 }
 
 function handleAddCargoItem() {
-  if (!isItemsValid.value) return;
+  if (!itemsValidator(cargoItems.value)) return;
   cargoItems.value.push({ amount: '', accountId: null });
 }
 
@@ -1232,4 +1240,5 @@ ion-chip.chip-selected {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
 </style>
