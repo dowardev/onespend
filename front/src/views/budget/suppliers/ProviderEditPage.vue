@@ -250,7 +250,7 @@
     <!-- Provider Selection Modal -->
     <ion-modal :is-open="showProviderModal" @will-dismiss="onProviderModalDismiss">
       <ion-header class="ion-no-border" mode="ios">
-        <ion-toolbar>
+        <ion-toolbar v-if="!showCreateProviderView">
           <ion-buttons>
             <ion-button @click="showProviderModal = false">
               <ion-icon :icon="closeOutline"></ion-icon>
@@ -258,9 +258,31 @@
           </ion-buttons>
 
           <ion-title>Seleccionar Proveedor</ion-title>
+
+          <ion-buttons slot="end">
+            <ion-button @click="showCreateProviderView = true">
+              <ion-icon :icon="addOutline"></ion-icon>
+            </ion-button>
+          </ion-buttons>
         </ion-toolbar>
 
-        <ion-toolbar>
+        <ion-toolbar v-else>
+          <ion-buttons>
+            <ion-button @click="showCreateProviderView = false">
+              <ion-icon :icon="arrowBackOutline"></ion-icon>
+            </ion-button>
+          </ion-buttons>
+
+          <ion-title>Crear Proveedor</ion-title>
+
+          <ion-buttons slot="end">
+            <ion-button @click="onCreateSupplier">
+              <ion-icon :icon="saveOutline"></ion-icon>
+            </ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+
+        <ion-toolbar v-if="!showCreateProviderView">
           <div class="ion-padding-start ion-padding-end">
             <ion-searchbar
               v-model="searchQuery"
@@ -273,23 +295,31 @@
       </ion-header>
 
       <ion-content>
-        <ion-list class="transparent ion-padding-start ion-padding-end">
-          <ion-card class="shadow1">
-            <ion-item
-              v-for="p in filteredProviders"
-              :key="p.id"
-              lines="full"
-              button
-              class="transparent"
-              @click="
-                selectProvider({ p });
-                showProviderModal = false;
-              "
-            >
-              <ion-label>{{ p.name }}</ion-label>
-            </ion-item>
-          </ion-card>
-        </ion-list>
+        <template v-if="!showCreateProviderView">
+          <ion-list class="transparent ion-padding-start ion-padding-end">
+            <ion-card class="shadow1">
+              <ion-item
+                v-for="p in filteredProviders"
+                :key="p.id"
+                lines="full"
+                button
+                class="transparent"
+                @click="
+                  selectProvider({ p });
+                  showProviderModal = false;
+                "
+              >
+                <ion-label>{{ p.name }}</ion-label>
+              </ion-item>
+            </ion-card>
+          </ion-list>
+        </template>
+        <SupplierFormComponent
+          v-else
+          :submit-trigger="submitTrigger"
+          @saved="onSupplierFormSaved"
+          @dismiss="showCreateProviderView = false"
+        />
       </ion-content>
     </ion-modal>
 
@@ -384,6 +414,8 @@ import {
   addOutline,
   warningOutline,
   checkmarkCircleOutline,
+  arrowBackOutline,
+  saveOutline,
 } from 'ionicons/icons';
 import { ref, computed, reactive, nextTick, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
@@ -394,6 +426,7 @@ import { useDeleteConfirm } from '@/composables/useDeleteConfirm';
 import { useDatePicker } from '@/composables/useDatePicker';
 import { type Supplier, type Product } from '@/controllers/suppliersController';
 import type { EntryGroup } from '@/utils/budgetTypes';
+import type { SupplierFormPayload } from '@/views/suppliers/modals/SupplierFormComponent.vue';
 // end imports
 
 // controllers
@@ -409,6 +442,7 @@ import AccountDistributionPicker from '@/views/budget/components/AccountDistribu
 import DetailsSection from '@/views/budget/components/DetailsSection.vue';
 import DatePickerPopover from '@/views/budget/components/DatePickerPopover.vue';
 import DeleteConfirmAlert from '@/views/budget/components/DeleteConfirmAlert.vue';
+import SupplierFormComponent from '@/views/suppliers/modals/SupplierFormComponent.vue';
 // end components
 
 // interface and types imports
@@ -504,6 +538,7 @@ const productQuantityRawValues = ref<Map<string | number, string>>(new Map());
 const temporaryProductCounter = ref(0);
 
 const showProviderModal = ref(false);
+const showCreateProviderView = ref(false);
 const showCoverageAlert = ref(false);
 const showIncompleteGroupToast = ref(false);
 
@@ -514,6 +549,7 @@ const routeProviderId = computed(() => route.query.providerId as string | number
 const isEntryMode = computed(() => route.query.mode === 'entry');
 // Suppliers list
 const allSuppliersList = ref<Supplier[]>([]);
+const submitTrigger = ref(0);
 
 // Attachment state
 const providerSyncId = ref<string | null>(null);
@@ -837,6 +873,51 @@ function isProductQuantityTouched(params: { productId: string | number }): boole
 function onProviderModalDismiss() {
   showProviderModal.value = false;
   searchQuery.value = '';
+  showCreateProviderView.value = false;
+}
+
+function onCreateSupplier() {
+  submitTrigger.value++;
+}
+
+async function onSupplierFormSaved(payload: SupplierFormPayload) {
+  try {
+    console.log('[ProviderEditPage] onSupplierFormSaved', payload);
+    const { toastController } = await import('@ionic/vue');
+    const { SuppliersController } = await import('@/controllers/suppliersController');
+    const suppliersCtrl = new SuppliersController();
+    await suppliersCtrl.addSupplier({ s: payload });
+    const suppliers = await suppliersCtrl.listSuppliers();
+    allSuppliersList.value = suppliers || [];
+
+    const newSupplier = allSuppliersList.value.find(
+      (s: Supplier) => s.name === payload.name,
+    );
+    if (newSupplier) {
+      selectProvider({ p: newSupplier });
+    }
+
+    const successToast = await toastController.create({
+      message: 'Proveedor creado',
+      duration: 1500,
+      color: 'success',
+      position: 'bottom',
+    });
+    await successToast.present();
+
+    showCreateProviderView.value = false;
+    showProviderModal.value = false;
+  } catch (err) {
+    console.error('[ProviderEditPage] onSupplierFormSaved error', err);
+    const { toastController } = await import('@ionic/vue');
+    const errorToast = await toastController.create({
+      message: 'Error al crear proveedor',
+      duration: 2000,
+      color: 'danger',
+      position: 'bottom',
+    });
+    await errorToast.present();
+  }
 }
 
 function selectProvider(params: { p: Supplier | SelectProviderData }) {
