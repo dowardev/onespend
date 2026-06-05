@@ -1,4 +1,4 @@
-import type { RecurringRecord } from '@/controllers/recurringController';
+import type { RecurringRecord } from '@/controllers/recurringRecordsController';
 import { format, getDate, getDaysInMonth } from 'date-fns';
 import { parseLocalDate } from '@/utils/date';
 

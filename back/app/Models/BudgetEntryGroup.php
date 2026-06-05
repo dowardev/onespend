@@ -29,4 +29,9 @@ class BudgetEntryGroup extends Model
     {
         return $this->belongsTo(Account::class);
     }
+
+    public function scopeForUser($query, $userId)
+    {
+        return $query->where('user_id', $userId);
+    }
 }

@@ -42,6 +42,10 @@ build/
 
 # OpenCode (agente CLI)
 .opencode/
+docs/superpowers/
 
 # Oxfmtrc
 .oxfmtrc.json
+
+# Development artifacts
+plan.md

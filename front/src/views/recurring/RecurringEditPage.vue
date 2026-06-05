@@ -605,8 +605,9 @@ import { toShortDate } from '@/utils/dateHelpers';
 import { useDeleteConfirm } from '@/composables/useDeleteConfirm';
 import { useDatePicker } from '@/composables/useDatePicker';
 import { useSync } from '@/composables/useSync';
-import recurringController from '@/controllers/recurringController';
-import type { Supplier, Product } from '@/controllers/suppliersController';
+import recurringRecordsController from '@/controllers/recurringRecordsController';
+import type { Supplier } from '@/controllers/suppliersController';
+import type { Product } from '@/controllers/supplierProductsController';
 import type { SupplierFormPayload } from '@/views/suppliers/modals/SupplierFormComponent.vue';
 import type {
   RecurringType,
@@ -614,7 +615,7 @@ import type {
   RecurringRecord,
   RecurringProduct,
   RecurringItem,
-} from '@/controllers/recurringController';
+} from '@/controllers/recurringRecordsController';
 // end imports
 
 // components
@@ -825,9 +826,9 @@ onMounted(async () => {
 // functions
 function loadRecord(params: { recurringId: string }) {
   const { recurringId } = params;
-  const record = recurringController
+  const record = recurringRecordsController
     .getRecordBySyncId({ syncId: recurringId })
-    .then((found) => found || recurringController.getRecordById({ id: recurringId }));
+    .then((found) => found || recurringRecordsController.getRecordById({ id: recurringId }));
   record.then((found: RecurringRecord | null) => {
     if (!found) return;
     recordId.value = found.id ?? null;
@@ -949,16 +950,16 @@ async function handleSave() {
 
   try {
     if (recordId.value) {
-      await recurringController.updateRecord({
+      await recurringRecordsController.updateRecord({
         id: recordId.value,
         changes: recordData as Partial<RecurringRecord>,
       });
-      const updated = await recurringController.getRecordById({ id: recordId.value });
+      const updated = await recurringRecordsController.getRecordById({ id: recordId.value });
       if (updated) {
         syncRecurringRecord({ record: updated, operation: 'update' });
       }
     } else {
-      const saved = await recurringController.addRecord({
+      const saved = await recurringRecordsController.addRecord({
         record: recordData as Omit<RecurringRecord, 'id' | 'sync_id' | 'createdAt'>,
       });
       syncRecurringRecord({ record: saved, operation: 'create' });
@@ -1205,9 +1206,9 @@ function handleDeleteFromPopover() {
 async function confirmDelete() {
   if (recordId.value) {
     try {
-      const record = await recurringController.getRecordById({ id: recordId.value });
+      const record = await recurringRecordsController.getRecordById({ id: recordId.value });
       if (record) {
-        await recurringController.removeRecord({ id: recordId.value });
+        await recurringRecordsController.removeRecord({ id: recordId.value });
         syncRecurringRecord({ record, operation: 'delete' });
       }
     } catch (err) {

@@ -96,12 +96,13 @@ import EntriesList from './EntriesList.vue';
 import { computed, reactive, onMounted, ref, watch, toRef } from 'vue';
 import { format, addDays } from 'date-fns';
 import { parseLocalDate } from '@/utils/date';
-import budgetController from '@/controllers/budgetController';
+import { useBudgetDayStore } from '@/stores/budgetDayStore';
+import { useBudgetEntriesStore } from '@/stores/budgetEntriesStore';
 import systemController from '@/controllers/systemConfigController';
 import { useRouter } from 'vue-router';
 import { StatisticsController, type Snapshots } from '@/controllers/statisticsController';
 import { usePeriodRange, type PeriodType } from '@/composables/usePeriodRange';
-import type { Income, EntryType } from '@/stores/budgetStore';
+import type { Income } from '@/stores/budgetEntriesStore';
 
 const props = defineProps<{
   period: PeriodType;
@@ -271,9 +272,10 @@ async function loadData() {
     let currentDateIter = new Date(start);
     while (currentDateIter <= end) {
       const dateStr = format(currentDateIter, 'yyyy-MM-dd');
-      await budgetController.loadDataForDate({ date: dateStr });
+      await useBudgetDayStore().loadBudgetForDate({ date: dateStr });
 
-      const entries = budgetController.getEntries();
+      const entriesStore = useBudgetEntriesStore();
+      const entries = entriesStore.entries;
 
       for (const entry of entries) {
         // ensure each entry carries its budget date so modals can show it
@@ -293,9 +295,10 @@ async function loadData() {
     currentDateIter = new Date(prevStart);
     while (currentDateIter <= prevEnd) {
       const dateStr = format(currentDateIter, 'yyyy-MM-dd');
-      await budgetController.loadDataForDate({ date: dateStr });
+      await useBudgetDayStore().loadBudgetForDate({ date: dateStr });
 
-      const entries = budgetController.getEntries();
+      const entriesStore = useBudgetEntriesStore();
+      const entries = entriesStore.entries;
       for (const entry of entries) {
         // annotate previous period entries with their date as well
         // (not added to allEntries but used for totals)

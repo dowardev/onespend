@@ -4,12 +4,9 @@ import { useAccountsStore } from '@/stores/accountsStore';
 import { useSync } from '@/composables/useSync';
 import type { Account } from '@/stores/accountsStore';
 import type { Supplier } from './suppliersController';
+import { generateSyncId } from '@/utils/generateSyncId';
 
 export type { Account };
-
-function generateSyncId(): string {
-  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-}
 
 class AccountsController {
   private isLoading = ref(false);
