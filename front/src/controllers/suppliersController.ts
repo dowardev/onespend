@@ -3,20 +3,8 @@ import { reactive, ref } from 'vue';
 import { useSuppliersStore } from '../stores/suppliersStore';
 import { useSync } from '@/composables/useSync';
 import { syncService } from '@/services/syncService';
-
-function generateSyncId(): string {
-  return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
-}
-
-export type Product = {
-  id?: string | number;
-  sync_id?: string;
-  serverId?: number | null;
-  name: string;
-  price: number;
-  imageBase64?: string | null;
-  synced_at?: number;
-};
+import type { Product } from './supplierProductsController';
+import { generateSyncId } from '@/utils/generateSyncId';
 
 export type Supplier = {
   id?: string | number;
@@ -96,7 +84,7 @@ class SuppliersController {
         console.log('[suppliersController] ⚠️ NO hay productos en entry');
       }
 
-      const { syncProvider, syncSupplierProduct } = useSync();
+      const { syncProvider } = useSync();
       console.log('[suppliersController] useSync imported');
 
       if (!entry.sync_id) {
@@ -104,39 +92,6 @@ class SuppliersController {
       }
 
       console.log('[suppliersController] 🔵 Sincronizando proveedor:', entry.sync_id);
-
-      // Sincronizar productos PRIMERO
-      if (entry.products && entry.products.length > 0) {
-        console.log('[suppliersController] 🔵 Sincronizando', entry.products.length, 'productos');
-        entry.products = entry.products.map((product: Product) => {
-          const tempProductSyncId = generateSyncId();
-          console.log('[suppliersController] 🔵 syncSupplierProduct para:', product.name);
-          try {
-            syncSupplierProduct({
-              product: {
-                supplierId: entry.sync_id,
-                ...product,
-                sync_id: tempProductSyncId,
-              },
-              operation: 'create',
-            });
-            console.log('[suppliersController] ✅ syncSupplierProduct completado');
-          } catch (prodSyncErr) {
-            console.warn(
-              '[suppliersController] syncSupplierProduct falló para',
-              product.name,
-              prodSyncErr,
-            );
-          }
-          return {
-            ...product,
-            sync_id: tempProductSyncId,
-          };
-        });
-        console.log('[suppliersController] Productos sincronizados:', entry.products.length);
-      } else {
-        console.log('[suppliersController] ⚠️ NO hay productos para sincronizar');
-      }
 
       // Luego sincronizar el proveedor
       console.log('[suppliersController] 🔵 LLAMANDO syncProvider');
@@ -227,28 +182,9 @@ class SuppliersController {
         updatedAt: Date.now(),
       };
 
-      const { syncProvider, syncSupplierProduct } = useSync();
+      const { syncProvider } = useSync();
       // Ensure provider shape expected by useSync
       syncProvider({ provider: entry }, 'create');
-
-      // Update products with sync_id before saving to IndexedDB
-      if (entry.products && entry.products.length > 0) {
-        entry.products = entry.products.map((product: Product) => {
-          const tempProductSyncId = generateSyncId();
-          syncSupplierProduct({
-            product: {
-              supplierId: entry.sync_id,
-              ...product,
-              sync_id: tempProductSyncId,
-            },
-            operation: 'create',
-          });
-          return {
-            ...product,
-            sync_id: tempProductSyncId,
-          };
-        });
-      }
 
       await ctrl.putEntry({ entry });
 

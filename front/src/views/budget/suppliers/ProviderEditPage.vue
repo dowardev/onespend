@@ -430,12 +430,17 @@ import { useDeleteConfirm } from '@/composables/useDeleteConfirm';
 import { useDatePicker } from '@/composables/useDatePicker';
 import { required, helpers } from '@vuelidate/validators'
 import { useVuelidate } from '@vuelidate/core'
-import { type Supplier, type Product } from '@/controllers/suppliersController';
+import { type Supplier } from '@/controllers/suppliersController';
+import type { Product } from '@/controllers/supplierProductsController';
 import type { EntryGroup } from '@/utils/budgetTypes';
 import type { SupplierFormPayload } from '@/views/suppliers/modals/SupplierFormComponent.vue';
 // end imports
 
 // controllers
+import { useBudgetDayStore } from '@/stores/budgetDayStore';
+import budgetEntriesController from '@/controllers/budgetEntriesController';
+import budgetProvidersController from '@/controllers/budgetProvidersController';
+import { SuppliersController } from '@/controllers/suppliersController';
 // end controllers
 
 // composables
@@ -608,7 +613,6 @@ const v$ = useVuelidate(rules, computed(() => ({
 // onMounted - initialize form based on route params
 onMounted(async () => {
   // Sync suppliers
-  const { SuppliersController } = await import('@/controllers/suppliersController');
   const suppliersCtrl = new SuppliersController();
   const suppliers = await suppliersCtrl.listSuppliers();
   allSuppliersList.value = suppliers || [];
@@ -626,12 +630,10 @@ onMounted(async () => {
 });
 
 async function initializeFromEntry() {
-  const { default: budgetController } = await import('@/controllers/budgetController');
-  const { SuppliersController } = await import('@/controllers/suppliersController');
   const suppliersCtrl = new SuppliersController();
 
   const entryId = routeEntryId.value;
-  const entries = budgetController.getEntries();
+  const entries = budgetEntriesController.getEntries();
   const entry = entries.find((e: any) => String(e.id) === String(entryId));
 
   if (!entry) return;
@@ -688,12 +690,10 @@ async function initializeFromEntry() {
 }
 
 async function initializeFromProvider() {
-  const { default: budgetController } = await import('@/controllers/budgetController');
-  const { SuppliersController } = await import('@/controllers/suppliersController');
   const suppliersCtrl = new SuppliersController();
 
   const providerId = routeProviderId.value;
-  const providers = budgetController.getProviders();
+  const providers = budgetProvidersController.getProviders();
   const provider = providers.find((p: any) => String(p.id) === String(providerId));
 
   if (!provider) return;
@@ -832,8 +832,7 @@ const productsCoverage = computed(() => {
 
 // functions
 async function setTodayDate() {
-  const { default: budgetController } = await import('@/controllers/budgetController');
-  const selectedDate = budgetController.getSelectedDate();
+  const selectedDate = useBudgetDayStore().selectedDate;
   const dateToUse = selectedDate || format(new Date(), 'yyyy-MM-dd');
   reassignPicker.setDate({ date: dateToUse });
 }
@@ -899,7 +898,6 @@ async function onSupplierFormSaved(payload: SupplierFormPayload) {
   try {
     console.log('[ProviderEditPage] onSupplierFormSaved', payload);
     const { toastController } = await import('@ionic/vue');
-    const { SuppliersController } = await import('@/controllers/suppliersController');
     const suppliersCtrl = new SuppliersController();
     await suppliersCtrl.addSupplier({ s: payload });
     const suppliers = await suppliersCtrl.listSuppliers();
@@ -1100,8 +1098,6 @@ async function handleSave() {
   const isValid = await v$.value.$validate()
   if (!isValid) return
 
-  const { default: budgetController } = await import('@/controllers/budgetController');
-
   const totalAmount = items.value.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
 
   const products = providerProducts.value
@@ -1134,7 +1130,7 @@ async function handleSave() {
       accountId: getAccountIdValue(item.accountId),
     }));
 
-    budgetController.updateIngreso({
+    await budgetEntriesController.updateIngreso({
       id: Number(routeEntryId.value),
       changes: {
         amount: payload.totalAmount,
@@ -1144,7 +1140,7 @@ async function handleSave() {
         date: payload.date,
       },
     });
-    budgetController.saveData();
+    await useBudgetDayStore().saveBudgetData();
   } else if (routeProviderId.value) {
     const firstAccountId = getAccountIdAsNumber(payload.items[0]?.accountId);
 
@@ -1153,7 +1149,7 @@ async function handleSave() {
       accountId: getAccountIdValue(item.accountId),
     }));
 
-    budgetController.updateProvider({
+    await budgetProvidersController.updateProvider({
       id: Number(routeProviderId.value),
       changes: {
         estimated: payload.totalAmount,
@@ -1166,7 +1162,7 @@ async function handleSave() {
         date: payload.date,
       },
     });
-    budgetController.saveData();
+    await useBudgetDayStore().saveBudgetData();
     savedProviderSyncId = providerSyncId.value;
   } else {
     const firstAccountId = getAccountIdAsNumber(payload.items[0]?.accountId);
@@ -1176,7 +1172,7 @@ async function handleSave() {
       accountId: getAccountIdValue(item.accountId),
     }));
 
-    const newProvider = budgetController.addProvider({
+    const newProvider = await budgetProvidersController.addProvider({
       name: payload.providerName || '',
       estimated: payload.totalAmount,
       accountId: firstAccountId,
@@ -1188,7 +1184,7 @@ async function handleSave() {
       notes: providerNotes.value,
       date: payload.date,
     });
-    budgetController.saveData();
+    await useBudgetDayStore().saveBudgetData();
     savedProviderSyncId = newProvider?.sync_id ?? null;
   }
 
@@ -1240,16 +1236,14 @@ function handleDeleteFromPopover() {
 }
 
 async function confirmDelete() {
-  const { default: budgetController } = await import('@/controllers/budgetController');
-
   if (isEntryMode.value && routeEntryId.value) {
-    budgetController.removeIngreso({ id: Number(routeEntryId.value) });
-    budgetController.saveData();
+    await budgetEntriesController.removeEntry({ id: Number(routeEntryId.value) });
+    await useBudgetDayStore().saveBudgetData();
   } else if (routeProviderId.value) {
     await deleteAllAttachments();
 
-    budgetController.removeProvider({ id: Number(routeProviderId.value) });
-    budgetController.saveData();
+    await budgetProvidersController.removeProvider({ id: Number(routeProviderId.value) });
+    await useBudgetDayStore().saveBudgetData();
   }
 
   router.back();

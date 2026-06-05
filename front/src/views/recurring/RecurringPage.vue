@@ -125,7 +125,7 @@ import { addOutline, trashOutline, pauseOutline, playOutline, flaskOutline } fro
 
 // Controllers
 import systemController from '@/controllers/systemConfigController';
-import { recurringController, type RecurringRecord } from '@/controllers/recurringController';
+import { recurringRecordsController, type RecurringRecord } from '@/controllers/recurringRecordsController';
 import accountsController from '@/controllers/accountsController';
 import { useSync } from '@/composables/useSync';
 // End Controllers
@@ -282,7 +282,7 @@ function editRecord(params: { record: RecurringRecord }) {
 async function toggleRecord(params: { record: RecurringRecord }) {
   const { record } = params;
   if (record.id == null) return;
-  await recurringController.toggleActive({ id: record.id });
+  await recurringRecordsController.toggleActive({ id: record.id });
   await syncRecurringRecord({ record: { ...record, status: record.status === 'active' ? 'paused' : 'active' as const } });
   await loadRecords();
 }
@@ -302,14 +302,14 @@ function onDeleteAlertDidDismiss() {
 
 async function removeConfirmed() {
   const id = deleteConfirm.recordId;
-  const recordToDelete = id != null ? await recurringController.getRecordById({ id }) : null;
+  const recordToDelete = id != null ? await recurringRecordsController.getRecordById({ id }) : null;
 
   deleteConfirm.open = false;
   deleteConfirm.recordId = null;
   deleteConfirm.recordName = '';
 
   if (!recordToDelete) return;
-  await recurringController.removeRecord({ id: id! });
+  await recurringRecordsController.removeRecord({ id: id! });
   await syncRecurringRecord({ record: { ...recordToDelete, status: 'deleted' as const } });
   await loadRecords();
 }
@@ -385,7 +385,7 @@ async function seedTestData() {
   ];
 
   for (const seed of seeds) {
-    await recurringController.addRecord({ record: seed });
+    await recurringRecordsController.addRecord({ record: seed });
   }
 
   await loadRecords();
@@ -401,7 +401,7 @@ async function seedTestData() {
 
 async function loadRecords() {
   try {
-    const all = await recurringController.getAllRecords();
+    const all = await recurringRecordsController.getAllRecords();
     records.value = (all || []).filter((r) => r.status !== 'deleted');
   } catch (e) {
     console.error('[RecurringPage] loadRecords error:', e);

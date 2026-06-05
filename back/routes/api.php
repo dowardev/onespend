@@ -1,8 +1,17 @@
 <?php
 
+use App\Http\Controllers\AccountController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\AttachmentController;
+use App\Http\Controllers\BudgetEntryController;
+use App\Http\Controllers\BudgetEntryGroupController;
+use App\Http\Controllers\BudgetProviderController;
+use App\Http\Controllers\BudgetProviderProductController;
+use App\Http\Controllers\RecurringRecordController;
+use App\Http\Controllers\RecurringRecordProductController;
+use App\Http\Controllers\SupplierController;
+use App\Http\Controllers\SupplierProductController;
 use App\Http\Controllers\SyncController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -32,4 +41,15 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/attachments/{attachmentId}/download', [AttachmentController::class, 'download']);
     Route::delete('/attachments/{attachmentId}', [AttachmentController::class, 'destroy']);
     Route::post('/attachments/batch-delete', [AttachmentController::class, 'batchDestroy']);
+
+    // REST API
+    Route::apiResource('accounts', AccountController::class);
+    Route::apiResource('budget-entries', BudgetEntryController::class);
+    Route::apiResource('budget-entry-groups', BudgetEntryGroupController::class);
+    Route::apiResource('budget-providers', BudgetProviderController::class);
+    Route::apiResource('budget-provider-products', BudgetProviderProductController::class);
+    Route::apiResource('suppliers', SupplierController::class);
+    Route::apiResource('supplier-products', SupplierProductController::class);
+    Route::apiResource('recurring-records', RecurringRecordController::class);
+    Route::apiResource('recurring-record-products', RecurringRecordProductController::class);
 });

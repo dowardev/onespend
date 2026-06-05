@@ -1,3 +1,42 @@
+## [v0.68.0] - 2026-06-04
+
+### Refactored
+
+- **Monolithic budgetStore + budgetController** — Extract into specialized stores and controllers
+
+  Replaced the single `budgetStore` (Pinia) and `budgetController` with:
+  - **Stores:** `budgetDayStore` (day-level state), `budgetEntriesStore` (entries CRUD), `budgetProvidersStore` (providers CRUD)
+  - **Controllers:** `budgetEntriesController`, `budgetProvidersController`, `budgetEntryGroupsController`, `budgetProviderProductsController`, `supplierProductsController`, `recurringRecordsController`, `recurringRecordProductsController`, `attachmentsController`
+  - **Composables:** `useSupplierProducts`, `useSuppliers`
+
+  Deleted the original `budgetStore.ts` and `budgetController.ts`.
+
+- **Laravel REST API** — Add dedicated controllers and FormRequests
+
+  New backend controllers: AccountController, BudgetEntryController, BudgetEntryGroupController, BudgetProviderController, BudgetProviderProductController, RecurringRecordController, RecurringRecordProductController, SupplierController, SupplierProductController. Each with typed FormRequest validation and routes registered in `api.php`.
+
+### Fixed
+
+- **Race condition in budget day operations** — Centralize IndexedDB load/save into `budgetDayStore`
+
+  Both `budgetEntriesController` and `budgetProvidersController` independently called `loadBudgetForDate()` and `saveBudgetData()` on the same IndexedDB block, causing data loss when used sequentially. Moved both operations into `budgetDayStore` with a single source of truth. Updated all 10 call sites.
+
+- **Inline store calls in templates** — Replace `useBudgetDayStore()` calls in DaySummaryModal.vue and BudgetView.vue template with centralized references.
+
+- **Missing `scopeForUser` on BudgetEntryGroup and RecurringRecordProduct** — Add Laravel scope and convert RecurringRecordProductController to route model binding.
+
+- **Uncached DixieController instances** — Cache instances in `budgetEntriesController` and `budgetProvidersController` to avoid redundant IndexedDB initialization.
+
+- **Dynamic imports in ProviderEditPage.vue** — Replace 7 `defineAsyncComponent` calls with static imports.
+
+### Added
+
+- **`generateSyncId` utility** — Shared sync ID generator in `src/utils/generateSyncId.ts`, replaces 7 duplicate implementations.
+
+### Security
+
+- **Authorization checks** — RecurringRecordProductController uses route model binding with `can:view`/`can:update` policies; BudgetEntryGroupController index uses `forUser()` scope.
+
 ## [v0.67.2] - 2026-06-04
 
 ### Fixed

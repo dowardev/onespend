@@ -1,9 +1,12 @@
 import { ref, onMounted, onUnmounted, toRaw } from 'vue';
 import { syncService, type SyncItem, type SyncItemData } from '@/services/syncService';
-import { useBudgetStore } from '@/stores/budgetStore';
+import { useBudgetEntriesStore } from '@/stores/budgetEntriesStore';
+import { useBudgetProvidersStore } from '@/stores/budgetProvidersStore';
 import { useAccountsStore } from '@/stores/accountsStore';
 import { useSuppliersStore } from '@/stores/suppliersStore';
-import { recurringController, type RecurringRecord, RECURRING_FIELD_MAP } from '@/controllers/recurringController';
+import { recurringRecordsController, type RecurringRecord, RECURRING_FIELD_MAP } from '@/controllers/recurringRecordsController';
+import type { BudgetProviderProduct } from '@/stores/budgetProvidersStore';
+import { generateSyncId } from '@/utils/generateSyncId';
 
 function mapServerRecurringToLocal(params: { item: Record<string, unknown> }): RecurringRecord {
   const { item } = params;
@@ -115,14 +118,11 @@ export function useSync() {
   const lastSyncTime = ref(0);
   const syncError = ref<string | null>(null);
 
-  const budgetStore = useBudgetStore();
+  const budgetEntriesStore = useBudgetEntriesStore();
+  const budgetProvidersStore = useBudgetProvidersStore();
   const accountsStore = useAccountsStore();
   const suppliersStore = useSuppliersStore();
   let cleanupOnlineListener: (() => void) | null = null;
-
-  function generateSyncId(): string {
-    return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-  }
 
   function syncEntry(params: {
     entry: SyncEntryParams;
@@ -590,7 +590,7 @@ export function useSync() {
       for (const entry of entries) {
         if (entry._deleted) {
           const localId = entry.id;
-          budgetStore.removeEntry(localId);
+          budgetEntriesStore.removeEntry(localId);
         } else {
           const mappedGroups = (
             entry.groups as
@@ -601,9 +601,9 @@ export function useSync() {
             accountId: g.account_id,
           }));
 
-          const existing = budgetStore.entries.find((e) => String(e.id) === String(entry.id));
+          const existing = budgetEntriesStore.entries.find((e) => String(e.id) === String(entry.id));
           if (existing) {
-            budgetStore.updateEntry(entry.id, {
+            budgetEntriesStore.updateEntry(entry.id, {
               name: entry.name as string,
               amount: entry.amount,
               date: entry.date,
@@ -615,7 +615,7 @@ export function useSync() {
               supplierName: entry.supplier_name,
             });
           } else {
-            budgetStore.addEntry({
+            budgetEntriesStore.addEntry({
               id: entry.id,
               name: entry.name as string,
               amount: entry.amount,
@@ -638,12 +638,12 @@ export function useSync() {
       for (const supplier of suppliers) {
         if (supplier._deleted) {
           const localId = supplier.id;
-          budgetStore.removeProvider(localId);
+          budgetProvidersStore.removeProvider(localId);
         } else {
-          const existing = budgetStore.providers.find((p) => String(p.id) === String(supplier.id));
+          const existing = budgetProvidersStore.providers.find((p) => String(p.id) === String(supplier.id));
           const s = supplier as any;
           if (existing) {
-            budgetStore.updateProvider(supplier.id, {
+            budgetProvidersStore.updateProvider(supplier.id, {
               name: s.name as string,
               date: s.date,
               estimated: s.estimated as number,
@@ -655,7 +655,7 @@ export function useSync() {
               visited: s.visited as boolean,
             });
           } else {
-            budgetStore.addProvider({
+            budgetProvidersStore.addProvider({
               id: supplier.id,
               name: s.name as string,
               date: s.date,
@@ -693,11 +693,11 @@ export function useSync() {
       for (const provider of providers) {
         if (provider._deleted) {
           const localId = provider.id;
-          budgetStore.removeProvider(localId);
+          budgetProvidersStore.removeProvider(localId);
         } else {
-          const existing = budgetStore.providers.find((p) => String(p.id) === String(provider.id));
+          const existing = budgetProvidersStore.providers.find((p) => String(p.id) === String(provider.id));
           if (existing) {
-            budgetStore.updateProvider(provider.id, {
+            budgetProvidersStore.updateProvider(provider.id, {
               name: provider.name as string,
               date: provider.date,
               estimated: provider.estimated as number,
@@ -709,7 +709,7 @@ export function useSync() {
               visited: provider.visited as boolean,
             });
           } else {
-            budgetStore.addProvider({
+            budgetProvidersStore.addProvider({
               id: provider.id,
               name: provider.name as string,
               date: provider.date,
@@ -731,16 +731,16 @@ export function useSync() {
     for (const item of records) {
       if (item._deleted) {
         const localId = item.id;
-        await recurringController.removeRecord({ id: localId });
+        await recurringRecordsController.removeRecord({ id: localId });
       } else {
         const localRecord = mapServerRecurringToLocal({ item: item as Record<string, unknown> });
         const syncId = localRecord.sync_id || String(item.id);
-        const existing = await recurringController.getRecordBySyncId({ syncId });
+        const existing = await recurringRecordsController.getRecordBySyncId({ syncId });
         if (existing) {
           const { id: _id, ...safeChanges } = localRecord;
-          await recurringController.updateRecord({ id: existing.id, changes: safeChanges });
+          await recurringRecordsController.updateRecord({ id: existing.id, changes: safeChanges });
         } else {
-          await recurringController.addRecord({ record: localRecord });
+          await recurringRecordsController.addRecord({ record: localRecord });
         }
       }
     }
@@ -770,15 +770,13 @@ export function useSync() {
       }
 
       for (const [providerId, prods] of Object.entries(productsByProvider)) {
-        const provider = budgetStore.providers.find((p) => String(p.id) === String(providerId));
+        const provider = budgetProvidersStore.providers.find((p) => String(p.id) === String(providerId));
         if (provider) {
-          budgetStore.updateProvider(Number(providerId), { products: prods });
+          budgetProvidersStore.updateProvider(Number(providerId), { products: prods });
         }
       }
     }
   }
-
-  // Usa BudgetProviderProduct del store (budgetStore.ts)
 
   function startAutoSync(intervalMs: number = 30000) {
     const interval = setInterval(() => {

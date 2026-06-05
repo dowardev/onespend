@@ -28,4 +28,11 @@ class RecurringRecordProduct extends Model
     {
         return $this->belongsTo(SupplierProduct::class, 'supplier_product_id');
     }
+
+    public function scopeForUser($query, $userId)
+    {
+        return $query->whereHas('recurringRecord', function ($q) use ($userId) {
+            $q->where('user_id', $userId);
+        });
+    }
 }
