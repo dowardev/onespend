@@ -77,7 +77,7 @@
       >
         <ion-content class="centered-popover">
           <ion-datetime
-            :value="budgetController.getSelectedDate()"
+            :value="budgetDayStore.selectedDate"
             presentation="date"
             @ion-change="onDateSelected"
           ></ion-datetime>
@@ -167,11 +167,15 @@ import { es as esLocale } from 'date-fns/locale';
 
 // controllers
 import systemController from '@/controllers/systemConfigController';
-import budgetController from '@/controllers/budgetController';
+import budgetEntriesController from '@/controllers/budgetEntriesController';
+import budgetProvidersController from '@/controllers/budgetProvidersController';
 import accountsController from '@/controllers/accountsController';
 import { AccountsController } from '@/controllers/accountsController';
-import { recurringController, type RecurringRecord } from '@/controllers/recurringController';
+import { recurringRecordsController, type RecurringRecord } from '@/controllers/recurringRecordsController';
 import { isDueOnDate, shouldAutoInsert } from '@/composables/useRecurrence';
+import { useBudgetDayStore } from '@/stores/budgetDayStore';
+import { useBudgetEntriesStore } from '@/stores/budgetEntriesStore';
+import { useBudgetProvidersStore } from '@/stores/budgetProvidersStore';
 import attachmentService from '@/services/attachmentService';
 import pendingAttachmentsService from '@/services/pendingAttachmentsService';
 // end controllers
@@ -206,13 +210,14 @@ const repairRan = ref(false);
 // end
 
 // computed
+const budgetDayStore = useBudgetDayStore();
 const formattedSelectedDate = computed(() => {
   try {
-    const d = parseLocalDate({ d: budgetController.getSelectedDate() });
-    if (isNaN(d.getTime())) return budgetController.getSelectedDate();
+    const d = parseLocalDate({ d: budgetDayStore.selectedDate });
+    if (isNaN(d.getTime())) return budgetDayStore.selectedDate;
     return format(d, "d 'de' MMMM 'de' yyyy", { locale: esLocale });
   } catch {
-    return budgetController.getSelectedDate();
+    return budgetDayStore.selectedDate;
   }
 });
 // end computed
@@ -221,9 +226,9 @@ const formattedSelectedDate = computed(() => {
   onIonViewWillEnter(async () => {
     try {
       await accountsController.loadAll();
-      await budgetController.loadDataForCurrentDate();
+      await budgetDayStore.loadBudgetForDate({ date: budgetDayStore.selectedDate });
       if (!repairRan.value) {
-        await recurringController.repairRecords();
+        await recurringRecordsController.repairRecords();
         repairRan.value = true;
       }
       await processRecurringForDate();
@@ -260,14 +265,16 @@ function openMoreOptions(params: { event: Event }) {
   showMoreOptions.value = true;
 }
 
-function onDateSelected(e: CustomEvent) {
+async function onDateSelected(e: CustomEvent) {
   const value = e.detail?.value;
   if (value) {
     const d = new Date(value);
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
-    budgetController.setDate({ date: `${y}-${m}-${day}` });
+    const dateStr = `${y}-${m}-${day}`;
+    budgetDayStore.setSelectedDate(dateStr);
+    await budgetDayStore.loadBudgetForDate({ date: dateStr });
     showDatePicker.value = false;
     setTimeout(async () => {
       await processRecurringForDate();
@@ -275,32 +282,38 @@ function onDateSelected(e: CustomEvent) {
   }
 }
 
-function goBack() {
-  const current = budgetController.getSelectedDate();
+async function goBack() {
+  const current = budgetDayStore.selectedDate;
   const d = parseLocalDate({ d: current });
   d.setDate(d.getDate() - 1);
-  budgetController.setDate({ date: formatLocalDate({ d }) });
+  const dateStr = formatLocalDate({ d });
+  budgetDayStore.setSelectedDate(dateStr);
+  await budgetDayStore.loadBudgetForDate({ date: dateStr });
   setTimeout(async () => {
     await processRecurringForDate();
   }, 50);
 }
 
-function goForward() {
-  const current = budgetController.getSelectedDate();
+async function goForward() {
+  const current = budgetDayStore.selectedDate;
   const d = parseLocalDate({ d: current });
   d.setDate(d.getDate() + 1);
-  budgetController.setDate({ date: formatLocalDate({ d }) });
+  const dateStr = formatLocalDate({ d });
+  budgetDayStore.setSelectedDate(dateStr);
+  await budgetDayStore.loadBudgetForDate({ date: dateStr });
   setTimeout(async () => {
     await processRecurringForDate();
   }, 50);
 }
 
-function goToToday() {
+async function goToToday() {
   const d = new Date();
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
-  budgetController.setDate({ date: `${y}-${m}-${day}` });
+  const dateStr = `${y}-${m}-${day}`;
+  budgetDayStore.setSelectedDate(dateStr);
+  await budgetDayStore.loadBudgetForDate({ date: dateStr });
   showDatePicker.value = false;
   setTimeout(async () => {
     await processRecurringForDate();
@@ -308,8 +321,8 @@ function goToToday() {
 }
 
 async function deduplicateRecurringEntries(): Promise<void> {
-  const existingEntries = budgetController.getEntries();
-  const existingProviders = budgetController.getProviders();
+  const existingEntries = budgetEntriesController.getEntries();
+  const existingProviders = budgetProvidersController.getProviders();
   const entryRecurringIds = new Set<string>();
   const providerRecurringIds = new Set<string>();
   let hadDuplicates = false;
@@ -317,7 +330,7 @@ async function deduplicateRecurringEntries(): Promise<void> {
   for (const e of existingEntries) {
     if (e._fromRecurringId) {
       if (entryRecurringIds.has(e._fromRecurringId)) {
-        budgetController.removeIngreso({ id: e.id });
+        budgetEntriesController.removeEntry({ id: e.id });
         console.warn('[recurring] dedup: removed duplicate entry', e.id, e._fromRecurringId);
         hadDuplicates = true;
       } else {
@@ -328,7 +341,7 @@ async function deduplicateRecurringEntries(): Promise<void> {
   for (const p of existingProviders) {
     if (p._fromRecurringId) {
       if (providerRecurringIds.has(p._fromRecurringId)) {
-        budgetController.removeProvider({ id: p.id });
+        budgetProvidersController.removeProvider({ id: p.id });
         console.warn('[recurring] dedup: removed duplicate provider', p.id, p._fromRecurringId);
         hadDuplicates = true;
       } else {
@@ -338,20 +351,20 @@ async function deduplicateRecurringEntries(): Promise<void> {
   }
 
   if (hadDuplicates) {
-    budgetController.saveData();
+    await budgetDayStore.saveBudgetData();
   }
 }
 
 async function processRecurringForDate() {
   try {
-    const dateStr = budgetController.getSelectedDate();
+    const dateStr = budgetDayStore.selectedDate;
     if (!dateStr) return;
 
     await deduplicateRecurringEntries();
 
-    const existingEntries = budgetController.getEntries();
-    const existingProviders = budgetController.getProviders();
-    const records = await recurringController.getActiveRecords();
+    const existingEntries = budgetEntriesController.getEntries();
+    const existingProviders = budgetProvidersController.getProviders();
+    const records = await recurringRecordsController.getActiveRecords();
     const pendientes: RecurringRecord[] = [];
 
     for (const record of records) {
@@ -372,37 +385,42 @@ async function processRecurringForDate() {
             (e) => e._fromRecurringId === syncId,
           );
           if (alreadyExists) continue;
-          const addFn = record.entryType === 'ingreso'
-            ? budgetController.addIngreso.bind(budgetController)
-            : budgetController.addEgreso.bind(budgetController);
-          addFn({
-            name: record.name,
-            amount: record.amount || 0,
-            accountId: record.accountId,
-            _fromRecurringId: syncId,
-          });
+          if (record.entryType === 'ingreso') {
+            await budgetEntriesController.addIngreso({
+              name: record.name,
+              amount: record.amount || 0,
+              accountId: record.accountId,
+              _fromRecurringId: syncId,
+            });
+          } else {
+            await budgetEntriesController.addEgreso({
+              name: record.name,
+              amount: record.amount || 0,
+              accountId: record.accountId,
+              _fromRecurringId: syncId,
+            });
+          }
         } else {
           const alreadyExists = existingProviders.some(
             (p) => p._fromRecurringId === syncId,
           );
           if (alreadyExists) continue;
-          budgetController.addProvider({
+          await budgetProvidersController.addProvider({
             name: record.name,
             estimated: record.estimated,
-            accountId: record.accountId,
+            accountId: Number(record.accountId) || 0,
             _fromRecurringId: syncId,
             products: record.products?.map((p) => ({
               id: p.supplierProductId ? String(p.supplierProductId) : undefined,
-              name: p.productName,
-              price: p.productPrice,
+              productName: p.productName,
+              productPrice: p.productPrice,
               quantity: p.quantity,
             })),
             items: record.items?.map((i) => ({
               amount: Number(i.amount),
-              accountId:
-                i.accountId && typeof i.accountId === 'object'
-                  ? (i.accountId as { id: string | number }).id
-                  : i.accountId || undefined,
+              accountId: typeof i.accountId === 'object' && i.accountId
+                ? (i.accountId as { id: string | number }).id
+                : (i.accountId ?? null) as string | number | null,
             })),
           });
         }
@@ -410,7 +428,7 @@ async function processRecurringForDate() {
         pendientes.push(record);
       }
     }
-    budgetController.saveData();
+    await budgetDayStore.saveBudgetData();
 
     pendingRecurringRecords.value = pendientes;
     if (pendientes.some((r) => r.autoInsert && r.time)) {
@@ -444,7 +462,7 @@ function confirmClearDay() {
 
 async function performClearDay() {
   // Eliminar adjuntos de todas las entradas del día
-  const entries = budgetController.getEntries();
+  const entries = budgetEntriesController.getEntries();
   for (const entry of entries) {
     if (entry.sync_id) {
       try {
@@ -463,8 +481,10 @@ async function performClearDay() {
   }
 
   // Eliminar entradas del día
-  budgetController.clearDay();
-  budgetController.saveData();
+  budgetEntriesController.getStore().clearEntries();
+  budgetProvidersController.getStore().clearProviders();
+  budgetDayStore.isDayClosed = false;
+  await budgetDayStore.saveBudgetData();
   showClearConfirm.value = false;
 }
 
@@ -492,136 +512,143 @@ async function insertTestData() {
   const accountId1 = accounts[0].id;
   const accountId2 = accounts[1]?.id ?? accountId1;
 
-  budgetController.addIngreso({
+  await budgetEntriesController.addIngreso({
     name: 'Venta mostrador 1',
     amount: 1500,
     paymentType: 'cash',
     accountId: accountId1,
   });
-  budgetController.addIngreso({
+  await budgetEntriesController.addIngreso({
     name: 'Venta mostrador 2',
     amount: 2300,
     paymentType: 'digital',
     accountId: accountId2,
   });
-  budgetController.addIngreso({
+  await budgetEntriesController.addIngreso({
     name: 'Venta online',
     amount: 4500,
     paymentType: 'cash',
     accountId: accountId1,
   });
-  budgetController.addIngreso({
+  await budgetEntriesController.addIngreso({
     name: 'Pedido mayorista',
     amount: 12000,
     paymentType: 'digital',
     accountId: accountId2,
   });
-  budgetController.addIngreso({
+  await budgetEntriesController.addIngreso({
     name: 'Venta telefónica',
     amount: 3500,
     paymentType: 'cash',
     accountId: accountId1,
   });
 
-  budgetController.addEgreso({
+  await budgetEntriesController.addEgreso({
     name: 'Compra inventario',
     amount: 8000,
     paymentType: 'cash',
     accountId: accountId1,
   });
-  budgetController.addEgreso({
+  await budgetEntriesController.addEgreso({
     name: 'Pago servicios',
     amount: 2500,
     paymentType: 'digital',
     accountId: accountId2,
   });
-  budgetController.addEgreso({
+  await budgetEntriesController.addEgreso({
     name: 'Transporte',
     amount: 800,
     paymentType: 'cash',
     accountId: accountId1,
   });
 
-  budgetController.addProvider({
+  await budgetProvidersController.addProvider({
     name: 'Proveedor A',
     estimated: 500,
-    accountId: accountId1,
+    accountId: Number(accountId1),
   });
-  budgetController.addProvider({
+  await budgetProvidersController.addProvider({
     name: 'Proveedor B',
     estimated: 800,
-    accountId: accountId2,
+    accountId: Number(accountId2),
   });
-  budgetController.addProvider({
+  await budgetProvidersController.addProvider({
     name: 'Proveedor C',
     estimated: 1200,
-    accountId: accountId1,
+    accountId: Number(accountId1),
   });
-  budgetController.addProvider({
+  await budgetProvidersController.addProvider({
     name: 'Proveedor D',
     estimated: 600,
-    accountId: accountId2,
+    accountId: Number(accountId2),
   });
-  budgetController.addProvider({
+  await budgetProvidersController.addProvider({
     name: 'Proveedor E',
     estimated: 950,
-    accountId: accountId1,
+    accountId: Number(accountId1),
   });
-  budgetController.addProvider({
+  await budgetProvidersController.addProvider({
     name: 'Proveedor F',
     estimated: 1500,
-    accountId: accountId2,
+    accountId: Number(accountId2),
   });
-  budgetController.addProvider({
+  await budgetProvidersController.addProvider({
     name: 'Proveedor G',
     estimated: 450,
-    accountId: accountId1,
+    accountId: Number(accountId1),
   });
 
-  budgetController.saveData();
+  await budgetDayStore.saveBudgetData();
   showMoreOptions.value = false;
 }
 
 async function applySinglePendingRecord(params: { record: RecurringRecord }) {
   const { record } = params;
   const syncId = record.sync_id || '';
-  const dateStr = budgetController.getSelectedDate();
+  const dateStr = budgetDayStore.selectedDate;
 
   if (record.type === 'cargo') {
-    const addFn = record.entryType === 'ingreso'
-      ? budgetController.addIngreso.bind(budgetController)
-      : budgetController.addEgreso.bind(budgetController);
-    addFn({
-      name: record.name,
-      amount: record.amount || 0,
-      accountId: record.accountId,
-      date: dateStr || undefined,
-      _fromRecurringId: syncId,
-    });
+    if (record.entryType === 'ingreso') {
+      await budgetEntriesController.addIngreso({
+        name: record.name,
+        amount: record.amount || 0,
+        accountId: record.accountId,
+        date: dateStr || undefined,
+        _fromRecurringId: syncId,
+      });
+    } else {
+      await budgetEntriesController.addEgreso({
+        name: record.name,
+        amount: record.amount || 0,
+        accountId: record.accountId,
+        date: dateStr || undefined,
+        _fromRecurringId: syncId,
+      });
+    }
   } else {
-    budgetController.addProvider({
+    await budgetProvidersController.addProvider({
       name: record.name,
       estimated: record.estimated,
-      accountId: record.accountId,
+      accountId: Number(record.accountId) || 0,
       date: dateStr || undefined,
       _fromRecurringId: syncId,
       products: record.products?.map((p) => ({
         id: p.supplierProductId ? String(p.supplierProductId) : undefined,
-        name: p.productName,
-        price: p.productPrice,
+        productName: p.productName,
+        productPrice: p.productPrice,
         quantity: p.quantity,
       })),
       items: record.items?.map((i) => ({
         amount: Number(i.amount),
         accountId:
-          i.accountId && typeof i.accountId === 'object'
+          typeof i.accountId === 'object' && i.accountId
             ? (i.accountId as { id: string | number }).id
-            : i.accountId || undefined,
+            : (i.accountId ?? null) as string | number | null,
       })),
     });
   }
 
-  budgetController.saveData();
+  await budgetDayStore.saveBudgetData();
   const idx = pendingRecurringRecords.value.findIndex((r) => r.id === record.id);
   if (idx !== -1) pendingRecurringRecords.value.splice(idx, 1);
   if (pendingRecurringRecords.value.length === 0) showPendingModal.value = false;

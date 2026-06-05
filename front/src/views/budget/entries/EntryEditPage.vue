@@ -155,7 +155,8 @@ import { trashOutline } from 'ionicons/icons';
 import { computed, ref, onMounted, reactive } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { format } from 'date-fns';
-import budgetController from '@/controllers/budgetController';
+import { useBudgetDayStore } from '@/stores/budgetDayStore';
+import budgetEntriesController from '@/controllers/budgetEntriesController';
 import { useAttachments } from '@/composables/useAttachments';
 import { parseDateValue, toShortDate } from '@/utils/dateHelpers';
 import { useDeleteConfirm } from '@/composables/useDeleteConfirm';
@@ -262,7 +263,8 @@ onMounted(async () => {
     await loadEntry(route.query.entryId as string);
   } else {
     entryItems.value = [{ amount: '', accountId: null }];
-    const selectedDate = budgetController.getSelectedDate();
+    const budgetDayStore = useBudgetDayStore();
+    const selectedDate = budgetDayStore.selectedDate;
     const dateStr = selectedDate
       ? selectedDate.slice(0, 10) + 'T00:00:00'
       : format(new Date(), 'yyyy-MM-dd') + 'T00:00:00';
@@ -273,7 +275,7 @@ onMounted(async () => {
 
 // functions
 async function loadEntry(entryId: string) {
-  const entries = budgetController.getEntries();
+  const entries = budgetEntriesController.getEntries();
   const entry = entries.find((e: any) => String(e.id) === String(entryId));
 
   if (!entry) return;
@@ -341,8 +343,8 @@ async function confirmDelete() {
     if (entrySyncId.value) {
       await deleteAllAttachments();
     }
-    budgetController.removeIngreso({ id: entryData.value.id });
-    budgetController.saveData();
+    const budgetDayStore = useBudgetDayStore();
+    budgetDayStore.saveBudgetData();
   }
   deleteConfirm.showDeleteAlert.value = false;
   router.back();
@@ -352,7 +354,8 @@ function resolveEntryDate(entry: any): string {
   if (entry?.date) {
     return parseDateValue({ raw: entry.date }).slice(0, 10);
   }
-  const selectedDate = budgetController.getSelectedDate?.();
+  const budgetDayStore = useBudgetDayStore();
+  const selectedDate = budgetDayStore.selectedDate;
   if (selectedDate) return parseDateValue({ raw: selectedDate }).slice(0, 10);
   return format(new Date(), 'yyyy-MM-dd');
 }
@@ -424,7 +427,7 @@ async function handleSave() {
         verbose: false,
       });
     } else {
-      budgetController.updateIngreso({
+      await budgetEntriesController.updateIngreso({
         id: entryData.value.id,
         changes: {
           entryType: payload.entryType,
@@ -436,7 +439,7 @@ async function handleSave() {
         } as any,
       });
     }
-    savedEntry = budgetController
+    savedEntry = budgetEntriesController
       .getEntries()
       .find((e: any) => String(e.id) === String(entryData.value.id));
   } else {
@@ -451,14 +454,14 @@ async function handleSave() {
         entryDataAny.date = payload.date;
       }
       if (payload.entryType === 'ingreso') {
-        savedEntry = budgetController.addIngreso(entryDataAny);
+        savedEntry = await budgetEntriesController.addIngreso(entryDataAny);
       } else {
-        savedEntry = budgetController.addEgreso(entryDataAny);
+        savedEntry = await budgetEntriesController.addEgreso(entryDataAny);
       }
     }
   }
 
-  budgetController.saveData();
+  await useBudgetDayStore().saveBudgetData();
 
   const entrySyncIdValue = savedEntry?.sync_id || entrySyncId.value;
   const isNewEntry = !entryData.value.id;
@@ -492,10 +495,12 @@ async function applyReassignDate() {
   if (!finalDate) return;
   reassignDate.value = finalDate;
 
+  const entryId = entryData.value.id;
+  if (entryId == null || entryId === undefined) return;
   try {
     const { reassignEntry } = await import('@/composables/useReassignEntry');
     await reassignEntry({
-      entryId: entryData.value.id,
+      entryId,
       newDate: finalDate,
       originalDate: entryData.value.date || undefined,
       restoreSelectedDate: true,

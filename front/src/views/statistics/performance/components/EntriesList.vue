@@ -39,7 +39,7 @@
 <script setup lang="ts">
 import { IonItem, IonLabel, IonList, IonListHeader, IonText } from '@ionic/vue';
 import EntriesChart, { type EntryChartItem } from './EntriesChart.vue';
-import type { Income } from '@/stores/budgetStore';
+import type { Income } from '@/stores/budgetEntriesStore';
 
 export interface EntryListItem {
   id: string | number;

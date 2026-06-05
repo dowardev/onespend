@@ -121,7 +121,7 @@ import { addOutline, trashOutline } from 'ionicons/icons';
 
 // Components
 import AddSupliersComponent from '../suppliers/modals/AddSupliersComponent.vue';
-import type { Product } from '@/controllers/suppliersController';
+import type { Product } from '@/controllers/supplierProductsController';
 
 interface SupplierGroup {
   letter: string;

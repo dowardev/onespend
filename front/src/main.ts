@@ -35,12 +35,16 @@ import '@ionic/vue/css/display.css';
 import './theme/variables.css';
 
 import { createPinia } from 'pinia';
-import budgetController from './controllers/budgetController';
+import budgetEntriesController from './controllers/budgetEntriesController';
+import budgetProvidersController from './controllers/budgetProvidersController';
+import { useBudgetDayStore } from './stores/budgetDayStore';
 
-// Expose controller globally in development for MCP/debugging
+// Expose controllers globally in development for MCP/debugging
 try {
   // @ts-ignore
-  (window as any).budgetController = budgetController;
+  (window as any).budgetEntriesController = budgetEntriesController;
+  // @ts-ignore
+  (window as any).budgetProvidersController = budgetProvidersController;
 } catch (e) {}
 
 function getIonicBreakpoint(): string {
@@ -65,14 +69,14 @@ router.isReady().then(async () => {
     // renders persisted entries immediately after load.
     // eslint-disable-next-line no-console
     console.log('[main] Loading budget data before mount');
-    // budgetController may perform IndexedDB operations; await completion.
+    // budget controllers may perform IndexedDB operations; await completion.
     // If it fails, continue mounting so app is usable.
     try {
-      // @ts-ignore
-      await budgetController.loadDataForCurrentDate();
+      const dayStore = useBudgetDayStore();
+      await dayStore.loadBudgetForDate({ date: dayStore.selectedDate });
     } catch (e) {
       // eslint-disable-next-line no-console
-      console.warn('[main] budgetController.loadDataForCurrentDate failed', e);
+      console.warn('[main] loadDataForDate failed', e);
     }
   } catch (e) {}
 
@@ -90,10 +94,13 @@ router.isReady().then(async () => {
     const originalUnmount = app.unmount;
     if (originalUnmount) originalUnmount();
   };
-  // Expose controller for debugging in development (MCP/DevTools).
+  // Expose controllers for debugging in development (MCP/DevTools).
   try {
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
-    window.budgetController = budgetController;
+    window.budgetEntriesController = budgetEntriesController;
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    window.budgetProvidersController = budgetProvidersController;
   } catch (e) {}
 });

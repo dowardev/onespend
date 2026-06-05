@@ -1,0 +1,233 @@
+import { DixieController } from './dixie';
+import { useBudgetProvidersStore } from '@/stores/budgetProvidersStore';
+import { useBudgetDayStore } from '@/stores/budgetDayStore';
+import { useBudgetEntriesStore } from '@/stores/budgetEntriesStore';
+import { useSync } from '@/composables/useSync';
+import type { Provider, BudgetProviderProduct } from '@/stores/budgetProvidersStore';
+import type { Supplier } from './suppliersController';
+import { generateSyncId } from '@/utils/generateSyncId';
+
+export type { Provider, BudgetProviderProduct };
+
+interface BudgetData {
+  entries: any[];
+  proveedores: Provider[];
+  isDayClosed?: boolean;
+  finishDayData?: any;
+}
+
+class BudgetProvidersController {
+  private ctrl: DixieController | null = null;
+  private pendingTimeouts: Set<any> | null = null;
+
+  private getController(): DixieController {
+    if (!this.ctrl) {
+      this.ctrl = new DixieController({ name: 'ABOgazDB', storeName: 'budget' });
+    }
+    return this.ctrl;
+  }
+
+  getStore() {
+    return useBudgetProvidersStore();
+  }
+
+  getProviders() {
+    return this.getStore().providers;
+  }
+
+  async getAll(): Promise<Provider[]> {
+    return [...this.getStore().providers];
+  }
+
+  async addProvider(params: {
+    name?: string;
+    estimated?: number;
+    accountId?: number;
+    allowEmpty?: boolean;
+    _supplierId?: string | number;
+    _supplierName?: string;
+    _supplier?: Supplier;
+    notes?: string;
+    products?: BudgetProviderProduct[];
+    items?: Array<{ amount: number; accountId: string | number | null }>;
+    date?: string;
+    _fromRecurringId?: string;
+  }) {
+    const {
+      name = '', estimated = 0, accountId = 0, allowEmpty = false,
+      _supplierId, _supplierName, _supplier, notes, products, items, date, _fromRecurringId,
+    } = params;
+    if (!name && !allowEmpty) return;
+
+    const store = this.getStore();
+    const dayStore = useBudgetDayStore();
+    const localId = Date.now() + Math.random();
+    const supplierSyncId = _supplierId as string | undefined;
+    const providerDate = date || dayStore.selectedDate;
+    const currentDate = dayStore.selectedDate;
+
+    const newProvider: Provider = {
+      id: localId,
+      sync_id: generateSyncId(),
+      name,
+      date: providerDate,
+      estimated: Number(estimated) || 0,
+      accountId: Number(accountId) || 0,
+      efectivo: 0,
+      tarjeta: 0,
+      credito: 0,
+      notes: notes || '',
+      visited: false,
+      _justAdded: true,
+      _supplierId: supplierSyncId,
+      _supplierName,
+      _pendingProducts: products,
+      products,
+      items,
+      _supplier: _supplier ? JSON.parse(JSON.stringify(_supplier)) : undefined,
+      createdAt: Date.now(),
+      _fromRecurringId,
+    };
+
+    const { syncBudgetProvider } = useSync();
+
+    if (providerDate !== currentDate) {
+      await this.saveProviderToDate(newProvider, providerDate);
+      syncBudgetProvider({ provider: newProvider as any, operation: 'create', products: products as any, supplierSyncId });
+    } else {
+      store.addProvider(newProvider);
+      syncBudgetProvider({ provider: newProvider as any, operation: 'create', products: products as any, supplierSyncId });
+    }
+
+    const timeoutId = setTimeout(() => {
+      const provider = store.providers.find((p) => p.id === newProvider.id);
+      if (provider) {
+        store.updateProvider(provider.id, { _justAdded: false });
+      }
+    }, 400);
+
+    if (!this.pendingTimeouts) {
+      this.pendingTimeouts = new Set();
+    }
+    this.pendingTimeouts.add(timeoutId);
+    setTimeout(() => {
+      this.pendingTimeouts?.delete(timeoutId);
+    }, 500);
+
+    return newProvider;
+  }
+
+  async updateProvider(params: { id: string | number; changes: Partial<Provider> }) {
+    const { id, changes } = params;
+    const store = this.getStore();
+    const dayStore = useBudgetDayStore();
+    const { syncBudgetProvider } = useSync();
+
+    const provider = store.providers.find((p) => p.id === id);
+    if (!provider) return false;
+
+    const productsToSync = (changes.products || provider?.products || []) as any[];
+    const supplierSyncId = String(provider?._supplierId || changes._supplierId || '');
+
+    const newDate = changes.date;
+    const currentDate = dayStore.selectedDate;
+
+    if (newDate && newDate !== currentDate) {
+      const updatedProvider = { ...provider, ...changes };
+      store.removeProvider(id);
+
+      await dayStore.saveBudgetData();
+
+      await this.saveProviderToDate(updatedProvider, newDate);
+
+      syncBudgetProvider({ provider: updatedProvider, operation: 'update', products: productsToSync, supplierSyncId });
+      return true;
+    } else {
+      store.updateProvider(id, changes);
+      syncBudgetProvider({ provider: { ...provider, ...changes }, operation: 'update', products: productsToSync, supplierSyncId });
+      return false;
+    }
+  }
+
+  private async saveProviderToDate(provider: Provider, targetDate: string) {
+    try {
+      const ctrl = this.getController();
+      const dateKey = `budget:${targetDate}`;
+      const plainProvider = JSON.parse(JSON.stringify(provider));
+      const existing = (await ctrl.getBackup({ id: dateKey })) as { data?: BudgetData } | null;
+      const entries = existing?.data?.entries ? JSON.parse(JSON.stringify(existing.data.entries)) : [];
+      const providers = existing?.data?.proveedores ? JSON.parse(JSON.stringify(existing.data.proveedores)) : [];
+      const isDayClosed = existing?.data?.isDayClosed || false;
+      const finishDayData = existing?.data?.finishDayData || {};
+
+      providers.push(plainProvider);
+
+      await ctrl.putEntry({
+        entry: { id: dateKey, data: { entries, proveedores: providers, isDayClosed, finishDayData } },
+      });
+    } catch (e) {
+      console.error('[BudgetProvidersController.saveProviderToDate] Error:', e);
+    }
+  }
+
+  async removeProvider(params: { id: string | number }) {
+    const { id } = params;
+    const store = this.getStore();
+    const { syncBudgetProvider } = useSync();
+    const provider = store.providers.find((p) => p.id === id);
+    store.removeProvider(id);
+
+    if (provider) {
+      syncBudgetProvider({ provider, operation: 'delete' });
+    }
+  }
+
+  addProviderEgresos(params: { provider: Provider }) {
+    const { provider } = params;
+    const dayStore = useBudgetDayStore();
+    const entriesStore = useBudgetEntriesStore();
+    const now = Date.now();
+    const amount = Number(provider.estimated || 0);
+
+    if (amount <= 0) return;
+
+    const newEntry: import('@/stores/budgetEntriesStore').Income = {
+      id: Date.now() + Math.random(),
+      sync_id: generateSyncId(),
+      name: provider.name,
+      amount,
+      date: dayStore.selectedDate,
+      paymentType: 'cash',
+      entryType: 'egreso',
+      createdAt: now,
+      accountId: provider.accountId,
+      supplierId: String(provider._supplierId || provider.id),
+      supplierName: provider.name,
+    };
+
+    entriesStore.addEntry(newEntry);
+
+    const { syncEntry } = useSync();
+    syncEntry({ entry: newEntry as any, operation: 'create' });
+  }
+
+  clearAllProviders() {
+    this.getStore().clearProviders();
+  }
+
+  syncProvidersWithSuppliers(params: { suppliers: Supplier[] }) {
+    const { suppliers } = params;
+    return this.getStore().syncProvidersWithSuppliers(suppliers);
+  }
+
+  cleanup() {
+    if (this.pendingTimeouts) {
+      this.pendingTimeouts.forEach((timeoutId: any) => clearTimeout(timeoutId));
+      this.pendingTimeouts.clear();
+    }
+  }
+}
+
+const budgetProvidersController = new BudgetProvidersController();
+export default budgetProvidersController;
+export { BudgetProvidersController };

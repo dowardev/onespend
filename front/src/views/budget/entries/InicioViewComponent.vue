@@ -158,10 +158,13 @@ import {
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import AccountCards from '../components/AccountCards.vue';
-import budgetController from '@/controllers/budgetController';
+import budgetEntriesController from '@/controllers/budgetEntriesController';
+import budgetProvidersController from '@/controllers/budgetProvidersController';
 import accountsController from '@/controllers/accountsController';
 import type { Account } from '@/stores/accountsStore';
-import type { Income, Provider } from '@/stores/budgetStore';
+import type { Income } from '@/stores/budgetEntriesStore';
+import type { Provider } from '@/stores/budgetProvidersStore';
+import { useBudgetDayStore } from '@/stores/budgetDayStore';
 import type { AccountWithBalance, EntryGroup } from '@/utils/budgetTypes';
 import { formatCurrency, calcProviderProductsTotal } from '@/utils/currency';
 
@@ -190,7 +193,8 @@ const router = useRouter();
 // Computed
 // Day-close concept removed; always treat as open
 const isDayClosed = computed(() => false);
-const frozenSnapshot = computed(() => budgetController.getFrozenSnapshot());
+const budgetDayStore = useBudgetDayStore();
+const frozenSnapshot = computed(() => budgetDayStore.frozenSnapshot);
 
 const accountsList = computed(() => {
   const list = accountsController.getAccounts();
@@ -204,7 +208,7 @@ function calculateAccountBalance(acc: Account, accountId: string | number) {
   const entries =
     isDayClosed.value && frozenSnapshot.value
       ? frozenSnapshot.value.entries
-      : budgetController.getEntries();
+      : budgetEntriesController.getEntries();
 
   const entriesForAccount = entries.filter((e: Income) => {
     if (String(e.accountId) === String(accountId)) return true;
@@ -224,12 +228,13 @@ function calculateAccountBalance(acc: Account, accountId: string | number) {
 
   return {
     ...acc,
+    id: acc.id,
     initialBalance,
     ingresos,
     egresos,
     balance: initialBalance + ingresos - egresos,
     hasTransactions: ingresos > 0 || egresos > 0,
-  };
+  } as AccountWithBalance;
 }
 
 const accountsWithBalance = computed(() => {
@@ -247,10 +252,10 @@ const accountsWithBalance = computed(() => {
 });
 
 const totalIngresos = computed(() => {
-  const entries =
+    const entries =
     isDayClosed.value && frozenSnapshot.value
       ? frozenSnapshot.value.entries
-      : budgetController.getEntries();
+      : budgetEntriesController.getEntries();
   return entries
     .filter((e: Income) => e.entryType === 'ingreso')
     .reduce((sum: number, e: Income) => sum + Number(e.amount || 0), 0);
@@ -260,7 +265,7 @@ const totalEgresos = computed(() => {
   const entries =
     isDayClosed.value && frozenSnapshot.value
       ? frozenSnapshot.value.entries
-      : budgetController.getEntries();
+      : budgetEntriesController.getEntries();
   const entriesTotal = entries
     .filter((e: Income) => e.entryType === 'egreso')
     .reduce((sum: number, e: Income) => sum + Number(e.amount || 0), 0);
@@ -291,9 +296,9 @@ const totalDifferenceColor = computed(() => {
 });
 
 const providersToday = computed(() => {
-  const sel = String(budgetController.getSelectedDate() || '').slice(0, 10);
+  const sel = String(budgetDayStore.selectedDate || '').slice(0, 10);
   if (!sel) return [];
-  return budgetController
+  return budgetProvidersController
     .getProviders()
     .filter((p: Provider) => String(p.date || '').slice(0, 10) === sel);
 });
@@ -302,10 +307,10 @@ const unifiedItems = computed((): UnifiedItem[] => {
   const entries: Income[] =
     isDayClosed.value && frozenSnapshot.value
       ? frozenSnapshot.value.entries
-      : budgetController.getEntries();
+      : budgetEntriesController.getEntries();
 
-  const selectedDateStr = String(budgetController.getSelectedDate() || '').slice(0, 10);
-  const providers: Provider[] = budgetController
+  const selectedDateStr = String(budgetDayStore.selectedDate || '').slice(0, 10);
+  const providers: Provider[] = budgetProvidersController
     .getProviders()
     .filter((p: Provider) => String(p.date || '').slice(0, 10) === selectedDateStr);
 
@@ -389,7 +394,7 @@ function formatProviderAmount(provider: Provider) {
   return formatCurrency({ value: calcProviderProductsTotal({ provider }) });
 }
 
-function blockKey(block: { type: string; item: Income }, idx: number) {
+function blockKey(block: { type: string; item: UnifiedItem }, idx: number) {
   if (!block) return `b-${idx}`;
   return `i-${String((block.item && block.item.id) || idx)}`;
 }
@@ -449,7 +454,7 @@ function getAccountRemaining(
   const entries =
     isDayClosed.value && frozenSnapshot.value
       ? frozenSnapshot.value.entries
-      : budgetController.getEntries();
+      : budgetEntriesController.getEntries();
 
   const entriesForAccount = entries.filter((e: Income) => {
     if (String(e.accountId) === String(accountId)) return true;

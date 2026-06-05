@@ -69,7 +69,7 @@ import {
 } from '@ionic/vue';
 import { closeOutline } from 'ionicons/icons';
 import { formatCurrency } from '@/utils/currency';
-import type { RecurringRecord } from '@/controllers/recurringController';
+import type { RecurringRecord } from '@/controllers/recurringRecordsController';
 // End Imports
 
 // Components

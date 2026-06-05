@@ -78,7 +78,7 @@ import {
 import { addOutline } from 'ionicons/icons';
 import { formatCurrency } from '@/utils/currency';
 import accountsController from '@/controllers/accountsController';
-import budgetController from '@/controllers/budgetController';
+import budgetEntriesController from '@/controllers/budgetEntriesController';
 // End Imports
 
 // Components
@@ -140,9 +140,9 @@ async function onModalSaved(params: { payload: AccountWithBalance }) {
 
 async function onDeleteAccount(params: { id: string | number }) {
   const { id } = params;
-  for (const entry of budgetController.getEntries()) {
+  for (const entry of budgetEntriesController.getEntries()) {
     if (String(entry.accountId) === String(id)) {
-      budgetController.updateIngreso({ id: entry.id, changes: { accountId: null } });
+      budgetEntriesController.updateIngreso({ id: entry.id, changes: { accountId: null } });
     }
   }
   await deleteAccount({ id });

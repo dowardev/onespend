@@ -1,4 +1,6 @@
-import budgetController from '@/controllers/budgetController';
+import { useBudgetDayStore } from '@/stores/budgetDayStore';
+import { useBudgetEntriesStore } from '@/stores/budgetEntriesStore';
+import budgetEntriesController from '@/controllers/budgetEntriesController';
 
 function toShortDate(d: string | number | Date | undefined | null): string {
   if (!d) return new Date().toISOString().slice(0, 10);
@@ -27,13 +29,14 @@ export async function reassignEntry(params: {
   try {
     const destDate = toShortDate(newDate);
 
-    const prevSelected =
-      (budgetController.getSelectedDate && budgetController.getSelectedDate()) || null;
+    const budgetDayStore = useBudgetDayStore();
+    const entriesStore = useBudgetEntriesStore();
+    const prevSelected = budgetDayStore.selectedDate || null;
 
     // resolve original date
     let srcDate = originalDate ? toShortDate(originalDate) : null;
     if (!srcDate) {
-      const storeFound = (budgetController.getEntries() || []).find(
+      const storeFound = (entriesStore.entries || []).find(
         (en: any) => String(en.id) === String(entryId),
       );
       if (storeFound && storeFound.date) srcDate = toShortDate(storeFound.date);
@@ -52,12 +55,11 @@ export async function reassignEntry(params: {
 
     // load source bucket
     try {
-      budgetController.setDate({ date: srcDate });
+      await budgetDayStore.loadBudgetForDate({ date: srcDate });
     } catch (_) {}
-    await budgetController.loadDataForDate({ date: srcDate });
 
     // find entry in source
-    const storeEntry = (budgetController.getEntries() || []).find(
+    const storeEntry = (entriesStore.entries || []).find(
       (en: any) => String(en.id) === String(entryId),
     );
     idToUse = storeEntry ? storeEntry.id : entryId;
@@ -65,13 +67,13 @@ export async function reassignEntry(params: {
     if (verbose) console.log('reassignEntry: idToUse ->', idToUse);
 
     // update date and persist
-    budgetController.updateIngreso({ id: idToUse, changes: { date: destDate } });
-    await budgetController.saveData();
+    entriesStore.updateEntry(idToUse, { date: destDate });
+    await budgetDayStore.saveBudgetData();
 
     // verify by loading dest
     try {
-      await budgetController.loadDataForDate({ date: destDate });
-      const destEntries = budgetController.getEntries() || [];
+      await budgetDayStore.loadBudgetForDate({ date: destDate });
+      const destEntries = entriesStore.entries || [];
       moved = destEntries.some((en: any) => String(en.id) === String(idToUse));
     } catch (err) {
       if (verbose) console.error('reassignEntry: verify error', err);
@@ -81,8 +83,8 @@ export async function reassignEntry(params: {
     if (!moved) {
       if (verbose) console.warn('reassignEntry: entry not found in dest, performing fallback');
       // reload source to get original payload
-      await budgetController.loadDataForDate({ date: srcDate });
-      const srcEntries = budgetController.getEntries() || [];
+      await budgetDayStore.loadBudgetForDate({ date: srcDate });
+      const srcEntries = entriesStore.entries || [];
       const srcEntry = srcEntries.find((en: any) => String(en.id) === String(idToUse));
       if (srcEntry) {
         const payload: any = {
@@ -96,24 +98,23 @@ export async function reassignEntry(params: {
           supplierName: srcEntry.supplierName,
         };
 
-        budgetController.removeIngreso({ id: idToUse });
-        await budgetController.saveData();
+        await budgetEntriesController.removeEntry({ id: idToUse });
+        await budgetDayStore.saveBudgetData();
 
         try {
-          budgetController.setDate({ date: destDate });
+          await budgetDayStore.loadBudgetForDate({ date: destDate });
         } catch (_) {}
-        await budgetController.loadDataForDate({ date: destDate });
         if ((srcEntry as any).entryType === 'ingreso') {
-          const created = budgetController.addIngreso(payload) as any;
+          const created = await budgetEntriesController.addIngreso(payload) as any;
           if (created) idToUse = created.id;
         } else {
-          const created = budgetController.addEgreso(payload) as any;
+          const created = await budgetEntriesController.addEgreso(payload) as any;
           if (created) idToUse = created.id;
         }
-        await budgetController.saveData();
+        await budgetDayStore.saveBudgetData();
 
         // assume created entry id is available from addIngreso/addEgreso
-        const finalEntries = budgetController.getEntries() || [];
+        const finalEntries = entriesStore.entries || [];
         moved = finalEntries.some((en: any) => String(en.id) === String(idToUse));
       }
     }
@@ -121,9 +122,8 @@ export async function reassignEntry(params: {
     // restore selected date if requested
     if (restoreSelectedDate && prevSelected) {
       try {
-        budgetController.setDate({ date: prevSelected });
+        await budgetDayStore.loadBudgetForDate({ date: prevSelected });
       } catch (_) {}
-      await budgetController.loadDataForDate({ date: prevSelected });
     }
 
     return { moved, id: idToUse };

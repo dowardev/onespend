@@ -214,10 +214,14 @@ import {
   IonContent,
   IonPage,
 } from '@ionic/vue';
-import budgetController from '@/controllers/budgetController';
+import budgetEntriesController from '@/controllers/budgetEntriesController';
+import budgetProvidersController from '@/controllers/budgetProvidersController';
 import accountsController from '@/controllers/accountsController';
+import { useBudgetDayStore } from '@/stores/budgetDayStore';
 import { closeOutline } from 'ionicons/icons';
 import { formatCurrency } from '@/utils/currency';
+
+const budgetDayStore = useBudgetDayStore();
 
 function formatTime(params: { timestamp: number }) {
   const { timestamp } = params;
@@ -229,8 +233,8 @@ function formatTime(params: { timestamp: number }) {
 }
 
 const summary = computed(() => {
-  const entries = budgetController.getEntries();
-  const providers = budgetController.getProviders();
+  const entries = budgetEntriesController.getEntries();
+  const providers = budgetProvidersController.getProviders();
 
   const ingresos = entries.filter((e) => e.entryType === 'ingreso');
   const egresos = entries.filter((e) => e.entryType === 'egreso');
@@ -267,7 +271,7 @@ function toggleRaw() {
   if (showRaw.value) {
     // help debugging: print entries to console
     try {
-      console.log('[DaySummaryModal] entries:', budgetController.getEntries());
+      console.log('[DaySummaryModal] entries:', budgetEntriesController.getEntries());
     } catch (e) {}
   }
 }
@@ -276,9 +280,9 @@ const rawJson = computed(() => {
   try {
     return JSON.stringify(
       {
-        selectedDate: budgetController.getSelectedDate(),
-        entries: budgetController.getEntries(),
-        providers: budgetController.getProviders(),
+        selectedDate: budgetDayStore.selectedDate,
+        entries: budgetEntriesController.getEntries(),
+        providers: budgetProvidersController.getProviders(),
       },
       null,
       2,
@@ -290,7 +294,7 @@ const rawJson = computed(() => {
 
 const paymentTypeBreakdown = computed(() => {
   const out: Record<string, number> = {};
-  for (const e of budgetController.getEntries()) {
+  for (const e of budgetEntriesController.getEntries()) {
     const t = e.paymentType || 'unknown';
     out[t] = (out[t] || 0) + Number(e.amount || 0);
   }
@@ -323,7 +327,7 @@ const topExpenseProviders = computed(() => {
 });
 
 const topAccounts = computed(() => {
-  const map = groupBySum(budgetController.getEntries(), 'accountId');
+  const map = groupBySum(budgetEntriesController.getEntries(), 'accountId');
   return Object.entries(map)
     .map(([id, v]) => ({ id, total: v.total }))
     .sort((a, b) => b.total - a.total)
@@ -362,10 +366,10 @@ function resolveAccountName(id: string) {
 
 const formattedDate = computed(() => {
   try {
-    const d = new Date(budgetController.getSelectedDate());
+    const d = new Date(budgetDayStore.selectedDate);
     return format(d, "d 'de' MMMM 'de' yyyy", { locale: esLocale });
   } catch {
-    return budgetController.getSelectedDate();
+    return budgetDayStore.selectedDate;
   }
 });
 </script>
