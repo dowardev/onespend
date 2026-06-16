@@ -1250,10 +1250,10 @@ async function confirmDelete() {
 }
 
 // Attachment handlers
-function onAttachmentsSave(params: { newFiles: File[]; deletedIds: number[] }) {
-  const { newFiles, deletedIds } = params;
-  handleAttachmentsSave({ newFiles, deletedIds });
-}
+  async function onAttachmentsSave(params: { newFiles: File[]; deletedIds: number[] }) {
+    const { newFiles, deletedIds } = params;
+    await handleAttachmentsSave({ newFiles, deletedIds });
+  }
 // end attachment handlers
 
 // Expose for parent if needed

@@ -1,4 +1,5 @@
-import { DixieController } from '@/controllers/dixie';
+import { recurringRecordsDb } from '@/db/controllers/recurringRecordsDb'
+import { syncQueue } from '@/services/syncQueue'
 
 function generateId(): string {
   const arr = new Uint8Array(16);
@@ -11,6 +12,7 @@ export type RecurringType = 'cargo' | 'provedor';
 export type RepeatFrequency = 'day' | 'week' | 'month' | 'year';
 
 export interface RecurringProduct {
+  sync_id?: string;
   supplierProductId?: string | number | null;
   productName: string;
   productPrice: number;
@@ -71,26 +73,12 @@ export const RECURRING_FIELD_MAP: Record<string, keyof RecurringRecord> = {
 };
 
 class RecurringRecordsController {
-  private dixie: DixieController;
-
-  constructor() {
-    this.dixie = new DixieController({ storeName: 'recurring_records' });
-  }
-
   async getAllRecords(): Promise<RecurringRecord[]> {
-    const db = await this.dixie.openDB();
-    const tx = db.transaction('recurring_records', 'readonly');
-    const store = tx.objectStore('recurring_records');
-    const request = store.getAll();
-    return new Promise((resolve, reject) => {
-      request.onsuccess = () => resolve(request.result || []);
-      request.onerror = () => reject(request.error);
-    });
+    return await recurringRecordsDb.getAll() as RecurringRecord[];
   }
 
   async getActiveRecords(): Promise<RecurringRecord[]> {
-    const all = await this.getAllRecords();
-    return all.filter((r) => r.status === 'active');
+    return await recurringRecordsDb.getActive() as RecurringRecord[];
   }
 
   async addRecord(params: { record: RecurringRecord }): Promise<RecurringRecord> {
@@ -109,8 +97,9 @@ class RecurringRecordsController {
       }));
     }
 
-    const id = await this.dixie.addEntry({ entry: newRecord });
-    newRecord.id = typeof id === 'number' ? id : String(id);
+    const syncId = await recurringRecordsDb.add({ entry: newRecord as any });
+    newRecord.id = typeof syncId === 'string' ? syncId : String(syncId);
+    await syncQueue.syncRecurringRecord({ record: newRecord, operation: 'create' });
     return newRecord;
   }
 
@@ -119,7 +108,8 @@ class RecurringRecordsController {
     const existing = await this.getRecordById({ id });
     if (!existing) return;
     const updated = { ...existing, ...changes };
-    await this.dixie.putEntry({ entry: updated });
+    await recurringRecordsDb.put({ entry: updated as any });
+    await syncQueue.syncRecurringRecord({ record: updated, operation: 'update' });
   }
 
   async removeRecord(params: { id: string | number }): Promise<void> {
@@ -127,7 +117,8 @@ class RecurringRecordsController {
     const existing = await this.getRecordById({ id });
     if (!existing) return;
     existing.status = 'deleted';
-    await this.dixie.putEntry({ entry: existing });
+    await recurringRecordsDb.put({ entry: existing as any });
+    await syncQueue.syncRecurringRecord({ record: existing, operation: 'delete' });
   }
 
   async getRecordById(params: { id: string | number }): Promise<RecurringRecord | null> {
@@ -138,8 +129,7 @@ class RecurringRecordsController {
 
   async getRecordBySyncId(params: { syncId: string }): Promise<RecurringRecord | null> {
     const { syncId } = params;
-    const all = await this.getAllRecords();
-    return all.find((r) => r.sync_id === syncId) || null;
+    return await recurringRecordsDb.getBySyncId({ syncId }) as RecurringRecord | null;
   }
 
   async toggleActive(params: { id: string | number }): Promise<void> {
@@ -147,7 +137,8 @@ class RecurringRecordsController {
     const record = await this.getRecordById({ id });
     if (!record) return;
     record.status = record.status === 'active' ? 'paused' : 'active';
-    await this.dixie.putEntry({ entry: record });
+    await recurringRecordsDb.put({ entry: record as any });
+    await syncQueue.syncRecurringRecord({ record, operation: 'update' });
   }
 
   async repairRecords(): Promise<number> {
@@ -166,7 +157,7 @@ class RecurringRecordsController {
       }
 
       if (needsRepair) {
-        await this.dixie.putEntry({ entry: record });
+        await recurringRecordsDb.put({ entry: record as any });
         repaired++;
       }
     }

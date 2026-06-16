@@ -177,7 +177,7 @@ import { arrowBackOutline } from 'ionicons/icons';
 // End Imports
 
 // Controllers
-import dixieController from '@/controllers/dixie';
+import { budgetDaySnapshotsDb } from '@/db/controllers/budgetDaySnapshotsDb';
 // End Controllers
 
 // Components
@@ -307,7 +307,7 @@ async function exportBackups() {
   try {
     running.value = true;
     progressText.value = 'Obteniendo copias...';
-    const all = await dixieController.listBackups();
+    const all = await budgetDaySnapshotsDb.getAll();
     const blob = new Blob([JSON.stringify(all, null, 2)], {
       type: 'application/json',
     });
@@ -334,8 +334,7 @@ async function runDryRun() {
     error.value = null;
     progressText.value = 'Simulando...';
     const res = await migrateAddEntriesToBackups({
-      dryRun: true,
-      verbose: false,
+      opts: { dryRun: true, verbose: false },
     });
     dryRunResult.value = res as MigrationResult[];
     stepStatus.value[1] = 'done';
@@ -395,7 +394,7 @@ async function insertTestEntries() {
       }
     }
     for (const e of bulk) {
-      await dixieController.addEntry({ entry: e });
+      await budgetDaySnapshotsDb.put({ entry: e as any });
     }
     successToast.message = `Insertadas ${bulk.length} entradas de prueba.`;
     successToast.open = true;
@@ -456,8 +455,7 @@ async function doApplyMigration() {
     error.value = null;
     progressText.value = 'Aplicando migración...';
     const res = await migrateAddEntriesToBackups({
-      dryRun: false,
-      verbose: true,
+      opts: { dryRun: false, verbose: true },
     });
     applyResult.value = res as MigrationResult[];
     stepStatus.value[3] = 'done';

@@ -2,12 +2,12 @@ import { useSystemConfig } from '../stores/useSystemConfig';
 import type { ThemeMode } from '../stores/useSystemConfig';
 
 class SystemConfigController {
-  init(params: Record<string, unknown> = {}) {
+  init(_params: Record<string, unknown> = {}) {
     const store = useSystemConfig();
     store.init();
   }
 
-  getDesignMode(params: Record<string, unknown> = {}) {
+  getDesignMode(_params: Record<string, unknown> = {}) {
     const store = useSystemConfig();
     return store.getDesignMode();
   }
@@ -64,13 +64,13 @@ class SystemConfigController {
   }
 
   getWeekStartDay(): number {
-    const store = useSystemConfig();
+    const store = useSystemConfig() as any;
     return store.getWeekStartDay();
   }
 
   setWeekStartDay(params: { value: number }) {
     const { value } = params;
-    const store = useSystemConfig();
+    const store = useSystemConfig() as any;
     store.setWeekStartDay(value);
   }
 }

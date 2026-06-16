@@ -39,7 +39,7 @@ class BudgetProviderProduct extends Model
 
     public function budgetProvider(): BelongsTo
     {
-        return $this->belongsTo(BudgetProvider::class, 'budget_provider_id');
+        return $this->belongsTo(BudgetProvider::class, 'budget_provider_id', 'sync_id');
     }
 
     public function supplierProduct(): BelongsTo

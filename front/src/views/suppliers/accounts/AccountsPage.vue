@@ -120,6 +120,17 @@ import accountsController from '@/controllers/accountsController';
 import AddAccountComponent from './modals/AddAccountComponent.vue';
 // End Components
 
+// Types
+import type { Account } from '@/stores/accountsStore';
+
+interface AccountFormData {
+  name: string;
+  initialBalance: number;
+  id?: string | number;
+  sync_id?: string;
+}
+// End Types
+
 // Vars
 const showModal = ref(false);
 const modalAccount = ref<any | null>(null);

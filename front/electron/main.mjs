@@ -27,8 +27,9 @@ function createWindow() {
     // Optionally open devtools in dev
     try {
       win.webContents.openDevTools({ mode: 'undocked' });
-    } catch (_e) {
-      // ignore
+} catch (_e) {
+       void _e;
+       // ignore
     }
   } else {
     // Prod: load built index.html from dist

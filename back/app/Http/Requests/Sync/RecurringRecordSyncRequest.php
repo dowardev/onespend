@@ -13,7 +13,7 @@ class RecurringRecordSyncRequest extends FormRequest
             'entry_type' => 'required|in:ingreso,egreso',
             'name' => 'required|string|max:255',
             'amount' => 'nullable|numeric',
-            'account_id' => 'nullable|integer|exists:accounts,id',
+            'account_id' => 'nullable|string|max:100',
             'repeat_frequency' => 'required|in:day,week,month,year',
             'repeat_interval' => 'required|integer|min:1',
             'repeat_days' => 'nullable|array',

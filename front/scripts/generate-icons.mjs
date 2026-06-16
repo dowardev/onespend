@@ -79,7 +79,7 @@ async function buildIcoFromPngs(entries) {
 
   // ICO header (6 bytes) + N directory entries (16 bytes each)
   const headerSize = 6 + 16 * count;
-  const imageOffsets = new Array(count);
+  const imageOffsets = Array.from({ length: count });
   let curOffset = headerSize;
 
   // Compute offsets

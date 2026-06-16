@@ -1,19 +1,18 @@
-import { DixieController } from './dixie';
+import { accountsDb } from '@/db/controllers/accountsDb';
+import { suppliersDb } from '@/db/controllers/suppliersDb';
 import { ref, computed } from 'vue';
 import { useAccountsStore } from '@/stores/accountsStore';
-import { useSync } from '@/composables/useSync';
+import { syncQueue } from '@/services/syncQueue';
 import type { Account } from '@/stores/accountsStore';
+import type { AccountRow } from '@/db/types';
 import type { Supplier } from './suppliersController';
 import { generateSyncId } from '@/utils/generateSyncId';
+import { db } from '@/db/OneSpendDB';
 
 export type { Account };
 
 class AccountsController {
   private isLoading = ref(false);
-
-  private getController(): DixieController {
-    return new DixieController({ name: 'ABOgazDB', storeName: 'accounts' });
-  }
 
   getAccountsStore() {
     return useAccountsStore();
@@ -34,55 +33,39 @@ class AccountsController {
 
   private async migrateFromSuppliers(): Promise<void> {
     try {
-      const suppliersCtrl = new DixieController({
-        name: 'ABOgazDB',
-        storeName: 'suppliers',
-      });
-      const suppliers = (await suppliersCtrl.listBackups()) as Array<Supplier>;
-      const store = this.getAccountsStore();
+      const suppliers = (await suppliersDb.getAll()) as Array<Supplier>;
+      const existingCount = (await db.accounts.count());
 
-      if (suppliers && suppliers.length > 0) {
-        if (store.accounts.length === 0) {
-          const newAccounts: Account[] = suppliers.map((s) => ({
-            id: s.id || undefined,
-            sync_id: generateSyncId(),
-            name: s.name,
-            initialBalance: s.initialBalance ?? 0,
-            createdAt: s.createdAt || Date.now(),
-            updatedAt: s.updatedAt || Date.now(),
-          }));
-          const copy = JSON.parse(JSON.stringify(newAccounts));
-          store.accounts.splice(0, store.accounts.length, ...copy);
-        }
+      if (suppliers && suppliers.length > 0 && existingCount === 0) {
+        const newAccounts: AccountRow[] = suppliers.map((s) => ({
+          sync_id: generateSyncId(),
+          name: s.name,
+          initialBalance: (s as any).initialBalance ?? 0,
+          createdAt: s.createdAt || Date.now(),
+          updatedAt: s.updatedAt || Date.now(),
+        }));
+        await accountsDb.bulkPut({ entries: newAccounts });
       }
-    } catch (_e) {}
+    } catch {}
   }
 
   async loadAll(): Promise<Account[]> {
     this.isLoading.value = true;
     try {
-      const ctrl = this.getController();
-      let all = (await ctrl.listBackups()) as Account[];
+      const all = await accountsDb.getAll() as AccountRow[];
 
       for (const account of all) {
         if (!account.sync_id) {
           account.sync_id = generateSyncId();
-          await ctrl.putEntry({ entry: account });
+          await accountsDb.put({ entry: account });
         }
       }
 
-      const sorted = (all || []).slice().sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-
       await this.migrateFromSuppliers();
 
-      const store = this.getAccountsStore();
-      const copy = JSON.parse(JSON.stringify(sorted));
-      store.accounts.splice(0, store.accounts.length, ...copy);
-      return [...copy];
+      return this.getAccountsStore().accounts;
     } catch (e) {
       console.error('accountsController.loadAll error', e);
-      const store = this.getAccountsStore();
-      store.accounts.splice(0, store.accounts.length);
       return [];
     } finally {
       this.isLoading.value = false;
@@ -90,95 +73,71 @@ class AccountsController {
   }
 
   async addAccount(
-    params: { account: Omit<Account, 'id' | 'sync_id' | 'createdAt' | 'updatedAt'> } | any,
+    params: { account: Omit<Account, 'id' | 'sync_id' | 'createdAt' | 'updatedAt'> },
   ) {
-    // Support multiple call shapes to be resilient: callers may pass
-    // { account: {...} } or { a: {...} } or the account object directly.
-    const account = params?.account ?? params?.a ?? params;
+    const { account } = params;
     if (!account) throw new Error('accountsController.addAccount: account is required');
-    const ctrl = this.getController();
     const now = Date.now();
 
     const sync_id = generateSyncId();
 
-    const entry: Account = {
+    const row: AccountRow = {
+      sync_id,
       name: String(account.name || ''),
       initialBalance: Number(account.initialBalance) || 0,
-      sync_id,
       createdAt: now,
       updatedAt: now,
     };
 
-    const { syncAccount } = useSync();
-    syncAccount(entry, 'create');
+    syncQueue.syncAccount({ account: { ...row, id: sync_id }, operation: 'create' });
 
-    const id = await ctrl.addEntry({ entry });
-    const newAccount: Account = {
-      id,
-      name: entry.name,
-      initialBalance: entry.initialBalance,
-      sync_id: entry.sync_id,
-      createdAt: entry.createdAt,
-      updatedAt: entry.updatedAt,
-    };
+    await accountsDb.add({ entry: row });
 
-    const store = this.getAccountsStore() as ReturnType<typeof useAccountsStore>;
-    store.accounts = [...store.accounts, newAccount];
-
-    return newAccount;
+    return {
+      id: sync_id,
+      sync_id,
+      name: row.name,
+      initialBalance: row.initialBalance,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    } as Account;
   }
 
   async updateAccount(params: { account: Account }) {
     const { account } = params;
     if (account.id == null) throw new Error('Account must have id to be updated');
-    const ctrl = this.getController();
 
-    const entry: Account = {
+    const row: AccountRow = {
+      sync_id: account.sync_id || String(account.id),
+      serverId: account.serverId ?? null,
       name: String(account.name),
       initialBalance: Number(account.initialBalance) || 0,
-      id: account.id,
-      sync_id: account.sync_id,
       createdAt: account.createdAt,
       updatedAt: Date.now(),
     };
 
-    const { syncAccount } = useSync();
-    syncAccount(entry, 'update');
+    syncQueue.syncAccount({ account: { ...row, id: row.sync_id }, operation: 'update' });
 
-    await ctrl.putEntry({ entry });
+    await accountsDb.put({ entry: row });
 
-    const store = this.getAccountsStore();
-    const idx = store.accounts.findIndex((acc: Account) => acc.id === account.id);
-    if (idx >= 0) {
-      store.accounts[idx] = {
-        id: entry.id,
-        name: entry.name,
-        initialBalance: entry.initialBalance,
-        sync_id: entry.sync_id,
-        createdAt: entry.createdAt,
-        updatedAt: entry.updatedAt,
-      };
-    }
-
-    return entry;
+    return {
+      id: row.sync_id,
+      sync_id: row.sync_id,
+      name: row.name,
+      initialBalance: row.initialBalance,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    } as Account;
   }
 
   async deleteAccount(params: { id: IDBValidKey }) {
     const { id } = params;
-    const ctrl = this.getController();
     const store = this.getAccountsStore();
-    const account = store.accounts.find((acc: Account) => acc.id === id);
+    const account = store.accounts.find((acc: Account) => acc.id === id || acc.sync_id === String(id));
 
-    await ctrl.deleteBackup({ id });
-
-    const idx = store.accounts.findIndex((acc: Account) => acc.id === id);
-    if (idx >= 0) {
-      store.accounts.splice(idx, 1);
-    }
-
-    if (account) {
-      const { syncAccount } = useSync();
-      syncAccount(account, 'delete');
+    if (account && account.sync_id) {
+      syncQueue.syncAccount({ account, operation: 'delete' });
+      await accountsDb.delete({ syncId: account.sync_id });
     }
   }
 }

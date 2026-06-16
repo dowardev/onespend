@@ -43,8 +43,8 @@
               ref="fileInput"
               type="file"
               accept="image/*"
-              @change="onFileChange"
               style="display: none"
+              @change="onFileChange"
             />
           </ion-item>
 
@@ -54,7 +54,7 @@
               <h2>Generate Report</h2>
               <p>Show performance comparison</p>
             </ion-label>
-            <ion-button slot="end" @click="generateReport" color="success">
+            <ion-button slot="end" color="success" @click="generateReport">
               Generate Report
             </ion-button>
           </ion-item>
@@ -65,7 +65,7 @@
               <h2>Clear Metrics</h2>
               <p>Reset all test data</p>
             </ion-label>
-            <ion-button slot="end" @click="clearMetrics" color="danger"> Clear </ion-button>
+            <ion-button slot="end" color="danger" @click="clearMetrics"> Clear </ion-button>
           </ion-item>
         </ion-card-content>
       </ion-card>
@@ -79,7 +79,7 @@
           <div v-for="(result, index) in testResults" :key="index">
             <h3>{{ result.test }}</h3>
             <p>{{ result.result }}</p>
-            <div class="ion-separator" v-if="index < testResults.length - 1"></div>
+            <div v-if="index < testResults.length - 1" class="ion-separator"></div>
           </div>
         </ion-card-content>
       </ion-card>
@@ -248,10 +248,10 @@ function testMemoryUsage() {
 function runJSONCloningTest() {
   // Create a large test object
   const testObj = {
-    array: new Array(1000).fill(0).map((_, i) => ({
+    array: Array.from({ length: 1000 }).map((_, i) => ({
       id: i,
       name: `Item ${i}`,
-      data: new Array(100).fill(0).map((_, j) => ({ nested: j, value: Math.random() })),
+      data: Array.from({ length: 100 }).map((_, j) => ({ nested: j, value: Math.random() })),
     })),
     metadata: {
       timestamp: Date.now(),

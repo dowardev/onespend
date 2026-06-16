@@ -6,13 +6,13 @@ import HomePage from '@/views/HomePage.vue';
 import BudgetView from '@/views/budget/BudgetView.vue';
 import SuppliersPage from '@/views/suppliers/SuppliersPage.vue';
 import AccountsPage from '@/views/suppliers/accounts/AccountsPage.vue';
-import StatisticsPage from '@/views/statistics/StatisticsPage.vue';
 import StatisticsConfigPage from '@/views/statistics/performance/config/StatisticsConfigPage.vue';
 import MaintenancePage from '@/views/admin/MaintenancePage.vue';
 import MigrateDates from '@/views/admin/maintenance/MigrateDates.vue';
 import MigrateEntries from '@/views/admin/maintenance/MigrateEntries.vue';
 import PersonalizationPage from '@/views/admin/PersonalizationPage.vue';
 import SyncView from '@/views/sync/SyncView.vue';
+import DLQView from '@/views/sync/DLQView.vue';
 import LoginView from '@/views/auth/LoginView.vue';
 import RegisterView from '@/views/auth/RegisterView.vue';
 import PerformanceTestPage from '@/views/test/PerformanceTestPage.vue';
@@ -95,6 +95,11 @@ const routes: Array<RouteRecordRaw> = [
     component: SyncView,
   },
   {
+    path: '/sync/dlq',
+    name: 'DLQView',
+    component: DLQView,
+  },
+  {
     path: '/admin/personalization',
     name: 'PersonalizationPage',
     component: PersonalizationPage,
@@ -160,7 +165,7 @@ router.beforeEach((to, from, next) => {
 });
 
 // Prefetch critical routes for better performance
-router.beforeResolve(async (to, from) => {
+router.beforeResolve(async (to, _from) => {
   // Disable prefetching to prevent component contamination
   // Only prefetch on production builds
   if (import.meta.env.DEV) return;
@@ -180,11 +185,10 @@ router.beforeResolve(async (to, from) => {
 
     if (component && typeof component === 'function') {
       try {
-        // Prefetch the component
-        await component();
-        console.debug(`[Router] Prefetched critical route: ${to.name}`);
+        await (component as () => Promise<unknown>)();
+        console.debug(`[Router] Prefetched critical route: ${String(to.name)}`);
       } catch (error) {
-        console.warn(`[Router] Failed to prefetch route: ${to.name}`, error);
+        console.warn(`[Router] Failed to prefetch route: ${String(to.name)}`, error);
       }
     }
   }

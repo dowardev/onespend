@@ -114,7 +114,7 @@ export const useBudgetProvidersStore = defineStore('budgetProviders', () => {
 
           if (matchingSupplier.products && matchingSupplier.products.length > 0) {
             const serverProducts = matchingSupplier.products as any[];
-            const localProducts = (provider._supplierProducts || []) as any[];
+            const _localProducts = (provider._supplierProducts || []) as any[];
 
             const syncedProducts: BudgetProviderProduct[] = serverProducts.map((serverProduct: any) => {
               return {

@@ -1,8 +1,8 @@
-import { DixieController } from './dixie';
+import { budgetDaySnapshotsDb } from '@/db/controllers/budgetDaySnapshotsDb'
 import { useBudgetProvidersStore } from '@/stores/budgetProvidersStore';
 import { useBudgetDayStore } from '@/stores/budgetDayStore';
 import { useBudgetEntriesStore } from '@/stores/budgetEntriesStore';
-import { useSync } from '@/composables/useSync';
+import { syncQueue } from '@/services/syncQueue';
 import type { Provider, BudgetProviderProduct } from '@/stores/budgetProvidersStore';
 import type { Supplier } from './suppliersController';
 import { generateSyncId } from '@/utils/generateSyncId';
@@ -17,15 +17,7 @@ interface BudgetData {
 }
 
 class BudgetProvidersController {
-  private ctrl: DixieController | null = null;
   private pendingTimeouts: Set<any> | null = null;
-
-  private getController(): DixieController {
-    if (!this.ctrl) {
-      this.ctrl = new DixieController({ name: 'ABOgazDB', storeName: 'budget' });
-    }
-    return this.ctrl;
-  }
 
   getStore() {
     return useBudgetProvidersStore();
@@ -89,14 +81,12 @@ class BudgetProvidersController {
       _fromRecurringId,
     };
 
-    const { syncBudgetProvider } = useSync();
-
     if (providerDate !== currentDate) {
       await this.saveProviderToDate(newProvider, providerDate);
-      syncBudgetProvider({ provider: newProvider as any, operation: 'create', products: products as any, supplierSyncId });
+      syncQueue.syncBudgetProvider({ provider: newProvider as any, operation: 'create', products: products as any, supplierSyncId });
     } else {
       store.addProvider(newProvider);
-      syncBudgetProvider({ provider: newProvider as any, operation: 'create', products: products as any, supplierSyncId });
+      syncQueue.syncBudgetProvider({ provider: newProvider as any, operation: 'create', products: products as any, supplierSyncId });
     }
 
     const timeoutId = setTimeout(() => {
@@ -121,8 +111,6 @@ class BudgetProvidersController {
     const { id, changes } = params;
     const store = this.getStore();
     const dayStore = useBudgetDayStore();
-    const { syncBudgetProvider } = useSync();
-
     const provider = store.providers.find((p) => p.id === id);
     if (!provider) return false;
 
@@ -140,21 +128,20 @@ class BudgetProvidersController {
 
       await this.saveProviderToDate(updatedProvider, newDate);
 
-      syncBudgetProvider({ provider: updatedProvider, operation: 'update', products: productsToSync, supplierSyncId });
+      syncQueue.syncBudgetProvider({ provider: updatedProvider, operation: 'update', products: productsToSync, supplierSyncId });
       return true;
     } else {
       store.updateProvider(id, changes);
-      syncBudgetProvider({ provider: { ...provider, ...changes }, operation: 'update', products: productsToSync, supplierSyncId });
+      syncQueue.syncBudgetProvider({ provider: { ...provider, ...changes }, operation: 'update', products: productsToSync, supplierSyncId });
       return false;
     }
   }
 
   private async saveProviderToDate(provider: Provider, targetDate: string) {
     try {
-      const ctrl = this.getController();
       const dateKey = `budget:${targetDate}`;
       const plainProvider = JSON.parse(JSON.stringify(provider));
-      const existing = (await ctrl.getBackup({ id: dateKey })) as { data?: BudgetData } | null;
+      const existing = await budgetDaySnapshotsDb.getById({ id: dateKey }) as { data?: BudgetData } | null;
       const entries = existing?.data?.entries ? JSON.parse(JSON.stringify(existing.data.entries)) : [];
       const providers = existing?.data?.proveedores ? JSON.parse(JSON.stringify(existing.data.proveedores)) : [];
       const isDayClosed = existing?.data?.isDayClosed || false;
@@ -162,7 +149,7 @@ class BudgetProvidersController {
 
       providers.push(plainProvider);
 
-      await ctrl.putEntry({
+      await budgetDaySnapshotsDb.put({
         entry: { id: dateKey, data: { entries, proveedores: providers, isDayClosed, finishDayData } },
       });
     } catch (e) {
@@ -173,12 +160,11 @@ class BudgetProvidersController {
   async removeProvider(params: { id: string | number }) {
     const { id } = params;
     const store = this.getStore();
-    const { syncBudgetProvider } = useSync();
     const provider = store.providers.find((p) => p.id === id);
     store.removeProvider(id);
 
     if (provider) {
-      syncBudgetProvider({ provider, operation: 'delete' });
+      syncQueue.syncBudgetProvider({ provider, operation: 'delete' });
     }
   }
 
@@ -207,8 +193,7 @@ class BudgetProvidersController {
 
     entriesStore.addEntry(newEntry);
 
-    const { syncEntry } = useSync();
-    syncEntry({ entry: newEntry as any, operation: 'create' });
+    syncQueue.syncEntry({ entry: newEntry as any, operation: 'create' });
   }
 
   clearAllProviders() {

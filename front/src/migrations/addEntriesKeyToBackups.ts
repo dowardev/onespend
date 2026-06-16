@@ -1,4 +1,4 @@
-import dixieController from '@/controllers/dixie';
+import { budgetDaySnapshotsDb } from '@/db/controllers/budgetDaySnapshotsDb';
 
 interface MigrationOptions {
   dryRun?: boolean;
@@ -20,7 +20,7 @@ interface BackupData {
 export async function migrateAddEntriesToBackups(params: { opts?: MigrationOptions }) {
   const { opts } = params;
   const { dryRun = true, verbose = true } = opts || {};
-  const all = (await dixieController.listBackups()) as Array<BackupEntry>;
+  const all = (await budgetDaySnapshotsDb.getAll()) as Array<BackupEntry>;
   const results: Array<{
     id: string | number | null;
     changed: boolean;
@@ -64,7 +64,7 @@ export async function migrateAddEntriesToBackups(params: { opts?: MigrationOptio
         results.push({ id, changed: true, before: data, after: newData });
         if (verbose) console.log('Dry-run: would update entry', id);
       } else {
-        await dixieController.putEntry({ entry: newEntry });
+        await budgetDaySnapshotsDb.put({ entry: newEntry as any });
         results.push({ id, changed: true, before: data, after: newData });
         if (verbose) console.log('Updated entry', id);
       }
@@ -81,22 +81,22 @@ export async function migrateAddEntriesToBackups(params: { opts?: MigrationOptio
 }
 
 export async function needsEntriesKeyCheck() {
-  const all = (await dixieController.listBackups()) as Array<BackupEntry>;
+  const all = (await budgetDaySnapshotsDb.getAll()) as Array<BackupEntry>;
   try {
     // console.log(
     //   'needsEntriesKeyCheck: found backups ->',
     //   Array.isArray(all) ? all.length : all
     // );
-  } catch (_e) {}
+  } catch {}
 
   for (const entry of all) {
     try {
-      const id = entry && entry.id ? entry.id : null;
+      const _id = entry && entry.id ? entry.id : null;
       const meta = entry && entry.meta ? Object.assign({}, entry.meta) : {};
       if (meta && meta.__entriesAdded === true) {
         try {
           // console.log('needsEntriesKeyCheck: skipping processed entry', id);
-        } catch (_e) {}
+        } catch {}
         continue;
       }
       const data = entry && entry.data ? entry.data : null;

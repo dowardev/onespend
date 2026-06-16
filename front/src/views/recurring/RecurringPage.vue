@@ -74,7 +74,7 @@
             </ion-item-group>
           </template>
 
-          <ion-item class="transparent" v-if="filteredRecords.length === 0">
+          <ion-item v-if="filteredRecords.length === 0" class="transparent">
             <ion-label class="ion-text-center">No hay cargos recurrentes</ion-label>
           </ion-item>
         </ion-list>

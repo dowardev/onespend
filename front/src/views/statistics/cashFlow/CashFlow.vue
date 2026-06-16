@@ -93,7 +93,7 @@ import {
   differenceInCalendarYears,
 } from 'date-fns';
 import { parseLocalDate } from '@/utils/date';
-import dixieController from '@/controllers/dixie';
+import { budgetDaySnapshotsDb } from '@/db/controllers/budgetDaySnapshotsDb';
 
 // Components
 import DayComponent from '@/views/statistics/cashFlow/day/DayComponent.vue';
@@ -381,7 +381,7 @@ Object.assign(year, { yearLabel, formattedYearProfit });
 // Data loading functions (adapted from child components)
 async function loadDayData() {
   try {
-    const all = ((await dixieController.listBackups()) as any[]) || [];
+    const all = (await budgetDaySnapshotsDb.getAll()) as any[] || [];
     // (debug exports removed)
     const targetDay = addDays(new Date(), day.dayOffset);
     const target = isoDate(targetDay);
@@ -491,7 +491,7 @@ async function loadDayData() {
 
 async function loadWeeklyData() {
   try {
-    const all = ((await dixieController.listBackups()) as any[]) || [];
+    const all = (await budgetDaySnapshotsDb.getAll()) as any[] || [];
 
     const labels: string[] = [];
     const ingresosArr: number[] = [];
@@ -673,7 +673,7 @@ async function loadWeeklyData() {
 
 async function loadMonthlyData() {
   try {
-    const all = ((await dixieController.listBackups()) as any[]) || [];
+    const all = (await budgetDaySnapshotsDb.getAll()) as any[] || [];
 
     // Determine year from selectedDate (fallback to current year)
     let parsed: Date;
@@ -724,7 +724,7 @@ async function loadMonthlyData() {
             };
           }
         });
-        // eslint-disable-next-line no-console
+         
         console.log(
           '[loadMonthlyData] debug: exported safeMatches to window.__debug_month_matches (count:',
           safeMatches.length,
@@ -778,7 +778,7 @@ async function loadMonthlyData() {
     ];
 
     try {
-      // eslint-disable-next-line no-console
+       
       console.log(
         '[loadMonthlyData] assigned month.chartData.datasets sample:',
         JSON.stringify(month.chartData.datasets),
@@ -803,7 +803,7 @@ async function loadMonthlyData() {
 
 async function loadYearData() {
   try {
-    const all = ((await dixieController.listBackups()) as any[]) || [];
+    const all = (await budgetDaySnapshotsDb.getAll()) as any[] || [];
 
     const yearStart = startOfYear(new Date());
     const baseYearStart = new Date(yearStart);
@@ -885,7 +885,7 @@ async function loadYearData() {
       { label: 'Egresos', data: yearEgresosTotals.map((v) => Number(v || 0)) },
     ];
     try {
-      // eslint-disable-next-line no-console
+       
       console.log(
         '[loadYearData] assigned year.chartData.datasets sample:',
         JSON.stringify(year.chartData.datasets),
@@ -1063,7 +1063,7 @@ onMounted(() => {
   void Promise.all([loadDayData(), loadWeeklyData(), loadMonthlyData(), loadYearData()]);
   try {
     // expose month for debugging in browser console
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     (window as any).__debug_month = month;
     // expose year for debugging
     try {

@@ -70,7 +70,7 @@ import { computed, reactive, onMounted, defineEmits } from 'vue';
 // constrollers
 import systemController from '@/controllers/systemConfigController';
 import { addOutline, trashOutline, closeOutline } from 'ionicons/icons';
-import { DixieController } from '@/controllers/dixie';
+import { statisticsConfigDb } from '@/db/controllers/statisticsConfigDb';
 // end constrollers
 
 const serviceItems = computed(() => categories[0].items);
@@ -85,9 +85,6 @@ const emit = defineEmits<{
 function closeModal() {
   emit('close');
 }
-
-// dixie instance for statistics fields
-const dixie = new DixieController({ storeName: 'statisticsFields' });
 
 type StatItem = {
   id?: number;
@@ -104,11 +101,11 @@ const categories = reactive([
 
 async function loadItems() {
   try {
-    const list: StatsField[] = await dixie.listBackups();
+    const list = await statisticsConfigDb.getAll();
     if (Array.isArray(list)) {
       for (const entry of list) {
         if (entry && entry.categoryKey) {
-          const cat = categories.find((c: Category) => c.key === entry.categoryKey);
+          const cat = categories.find((c) => c.key === entry.categoryKey);
           if (cat) {
             cat.items.push({
               id: entry.id,
@@ -126,7 +123,7 @@ async function loadItems() {
   }
 }
 
-function hasUnfilled(category: Category) {
+function hasUnfilled(category: { key: string; title: string; items: StatItem[] }) {
   // returns true if any existing item has empty name or amount is not a valid number > 0
   if (!category || !Array.isArray(category.items)) return false;
   return category.items.some((it: StatItem) => {
@@ -145,7 +142,7 @@ async function addItem() {
 
   const newItem: StatItem = { categoryKey: 'services', name: '', amount: null };
   try {
-    const id = await dixie.addEntry({ entry: newItem });
+    const id = await statisticsConfigDb.add({ entry: newItem as any });
     newItem.id = id as number;
     serviceItems.value.push(newItem);
   } catch (e) {
@@ -155,7 +152,7 @@ async function addItem() {
 
 async function updateItem(item: StatItem) {
   try {
-    await dixie.putEntry({ entry: item });
+    await statisticsConfigDb.put({ entry: item as any });
   } catch (e) {
     console.error('Failed to update item', e);
   }
@@ -165,7 +162,7 @@ async function removeItem(idx: number) {
   const item = serviceItems.value[idx];
   if (!item) return;
   try {
-    if (item.id) await dixie.deleteBackup({ id: item.id as number });
+    if (item.id) await statisticsConfigDb.delete({ id: item.id });
   } catch (e) {
     console.error('Failed to delete item from dixie', e);
   } finally {

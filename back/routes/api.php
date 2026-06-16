@@ -13,6 +13,8 @@ use App\Http\Controllers\RecurringRecordProductController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\SupplierProductController;
 use App\Http\Controllers\SyncController;
+use App\Http\Controllers\MetricsController;
+use App\Http\Controllers\HealthController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -27,11 +29,20 @@ Route::middleware(['auth:sanctum'])->group(function () {
     });
     Route::post('/logout', [AuthenticatedSessionController::class, 'destroy']);
     
-    // Sync API
-    Route::get('/sync/changes', [SyncController::class, 'getChanges']);
-    Route::post('/sync/merge', [SyncController::class, 'merge']);
-    Route::get('/sync/full', [SyncController::class, 'fullSync']);
-    Route::post('/sync/resolve-conflict', [SyncController::class, 'resolveConflict']);
+    Route::middleware(['throttle:30,1', 'sync.version'])->group(function () {
+        Route::get('/sync/changes', [SyncController::class, 'getChanges']);
+        Route::post('/sync/merge', [SyncController::class, 'merge']);
+        Route::get('/sync/full', [SyncController::class, 'fullSync']);
+        Route::post('/sync/resolve-conflict', [SyncController::class, 'resolveConflict']);
+        Route::post('/sync/resolve-conflicts-batch', [SyncController::class, 'resolveConflictsBatch']);
+        Route::get('/sync/conflicts', [SyncController::class, 'getResolvedConflicts']);
+        Route::get('/sync/merge-status/{jobId}', [SyncController::class, 'mergeStatus']);
+    });
+
+    Route::middleware(['sync.version'])->group(function () {
+        Route::get('/metrics', MetricsController::class);
+        Route::get('/sync/health', HealthController::class);
+    });
 
     // Attachments API
     Route::get('/budget-entries/{entryId}/attachments', [AttachmentController::class, 'index']);
@@ -49,6 +60,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::apiResource('budget-providers', BudgetProviderController::class);
     Route::apiResource('budget-provider-products', BudgetProviderProductController::class);
     Route::apiResource('suppliers', SupplierController::class);
+    Route::get('/supplier-products/{id}/image', [SupplierProductController::class, 'image']);
     Route::apiResource('supplier-products', SupplierProductController::class);
     Route::apiResource('recurring-records', RecurringRecordController::class);
     Route::apiResource('recurring-record-products', RecurringRecordProductController::class);

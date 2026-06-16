@@ -15,6 +15,7 @@ class Supplier extends Model
         'user_id',
         'sync_id',
         'name',
+        'status',
         'deleted_at',
     ];
 

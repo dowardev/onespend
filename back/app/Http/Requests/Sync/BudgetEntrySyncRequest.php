@@ -14,14 +14,14 @@ class BudgetEntrySyncRequest extends FormRequest
             'date' => 'required|date',
             'payment_type' => 'required|in:cash,digital',
             'entry_type' => 'required|in:ingreso,egreso',
-            'account_id' => 'nullable|integer|exists:accounts,id',
+            'account_id' => 'nullable|string|max:100',
             'supplier_id' => 'nullable|string|max:100',
             'supplier_name' => 'nullable|string|max:255',
             '_from_recurring_id' => 'nullable|string|max:100',
             'status' => 'sometimes|in:active,deleted',
             'deleted_at' => 'nullable|date',
             'groups' => 'nullable|array',
-            'groups.*.account_id' => 'nullable|integer|exists:accounts,id',
+            'groups.*.account_id' => 'nullable|string|max:100',
             'groups.*.amount' => 'required_with:groups|numeric',
         ];
     }

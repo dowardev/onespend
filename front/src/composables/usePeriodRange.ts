@@ -48,7 +48,7 @@ export function usePeriodRange(
   const referenceDate = ref(options.initialDate ?? new Date());
   const weekStartDay = options.weekStartDay ?? ref(1);
 
-  const periodLabels: Record<PeriodType, string> = {
+  const _periodLabels: Record<PeriodType, string> = {
     day: 'Día',
     week: 'Semana',
     month: 'Mes',
@@ -237,7 +237,7 @@ export function usePeriodRange(
   });
 
   const previousDateFormatted = computed(() => {
-    const { start: prevStart, end: prevEnd } = getPreviousPeriodDateRange();
+    const { start: prevStart, end: _prevEnd } = getPreviousPeriodDateRange();
     switch (period.value) {
       case 'day':
         return format(prevStart, 'yyyy-MM-dd');

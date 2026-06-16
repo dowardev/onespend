@@ -117,7 +117,7 @@ watch(
     safeChartData.value = applyNeonStyles(cloned);
     // Debug: show final chart data sent to vue-chartjs
     try {
-      // eslint-disable-next-line no-console
+       
       console.log('[DayChart] safeChartData:', JSON.parse(JSON.stringify(safeChartData.value)));
     } catch (_e) {
       /* ignore */

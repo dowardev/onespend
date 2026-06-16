@@ -1,4 +1,4 @@
-import dixieController from '@/controllers/dixie';
+import { budgetDaySnapshotsDb } from '@/db/controllers/budgetDaySnapshotsDb';
 import { normalizeEntryData } from '@/controllers/migrationService';
 
 interface MigrationOptions {
@@ -24,7 +24,7 @@ interface BackupData {
 export async function migrateNormalizeBackupDates(params: { opts?: MigrationOptions }) {
   const { opts } = params;
   const { dryRun = true, verbose = true } = opts || {};
-  const all = (await dixieController.listBackups()) as Array<BackupEntry>;
+  const all = (await budgetDaySnapshotsDb.getAll()) as Array<BackupEntry>;
   const results: Array<{
     id: string | number | null;
     changed: boolean;
@@ -56,11 +56,11 @@ export async function migrateNormalizeBackupDates(params: { opts?: MigrationOpti
       });
 
       if (dryRun) {
-        results.push({ id, changed: true, before: data, after: newData });
+        results.push({ id, changed: true, before: data as BackupData, after: newData as BackupData });
         if (verbose) console.log('Dry-run: would update entry', id);
       } else {
-        await dixieController.putEntry({ entry: newEntry });
-        results.push({ id, changed: true, before: data, after: newData });
+        await budgetDaySnapshotsDb.put({ entry: newEntry as any });
+        results.push({ id, changed: true, before: data as BackupData, after: newData as BackupData });
         if (verbose) console.log('Updated entry', id);
       }
     } catch (e) {
@@ -73,13 +73,13 @@ export async function migrateNormalizeBackupDates(params: { opts?: MigrationOpti
 }
 
 export async function needsNormalizeCheck() {
-  const all = (await dixieController.listBackups()) as Array<BackupEntry>;
+  const all = (await budgetDaySnapshotsDb.getAll()) as Array<BackupEntry>;
   try {
     // console.log(
     //   'needsNormalizeCheck: found backups ->',
     //   Array.isArray(all) ? all.length : all
     // );
-  } catch (_e) {}
+  } catch {}
   for (const entry of all) {
     try {
       const id = entry && entry.id ? entry.id : null;
@@ -87,7 +87,7 @@ export async function needsNormalizeCheck() {
       if (meta && meta.__datesNormalized === true) {
         try {
           console.log('needsNormalizeCheck: skipping normalized entry', id);
-        } catch (_e) {}
+        } catch {}
         continue;
       }
       const data = entry && entry.data ? entry.data : null;
@@ -99,7 +99,7 @@ export async function needsNormalizeCheck() {
         //   'would change?',
         //   !!changed
         // );
-      } catch (_e) {}
+      } catch {}
       if (changed) return true;
     } catch (e) {
       console.error('needsNormalizeCheck: error checking entry', entry && entry.id, e);

@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { ref, reactive } from 'vue';
+import { ref } from 'vue';
 import { Supplier } from '../controllers/suppliersController';
 
 export const useSuppliersStore = defineStore('suppliers', () => {

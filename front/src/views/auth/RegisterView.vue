@@ -16,7 +16,7 @@
           <p>Crea tu cuenta</p>
         </div>
 
-        <form @submit.prevent="handleRegister" class="auth-form">
+        <form class="auth-form" @submit.prevent="handleRegister">
           <ion-item>
             <ion-label position="stacked">Nombre</ion-label>
             <ion-input
@@ -24,7 +24,7 @@
               type="text"
               required
               placeholder="Tu nombre"
-              @ionBlur="v$.name.$touch()"
+              @ion-blur="v$.name.$touch()"
             ></ion-input>
           </ion-item>
           <div v-if="v$.name.$error" class="field-error">
@@ -38,7 +38,7 @@
               type="text"
               required
               placeholder="Tu usuario"
-              @ionBlur="v$.user.$touch()"
+              @ion-blur="v$.user.$touch()"
             ></ion-input>
           </ion-item>
           <div v-if="v$.user.$error" class="field-error">
@@ -52,7 +52,7 @@
               type="email"
               required
               placeholder="tu@email.com"
-              @ionBlur="v$.email.$touch()"
+              @ion-blur="v$.email.$touch()"
             ></ion-input>
           </ion-item>
           <div v-if="v$.email.$error" class="field-error">
@@ -67,7 +67,7 @@
               type="password"
               required
               placeholder="Mínimo 8 caracteres"
-              @ionBlur="v$.password.$touch()"
+              @ion-blur="v$.password.$touch()"
             ></ion-input>
           </ion-item>
           <div v-if="v$.password.$error" class="field-error">
@@ -82,7 +82,7 @@
               type="password"
               required
               placeholder="Repite tu contraseña"
-              @ionBlur="v$.passwordConfirmation.$touch()"
+              @ion-blur="v$.passwordConfirmation.$touch()"
             ></ion-input>
           </ion-item>
           <div v-if="v$.passwordConfirmation.$error" class="field-error">
@@ -101,8 +101,8 @@
             type="button"
             expand="block"
             fill="outline"
-            @click="generateRandomData"
             class="generate-button"
+            @click="generateRandomData"
           >
             Generar datos de prueba
           </ion-button>

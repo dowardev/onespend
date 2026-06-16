@@ -1,7 +1,8 @@
 import { defineStore } from 'pinia';
-import { ref } from 'vue';
-import dixieController from '@/controllers/dixie';
-import { useSync } from '@/composables/useSync';
+import { ref, computed } from 'vue';
+import { liveQuery } from 'dexie';
+import { db } from '@/db/OneSpendDB';
+import type { AccountRow } from '@/db/types';
 
 export type Account = {
   id?: string | number;
@@ -15,83 +16,39 @@ export type Account = {
   _synced?: boolean;
 };
 
-interface BackupRecord {
-  id?: string;
-  data?: {
-    accounts?: Array<Account>;
+function mapAccountRow(row: AccountRow): Account {
+  return {
+    id: row.sync_id,
+    sync_id: row.sync_id,
+    serverId: row.serverId ?? null,
+    name: row.name,
+    initialBalance: row.initialBalance,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    synced_at: row.syncedAt,
   };
 }
 
 export const useAccountsStore = defineStore('accounts', () => {
-  const accounts = ref<Account[]>([]);
-  const { syncAccount } = useSync();
+  const rawAccounts = ref<AccountRow[]>([]);
+  const loading = ref(true);
 
-  async function loadAccounts() {
-    try {
-      const result = await dixieController.listBackups();
-      const accountBackups = (result as Array<BackupRecord>).filter((b: BackupRecord) =>
-        String(b.id).startsWith('account:'),
-      );
-      const loadedAccounts: Account[] = [];
-      for (const backup of accountBackups) {
-        if (backup.data && Array.isArray(backup.data.accounts)) {
-          loadedAccounts.push(...backup.data.accounts);
-        }
-      }
-      accounts.value.splice(0, accounts.value.length, ...loadedAccounts);
-    } catch (error) {
-      console.error('Failed to load accounts:', error);
-    }
-  }
+  const _subscription = liveQuery(() => db.accounts.toArray()).subscribe({
+    next: (result) => {
+      rawAccounts.value = result;
+      loading.value = false;
+    },
+    error: () => {
+      loading.value = false;
+    },
+  });
 
-  async function addAccount(params: { account: Omit<Account, 'id'> }) {
-    const { account } = params;
-    const newAccount: Account = {
-      ...account,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    };
-    accounts.value.push(newAccount);
-    syncAccount(newAccount, 'create');
-  }
-
-  function updateAccount(params: { id: string | number; changes: Partial<Account> }) {
-    const { id, changes } = params;
-    const idx = accounts.value.findIndex((a) => a.id === id);
-    if (idx === -1) return;
-    const updated = { ...accounts[idx], ...changes, updatedAt: Date.now() };
-    accounts.value.splice(idx, 1, updated);
-    syncAccount(updated, 'update');
-  }
-
-  function removeAccount(params: { id: string | number }) {
-    const { id } = params;
-    const idx = accounts.value.findIndex((a) => a.id === id);
-    if (idx === -1) return;
-    const account = accounts[idx];
-    accounts.value.splice(idx, 1);
-    syncAccount(account, 'delete');
-  }
-
-  function upsertAccount(params: { account: Account }) {
-    const { account } = params;
-    const existing = accounts.value.find(
-      (a) => String(a.id) === String(account.id) || a.sync_id === account.sync_id,
-    );
-    if (existing) {
-      const idx = accounts.value.indexOf(existing);
-      accounts.value.splice(idx, 1, account);
-    } else {
-      accounts.value.push(account);
-    }
-  }
+  const accounts = computed<Account[]>(() =>
+    rawAccounts.value.map(mapAccountRow),
+  );
 
   return {
     accounts,
-    loadAccounts,
-    addAccount,
-    updateAccount,
-    removeAccount,
-    upsertAccount,
+    loading,
   };
 });

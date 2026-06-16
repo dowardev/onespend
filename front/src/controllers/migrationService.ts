@@ -11,7 +11,7 @@ export function normalizeDateIfNeeded(params: { val: unknown }): {
     const normalized = formatLocalDate({ d: s });
     if (s === normalized) return { value: val, changed: false };
     return { value: normalized, changed: true };
-  } catch (e) {
+  } catch {
     return { value: val, changed: false };
   }
 }
@@ -31,10 +31,10 @@ export function normalizeEntryData(
 
   if (!data || typeof data !== 'object') return { newData: data, changed: false };
   let changed = false;
-  const clone = Object.assign({}, data);
+  const clone = Object.assign({}, data) as Record<string, unknown>;
 
   if (clone.selectedDate != null) {
-    const res = normalizeDateIfNeeded(clone.selectedDate);
+    const res = normalizeDateIfNeeded({ val: clone.selectedDate });
     if (res.changed) {
       clone.selectedDate = res.value;
       changed = true;
@@ -46,7 +46,7 @@ export function normalizeEntryData(
     for (let i = 0; i < arr.length; i++) {
       const item = arr[i];
       if (item && typeof item === 'object' && item[key] != null) {
-        const r = normalizeDateIfNeeded(item[key]);
+        const r = normalizeDateIfNeeded({ val: item[key] });
         if (r.changed) {
           const newItem = Object.assign({}, item);
           newItem[key] = r.value;
@@ -58,18 +58,20 @@ export function normalizeEntryData(
   };
 
   if (Array.isArray(clone.proveedores)) {
-    clone.proveedores = clone.proveedores.slice();
-    normArrayDates(clone.proveedores, 'date');
+    const proveedores = (clone.proveedores as Array<Record<string, unknown>>).slice();
+    normArrayDates(proveedores, 'date');
+    clone.proveedores = proveedores;
   }
 
   if (Array.isArray(clone.ingresos)) {
-    clone.ingresos = clone.ingresos.slice();
-    normArrayDates(clone.ingresos, 'date');
+    const ingresos = (clone.ingresos as Array<Record<string, unknown>>).slice();
+    normArrayDates(ingresos, 'date');
+    clone.ingresos = ingresos;
   }
 
   if (clone.newIngreso && typeof clone.newIngreso === 'object') {
-    const ni = Object.assign({}, clone.newIngreso);
-    const r = normalizeDateIfNeeded(ni.date);
+    const ni = Object.assign({}, clone.newIngreso) as Record<string, unknown>;
+    const r = normalizeDateIfNeeded({ val: ni.date });
     if (r.changed) {
       ni.date = r.value;
       clone.newIngreso = ni;
@@ -78,8 +80,8 @@ export function normalizeEntryData(
   }
 
   if (clone.newProveedor && typeof clone.newProveedor === 'object') {
-    const np = Object.assign({}, clone.newProveedor);
-    const r = normalizeDateIfNeeded(np.date);
+    const np = Object.assign({}, clone.newProveedor) as Record<string, unknown>;
+    const r = normalizeDateIfNeeded({ val: np.date });
     if (r.changed) {
       np.date = r.value;
       clone.newProveedor = np;
