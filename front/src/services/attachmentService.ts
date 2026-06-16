@@ -1,4 +1,5 @@
 import { getToken } from './tokenStorage';
+import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8001';
 
@@ -53,6 +54,7 @@ export async function listAttachments(entrySyncId: string): Promise<AttachmentLi
 export async function uploadAttachments(
   entrySyncId: string,
   files: File[],
+  timeoutMs = 120000,
 ): Promise<AttachmentUploadResponse> {
   const headers = await getHeaders();
   const formData = new FormData();
@@ -60,10 +62,10 @@ export async function uploadAttachments(
     formData.append('files', file);
   });
 
-  const response = await fetch(`${API_URL}/api/budget-entries/${entrySyncId}/attachments`, {
-    method: 'POST',
-    headers,
-    body: formData,
+  const response = await fetchWithTimeout({
+    url: `${API_URL}/api/budget-entries/${entrySyncId}/attachments`,
+    options: { method: 'POST', headers, body: formData },
+    timeoutMs,
   });
   return handleResponse<AttachmentUploadResponse>(response);
 }
@@ -80,6 +82,7 @@ export async function listProviderAttachments(providerSyncId: string): Promise<A
 export async function uploadProviderAttachments(
   providerSyncId: string,
   files: File[],
+  timeoutMs = 120000,
 ): Promise<AttachmentUploadResponse> {
   const headers = await getHeaders();
   const formData = new FormData();
@@ -87,10 +90,10 @@ export async function uploadProviderAttachments(
     formData.append('files', file);
   });
 
-  const response = await fetch(`${API_URL}/api/budget-providers/${providerSyncId}/attachments`, {
-    method: 'POST',
-    headers,
-    body: formData,
+  const response = await fetchWithTimeout({
+    url: `${API_URL}/api/budget-providers/${providerSyncId}/attachments`,
+    options: { method: 'POST', headers, body: formData },
+    timeoutMs,
   });
   return handleResponse<AttachmentUploadResponse>(response);
 }

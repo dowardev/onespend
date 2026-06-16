@@ -1,373 +1,73 @@
-## [v0.68.0] - 2026-06-04
+## [v0.70.0] - 2026-06-16
+
+### Added
+- Chunked fullSync with streaming (Response::stream) + test fallback
+- Async merge via SyncMergeJob + polling endpoint
+- Server-side change deduplication via dedup_hash
+- Sync protocol versioning (X-Sync-Protocol-Version header)
+- Structured JSON logging for sync operations
+- MetricsController to expose /metrics endpoint
+- SyncMetrics class for collecting metrics
+- SyncMetadata cleanup command
+- Enhanced health check endpoint for sync system
+- Sync health monitor command with schedule
+- Frontend performance monitoring utility
+- Instrument frontend sync services with performance monitoring
+- usePerformanceMonitoring composable with test utilities
+- k6 benchmark script for sync load testing
+- Chaos testing for sync functionality (Phase 6.3)
+- Consolidated getChanges into single UNION ALL query with cursor-based pagination
+- Phase 2.4: compress merge response to sync_id + id mappings only
+
+### Fixed
+- Resolve all frontend lint errors (oxlint) and backend sync controller bugs
+- Guard localStorage quota in dataClearService with truncation fallback
+- Remove dead saveQueue, add max debounce delay to prevent indefinite sync delay
+- Replace any casts with proper types in SyncQueueService and accountsController
+- Use model fillable in SupplierProcessor, soft-delete removed products
+- Cache filtered fillable fields (excluding system cols), remove duplicate filterToModelFillable
+- Atomic DLQ retry, remove direct service/DB imports from views
+- Add mutex to ConflictStore.ensureLoaded to prevent concurrent load races
+- Use put instead of add in addOrUpdateQueueItem to prevent race condition
+- Add missing recurring_record_product and supplier_product to bulkUpsert
+- Apply backoff only to failed chunk IDs, not entire queue
+- Wire AbortController signal to fetch calls so cancelActiveRequests works
+- Release Web Lock properly by resolving the held promise
+- Overhaul phase 3-4: DLQ, last_sync, conflict resolution, pendingAttachments, Web Lock, syncInProgress, cleanup keys, SyncView conflicts UI
+- Remove orphaned Income model (table was renamed to budget_entries)
+- Overhaul phase 1-2: merge lock, groups sync_id, N+1 queries, throttle, cursor HMAC, cleanup command
+
+### Performance
+- Batch conflict resolution (backend + frontend)
+- Concurrent chunk processing, persist ConflictStore in IndexedDB
+- Retry before fullSync, bulkUpsert refactor, upload timeout, auto-sync backoff, nextRetryAt index
+- Batch supplier store mutations in applyServerChanges
+- Map lookups in applyServerChanges instead of Array.find
+- Bulk IndexedDB operations for queue removal and entity deletion
+- Remove duplicate validation from SyncController (processors already validate)
+- Diff-based upsert for RecurringRecordProduct, remove whereHas subquery
+- Diff-based upsert for BudgetProviderProduct instead of delete-and-recreate
+- Bulk UPDATE using CASE WHEN in AbstractEntityProcessor
+- Consolidate detectConflicts and existingMap into single DB query
+- Cache fillable fields in AbstractEntityProcessor
+- Add batch size limit (500) to create/update to prevent oversized SQL
 
 ### Refactored
-
-- **Monolithic budgetStore + budgetController** — Extract into specialized stores and controllers
-
-  Replaced the single `budgetStore` (Pinia) and `budgetController` with:
-  - **Stores:** `budgetDayStore` (day-level state), `budgetEntriesStore` (entries CRUD), `budgetProvidersStore` (providers CRUD)
-  - **Controllers:** `budgetEntriesController`, `budgetProvidersController`, `budgetEntryGroupsController`, `budgetProviderProductsController`, `supplierProductsController`, `recurringRecordsController`, `recurringRecordProductsController`, `attachmentsController`
-  - **Composables:** `useSupplierProducts`, `useSuppliers`
-
-  Deleted the original `budgetStore.ts` and `budgetController.ts`.
-
-- **Laravel REST API** — Add dedicated controllers and FormRequests
-
-  New backend controllers: AccountController, BudgetEntryController, BudgetEntryGroupController, BudgetProviderController, BudgetProviderProductController, RecurringRecordController, RecurringRecordProductController, SupplierController, SupplierProductController. Each with typed FormRequest validation and routes registered in `api.php`.
-
-### Fixed
-
-- **Race condition in budget day operations** — Centralize IndexedDB load/save into `budgetDayStore`
-
-  Both `budgetEntriesController` and `budgetProvidersController` independently called `loadBudgetForDate()` and `saveBudgetData()` on the same IndexedDB block, causing data loss when used sequentially. Moved both operations into `budgetDayStore` with a single source of truth. Updated all 10 call sites.
-
-- **Inline store calls in templates** — Replace `useBudgetDayStore()` calls in DaySummaryModal.vue and BudgetView.vue template with centralized references.
-
-- **Missing `scopeForUser` on BudgetEntryGroup and RecurringRecordProduct** — Add Laravel scope and convert RecurringRecordProductController to route model binding.
-
-- **Uncached DixieController instances** — Cache instances in `budgetEntriesController` and `budgetProvidersController` to avoid redundant IndexedDB initialization.
-
-- **Dynamic imports in ProviderEditPage.vue** — Replace 7 `defineAsyncComponent` calls with static imports.
-
-### Added
-
-- **`generateSyncId` utility** — Shared sync ID generator in `src/utils/generateSyncId.ts`, replaces 7 duplicate implementations.
-
-### Security
-
-- **Authorization checks** — RecurringRecordProductController uses route model binding with `can:view`/`can:update` policies; BudgetEntryGroupController index uses `forUser()` scope.
-
-## [v0.67.2] - 2026-06-04
-
-### Fixed
-
-- **SyncController soft-delete** — Unify deletion mechanism across entity types
-
-  `bulkDeleteSuppliers` removed `status => 'deleted'` (column doesn't exist in `suppliers` table). `processItem` now uses `deleted_at` only for all entities except `recurring_record`, which requires both `deleted_at` and `status => 'deleted'` for frontend filtering (`r.status !== 'deleted'`).
-
-- **SyncResolveConflictRequest client_data** — Fix contradictory validation rule
-
-  Removed `nullable` from `required_if:resolution,client|array` rule — `nullable` was effectively making `required_if` useless by allowing `null` values.
-
-- **Vuelidate validation unification (EntryEditPage, RecurringEditPage, ProviderEditPage)**
-
-  Replaced custom `isFormValid`/`isItemsValid` computed properties with Vuelidate `v$.$invalid` in templates. Added `itemsValid`/`itemsValidator` custom validators for items arrays. Removed redundant `isFormValid` and `isItemsValid` computeds. Token `ProviderEditPage` name validation conditionally required only in non-entry mode.
-
-- **budgetController addEgreso** — Refactor to use `createEntry` + `continueAdd` pattern
-
-  Unified the expense creation flow to match `addIngreso`. Added missing `createEntry` and `continueAdd` private methods.
-
-- **RegisterView & AddAccountComponent** — Add `maxLength(255)` validation
-
-  Prevent fields from exceeding database column limits.
-
-- **useQuickAccount** — Prevent negative initial balance
-
-  Wrapped `initialBalance` with `Math.max(0, ...)` to clamp negative values to zero.
-
-- **recurringController** — Normalize item amounts on creation
-
-  Added `Number(item.amount) || 0` coercion when creating recurring record items.
-
-- **budgetStore** — Fix `accountId` type in Provider interface
-
-  Changed from `number` to `number | null` to reflect nullable database column.
-
-- **LoginView.vue** — Remove unused `email` import
-
-- **recurringController** — Add missing semicolon in items `map` callback
-
-### Refactored
-
-- **Sync FormRequest classes** — Extract static `validationRules()` method
-
-  All 8 Sync FormRequests (Account, BudgetEntry, BudgetProviderProduct, BudgetProvider, RecurringRecordProduct, RecurringRecord, SupplierProduct, Supplier) now expose a public static `validationRules(): array` method. SyncController `validateEntityData` calls `$requestClass::validationRules()` instead of instantiating and calling `->rules()`.
-
-- **SyncController** — Replace inline `Request` injection with typed FormRequests
-
-  `merge()` now receives `SyncMergeRequest`, `resolveConflict()` receives `SyncResolveConflictRequest`. Merge endpoint validates all 8 entity types before processing.
-
-### Changed
-
-- **SyncController validation errors** — Include item index and entity type
-
-  Failed validation now returns `{ message, errors, index, entity_type }` for precise error identification.
-
-- **SyncController bulk operations** — Filter data to model fillable fields
-
-  New `filterToFillable()` helper strips non-fillable fields before insert/update in `bulkCreateItems` and `updateEntity`.
-
-- **CSS deduplication** — Move `.validation-error` to global stylesheet
-
-  Added global `.validation-error` class in `variables.css`. Removed 5 duplicate blocks from LoginView.vue, EntryEditPage.vue, ProviderEditPage.vue, SupplierFormComponent.vue, and RecurringEditPage.vue.
-
-### Added
-
-- **SyncMergeRequest** — New FormRequest for merge endpoint validation
-
-  Validates `data` structure with typed sub-arrays for all 8 entity types.
-
-## [v0.67.1] - 2026-06-03
-
-### Fixed
-
-- **AddSupplierComponent** — Replaced `useIonToast` with `toastController`
-
-  `@ionic/vue` v8 does not export `useIonToast`. Replaced the non-existent composable import with `toastController.create()` + `.present()` to fix the `SyntaxError` at runtime.
-
-## [v0.67.0] - 2026-06-02
-
-### Removed
-
-- **Templates feature** — Complete removal from both frontend and backend
-
-  **Backend:**
-  - `app/Models/Template.php` — Model removed
-  - `database/migrations/2026_01_16_000005_create_templates_table.php` — Migration deleted
-  - `database/migrations/2026_06_02_000001_drop_templates_table.php` — New migration to drop the `templates` table
-  - `app/Http/Controllers/SyncController.php` — Removed Template import, ENTITY_TYPES mapping, and fullSync query
-
-  **Frontend:**
-  - `stores/templatesStore.ts` — Pinia store removed
-  - `controllers/TempalteController.ts` — Controller removed
-  - `controllers/templateService.ts` — Service removed
-  - `views/templates/` — Entire view directory (TemplatesView, AddTemplateComponent, ApplyTemplateComponent) removed
-  - `views/budget/components/TemplatesModal.vue` — Budget template picker modal removed
-  - `router/index.ts` — `/templates` route and prefetch removed
-  - `components/MainMenu.vue` — "Templates" menu item removed
-  - `composables/useSync.ts` — `syncTemplate()` function and pull-change integration removed
-  - `services/syncService.ts` — Template entity type removed from queue and data mapping
-  - `views/sync/SyncView.vue` — "Plantillas" entity label removed
-  - `stores/budgetStore.ts` — `_fromTemplate` flag removed from Provider interface
-  - `controllers/dixie.ts` — `'templates'` IndexedDB object store removed
-
-## [v0.66.0] - 2026-05-25
-
-### Refactor
-
-- **Extract shared logic into reusable composables and utilities**
-  - `useAccountSelection` — account sorting, available/selected filtering, default account fallback
-  - `useDatePicker` — date ISO state management, popover lifecycle (open/apply/cancel)
-  - `useDeleteConfirm` — alert state and button configuration for delete confirmation
-  - `useQuickAccount` — quick account creation alert flow
-  - `amountValidation.ts` — `isNumericValue`, `isPositiveValue`, `getAmountError`, `isAmountInvalid`, `isAmountTouched`
-  - `dateHelpers.ts` — `parseDateValue`, `toShortDate`
-
-- **Extract shared UI into reusable components**
-  - `EditPageHeader.vue` — unified header with back/save/options buttons
-  - `AccountDistributionSection.vue` — items list with add/remove, amount validation, account slot
-  - `DetailsSection.vue` — notes textarea + attachments modal integration
-  - `DatePickerPopover.vue` — date picker popover with apply/cancel
-  - `DeleteConfirmAlert.vue` — confirmation alert wrapper
-  - `QuickAccountAlert.vue` — quick account creation alert wrapper
-
-- **Simplify EntryEditPage and ProviderEditPage** by consuming the new composables and components (~1775 lines removed net across both pages)
-
-### Added
-
-- `front/pnpm-workspace.yaml` — pnpm workspace build allowlist configuration
-
-### Changed
-
-- **BudgetView**: Remove "Inicio/Proveedores" segment toggle; providers now shown exclusively in the unified `InicioViewComponent` list
-- **BudgetView**: Update clear-day confirmation message from "proveedores e ingresos" to "registros"
-- **AGENTS.md**: Rewritten for OneSpend project with architecture overview, multi-platform commands, MariaDB setup, and updated code conventions
-- **guides/TemplateView.vue**: Fix typos (`templa<template>` → `<template>`, `<ion-toolvar>` → `<ion-toolbar>`)
-- **budgetController.addProvider**: Return type annotated as `: Provider | undefined`
-- **App.vue**: Add `.danger-alert-btn` global CSS class for consistent delete button styling
-
-### Removed
-
-- `ProvidersSummary.vue` — functionality absorbed into unified entry list
-- `ProductsModalComponent.vue` — products logic integrated into ProviderEditPage
-- `ProviderCardComponent.vue` — card display replaced by unified list items
-- `ProvidersComponent.vue` — providers tab removed; view merged into InicioViewComponent
-
-## [v0.65.0] - 2026-05-23
-
-### Refactor
-
-- **Extract attachment logic into reusable `useAttachments` composable**
-  - Centralizes open/save/delete logic for both entity types (`entries` | `providers`)
-  - Replaces ~200 lines of duplicated code in EntryEditPage and ProviderEditPage
-  - Infers `fkColumn` from `entityType` instead of receiving it as a parameter
-
-- **Consolidate attachment migrations into a single file**
-  - Merged `make_budget_entry_sync_id_nullable` into `add_providers_support_and_nullable_entry_to_attachments`
-  - Improved `down()` with proper cleanup: resets provider data, nullifies entry sync IDs before reverting columns
-
-### Added
-
-- **Batch delete endpoint for attachments**: `POST /attachments/batch-delete` (backend `batchDestroy` + frontend `deleteAttachments` service)
-
-### Changed
-
-- `AttachmentController::handleUpload` now infers `$fkColumn` from `$entityType` internally
-- `ProviderEditPage.confirmDelete` converted from async IIFE to regular async function
-- `budgetController.addProvider` return type annotated as `:void`
-
-## [v0.64.0] - 2026-05-23
-
-### Features
-
-- **Add provider attachments support**
-  - New backend API endpoints: `GET/POST /budget-providers/{providerId}/attachments`
-  - New `budget_provider_sync_id` column and `ENTITY_TYPE_PROVIDERS` in Attachment model
-  - Frontend: `listProviderAttachments()` and `uploadProviderAttachments()` in attachmentService
-  - Pending attachments refactored to support multiple entity types (`entries` | `providers`)
-  - Sync service routes provider attachments to the correct endpoint
-
-- **Add notes field to provider edit page**
-  - New textarea for provider notes in ProviderEditPage
-  - Notes passed via `addProvider` controller method
-
-- **Show pending attachments in entry attachment modal**
-  - EntryEditPage now displays pending (not-yet-uploaded) files when opening attachments
-  - Supports removing pending files directly from the modal
-
-### Changed
-
-- **Oxlint/oxfmt formatting applied across ~100 frontend files**
-  - Formatter config: changed `semi: false` → `semi: true`
-  - TypeScript type narrowing fixes (`as string` casting) and code cleanup
-  - ProductsModalComponent moved to `front/src/views/budget/modals/`
-  - CashFlow.vue reformatted imports and code for readability
-
-- **Backend: `budget_entry_sync_id` made nullable in attachments table**
-  - Required for provider attachments that have no entry association
-
-- **Backend: `user_id` added to `budget_entry_groups` table**
-  - New migration; createBudgetEntryGroups now accepts userId
-  - SyncController includes `user_id` in budget_entry_groups creation
-
-### Fixed
-
-- Resolved TypeScript errors in ProviderEditPage.vue (LBDS-21)
-- Fixed attachment deletion in EntryEditPage: server and pending file deletion handled separately
-
-### Chore
-
-- Updated `.gitignore` to exclude `.opencode/` and `.oxfmtrc.json`
-
-## [v0.63.0] - 2026-05-20
-
-### Features
-
-- **Remove simple/multiple expense type toggle in provider edit page, always show products and multi-account distribution**
-  - Products are now always visible when provider has them
-  - Account distribution section always shows regardless of expense type
-  - Coverage banner extracted as standalone component shown when any product has quantity > 0
-
-- **Add smart account sorting in account selection modal**
-  - Available accounts (not selected in any item) shown first and are clickable
-  - Selected accounts shown last, disabled with "Seleccionada" label
-
-- **Add toast notification when attempting to add group with incomplete previous**
-  - Shows warning toast when user clicks "+" before completing current group
-  - Validates using isItemsValid computed
-
-### Changed
-
-- Simplify isFormValid computed by collapsing redundant branches
-- Simplify addItem/handleAddItem to always add with isItemsValid guard + toast
-- Simplify createQuickAccount by removing canAddMoreItems branch
-- Replace filteredAccounts with sortedAccounts computed that returns { available, selected }
-
-### Removed
-
-- Remove expenseType ref and watch logic
-- Remove simple mode section (single amount with one account)
-- Remove info popover (Simple/Multiple explanation)
-- Remove canAddMoreItems computed
-- Remove popoverInfo reactive and openInfoPopover function
-- Remove hasProviderProducts computed
-- Remove unused imports: IonSegment, IonSegmentButton, IonSelect, IonSelectOption, informationCircleSharp, watch
-
-### Fixed
-
-- Remove redundant nullish coalescing on html2canvasOptions in usePdfReport and statisticsController
-
-## [v0.62.0] - 2026-05-19
-
-### Features
-
-- **Add oxlint and oxfmt for improved linting and formatting**
-  - Integrate oxlint as new linting tool alongside eslint
-  - Add oxfmt for code formatting (replacement for Prettier)
-  - Update lint scripts to run both oxlint and eslint in parallel using npm-run-all2
-
-### Refactor
-
-- **Migrate from Prettier to Oxlint for code formatting**
-  - Replace prettier with oxfmt in format commands
-  - Remove eslint-plugin-prettier from eslint config
-  - Remove .prettierrc.cjs configuration file
-
-### Chore
-
-- **Update dependencies for new tooling**
-  - Add eslint-plugin-oxlint, npm-run-all2, oxfmt, oxlint
-  - Move @fsouza/prettierd to devDependencies
-
-## [v0.61.1] - 2026-05-13
-
-### Features
-
-- **ProviderEditPage: Add card validation and coverage alert**
-  - Add button now only adds cards (removed quick account alert behavior)
-  - Prevent adding new card until existing card has amount and account filled
-  - Show warning alert when trying to add card but products total is already covered
-  - Disable account/mount inputs and add/remove buttons until at least one product has quantity
-
-### Fix
-
-- **ProviderEditPage: Remove account creation from add button flow**
-
-## [v0.61.0] - 2026-05-12
-
-### Features
-
-- **InicioViewComponent: Add popover for add button**
-  - Replace direct navigation with ion-popover containing "Registro" and "Proveedores" options
-  - "Registro" navigates to `/budget/entry/new` (existing behavior)
-  - "Proveedores" navigates to `/budget/provider/new`
-
-- **InicioViewComponent: Unified entries and providers list**
-  - Combine entries and providers into single chronological list
-  - Add `createdAt` timestamp to providers for proper sorting
-  - Providers display with warning color, entries use income/expense colors
-  - Click handler navigates to appropriate edit page based on item type
-
-- **ProviderEditPage: Replace ion-segment with ion-select for expense type**
-  - Replace "Inicio/Productos" segment with "Tipo de gasto" select (Simple/Multiple)
-  - "Simple" mode: single amount + account (no products, no add button)
-  - "Multiple" mode: products with quantities + distribution by account (existing behavior)
-  - "Multiple" option disabled when provider has no products
-  - Add watchers to handle mode transitions (collapse/expand items, clear products)
-
-### Fix
-
-- **AccountsPage: Fix edit modal opening as create mode**
-  - Pass `{ id }` instead of `{ id: id }` to `remove` function in delete handler
-
-### Refactor
-
-- **budgetController: Add createdAt timestamp to providers**
-  - Track creation time for chronological sorting in unified list
-
-- **budgetStore: Add createdAt optional field to Provider interface**
+- Extract ResolvesSupplierProductId trait to DRY product processors
+- BudgetEntryProcessor uses postprocessCreate instead of duplicating parent logic
+- Move recurring_record_product type-check to processor override, remove from abstract
 
 ### Documentation
+- Phase 6.1 complete, move to Phase 6.2
+- Phase 3 complete - conflict detection v2 fully implemented
+- Phase 2 complete, move to Phase 3
+- Mark Phase 2.1 complete, move to Phase 2.2
+- Mark Phase 1.1 complete, move to Phase 2
+- Update sync-optimization-plan with actual implementation status
 
-- **AGENTS.md: Update controller-only communication guidelines**
-  - Clarify that components can contain local logic (computed, functions, vars, watchers, onMounted)
-  - Restriction applies only to external connections (stores, APIs)
+### Testing
+- Phase 6.1 - unit tests for three-way merge, auto-merge, field-level detection
 
-- **Add specification and planning documents**
-  - `docs/superpowers/specs/2026-05-10-budget-add-popover-design.md`
-  - `docs/superpowers/plans/2026-05-10-budget-add-popover-plan.md`
-  - `docs/superpowers/specs/2026-05-11-provider-type-select-design.md`
-  - `docs/superpowers/plans/2026-05-11-provider-type-select-plan.md`
 
 ### Files Changed
 
@@ -380,6 +80,10 @@
 - `docs/superpowers/specs/` — New specification documents
 - `docs/superpowers/plans/` — New planning documents
 - `front/package.json` — Bump version to 0.61.0
+
+---
+
+## [v0.69.0] - 2026-06-09
 
 ---
 
@@ -4153,5 +3857,6 @@
 - src/views/statistics/cashFlow/week/WeekChartComponent.vue (modified)
 
 ---
+
 
 

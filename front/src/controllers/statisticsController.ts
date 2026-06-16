@@ -1,7 +1,7 @@
 import { ref, reactive, type Ref } from 'vue';
 import { format } from 'date-fns';
 import { formatLocalDate } from '@/utils/date';
-import { DixieController } from './dixie';
+import { budgetDaySnapshotsDb } from '@/db/controllers/budgetDaySnapshotsDb';
 
 export type Html2CanvasOptions = Record<string, unknown>;
 export type JsPdfOptions = { orientation?: string; unit?: string; format?: string };
@@ -61,7 +61,7 @@ class StatisticsController {
   setHover(key: string, value: boolean) {
     try {
       this.hovered[key] = value;
-    } catch (_e) {}
+    } catch {}
   }
 
   getHovered() {
@@ -86,7 +86,7 @@ class StatisticsController {
       if (sumPayments > 0) return sumPayments;
       const e = Number(p?.estimated || 0);
       return e;
-    } catch (_e) {
+    } catch {
       return 0;
     }
   }
@@ -147,15 +147,13 @@ class StatisticsController {
     }
   }
 
-  async listBackups(storeName: string = 'backups') {
-    const ctrl = new DixieController({ name: 'ABOgazDB', storeName });
-    return await ctrl.listBackups();
-  }
+   async listBackups() {
+     return await budgetDaySnapshotsDb.getAll();
+   }
 
-  async getBackup(id: IDBValidKey, storeName: string = 'backups') {
-    const ctrl = new DixieController({ name: 'ABOgazDB', storeName });
-    return await ctrl.getBackup(id);
-  }
+   async getBackup(id: string) {
+     return await budgetDaySnapshotsDb.getById({ id });
+   }
 
   async downloadPdf(opts: UsePdfReportOptions): Promise<boolean> {
     console.log('[StatisticsController] downloadPdf started');
@@ -189,9 +187,9 @@ class StatisticsController {
     try {
       console.log('[StatisticsController] Importing html2canvas and jspdf...');
       const html2canvasModule = await import('html2canvas');
-      const html2canvas = html2canvasModule && (html2canvasModule.default ?? html2canvasModule);
+      const html2canvas = html2canvasModule && (html2canvasModule.default ?? html2canvasModule) as any;
       const jsPDFModule = await import('jspdf');
-      const jsPDF = jsPDFModule && (jsPDFModule.jsPDF ?? jsPDFModule.default ?? jsPDFModule);
+      const jsPDF = jsPDFModule && (jsPDFModule.jsPDF ?? jsPDFModule.default ?? jsPDFModule) as any;
 
       console.log('[StatisticsController] html2canvas:', !!html2canvas, 'jspdf:', !!jsPDF);
 

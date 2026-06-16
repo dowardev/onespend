@@ -60,11 +60,11 @@
         >
           <template v-if="editingIndex !== item.originalIndex">
             <ion-thumbnail
-              v-if="item.product.imageBase64"
+              v-if="getProductImage(item.product)"
               slot="start"
               style="min-width: 48px; margin-right: 8px"
             >
-              <img :src="item.product.imageBase64" alt="product" />
+              <img :src="getProductImage(item.product)" alt="product" />
             </ion-thumbnail>
 
             <ion-label>
@@ -168,17 +168,19 @@ import {
   IonNote,
   toastController,
 } from '@ionic/vue';
-import { reactive, ref, computed, watch } from 'vue';
+import { reactive, ref, computed, watch, onBeforeUnmount } from 'vue';
 import { addOutline, closeOutline, saveOutline, searchOutline, trashOutline } from 'ionicons/icons';
 import { useVuelidate } from '@vuelidate/core';
 import { required, maxLength } from '@vuelidate/validators';
 
 import type { Supplier } from '@/controllers/suppliersController';
+import { getToken } from '@/services/tokenStorage';
 
 export interface SupplierFormProduct {
   name: string;
   price: number;
   imageBase64?: string | null;
+  imageUrl?: string | null;
 }
 
 export interface SupplierFormPayload {
@@ -196,7 +198,7 @@ const emit = defineEmits<{
   (e: 'dismiss'): void;
 }>();
 
-type Product = { name: string; price: number; imageBase64?: string | null };
+type Product = { name: string; price: number; imageBase64?: string | null; imageUrl?: string | null };
 
 const form = reactive({ name: '', products: [] as Product[] });
 const rules = computed(() => ({
@@ -227,7 +229,9 @@ async function presentToast(params: {
 async function compressImage(file: File, quality = 0.6): Promise<string> {
   return await new Promise((resolve, reject) => {
     const img = new Image();
+    const blobUrl = URL.createObjectURL(file);
     img.onload = () => {
+      URL.revokeObjectURL(blobUrl);
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d')!;
       const maxSize = 1024;
@@ -244,8 +248,11 @@ async function compressImage(file: File, quality = 0.6): Promise<string> {
       ctx.drawImage(img, 0, 0, width, height);
       resolve(canvas.toDataURL('image/jpeg', quality));
     };
-    img.onerror = () => reject(new Error('Failed to compress image'));
-    img.src = URL.createObjectURL(file);
+    img.onerror = () => {
+      URL.revokeObjectURL(blobUrl);
+      reject(new Error('Failed to compress image'));
+    };
+    img.src = blobUrl;
   });
 }
 
@@ -293,6 +300,43 @@ function removeImage() {
   if (fileInput.value) fileInput.value.value = '';
 }
 
+const loadedImages = reactive(new Map<string, string>());
+
+async function fetchProductImage(params: { imageUrl: string }): Promise<void> {
+  const { imageUrl } = params;
+  if (loadedImages.has(imageUrl)) return;
+  try {
+    const token = await getToken();
+    const response = await fetch(imageUrl, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) return;
+    const blob = await response.blob();
+    loadedImages.set(imageUrl, URL.createObjectURL(blob));
+  } catch {
+    // Image unavailable, skip
+  }
+}
+
+function getProductImage(product: Product): string | null {
+  return product.imageBase64 || loadedImages.get(product.imageUrl ?? '') || null;
+}
+
+onBeforeUnmount(() => {
+  loadedImages.forEach((blobUrl) => {
+    URL.revokeObjectURL(blobUrl);
+  });
+  loadedImages.clear();
+});
+
+function loadProductImages(products: Product[]): void {
+  for (const product of products) {
+    if (!product.imageBase64 && product.imageUrl) {
+      fetchProductImage({ imageUrl: product.imageUrl });
+    }
+  }
+}
+
 watch(
   () => props.supplier,
   (s) => {
@@ -303,6 +347,7 @@ watch(
           ? structuredClone(s.products)
           : JSON.parse(JSON.stringify(s.products))
         : [];
+      loadProductImages(form.products);
       showNewProductFields.value = !form.products || form.products.length === 0;
     } else {
       form.name = '';

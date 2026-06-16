@@ -1,9 +1,9 @@
-import { DixieController } from './dixie';
-import { reactive, ref } from 'vue';
+import { suppliersDb } from '@/db/controllers/suppliersDb';
 import { useSuppliersStore } from '../stores/suppliersStore';
-import { useSync } from '@/composables/useSync';
 import { syncService } from '@/services/syncService';
+import { syncQueue } from '@/services/syncQueue';
 import type { Product } from './supplierProductsController';
+import type { SupplierRow } from '@/db/types';
 import { generateSyncId } from '@/utils/generateSyncId';
 
 export type Supplier = {
@@ -23,10 +23,6 @@ class SuppliersController {
     return useSuppliersStore();
   }
 
-  private getController(): DixieController {
-    return new DixieController({ name: 'ABOgazDB', storeName: 'suppliers' });
-  }
-
   async addSupplier(params: { s: Omit<Supplier, 'id' | 'createdAt' | 'updatedAt'> }) {
     const { s } = params;
     console.log(
@@ -41,14 +37,13 @@ class SuppliersController {
     try {
       console.log('[suppliersController] addSupplier called with:', JSON.stringify(s, null, 2));
 
-      const ctrl = this.getController();
       const now = Date.now();
 
       // Safe clone function to handle non-cloneable objects
       const safeClone = (obj: any): any => {
         try {
           return structuredClone ? structuredClone(obj) : JSON.parse(JSON.stringify(obj));
-        } catch (e) {
+        } catch {
           // Fallback to manual deep clone for problematic objects
           return JSON.parse(
             JSON.stringify(obj, (key, value) => {
@@ -84,9 +79,6 @@ class SuppliersController {
         console.log('[suppliersController] ⚠️ NO hay productos en entry');
       }
 
-      const { syncProvider } = useSync();
-      console.log('[suppliersController] useSync imported');
-
       if (!entry.sync_id) {
         entry.sync_id = generateSyncId();
       }
@@ -96,18 +88,18 @@ class SuppliersController {
       // Luego sincronizar el proveedor
       console.log('[suppliersController] 🔵 LLAMANDO syncProvider');
       try {
-        syncProvider({ provider: entry }, 'create');
+      syncQueue.syncProvider({ provider: entry, operation: 'create' });
         console.log('[suppliersController] ✅ syncProvider ejecutado');
       } catch (syncErr) {
         console.warn('[suppliersController] syncProvider falló (se reintentará después):', syncErr);
       }
 
-      const localId = await ctrl.addEntry({ entry });
+      const localId = await suppliersDb.add({ entry: entry as unknown as SupplierRow });
       entry.id = typeof localId === 'number' ? localId : String(localId);
       const result = entry as Supplier;
       console.log('[suppliersController] Guardado en IndexedDB con localId:', localId);
 
-      await ctrl.putEntry({ entry });
+      await suppliersDb.put({ entry: entry as unknown as SupplierRow });
 
       store.suppliers = [result, ...store.suppliers];
 
@@ -153,13 +145,11 @@ class SuppliersController {
     store.loading = true;
     store.error = null;
     try {
-      const ctrl = this.getController();
-
       // Safe clone function to handle non-cloneable objects
       const safeClone = (obj: any): any => {
         try {
           return structuredClone ? structuredClone(obj) : JSON.parse(JSON.stringify(obj));
-        } catch (e) {
+        } catch {
           // Fallback to manual deep clone for problematic objects
           return JSON.parse(
             JSON.stringify(obj, (key, value) => {
@@ -182,11 +172,9 @@ class SuppliersController {
         updatedAt: Date.now(),
       };
 
-      const { syncProvider } = useSync();
-      // Ensure provider shape expected by useSync
-      syncProvider({ provider: entry }, 'create');
+      syncQueue.syncProvider({ provider: entry, operation: 'update' });
 
-      await ctrl.putEntry({ entry });
+      await suppliersDb.put({ entry: entry as unknown as SupplierRow });
 
       store.suppliers = store.suppliers.map((s) => (s.id === entry.id ? entry : s));
 
@@ -205,18 +193,14 @@ class SuppliersController {
     store.loading = true;
     store.error = null;
     try {
-      const ctrl = this.getController();
       const allSuppliers = store.suppliers;
       const supplier = allSuppliers.find((s) => s.id === id);
-      await ctrl.deleteBackup({ id });
+      if (supplier && supplier.sync_id) {
+        syncQueue.syncProvider({ provider: supplier, operation: 'delete' });
+        await suppliersDb.delete({ syncId: supplier.sync_id });
+      }
 
       store.suppliers = allSuppliers.filter((s) => s.id !== id);
-
-      if (supplier) {
-        const { syncProvider } = useSync();
-        // Ensure provider is passed as an object with `provider` prop
-        syncProvider({ provider: supplier }, 'delete');
-      }
     } catch (e) {
       store.error = e as Error;
       throw e;
@@ -230,8 +214,7 @@ class SuppliersController {
     store.loading = true;
     store.error = null;
     try {
-      const ctrl = this.getController();
-      const all = (await ctrl.listBackups()) as Supplier[];
+      const all = (await suppliersDb.getAll()) as Supplier[];
 
       console.log(
         'suppliersController.listSuppliers - IndexedDB suppliers count:',
@@ -261,7 +244,7 @@ class SuppliersController {
           console.log('suppliersController.listSuppliers - fullSyncAndSave completed');
 
           // Retry reading from IndexedDB after sync
-          const allAfterSync = (await ctrl.listBackups()) as Supplier[];
+          const allAfterSync = (await suppliersDb.getAll()) as Supplier[];
           console.log(
             'suppliersController.listSuppliers - Suppliers after sync:',
             allAfterSync?.length || 0,
@@ -320,7 +303,7 @@ class SuppliersController {
       ) {
         return (store.suppliers as any).value;
       }
-    } catch (_e) {
+    } catch {
       // fallback
     }
     return store.suppliers;
@@ -328,7 +311,7 @@ class SuppliersController {
 
   getLoading() {
     const store = this.getStore();
-    return store.loading?.value ?? store.loading;
+    return store.loading;
   }
 
   getError() {

@@ -32,7 +32,7 @@ export function formatLocalDate(
         try {
           dateObj = parseISO(s);
           if (isNaN(dateObj.getTime())) throw new Error('invalid');
-        } catch (_e) {
+        } catch {
           const m = s.match(/(\d{4})-(\d{2})-(\d{2})/);
           if (m) {
             const year = Number(m[1]);
@@ -50,14 +50,14 @@ export function formatLocalDate(
     const m = String(dateObj.getMonth() + 1).padStart(2, '0');
     const day = String(dateObj.getDate()).padStart(2, '0');
     return `${y}-${m}-${day}`;
-  } catch (_e) {
+  } catch {
     try {
       const now = new Date();
       return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(
         2,
         '0',
       )}-${String(now.getDate()).padStart(2, '0')}`;
-    } catch (_err) {
+    } catch {
       return '';
     }
   }
@@ -86,7 +86,7 @@ export function parseLocalDate(params: { d?: Date | string | null } | Date | str
   try {
     const parsed = parseISO(s);
     if (!isNaN(parsed.getTime())) return parsed;
-  } catch (_e) {
+  } catch {
     // fallback below
   }
   const m = s.match(/(\d{4})-(\d{2})-(\d{2})/);
@@ -113,7 +113,7 @@ export function normalizeName(params: { name: string | undefined | null }): stri
       .normalize('NFD')
       .replace(/\p{Diacritic}/gu, '')
       .replace(/\s+/g, ' ');
-  } catch (_e) {
+  } catch {
     return String(name).trim().toLowerCase();
   }
 }
@@ -133,7 +133,7 @@ export function safeIntlFormat(
     const d = date instanceof Date ? date : new Date(String(date));
     if (isNaN(d.getTime())) return '';
     return new Intl.DateTimeFormat(locale, options as any).format(d);
-  } catch (_e) {
+  } catch {
     return '';
   }
 }

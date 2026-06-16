@@ -1,5 +1,6 @@
-import { DixieController } from './dixie';
-import { useSync } from '@/composables/useSync';
+import { budgetEntryGroupsDb } from '@/db/controllers/budgetEntryGroupsDb'
+import { budgetEntriesDb } from '@/db/controllers/budgetEntriesDb'
+import { syncQueue } from '@/services/syncQueue';
 import { generateSyncId } from '@/utils/generateSyncId';
 
 export interface BudgetEntryGroup {
@@ -12,15 +13,9 @@ export interface BudgetEntryGroup {
 }
 
 class BudgetEntryGroupsController {
-  private getController(): DixieController {
-    return new DixieController({ name: 'ABOgazDB', storeName: 'backups' });
-  }
-
   async getAll(): Promise<BudgetEntryGroup[]> {
     try {
-      const ctrl = this.getController();
-      const all = (await ctrl.listBackups()) as any[];
-      return all.filter((item) => String(item.id)?.startsWith('entryGroup:'));
+      return await budgetEntryGroupsDb.getAll() as any;
     } catch (e) {
       console.error('budgetEntryGroupsController.getAll error', e);
       return [];
@@ -29,8 +24,7 @@ class BudgetEntryGroupsController {
 
   async getByEntryId(params: { entryId: string | number }): Promise<BudgetEntryGroup[]> {
     const { entryId } = params;
-    const all = await this.getAll();
-    return all.filter((g) => String(g.entryId) === String(entryId));
+    return await budgetEntryGroupsDb.getByEntryId({ entrySyncId: String(entryId) }) as any;
   }
 
   async addGroup(params: { group: Omit<BudgetEntryGroup, 'id' | 'sync_id'> }) {
@@ -40,11 +34,14 @@ class BudgetEntryGroupsController {
       sync_id: generateSyncId(),
     };
 
-    const ctrl = this.getController();
-    const id = await ctrl.addEntry({ entry: { ...newGroup, id: `entryGroup:${generateSyncId()}` } });
+    const id = await budgetEntryGroupsDb.add({ entry: newGroup as any });
 
-    const { syncEntry } = useSync();
-    syncEntry({ entry: newGroup as any, operation: 'create' });
+    const allGroups = await budgetEntryGroupsDb.getByEntryId({ entrySyncId: String(newGroup.entryId) });
+    const entry = await budgetEntriesDb.getBySyncId({ syncId: String(newGroup.entryId) });
+    if (entry) {
+      entry.groups = allGroups.map((g: any) => ({ amount: g.amount, accountId: g.account_id || g.accountId }));
+      await syncQueue.syncEntry({ entry, operation: 'update' });
+    }
 
     return { ...newGroup, id };
   }
@@ -52,14 +49,17 @@ class BudgetEntryGroupsController {
   async removeGroupsByEntryId(params: { entryId: string | number }) {
     const { entryId } = params;
     const groups = await this.getByEntryId({ entryId });
-    const ctrl = this.getController();
 
     for (const group of groups) {
       if (group.id != null) {
-        const { syncEntry } = useSync();
-        syncEntry({ entry: group as any, operation: 'delete' });
-        await ctrl.deleteBackup({ id: group.id as IDBValidKey });
+        await budgetEntryGroupsDb.delete({ id: Number(group.id) });
       }
+    }
+
+    const entry = await budgetEntriesDb.getBySyncId({ syncId: String(entryId) });
+    if (entry) {
+      entry.groups = [];
+      await syncQueue.syncEntry({ entry, operation: 'update' });
     }
   }
 }

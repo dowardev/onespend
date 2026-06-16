@@ -4,7 +4,7 @@
       <ion-toolbar>
         <ion-title>Mis Finanzas</ion-title>
         <ion-buttons slot="end">
-          <ion-button @click="exportToExcel" :disabled="isExporting">
+          <ion-button :disabled="isExporting" @click="exportToExcel">
             <ion-icon :icon="downloadOutline"></ion-icon>
           </ion-button>
 

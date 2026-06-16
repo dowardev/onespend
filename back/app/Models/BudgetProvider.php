@@ -56,7 +56,7 @@ class BudgetProvider extends Model
 
     public function products(): HasMany
     {
-        return $this->hasMany(BudgetProviderProduct::class, 'budget_provider_id');
+        return $this->hasMany(BudgetProviderProduct::class, 'budget_provider_id', 'sync_id');
     }
 
     public function scopeActive($query)

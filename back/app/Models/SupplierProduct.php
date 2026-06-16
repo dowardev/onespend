@@ -37,7 +37,7 @@ class SupplierProduct extends Model
 
     public function supplier(): BelongsTo
     {
-        return $this->belongsTo(Supplier::class);
+        return $this->belongsTo(Supplier::class, 'supplier_id', 'sync_id');
     }
 
     public function scopeActive($query)

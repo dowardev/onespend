@@ -1,36 +1,67 @@
-const PENDING_ATTACHMENTS_KEY = 'pending_attachments';
+import { db } from '@/db/OneSpendDB'
+
+const PENDING_ATTACHMENTS_KEY = 'pending_attachments'
+const MIGRATION_DONE_KEY = 'pending_attachments_dexie_migrated'
 
 export interface PendingAttachmentFile {
-  name: string;
-  type: string;
-  size: number;
-  data: string;
+  name: string
+  type: string
+  size: number
+  data: string
 }
 
-export type AttachmentEntityType = 'entries' | 'providers';
+export type AttachmentEntityType = 'entries' | 'providers'
 
 export interface PendingAttachment {
-  entitySyncId: string;
-  entityType: AttachmentEntityType;
-  files: PendingAttachmentFile[];
-  timestamp: number;
+  entitySyncId: string
+  entityType: AttachmentEntityType
+  files: PendingAttachmentFile[]
+  timestamp: number
 }
 
 function pendingKey(entitySyncId: string, entityType: AttachmentEntityType): string {
-  return `${entityType}:${entitySyncId}`;
+  return `${entityType}:${entitySyncId}`
 }
 
-function loadPending(): Record<string, PendingAttachment> {
+async function migrateFromLocalStorage(): Promise<void> {
+  if (typeof window === 'undefined') return
+  const done = localStorage.getItem(MIGRATION_DONE_KEY)
+  if (done) return
+
   try {
-    const raw = localStorage.getItem(PENDING_ATTACHMENTS_KEY);
-    return raw ? JSON.parse(raw) : {};
-  } catch {
-    return {};
+    const raw = localStorage.getItem(PENDING_ATTACHMENTS_KEY)
+    if (!raw) {
+      localStorage.setItem(MIGRATION_DONE_KEY, '1')
+      return
+    }
+
+    const data: Record<string, PendingAttachment> = JSON.parse(raw)
+    const entries = Object.values(data)
+
+    for (const entry of entries) {
+      await db.table('pendingAttachments').add({
+        syncId: pendingKey(entry.entitySyncId, entry.entityType),
+        entitySyncId: entry.entitySyncId,
+        entityType: entry.entityType,
+        files: entry.files,
+        timestamp: entry.timestamp,
+      })
+    }
+
+    localStorage.removeItem(PENDING_ATTACHMENTS_KEY)
+    localStorage.setItem(MIGRATION_DONE_KEY, '1')
+  } catch (e) {
+    console.error('[pendingAttachmentsService] Failed to migrate from localStorage', e)
   }
 }
 
-function savePending(data: Record<string, PendingAttachment>): void {
-  localStorage.setItem(PENDING_ATTACHMENTS_KEY, JSON.stringify(data));
+let migrationPromise: Promise<void> | null = null
+
+async function ensureMigrated(): Promise<void> {
+  if (!migrationPromise) {
+    migrationPromise = migrateFromLocalStorage()
+  }
+  await migrationPromise
 }
 
 export async function addPendingAttachment(
@@ -38,97 +69,108 @@ export async function addPendingAttachment(
   files: File[],
   entityType: AttachmentEntityType = 'entries',
 ): Promise<void> {
-  const pending = loadPending();
+  await ensureMigrated()
 
   const fileData = await Promise.all(
     files.map(async (file) => {
-      const data = await fileToBase64(file);
+      const data = await fileToBase64(file)
       return {
         name: file.name,
         type: file.type,
         size: file.size,
         data,
-      };
+      }
     }),
-  );
+  )
 
-  const key = pendingKey(entitySyncId, entityType);
-  pending[key] = {
+  const key = pendingKey(entitySyncId, entityType)
+
+  const existing = await db.table('pendingAttachments').where('syncId').equals(key).first()
+  const record = {
+    syncId: key,
     entitySyncId,
     entityType,
     files: fileData,
     timestamp: Date.now(),
-  };
+  }
 
   try {
-    savePending(pending);
-  } catch (error) {
-    if (error instanceof DOMException && error.name === 'QuotaExceededError') {
-      console.error(
-        '[pendingAttachmentsService] localStorage quota exceeded, clearing pending attachments',
-      );
-      localStorage.removeItem(PENDING_ATTACHMENTS_KEY);
-      const newPending: Record<string, PendingAttachment> = {};
-      newPending[key] = {
-        entitySyncId,
-        entityType,
-        files: fileData,
-        timestamp: Date.now(),
-      };
-      savePending(newPending);
+    if (existing) {
+      await db.table('pendingAttachments').update(existing.id!, record)
     } else {
-      throw error;
+      await db.table('pendingAttachments').add(record)
     }
+  } catch (e) {
+    console.error('[pendingAttachmentsService] Failed to save pending attachment', e)
   }
 }
 
-export function getPendingAttachment(
+export async function getPendingAttachment(
   entitySyncId: string,
   entityType: AttachmentEntityType = 'entries',
-): PendingAttachment | null {
-  const pending = loadPending();
-  return pending[pendingKey(entitySyncId, entityType)] || null;
+): Promise<PendingAttachment | null> {
+  await ensureMigrated()
+
+  const key = pendingKey(entitySyncId, entityType)
+  const row = await db.table('pendingAttachments').where('syncId').equals(key).first()
+  if (!row) return null
+
+  return {
+    entitySyncId: row.entitySyncId,
+    entityType: row.entityType,
+    files: row.files,
+    timestamp: row.timestamp,
+  }
 }
 
-export function getAllPendingAttachments(): PendingAttachment[] {
-  const pending = loadPending();
-  return Object.values(pending);
+export async function getAllPendingAttachments(): Promise<PendingAttachment[]> {
+  await ensureMigrated()
+
+  const rows = await db.table('pendingAttachments').toArray()
+  return rows.map((row) => ({
+    entitySyncId: row.entitySyncId,
+    entityType: row.entityType,
+    files: row.files,
+    timestamp: row.timestamp,
+  }))
 }
 
-export function removePendingAttachment(
+export async function removePendingAttachment(
   entitySyncId: string,
   entityType: AttachmentEntityType = 'entries',
-): void {
-  const pending = loadPending();
-  delete pending[pendingKey(entitySyncId, entityType)];
-  savePending(pending);
+): Promise<void> {
+  await ensureMigrated()
+
+  const key = pendingKey(entitySyncId, entityType)
+  await db.table('pendingAttachments').where('syncId').equals(key).delete()
 }
 
-export function hasPendingAttachments(): boolean {
-  const pending = loadPending();
-  return Object.keys(pending).length > 0;
+export async function hasPendingAttachments(): Promise<boolean> {
+  await ensureMigrated()
+
+  const count = await db.table('pendingAttachments').count()
+  return count > 0
 }
 
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
+    const reader = new FileReader()
+    reader.readAsDataURL(file)
     reader.onload = () => {
-      const result = reader.result as string;
-      resolve(result.split(',')[1]);
-    };
-    reader.onerror = (error) => reject(error);
-  });
+      const result = reader.result as string
+      resolve(result.split(',')[1])
+    }
+    reader.onerror = (error) => reject(error)
+  })
 }
 
 export function base64ToFile(base64: string, name: string, type: string): File {
-  const byteCharacters = atob(base64);
-  const byteNumbers = new Array(byteCharacters.length);
+  const byteCharacters = atob(base64)
+  const byteArray = new Uint8Array(byteCharacters.length)
   for (let i = 0; i < byteCharacters.length; i++) {
-    byteNumbers[i] = byteCharacters.charCodeAt(i);
+    byteArray[i] = byteCharacters.charCodeAt(i)
   }
-  const byteArray = new Uint8Array(byteNumbers);
-  return new File([byteArray], name, { type });
+  return new File([byteArray], name, { type })
 }
 
 export async function uploadPendingAttachments(
@@ -136,35 +178,39 @@ export async function uploadPendingAttachments(
   entityType: AttachmentEntityType,
   uploadFn: (id: string, files: File[]) => Promise<unknown>,
 ): Promise<boolean> {
-  const pending = getPendingAttachment(entitySyncId, entityType);
-  if (!pending) return true;
+  const pending = await getPendingAttachment(entitySyncId, entityType)
+  if (!pending) return true
 
-  const files = pending.files.map((f) => base64ToFile(f.data, f.name, f.type));
+  const files = pending.files.map((f) => base64ToFile(f.data, f.name, f.type))
 
   try {
-    await uploadFn(entitySyncId, files);
-    removePendingAttachment(entitySyncId, entityType);
-    return true;
+    await uploadFn(entitySyncId, files)
+    await removePendingAttachment(entitySyncId, entityType)
+    return true
   } catch (error) {
-    console.error('Failed to upload pending attachments:', error);
-    return false;
+    console.error('Failed to upload pending attachments:', error)
+    return false
   }
 }
 
-export function removeFileFromPending(
+export async function removeFileFromPending(
   entitySyncId: string,
   entityType: AttachmentEntityType,
   fileIndex: number,
-): void {
-  const pending = loadPending();
-  const key = pendingKey(entitySyncId, entityType);
-  const entry = pending[key];
-  if (entry && entry.files[fileIndex]) {
-    entry.files.splice(fileIndex, 1);
-    if (entry.files.length === 0) {
-      delete pending[key];
-    }
-    savePending(pending);
+): Promise<void> {
+  await ensureMigrated()
+
+  const key = pendingKey(entitySyncId, entityType)
+  const row = await db.table('pendingAttachments').where('syncId').equals(key).first()
+  if (!row) return
+
+  const files = [...row.files]
+  files.splice(fileIndex, 1)
+
+  if (files.length === 0) {
+    await db.table('pendingAttachments').where('syncId').equals(key).delete()
+  } else {
+    await db.table('pendingAttachments').update(row.id!, { files })
   }
 }
 
@@ -177,4 +223,4 @@ export default {
   base64ToFile,
   uploadPendingAttachments,
   removeFileFromPending,
-};
+}

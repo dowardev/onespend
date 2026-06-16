@@ -26,6 +26,10 @@ yarn-error.log*
 .env.*.local
 .env.production
 
+# OS files
+.DS_Store
+Thumbs.db
+
 # IDE
 /.idea
 /.vscode/*

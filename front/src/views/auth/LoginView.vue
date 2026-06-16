@@ -16,7 +16,7 @@
           <p>Inicia sesión para continuar</p>
         </div>
 
-        <form @submit.prevent="handleLogin" class="auth-form">
+        <form class="auth-form" @submit.prevent="handleLogin">
           <ion-item>
             <ion-label position="stacked">Email o Usuario</ion-label>
             <ion-input

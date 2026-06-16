@@ -15,14 +15,14 @@ class SyncMergeRequest extends FormRequest
     {
         return [
             'data' => 'required|array',
-            'data.account' => 'sometimes|array',
-            'data.supplier' => 'sometimes|array',
-            'data.supplier_product' => 'sometimes|array',
-            'data.budget_entry' => 'sometimes|array',
-            'data.budget_provider' => 'sometimes|array',
-            'data.budget_provider_product' => 'sometimes|array',
-            'data.recurring_record' => 'sometimes|array',
-            'data.recurring_record_product' => 'sometimes|array',
+            'data.account' => 'sometimes|array|max:100',
+            'data.supplier' => 'sometimes|array|max:100',
+            'data.supplier_product' => 'sometimes|array|max:100',
+            'data.budget_entry' => 'sometimes|array|max:100',
+            'data.budget_provider' => 'sometimes|array|max:100',
+            'data.budget_provider_product' => 'sometimes|array|max:100',
+            'data.recurring_record' => 'sometimes|array|max:100',
+            'data.recurring_record_product' => 'sometimes|array|max:100',
         ];
     }
 

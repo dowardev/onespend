@@ -1,7 +1,8 @@
-import { DixieController } from './dixie';
+import { budgetDaySnapshotsDb } from '@/db/controllers/budgetDaySnapshotsDb'
+import { budgetEntriesDb } from '@/db/controllers/budgetEntriesDb'
 import { useBudgetEntriesStore } from '@/stores/budgetEntriesStore';
 import { useBudgetDayStore } from '@/stores/budgetDayStore';
-import { useSync } from '@/composables/useSync';
+import { syncQueue } from '@/services/syncQueue';
 import { formatLocalDate } from '@/utils/date';
 import type { Income, PaymentType, EntryType } from '@/stores/budgetEntriesStore';
 import { generateSyncId } from '@/utils/generateSyncId';
@@ -16,15 +17,6 @@ interface BudgetData {
 }
 
 class BudgetEntriesController {
-  private ctrl: DixieController | null = null;
-
-  private getController(): DixieController {
-    if (!this.ctrl) {
-      this.ctrl = new DixieController({ name: 'ABOgazDB', storeName: 'budget' });
-    }
-    return this.ctrl;
-  }
-
   getStore() {
     return useBudgetEntriesStore();
   }
@@ -40,16 +32,13 @@ class BudgetEntriesController {
   async addEntry(params: { entry: Income }) {
     const { entry } = params;
     const store = this.getStore();
-    const ctrl = this.getController();
-    const { syncEntry } = useSync();
-
     if (!entry.sync_id) {
       entry.sync_id = generateSyncId();
     }
 
-    syncEntry({ entry: entry as any, operation: 'create' });
+    syncQueue.syncEntry({ entry: entry as any, operation: 'create' });
 
-    const id = await ctrl.addEntry({ entry });
+    const id = await budgetEntriesDb.add({ entry: entry as any });
     const newEntry: Income = { ...entry, id: id as string | number };
     store.addEntry(newEntry);
     return newEntry;
@@ -118,12 +107,11 @@ class BudgetEntriesController {
   async updateEntry(params: { id: string | number; changes: Partial<Income> }) {
     const { id, changes } = params;
     const store = this.getStore();
-    const { syncEntry } = useSync();
 
     store.updateEntry(id, changes);
     const entry = store.entries.find((e) => e.id === id);
     if (entry) {
-      syncEntry({ entry, operation: 'update' });
+      syncQueue.syncEntry({ entry, operation: 'update' });
     }
   }
 
@@ -131,7 +119,6 @@ class BudgetEntriesController {
     const { id, changes } = params;
     const store = this.getStore();
     const dayStore = useBudgetDayStore();
-    const { syncEntry } = useSync();
 
     const newDate = changes.date;
     const currentDate = dayStore.selectedDate;
@@ -143,12 +130,11 @@ class BudgetEntriesController {
       const updatedEntry = { ...entry, ...changes };
       store.removeEntry(id);
 
-      const ctrl = this.getController();
       const dateKey = `budget:${currentDate}`;
-      const existing = (await ctrl.getBackup({ id: dateKey })) as { data?: BudgetData } | null;
+      const existing = await budgetDaySnapshotsDb.getById({ id: dateKey }) as { data?: BudgetData } | null;
       const entries = existing?.data?.entries ? JSON.parse(JSON.stringify(existing.data.entries)).filter((e: any) => String(e.id) !== String(id)) : [];
       const providers = existing?.data?.proveedores ? JSON.parse(JSON.stringify(existing.data.proveedores)) : [];
-      await ctrl.putEntry({
+      await budgetDaySnapshotsDb.put({
         entry: {
           id: dateKey,
           data: { entries, proveedores: providers, isDayClosed: dayStore.isDayClosed, finishDayData: dayStore.finishDayData },
@@ -156,23 +142,23 @@ class BudgetEntriesController {
       });
 
       const targetKey = `budget:${newDate}`;
-      const targetData = (await ctrl.getBackup({ id: targetKey })) as { data?: BudgetData } | null;
+      const targetData = await budgetDaySnapshotsDb.getById({ id: targetKey }) as { data?: BudgetData } | null;
       const targetEntries = targetData?.data?.entries ? JSON.parse(JSON.stringify(targetData.data.entries)) : [];
       const targetProviders = targetData?.data?.proveedores ? JSON.parse(JSON.stringify(targetData.data.proveedores)) : [];
       targetEntries.push(JSON.parse(JSON.stringify(updatedEntry)));
-      await ctrl.putEntry({
+      await budgetDaySnapshotsDb.put({
         entry: {
           id: targetKey,
           data: { entries: targetEntries, proveedores: targetProviders, isDayClosed: false, finishDayData: { totalSalesEfectivo: 0, totalSalesTarjeta: 0, totalSalesCredito: 0, type: '%', margin: 0 } },
         },
       });
 
-      syncEntry({ entry: updatedEntry, operation: 'update' });
+      syncQueue.syncEntry({ entry: updatedEntry, operation: 'update' });
     } else {
       store.updateEntry(id, changes);
       const entry = store.entries.find((e) => e.id === id);
       if (entry) {
-        syncEntry({ entry, operation: 'update' });
+        syncQueue.syncEntry({ entry, operation: 'update' });
       }
     }
   }
@@ -180,13 +166,12 @@ class BudgetEntriesController {
   async removeEntry(params: { id: string | number }) {
     const { id } = params;
     const store = this.getStore();
-    const { syncEntry } = useSync();
     const entry = store.entries.find((e) => e.id === id);
 
     store.removeEntry(id);
 
     if (entry) {
-      syncEntry({ entry, operation: 'delete' });
+      syncQueue.syncEntry({ entry, operation: 'delete' });
     }
   }
 

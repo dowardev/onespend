@@ -1,12 +1,13 @@
-import { ref, onMounted, onUnmounted, toRaw } from 'vue';
-import { syncService, type SyncItem, type SyncItemData } from '@/services/syncService';
-import { useBudgetEntriesStore } from '@/stores/budgetEntriesStore';
+import { ref, onMounted, onUnmounted } from 'vue';
+import { syncService, type SyncItemData, AuthExpiredError } from '@/services/syncService';
+import { syncQueue } from '@/services/syncQueue';
+import { useBudgetEntriesStore, type PaymentType, type EntryType } from '@/stores/budgetEntriesStore';
 import { useBudgetProvidersStore } from '@/stores/budgetProvidersStore';
-import { useAccountsStore } from '@/stores/accountsStore';
 import { useSuppliersStore } from '@/stores/suppliersStore';
 import { recurringRecordsController, type RecurringRecord, RECURRING_FIELD_MAP } from '@/controllers/recurringRecordsController';
 import type { BudgetProviderProduct } from '@/stores/budgetProvidersStore';
-import { generateSyncId } from '@/utils/generateSyncId';
+import { suppliersDb } from '@/db/controllers/suppliersDb';
+import { supplierProductsDb } from '@/db/controllers/supplierProductsDb';
 
 function mapServerRecurringToLocal(params: { item: Record<string, unknown> }): RecurringRecord {
   const { item } = params;
@@ -46,7 +47,7 @@ export interface SyncEntryParams {
   paymentType?: string | null;
   entryType?: string | null;
   accountId?: number | string | null;
-  groups?: Array<{ amount: number; accountId: string | number }>;
+  groups?: Array<{ sync_id?: string; amount: number; accountId: string | number }>;
   supplierId?: string | null;
   supplierName?: string | null;
   [key: string]: unknown;
@@ -75,6 +76,7 @@ export interface SyncAccountParams {
 
 export interface SyncSupplierProductParams {
   supplierId?: number | string | null;
+  supplier_id?: number | string | null;
   name?: string | null;
   price?: number | string | null;
   imageBase64?: string | null;
@@ -104,6 +106,8 @@ export interface SyncBudgetProviderParams {
 }
 
 export interface SyncBudgetProviderProductParams {
+  sync_id?: string;
+  id?: number | string;
   budgetProviderId?: number | null;
   supplierProductId?: number | null;
   productName?: string | null;
@@ -120,406 +124,44 @@ export function useSync() {
 
   const budgetEntriesStore = useBudgetEntriesStore();
   const budgetProvidersStore = useBudgetProvidersStore();
-  const accountsStore = useAccountsStore();
   const suppliersStore = useSuppliersStore();
-  let cleanupOnlineListener: (() => void) | null = null;
+let cleanupOnlineListener: (() => void) | null = null;
+let cleanupAuthExpired: (() => void) | null = null;
+let cleanupAutoSync: (() => void) | null = null;
 
-  function syncEntry(params: {
-    entry: SyncEntryParams;
-    operation?: 'create' | 'update' | 'delete';
-  }) {
-    const { entry, operation = 'create' } = params;
-    let syncId = entry.sync_id;
-
-    if (!syncId) {
-      syncId = entry.sync_id = String(entry.id || generateSyncId());
-    }
-
-    const syncItem: Omit<SyncItem, 'timestamp' | 'retryCount'> = {
-      id: syncId,
-      entityType: 'budget_entry',
-      operation,
-      data: {
-        name: entry.name as string,
-        amount: entry.amount,
-        date: entry.date,
-        payment_type: entry.paymentType as string,
-        entry_type: entry.entryType as string,
-        account_id: entry.accountId as string,
-        groups: entry.groups,
-        supplier_id: entry.supplierId,
-        supplier_name: entry.supplierName,
-        updated_at: Date.now(),
-      },
-    };
-
-    syncService.queueOperation(syncItem);
-    pendingChanges.value = syncService.getQueueCount();
+  async function syncEntry(params: { entry: SyncEntryParams; operation?: 'create' | 'update' | 'delete' }) {
+    await syncQueue.syncEntry(params);
+    pendingChanges.value = await syncService.getQueueCount();
   }
 
-  function syncProvider(
-    paramsOrProvider:
-      | { provider?: SyncProviderParams; operation?: 'create' | 'update' | 'delete' }
-      | SyncProviderParams,
-    maybeOperation?: 'create' | 'update' | 'delete',
-  ) {
-    // Support two calling styles:
-    // 1) syncProvider({ provider: {...}, operation: 'create' })
-    // 2) syncProvider(providerObject, 'create')
-    let provider: SyncProviderParams | undefined;
-    let operation: 'create' | 'update' | 'delete' = 'create';
-
-    if (!paramsOrProvider) {
-      console.error('[useSync] syncProvider called with no arguments');
-      return;
-    }
-
-    if ((paramsOrProvider as any).provider !== undefined) {
-      provider = (paramsOrProvider as any).provider as SyncProviderParams;
-      operation = (paramsOrProvider as any).operation || maybeOperation || 'create';
-    } else {
-      provider = paramsOrProvider as SyncProviderParams;
-      operation = maybeOperation || (provider as any).operation || 'create';
-    }
-
-    if (!provider) {
-      console.error('[useSync] syncProvider: provider is undefined or null', {
-        paramsOrProvider,
-        maybeOperation,
-      });
-      return;
-    }
-
-    // If provider is a reactive proxy, get the raw object to avoid trapped getters
-    const prov = toRaw(provider) as SyncProviderParams;
-
-    console.log('%c[useSync] 🔵 syncProvider LLAMADO', 'color: blue; font-weight: bold', {
-      name: prov?.name as string,
-      operation,
-      sync_id: prov?.sync_id,
-      id: (prov as any).id,
-    });
-
-    let syncId = prov.sync_id as string | undefined;
-
-    if (!syncId) {
-      syncId = prov.sync_id = String((prov as any).id || generateSyncId());
-      console.log('[useSync] syncId generado:', syncId);
-    }
-
-    const syncItem: Omit<SyncItem, 'timestamp' | 'retryCount'> = {
-      id: syncId,
-      entityType: 'supplier',
-      operation,
-      data: {
-        name: (prov?.name as string) || null,
-        updated_at: Date.now(),
-      },
-    };
-
-    console.log('[useSync] syncItem creado:', syncItem);
-    console.log('[useSync] Llamando syncService.queueOperation...');
-
-    syncService.queueOperation(syncItem);
-    pendingChanges.value = syncService.getQueueCount();
-
-    console.log('[useSync] ✅ queueOperation completado, pendingChanges:', pendingChanges.value);
+  async function syncProvider(params: { provider: SyncProviderParams; operation?: 'create' | 'update' | 'delete' }) {
+    await syncQueue.syncProvider(params);
+    pendingChanges.value = await syncService.getQueueCount();
   }
 
-  function syncAccount(
-    paramsOrAccount:
-      | { account?: SyncAccountParams; operation?: 'create' | 'update' | 'delete' }
-      | SyncAccountParams,
-    maybeOperation?: 'create' | 'update' | 'delete',
-  ) {
-    // Support two calling styles for robustness:
-    // 1) syncAccount({ account: {...}, operation: 'create' })
-    // 2) syncAccount(accountObject, 'create')
-    let account: SyncAccountParams | undefined;
-    let operation: 'create' | 'update' | 'delete' = 'create';
-
-    if (!paramsOrAccount) {
-      console.error('[useSync] syncAccount called with no arguments');
-      return;
-    }
-
-    if ((paramsOrAccount as any).account !== undefined) {
-      account = (paramsOrAccount as any).account as SyncAccountParams;
-      operation = (paramsOrAccount as any).operation || maybeOperation || 'create';
-    } else {
-      account = paramsOrAccount as SyncAccountParams;
-      operation = maybeOperation || (account as any).operation || 'create';
-    }
-
-    if (!account) {
-      console.error('[useSync] syncAccount: account is undefined or null', {
-        paramsOrAccount,
-        maybeOperation,
-      });
-      return;
-    }
-
-    // If account is a reactive proxy, get the raw object to avoid trapped getters.
-    // toRaw may return undefined for non-object inputs, so fall back to the original
-    // value. Be defensive: ensure we always have an object before accessing properties
-    // like `sync_id` to avoid runtime TypeErrors when callers pass `undefined`.
-    const accRaw = toRaw(account) as SyncAccountParams | undefined;
-    const acc = (accRaw ?? (account as SyncAccountParams)) as SyncAccountParams | undefined;
-
-    if (!acc) {
-      console.error('[useSync] syncAccount: resolved account is not an object', {
-        paramsOrAccount,
-        maybeOperation,
-      });
-      return;
-    }
-
-    let syncId = (acc.sync_id as string | undefined) ?? undefined;
-
-    if (!syncId) {
-      // Ensure we can write a stable sync_id back onto the object when missing.
-      // Only do this for actual objects.
-      try {
-        syncId = acc.sync_id = String((acc as any).id || generateSyncId());
-      } catch (e) {
-        // In the unlikely event acc is non-writable, fall back to a generated id
-        syncId = String((acc as any)?.id || generateSyncId());
-      }
-    }
-
-    const syncItem: Omit<SyncItem, 'timestamp' | 'retryCount'> = {
-      id: syncId,
-      entityType: 'account',
-      operation,
-      data: {
-        name: acc.name || null,
-        initial_balance: acc.initialBalance ?? null,
-        updated_at: Date.now(),
-      },
-    };
-
-    syncService.queueOperation(syncItem);
-    pendingChanges.value = syncService.getQueueCount();
+  async function syncAccount(params: { account: SyncAccountParams; operation?: 'create' | 'update' | 'delete' }) {
+    await syncQueue.syncAccount(params);
+    pendingChanges.value = await syncService.getQueueCount();
   }
 
-  function syncSupplierProduct(
-    paramsOrProduct:
-      | { product?: SyncSupplierProductParams; operation?: 'create' | 'update' | 'delete' }
-      | SyncSupplierProductParams,
-    maybeOperation?: 'create' | 'update' | 'delete',
-  ) {
-    // Support two calling styles for robustness:
-    // 1) syncSupplierProduct({ product: {...}, operation: 'create' })
-    // 2) syncSupplierProduct(productObject, 'create')
-    let product: SyncSupplierProductParams | undefined;
-    let operation: 'create' | 'update' | 'delete' = 'create';
-
-    if (!paramsOrProduct) {
-      console.error('[useSync] syncSupplierProduct called with no arguments');
-      return;
-    }
-
-    if ((paramsOrProduct as any).product !== undefined) {
-      product = (paramsOrProduct as any).product as SyncSupplierProductParams;
-      operation = (paramsOrProduct as any).operation || maybeOperation || 'create';
-    } else {
-      product = paramsOrProduct as SyncSupplierProductParams;
-      operation = maybeOperation || (product as any).operation || 'create';
-    }
-
-    if (!product) {
-      console.error('[useSync] syncSupplierProduct: product is undefined or null', {
-        paramsOrProduct,
-        maybeOperation,
-      });
-      return;
-    }
-
-    console.log('%c[useSync] 🔵 syncSupplierProduct LLAMADO', 'color: purple; font-weight: bold', {
-      name: product?.name,
-      operation,
-      sync_id: product?.sync_id,
-      supplierId: product?.supplierId,
-    });
-
-    let syncId = product.sync_id as string | undefined;
-
-    if (!syncId) {
-      // Generate a unique sync_id for the product
-      const baseId = product.supplierId
-        ? `${product.supplierId}-${product.name}-${product.price}`
-        : `${product.name}-${product.price}-${Date.now()}`;
-      syncId = product.sync_id = `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
-      console.log('[useSync] syncId generado para producto:', syncId);
-    }
-
-    const syncItem: Omit<SyncItem, 'timestamp' | 'retryCount'> = {
-      id: syncId,
-      entityType: 'supplier_product',
-      operation,
-      data: {
-        supplier_id: product.supplierId || product.supplier_id,
-        name: product.name,
-        price: product.price,
-        image_base64: product.imageBase64 || product.image_base64,
-        updated_at: Date.now(),
-      },
-    };
-
-    syncService.queueOperation(syncItem);
-    pendingChanges.value = syncService.getQueueCount();
+  async function syncSupplierProduct(params: { product: SyncSupplierProductParams; operation?: 'create' | 'update' | 'delete' }) {
+    await syncQueue.syncSupplierProduct(params);
+    pendingChanges.value = await syncService.getQueueCount();
   }
 
-  function syncBudgetProvider(params: {
-    provider: SyncBudgetProviderParams;
-    operation?: 'create' | 'update' | 'delete';
-    products?: SyncBudgetProviderProductParams[];
-    supplierSyncId?: string;
-  }) {
-    const { provider, operation = 'create', products, supplierSyncId } = params;
-    let syncId = provider.sync_id;
-
-    if (!syncId) {
-      syncId = provider.sync_id = String(provider.id || generateSyncId());
-    }
-
-    const syncItem: Omit<SyncItem, 'timestamp' | 'retryCount'> = {
-      id: syncId,
-      entityType: 'budget_provider',
-      operation,
-      data: {
-        date: provider.date,
-        name: provider.name as string,
-        estimated: provider.estimated as number,
-        account_id: provider.accountId as string,
-        efectivo: provider.efectivo as number,
-        tarjeta: provider.tarjeta as number,
-        credito: provider.credito as number,
-        notes: provider.notes as string,
-        visited: provider.visited as boolean,
-        _supplier_id: provider._supplierId || supplierSyncId,
-        _supplier_name: provider._supplierName as string,
-        products: products
-          ? products.map((p: SyncBudgetProviderProductParams) => ({
-              sync_id: p.sync_id,
-              supplier_product_id: p.supplierProductId,
-              product_name: p.productName,
-              product_price: p.productPrice,
-              quantity: p.quantity,
-              updated_at: Date.now(),
-            }))
-          : [],
-        updated_at: Date.now(),
-      },
-    };
-
-    console.log(
-      'syncBudgetProvider - Enviando payload:',
-      JSON.stringify(
-        {
-          id: syncItem.id,
-          entityType: syncItem.entityType,
-          operation: syncItem.operation,
-          data: syncItem.data,
-          productsDetails: (syncItem.data as any).products?.map(
-            (p: SyncBudgetProviderProductParams) => ({
-              supplierProductId: p.supplierProductId,
-              productName: p.productName,
-              quantity: p.quantity,
-            }),
-          ),
-        },
-        null,
-        2,
-      ),
-    );
-
-    syncService.queueOperation(syncItem);
-    pendingChanges.value = syncService.getQueueCount();
+  async function syncBudgetProvider(params: { provider: SyncBudgetProviderParams; operation?: 'create' | 'update' | 'delete'; products?: SyncBudgetProviderProductParams[]; supplierSyncId?: string }) {
+    await syncQueue.syncBudgetProvider(params);
+    pendingChanges.value = await syncService.getQueueCount();
   }
 
-  function syncBudgetProviderProduct(params: {
-    product: SyncBudgetProviderProductParams;
-    operation?: 'create' | 'update' | 'delete';
-  }) {
-    const { product, operation = 'create' } = params;
-    let syncId = product.sync_id;
-
-    if (!syncId) {
-      syncId = product.sync_id = String(product.id || generateSyncId());
-    }
-
-    const syncItem: Omit<SyncItem, 'timestamp' | 'retryCount'> = {
-      id: syncId,
-      entityType: 'budget_provider_product',
-      operation,
-      data: {
-        budget_provider_id: product.budgetProviderId,
-        supplier_product_id: product.supplierProductId,
-        product_name: product.productName,
-        product_price: product.productPrice,
-        quantity: product.quantity,
-        updated_at: Date.now(),
-      },
-    };
-
-    syncService.queueOperation(syncItem);
-    pendingChanges.value = syncService.getQueueCount();
+  async function syncBudgetProviderProduct(params: { product: SyncBudgetProviderProductParams; operation?: 'create' | 'update' | 'delete' }) {
+    await syncQueue.syncBudgetProviderProduct(params);
+    pendingChanges.value = await syncService.getQueueCount();
   }
 
-  function syncRecurringRecord(params: {
-    record: RecurringRecord;
-    operation?: 'create' | 'update' | 'delete';
-  }) {
-    const { record, operation = 'create' } = params;
-    let syncId = record.sync_id;
-
-    if (!syncId) {
-      syncId = record.sync_id = String(record.id || generateSyncId());
-    }
-
-    const syncItem: Omit<SyncItem, 'timestamp' | 'retryCount'> = {
-      id: syncId,
-      entityType: 'recurring_record',
-      operation,
-      data: {
-        type: record.type,
-        entry_type: record.entryType,
-        name: record.name,
-        amount: record.amount,
-        account_id: record.accountId as string,
-        repeat_frequency: record.repeatFrequency,
-        repeat_interval: record.repeatInterval,
-        repeat_days: record.repeatDays,
-        repeat_month_day: record.repeatMonthDay,
-        repeat_month_weekday_mode: record.repeatMonthWeekdayMode,
-        repeat_month_weekday: record.repeatMonthWeekday,
-        repeat_month_weekday_ordinal: record.repeatMonthWeekdayOrdinal,
-        repeat_year_month: record.repeatYearMonth,
-        repeat_year_day: record.repeatYearDay,
-        time: record.time,
-        auto_insert: record.autoInsert,
-        start_date: record.startDate,
-        end_date: record.endDate,
-        estimated: record.estimated,
-        items: record.items,
-        notes: record.notes,
-        status: record.status,
-        products: record.products
-          ? record.products.map((p) => ({
-              sync_id: p.sync_id,
-              supplier_product_id: p.supplierProductId,
-              product_name: p.productName,
-              product_price: p.productPrice,
-              quantity: p.quantity,
-            }))
-          : [],
-        updated_at: Date.now(),
-      },
-    };
-
-    syncService.queueOperation(syncItem);
-    pendingChanges.value = syncService.getQueueCount();
+  async function syncRecurringRecord(params: { record: RecurringRecord; operation?: 'create' | 'update' | 'delete' }) {
+    await syncQueue.syncRecurringRecord(params);
+    pendingChanges.value = await syncService.getQueueCount();
   }
 
   async function syncNow(): Promise<boolean> {
@@ -527,27 +169,28 @@ export function useSync() {
       syncError.value = 'Cannot sync while offline';
       return false;
     }
-
     isSyncing.value = true;
     syncError.value = null;
-
     try {
+      const queueLength = await syncService.getQueueCount();
       const result = await syncService.processQueue();
-
-      console.log('syncNow - result from server:', JSON.stringify(result, null, 2));
-
-      if (result) {
-        await applyServerChanges({
-          changes: (result as any).results || {},
-          serverTime: result.serverTime,
+      if (result === null && queueLength > 0) {
+        return false;
+      }
+      if (isOnline.value) {
+        await syncService.pullChanges(async (changes) => {
+          await applyServerChanges({ changes });
         });
       }
-
       lastSyncTime.value = syncService.getLastSyncTime();
-      pendingChanges.value = syncService.getQueueCount();
-
+      pendingChanges.value = await syncService.getQueueCount();
       return true;
     } catch (error) {
+      if (error instanceof AuthExpiredError) {
+        syncError.value = 'Session expired. Please log in again.';
+        window.location.hash = '#/login';
+        return false;
+      }
       syncError.value = error instanceof Error ? error.message : 'Sync failed';
       return false;
     } finally {
@@ -565,10 +208,16 @@ export function useSync() {
     syncError.value = null;
 
     try {
-      const changes = await (syncService as any).pullChanges();
-      await applyServerChanges({ changes, serverTime: Date.now() });
+      await syncService.pullChanges(async (changes) => {
+        await applyServerChanges({ changes });
+      });
       lastSyncTime.value = syncService.getLastSyncTime();
     } catch (error) {
+      if (error instanceof AuthExpiredError) {
+        syncError.value = 'Session expired. Please log in again.';
+        window.location.hash = '#/login';
+        return;
+      }
       syncError.value = error instanceof Error ? error.message : 'Pull failed';
     } finally {
       isSyncing.value = false;
@@ -587,45 +236,51 @@ export function useSync() {
 
     if (changes.budget_entry) {
       const entries = Array.isArray(changes.budget_entry) ? changes.budget_entry : [];
+      const entryMap = new Map(budgetEntriesStore.entries.map(e => [e.sync_id, e]));
       for (const entry of entries) {
         if (entry._deleted) {
           const localId = entry.id;
-          budgetEntriesStore.removeEntry(localId);
+          budgetEntriesStore.removeEntry(localId as string | number);
         } else {
-          const mappedGroups = (
-            entry.groups as
-              | Array<{ id?: number; account_id?: number | null; amount: number }>
-              | undefined
-          )?.map((g) => ({
-            amount: g.amount,
-            accountId: g.account_id,
-          }));
+        const mappedGroups = (
+          entry.groups as
+            | Array<{ sync_id?: string; id?: number; account_id?: number | null; amount: number }>
+            | undefined
+        )?.map((g) => ({
+          sync_id: g.sync_id,
+          amount: g.amount,
+          accountId: g.account_id,
+        }));
 
-          const existing = budgetEntriesStore.entries.find((e) => String(e.id) === String(entry.id));
+          const existing = entryMap.get(String(entry.id));
+          const validPaymentTypes: PaymentType[] = ['cash', 'digital'];
+          const validEntryTypes: EntryType[] = ['ingreso', 'egreso'];
+          const paymentType: PaymentType = validPaymentTypes.includes(entry.payment_type as PaymentType) ? entry.payment_type as PaymentType : 'cash';
+          const entryType: EntryType = validEntryTypes.includes(entry.entry_type as EntryType) ? entry.entry_type as EntryType : 'egreso';
           if (existing) {
-            budgetEntriesStore.updateEntry(entry.id, {
+            budgetEntriesStore.updateEntry(entry.id as string | number, {
               name: entry.name as string,
-              amount: entry.amount,
+              amount: entry.amount as number,
               date: entry.date,
-              paymentType: entry.payment_type,
-              entryType: entry.entry_type,
-              accountId: entry.account_id ? parseInt(entry.account_id, 10) : null,
+              paymentType,
+              entryType,
+              accountId: entry.account_id ? parseInt(entry.account_id as string, 10) : null,
               groups: mappedGroups,
-              supplierId: entry.supplier_id,
-              supplierName: entry.supplier_name,
+              supplierId: entry.supplier_id as string,
+              supplierName: entry.supplier_name as string,
             });
           } else {
             budgetEntriesStore.addEntry({
-              id: entry.id,
+              id: entry.id as string | number,
               name: entry.name as string,
-              amount: entry.amount,
+              amount: entry.amount as number,
               date: entry.date,
-              paymentType: entry.payment_type,
-              entryType: entry.entry_type,
-              accountId: entry.account_id ? parseInt(entry.account_id, 10) : null,
+              paymentType,
+              entryType,
+              accountId: entry.account_id ? parseInt(entry.account_id as string, 10) : null,
               groups: mappedGroups,
-              supplierId: entry.supplier_id,
-              supplierName: entry.supplier_name,
+              supplierId: entry.supplier_id as string,
+              supplierName: entry.supplier_name as string,
               createdAt: Date.now(),
             });
           }
@@ -635,73 +290,81 @@ export function useSync() {
 
     if (changes.supplier) {
       const suppliers = Array.isArray(changes.supplier) ? changes.supplier : [];
+      const supplierMap = new Map(suppliersStore.suppliers.map(s => [s.sync_id, s]));
+
+      // Phase 1: Synchronous — all store mutations (batched by Vue)
+      const toDeleteSyncIds: string[] = [];
+      const toUpsert: Array<{ syncId: string; entry: any }> = [];
+
       for (const supplier of suppliers) {
+        const s = supplier as any;
+        const syncId = String(supplier.id);
+
         if (supplier._deleted) {
-          const localId = supplier.id;
-          budgetProvidersStore.removeProvider(localId);
-        } else {
-          const existing = budgetProvidersStore.providers.find((p) => String(p.id) === String(supplier.id));
-          const s = supplier as any;
+          const existing = supplierMap.get(syncId);
           if (existing) {
-            budgetProvidersStore.updateProvider(supplier.id, {
-              name: s.name as string,
-              date: s.date,
-              estimated: s.estimated as number,
-              accountId: s.account_id ? parseInt(s.account_id, 10) : null,
-              efectivo: s.efectivo as number,
-              tarjeta: s.tarjeta as number,
-              credito: s.credito as number,
-              notes: s.notes as string,
-              visited: s.visited as boolean,
-            });
-          } else {
-            budgetProvidersStore.addProvider({
-              id: supplier.id,
-              name: s.name as string,
-              date: s.date,
-              estimated: s.estimated as number,
-              accountId: s.account_id ? parseInt(s.account_id, 10) : null,
-              efectivo: s.efectivo as number,
-              tarjeta: s.tarjeta as number,
-              credito: s.credito as number,
-              notes: s.notes as string,
-              visited: s.visited as boolean,
-            });
+            const idx = suppliersStore.suppliers.indexOf(existing);
+            if (idx >= 0) suppliersStore.suppliers.splice(idx, 1);
           }
+          toDeleteSyncIds.push(syncId);
+        } else {
+          const existing = supplierMap.get(syncId);
+          const entry = {
+            sync_id: syncId,
+            name: s.name,
+            serverId: s.id_server ?? s.id,
+            synced_at: Date.now(),
+            products: (s.products || []).map((p: any) => ({
+              sync_id: p.sync_id || p.id,
+              name: p.name,
+              price: p.price,
+              imageBase64: p.image_base64 || p.imageBase64,
+              imageUrl: p.image_url || p.imageUrl,
+              serverId: p.id,
+              synced_at: Date.now(),
+            })),
+          };
+
+          if (existing) {
+            Object.assign(existing, entry);
+          } else {
+            suppliersStore.suppliers.push(entry);
+          }
+          toUpsert.push({ syncId, entry });
+        }
+      }
+
+      // Phase 2: Async — IndexedDB operations in bulk
+      for (const syncId of toDeleteSyncIds) {
+        await suppliersDb.delete({ syncId }).catch(() => {});
+        await supplierProductsDb.deleteBySupplierId({ supplierSyncId: syncId }).catch(() => {});
+      }
+
+      for (const { syncId, entry } of toUpsert) {
+        const dbEntry = await suppliersDb.getBySyncId({ syncId });
+        if (dbEntry) {
+          await suppliersDb.put({ entry: { ...dbEntry, ...entry } });
+        } else {
+          await suppliersDb.put({ entry: { ...entry, sync_id: syncId } });
         }
       }
     }
 
-    if (changes.account) {
-      const accounts = Array.isArray(changes.account) ? changes.account : [];
-      for (const account of accounts) {
-        if (!account._deleted) {
-          accountsStore.upsertAccount({
-            id: account.id,
-            sync_id: account.id,
-            name: account.name,
-            initialBalance: account.initial_balance,
-            createdAt: Date.now(),
-            updatedAt: Date.now(),
-          });
-        }
-      }
-    }
-
-    if (changes.budget_provider) {
+  if (changes.budget_provider) {
       const providers = Array.isArray(changes.budget_provider) ? changes.budget_provider : [];
+      const providerMap = new Map(budgetProvidersStore.providers.map(p => [p.sync_id, p]));
       for (const provider of providers) {
         if (provider._deleted) {
           const localId = provider.id;
-          budgetProvidersStore.removeProvider(localId);
+          budgetProvidersStore.removeProvider(localId as string | number);
         } else {
-          const existing = budgetProvidersStore.providers.find((p) => String(p.id) === String(provider.id));
+          const existing = providerMap.get(String(provider.id));
           if (existing) {
-            budgetProvidersStore.updateProvider(provider.id, {
+            budgetProvidersStore.updateProvider(provider.id as string | number, {
               name: provider.name as string,
               date: provider.date,
               estimated: provider.estimated as number,
-              accountId: provider.account_id ? parseInt(provider.account_id, 10) : null,
+              accountId: provider.account_id ? parseInt(provider.account_id as string, 10) : null,
               efectivo: provider.efectivo as number,
               tarjeta: provider.tarjeta as number,
               credito: provider.credito as number,
@@ -710,11 +373,11 @@ export function useSync() {
             });
           } else {
             budgetProvidersStore.addProvider({
-              id: provider.id,
+              id: provider.id as string | number,
               name: provider.name as string,
               date: provider.date,
               estimated: provider.estimated as number,
-              accountId: provider.account_id ? parseInt(provider.account_id, 10) : null,
+              accountId: provider.account_id ? parseInt(provider.account_id as string, 10) : null,
               efectivo: provider.efectivo as number,
               tarjeta: provider.tarjeta as number,
               credito: provider.credito as number,
@@ -731,7 +394,7 @@ export function useSync() {
     for (const item of records) {
       if (item._deleted) {
         const localId = item.id;
-        await recurringRecordsController.removeRecord({ id: localId });
+        await recurringRecordsController.removeRecord({ id: localId as string | number });
       } else {
         const localRecord = mapServerRecurringToLocal({ item: item as Record<string, unknown> });
         const syncId = localRecord.sync_id || String(item.id);
@@ -759,18 +422,19 @@ export function useSync() {
             productsByProvider[providerId] = [];
           }
           productsByProvider[providerId].push({
-            id: product.id,
-            sync_id: product.id,
+            id: product.id as string | number,
+            sync_id: product.sync_id as string,
             supplierProductId: product.supplier_product_id,
             productName: product.product_name,
-            productPrice: product.product_price,
+            productPrice: product.product_price as number,
             quantity: product.quantity,
           });
         }
       }
 
+      const providerMap = new Map(budgetProvidersStore.providers.map(p => [p.sync_id, p]));
       for (const [providerId, prods] of Object.entries(productsByProvider)) {
-        const provider = budgetProvidersStore.providers.find((p) => String(p.id) === String(providerId));
+        const provider = providerMap.get(String(providerId));
         if (provider) {
           budgetProvidersStore.updateProvider(Number(providerId), { products: prods });
         }
@@ -778,17 +442,44 @@ export function useSync() {
     }
   }
 
-  function startAutoSync(intervalMs: number = 30000) {
-    const interval = setInterval(() => {
-      if (isOnline.value && pendingChanges.value > 0) {
-        syncNow();
-      }
-    }, intervalMs);
+  function startAutoSync(baseIntervalMs: number = 30000) {
+    let currentInterval = baseIntervalMs;
+    let syncTimeout: ReturnType<typeof setTimeout> | null = null;
+    let isCleanedUp = false;
 
-    return () => clearInterval(interval);
+    async function tick() {
+      if (isCleanedUp) return;
+
+      if (!isOnline.value || isSyncing.value) {
+        currentInterval = baseIntervalMs;
+        syncTimeout = setTimeout(tick, currentInterval);
+        return;
+      }
+
+      if (pendingChanges.value > 0) {
+        const success = await syncNow();
+        currentInterval = success ? baseIntervalMs : Math.min(Math.round(currentInterval * 2), 300000);
+      } else {
+        currentInterval = baseIntervalMs;
+      }
+
+      if (!isCleanedUp) {
+        syncTimeout = setTimeout(tick, currentInterval);
+      }
+    }
+
+    syncTimeout = setTimeout(tick, baseIntervalMs);
+
+    return () => {
+      isCleanedUp = true;
+      if (syncTimeout !== null) {
+        clearTimeout(syncTimeout);
+        syncTimeout = null;
+      }
+    };
   }
 
-  onMounted(() => {
+  onMounted(async () => {
     cleanupOnlineListener = syncService.onOnlineChange((online) => {
       isOnline.value = online;
       if (online) {
@@ -796,15 +487,58 @@ export function useSync() {
       }
     });
 
-    pendingChanges.value = syncService.getQueueCount();
-    lastSyncTime.value = syncService.getLastSyncTime();
-  });
+    cleanupAuthExpired = syncService.onAuthExpired(() => {
+      isSyncing.value = false;
+      syncError.value = 'Session expired. Please log in again.';
+      window.location.hash = '#/login';
+    });
 
-  onUnmounted(() => {
-    if (cleanupOnlineListener) {
-      cleanupOnlineListener();
+  pendingChanges.value = await syncService.getQueueCount();
+  lastSyncTime.value = syncService.getLastSyncTime();
+  cleanupAutoSync = startAutoSync();
+});
+
+onUnmounted(() => {
+  if (cleanupAutoSync) {
+    cleanupAutoSync();
+  }
+  if (cleanupOnlineListener) {
+    cleanupOnlineListener();
+  }
+  if (cleanupAuthExpired) {
+    cleanupAuthExpired();
+  }
+});
+
+  async function syncAfterLogin() {
+    if (!isOnline.value) return;
+    try {
+      isSyncing.value = true;
+      await syncService.pullChanges(async (changes) => {
+        await applyServerChanges({ changes });
+      });
+      await syncService.processQueue();
+      lastSyncTime.value = syncService.getLastSyncTime();
+      pendingChanges.value = await syncService.getQueueCount();
+    } catch (error) {
+      if (error instanceof AuthExpiredError) {
+        syncError.value = 'Session expired.';
+        window.location.hash = '#/login';
+        return;
+      }
+      syncError.value = error instanceof Error ? error.message : 'Sync after login failed';
+    } finally {
+      isSyncing.value = false;
     }
-  });
+  }
+
+  async function getConflicts(): Promise<Record<string, import('@/services/syncService').SyncConflictItem[]>> {
+    return syncService.getConflicts();
+  }
+
+  function getConflictStore() {
+    return syncService.getConflictStore();
+  }
 
   return {
     isOnline,
@@ -821,6 +555,9 @@ export function useSync() {
     syncRecurringRecord,
     syncSupplierProduct,
     syncNow,
+    syncAfterLogin,
+    getConflicts,
+    getConflictStore,
     pullFromServer,
     startAutoSync,
   };

@@ -9,8 +9,8 @@ class RecurringRecordProductSyncRequest extends FormRequest
     public static function validationRules(): array
     {
         return [
-            'recurring_record_id' => 'required|integer|exists:recurring_records,id',
-            'supplier_product_id' => 'nullable|integer|exists:supplier_products,id',
+            'recurring_record_id' => 'required|string|max:255',
+            'supplier_product_id' => 'nullable|string|max:255',
             'product_name' => 'required|string|max:255',
             'product_price' => 'required|numeric|min:0',
             'quantity' => 'required|integer|min:0',

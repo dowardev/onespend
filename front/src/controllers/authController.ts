@@ -5,19 +5,6 @@ import { syncService } from '@/services/syncService';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001';
 
-interface LoginParams {
-  login: string;
-  password: string;
-}
-
-interface RegisterParams {
-  name: string;
-  user: string;
-  email: string;
-  password: string;
-  password_confirmation: string;
-}
-
 interface AuthResponse {
   user?: User;
   error?: string;
@@ -87,7 +74,7 @@ class AuthController {
 
       // Iniciar sincronización automática en segundo plano tras iniciar sesión
       try {
-        if (syncService.getQueueCount() > 0) {
+        const queueCount = await syncService.getQueueCount(); if (queueCount > 0) {
           // No await para no bloquear el flujo de login/registro
           syncService.processQueue().catch((err) => {
             console.warn('[AuthController] Sync after login failed:', err);
@@ -132,7 +119,7 @@ class AuthController {
 
       // Iniciar sincronización automática en segundo plano tras registro
       try {
-        if (syncService.getQueueCount() > 0) {
+        const queueCount = await syncService.getQueueCount(); if (queueCount > 0) {
           // No await para no bloquear el flujo de registro
           syncService.processQueue().catch((err) => {
             console.warn('[AuthController] Sync after register failed:', err);
@@ -158,7 +145,7 @@ class AuthController {
    * Cierra la sesión del usuario
    */
   async logout(): Promise<boolean> {
-    const pendingItems = syncService.getQueueCount();
+    const pendingItems = await syncService.getQueueCount();
 
     if (pendingItems > 0) {
       const confirmed = window.confirm(
@@ -227,7 +214,7 @@ class AuthController {
       await removeToken();
       this.store.setUser(null);
       return false;
-    } catch (e) {
+    } catch {
       await removeToken();
       this.store.setUser(null);
       return false;

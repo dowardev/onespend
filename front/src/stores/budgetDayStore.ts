@@ -3,7 +3,7 @@ import { ref } from 'vue';
 import { formatLocalDate } from '@/utils/date';
 import { useBudgetEntriesStore } from './budgetEntriesStore';
 import { useBudgetProvidersStore } from './budgetProvidersStore';
-import { DixieController } from '@/controllers/dixie';
+import { budgetDaySnapshotsDb } from '@/db/controllers/budgetDaySnapshotsDb';
 
 export interface FinishDayData {
   totalSalesEfectivo: number;
@@ -51,10 +51,6 @@ export const useBudgetDayStore = defineStore('budgetDay', () => {
     finishDayData.value = { ...data };
   }
 
-  function getDixieController(): DixieController {
-    return new DixieController({ name: 'ABOgazDB', storeName: 'budget' });
-  }
-
   async function loadBudgetForDate(params: { date: string }) {
     const { date } = params;
     const entriesStore = useBudgetEntriesStore();
@@ -63,7 +59,7 @@ export const useBudgetDayStore = defineStore('budgetDay', () => {
     isLoading.value = true;
     try {
       const dateKey = `budget:${date}`;
-      const result = await getDixieController().getBackup({ id: dateKey }) as {
+      const result = await budgetDaySnapshotsDb.getById({ id: dateKey }) as {
         data: {
           entries: any[];
           proveedores: any[];
@@ -109,10 +105,9 @@ export const useBudgetDayStore = defineStore('budgetDay', () => {
     const entriesStore = useBudgetEntriesStore();
     const providersStore = useBudgetProvidersStore();
 
-    const ctrl = getDixieController();
     const dateKey = `budget:${selectedDate.value}`;
 
-    await ctrl.putEntry({
+    await budgetDaySnapshotsDb.put({
       entry: {
         id: dateKey,
         data: {

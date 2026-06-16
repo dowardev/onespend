@@ -9,7 +9,7 @@ export function useSupplierProducts() {
     return await supplierProductsController.updateProduct(params);
   }
 
-  async function remove(params: { id: IDBValidKey }) {
+  async function remove(params: { syncId: string }) {
     return await supplierProductsController.deleteProduct(params);
   }
 
