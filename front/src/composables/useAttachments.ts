@@ -33,7 +33,7 @@ export function useAttachments(params: {
     }
 
     try {
-      const pending = pendingAttachmentsService.getPendingAttachment(syncId.value, entityType);
+      const pending = await pendingAttachmentsService.getPendingAttachment(syncId.value, entityType);
       if (pending?.files.length) {
         pending.files.forEach((file, index) => {
           existingAttachments.value.push({
@@ -54,7 +54,7 @@ export function useAttachments(params: {
     showAttachmentsModal.value = true;
   }
 
-  function handleAttachmentsSave(params: { newFiles: File[]; deletedIds: number[] }) {
+  async function handleAttachmentsSave(params: { newFiles: File[]; deletedIds: number[] }) {
     const { newFiles, deletedIds } = params;
     pendingAttachments.value = newFiles;
 
@@ -67,9 +67,9 @@ export function useAttachments(params: {
 
     if (pendingDeleteIndexes.length > 0 && syncId.value) {
       const sorted = [...pendingDeleteIndexes].sort((a, b) => b - a);
-      for (const index of sorted) {
-        pendingAttachmentsService.removeFileFromPending(syncId.value, entityType, index);
-      }
+    for (const index of sorted) {
+      await pendingAttachmentsService.removeFileFromPending(syncId.value, entityType, index);
+    }
     }
   }
 
@@ -131,7 +131,7 @@ export function useAttachments(params: {
       console.error(`Failed to delete ${entityType} attachments:`, error);
     }
 
-    pendingAttachmentsService.removePendingAttachment(syncId.value, entityType);
+    await pendingAttachmentsService.removePendingAttachment(syncId.value, entityType);
   }
 
   function dismissModal() {

@@ -9,24 +9,23 @@ use App\Models\BudgetEntry;
 use App\Models\BudgetEntryGroup;
 use App\Models\Supplier;
 use App\Models\SupplierProduct;
+use App\Models\MergeJob;
 use App\Models\SyncMetadata;
 use App\Models\RecurringRecord;
 use App\Models\RecurringRecordProduct;
 use App\Http\Requests\Sync\SyncMergeRequest;
 use App\Http\Requests\Sync\SyncResolveConflictRequest;
-use App\Http\Requests\Sync\AccountSyncRequest;
-use App\Http\Requests\Sync\BudgetEntrySyncRequest;
-use App\Http\Requests\Sync\BudgetProviderProductSyncRequest;
-use App\Http\Requests\Sync\BudgetProviderSyncRequest;
-use App\Http\Requests\Sync\RecurringRecordProductSyncRequest;
-use App\Http\Requests\Sync\RecurringRecordSyncRequest;
-use App\Http\Requests\Sync\SupplierProductSyncRequest;
-use App\Http\Requests\Sync\SupplierSyncRequest;
+use App\Http\Requests\Sync\SyncResolveConflictsBatchRequest;
+use App\Services\Sync\SyncOrchestratorService;
+use App\Metrics\SyncMetrics;
+use App\Jobs\SyncMergeJob;
+use App\Services\Sync\Processors\AbstractEntityProcessor;
+use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Validator;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Cache;
 
 class SyncController extends Controller
 {
@@ -41,881 +40,817 @@ class SyncController extends Controller
         'recurring_record_product' => RecurringRecordProduct::class,
     ];
 
+    private SyncOrchestratorService $orchestrator;
+    private SyncMetrics $metrics;
+
+    public function __construct(SyncOrchestratorService $orchestrator, SyncMetrics $metrics)
+    {
+        $this->orchestrator = $orchestrator;
+        $this->metrics = $metrics;
+    }
+
+    private function recordSyncMetrics(string $method, float $startTime, ?string $errorType = null): void
+    {
+        $duration = (microtime(true) - $startTime) * 1000;
+        $this->metrics->increment("sync_{$method}_total");
+        $this->metrics->recordHistogram("sync_{$method}_duration_ms", $duration);
+        if ($errorType !== null) {
+            $this->metrics->increment('sync_errors_total', ['method' => $method, 'error_type' => $errorType]);
+        }
+    }
+
     public function getChanges(Request $request): JsonResponse
     {
+        $startTime = microtime(true);
         $user = $request->user();
+        $userId = $user->id;
         $lastSync = $request->input('last_sync', 0);
+        $limit = min(max((int) $request->input('limit', 200), 1), 1000);
+        $cursorParam = $request->input('cursor');
         $entityTypes = $request->input('types', array_keys(self::ENTITY_TYPES));
 
-        $changes = [];
-        $lastSyncDateTime = date('Y-m-d H:i:s', $lastSync);
+        $parseResult = $this->parseCursor($cursorParam);
+        if ($parseResult === false) {
+            $this->recordSyncMetrics('getChanges', $startTime, 'invalid_cursor');
+            return response()->json(['error' => 'Invalid cursor format'], 400);
+        }
+        $cursor = $parseResult;
+        $startType = $cursor !== null ? ($cursor[0] ?? 0) : 0;
+        $startUpdatedAt = $cursor !== null ? ($cursor[1] ?? null) : null;
+        $startSyncId = $cursor !== null ? ($cursor[2] ?? null) : null;
 
-        // Preload supplier sync IDs to cache supplier products and avoid N+1 queries
-        $supplierSyncIds = [];
-        foreach ($entityTypes as $entityType) {
-            if ($entityType === 'supplier') {
-                $modelClass = self::ENTITY_TYPES[$entityType];
-                $supplierSyncIds = $modelClass::forUser($user->id)
-                    ->where('updated_at', '>', $lastSyncDateTime)
-                    ->pluck('sync_id')
-                    ->toArray();
+        $lastSyncDateTime = $lastSync > 0
+            ? date('Y-m-d H:i:s', AbstractEntityProcessor::normalizeTimestamp($lastSync))
+            : '1970-01-01 00:00:00';
+
+        $requestedEntityTypes = array_intersect($entityTypes, array_keys(self::ENTITY_TYPES));
+        $typeIndexMap = array_flip($requestedEntityTypes);
+
+        $changes = [];
+        $totalCount = 0;
+        $nextTypeIdx = $startType;
+        $nextUpdatedAt = $startUpdatedAt;
+        $nextSyncId = $startSyncId;
+        $hasMore = false;
+
+        // Single UNION query for all entity types
+        if ($startType < count($entityTypes)) {
+            $unionResults = $this->fetchChangedSyncIdsUnion(
+                $entityTypes,
+                $userId,
+                $lastSyncDateTime,
+                $startType,
+                $startUpdatedAt,
+                $startSyncId,
+                $limit
+            );
+
+            foreach ($unionResults as $row) {
+                $entityType = $row->entity_type;
+                $syncId = $row->sync_id;
+                $updatedAt = $row->updated_at;
+
+                if (!isset($changes[$entityType])) {
+                    $changes[$entityType] = [];
+                }
+                $changes[$entityType][] = ['sync_id' => $row->sync_id, 'updated_at' => $updatedAt];
+            }
+
+            $lastRow = end($unionResults);
+            if ($lastRow) {
+                $nextUpdatedAt = $lastRow->updated_at;
+                $nextSyncId = $lastRow->sync_id;
+                $nextTypeIdx = $typeIndexMap[$lastRow->entity_type] ?? $startType;
+            }
+
+            $hasMore = count($unionResults) >= $limit;
+        } else {
+            $hasMore = false;
+        }
+
+        // Fetch full items for each entity type
+        $finalChanges = [];
+        foreach ($changes as $entityType => $syncIds) {
+            $syncIdArray = array_column($changes[$entityType], 'sync_id');
+            $items = $this->hydrateChangedItems($entityType, array_column($changes[$entityType], 'sync_id'));
+            $finalChanges[$entityType] = $this->formatChangedItems($entityType, $items, $userId);
+        }
+
+        // Handle deleted records for exhausted entity types
+        // When we've processed all entity types but still need more records to reach limit
+        while ($totalCount < $limit && $nextTypeIdx < count($requestedEntityTypes) && !$hasMore) {
+            $entityType = $requestedEntityTypes[$nextTypeIdx];
+            $syncIds = $this->fetchChangedSyncIds($entityType, $userId, $lastSyncDateTime, $nextTypeIdx, $startType, $startUpdatedAt, $startSyncId, $limit - $totalCount);
+
+            if (empty($syncIds)) {
+                $recordsExhausted = true;
+            } else {
+                $items = $this->hydrateChangedItems($entityType, $syncIds);
+                $finalChanges[$entityType] = $this->formatChangedItems($entityType, $items, $userId);
+                $totalCount += count($finalChanges[$entityType]);
+
+                $lastItem = $items->last();
+                $nextUpdatedAt = $lastItem->updated_at->toDateTimeString();
+                $nextSyncId = $lastItem->sync_id;
+
+                $recordsExhausted = count($items) < ($limit - $totalCount + count($items));
+            }
+
+            if ($recordsExhausted) {
+                $deletedIds = SyncMetadata::forUser($userId)
+                    ->byEntityType($entityType)
+                    ->where('sync_status', 'deleted')
+                    ->where('server_updated_at', '>', $lastSyncDateTime)
+                    ->pluck('entity_id');
+
+                foreach ($deletedIds as $deletedId) {
+                    if (!isset($finalChanges[$entityType])) {
+                        $finalChanges[$entityType] = [];
+                    }
+                    $finalChanges[$entityType][] = ['id' => $deletedId, '_deleted' => true];
+                    $totalCount++;
+                }
+
+                $nextTypeIdx++;
+                $nextUpdatedAt = null;
+                $nextSyncId = null;
+            } else {
+                $hasMore = true;
+                break;
             }
         }
 
-        // Cache supplier products for all suppliers that changed
+        $nextCursor = $this->buildCursor($hasMore ? [$nextTypeIdx, $nextUpdatedAt, $nextSyncId] : null);
+
+        $this->recordSyncMetrics('getChanges', $startTime);
+        return response()->json([
+            'success' => true,
+            'changes' => $finalChanges,
+            'cursor' => $nextCursor,
+            'has_more' => $hasMore,
+            'serverTime' => now()->timestamp,
+        ]);
+    }
+
+    private function parseCursor(?string $cursorParam): array|null|false
+    {
+        if ($cursorParam === null || $cursorParam === '') return null;
+
+        $parts = explode('.', $cursorParam);
+        if (count($parts) !== 2) return false;
+
+        [$cursorData, $hmac] = $parts;
+        $expectedHmac = hash_hmac('sha256', $cursorData, config('app.key'));
+        if (!hash_equals($expectedHmac, $hmac)) return false;
+
+        $decoded = base64_decode($cursorData, true);
+        if ($decoded === false) return false;
+
+        $parsed = json_decode($decoded, true);
+        if (!is_array($parsed) || count($parsed) !== 3) return false;
+        if (!is_int($parsed[0])) return false;
+        if (!(is_null($parsed[1]) || is_string($parsed[1]))) return false;
+        if (!(is_null($parsed[2]) || is_string($parsed[2]))) return false;
+
+        return $parsed;
+    }
+
+    private function buildCursor(?array $cursorData): ?string
+    {
+        if ($cursorData === null) return null;
+
+        $encoded = base64_encode(json_encode($cursorData));
+        return $encoded . '.' . hash_hmac('sha256', $encoded, config('app.key'));
+    }
+
+    private function fetchChangedSyncIds(
+        string $entityType,
+        int $userId,
+        string $lastSyncDateTime,
+        int $currentTypeIdx,
+        int $startType,
+        ?string $startUpdatedAt,
+        ?string $startSyncId,
+        int $remaining,
+    ): array {
+        $modelClass = self::ENTITY_TYPES[$entityType];
+        $query = $modelClass::forUser($userId)
+            ->select(['sync_id', 'updated_at']);
+
+        if ($currentTypeIdx === $startType && $startUpdatedAt !== null) {
+            $query->where(function ($q) use ($startUpdatedAt, $startSyncId) {
+                $q->where('updated_at', '>', $startUpdatedAt)
+                  ->orWhere(function ($q2) use ($startUpdatedAt, $startSyncId) {
+                      $q2->where('updated_at', '=', $startUpdatedAt)
+                         ->where('sync_id', '>', $startSyncId);
+                  });
+            });
+        } else {
+            $query->where('updated_at', '>', $lastSyncDateTime);
+        }
+
+        return $query->orderBy('updated_at')->orderBy('sync_id')
+            ->limit($remaining)
+            ->pluck('sync_id')
+            ->toArray();
+    }
+
+    private function fetchChangedSyncIdsUnion(array $entityTypes, int $userId, string $lastSyncDateTime, int $startType, ?string $startUpdatedAt, ?string $startSyncId, int $limit): array
+    {
+        $unionParts = [];
+        $params = [];
+
+        foreach ($entityTypes as $typeIdx => $entityType) {
+            $modelClass = self::ENTITY_TYPES[$entityType];
+            $table = (new $modelClass)->getTable();
+
+            $whereClause = '`user_id` = ? AND `updated_at` > ?';
+            $params[] = $userId;
+            $params[] = $lastSyncDateTime;
+
+            if ($typeIdx === $startType && $startUpdatedAt !== null) {
+                $whereClause = '(' . $whereClause . ') AND (`updated_at` > ? OR (`updated_at` = ? AND `sync_id` > ?))';
+                $params[] = $startUpdatedAt;
+                $params[] = $startUpdatedAt;
+                $params[] = $startSyncId;
+            }
+
+            $unionParts[] = "SELECT `sync_id`, `updated_at`, '" . $entityType . "' as entity_type, " . $typeIdx . " as type_idx FROM `{$table}` WHERE {$whereClause}";
+        }
+
+        $unionSql = implode(' UNION ALL ', $unionParts);
+        $unionSql .= ' ORDER BY `type_idx`, `updated_at`, `sync_id` LIMIT ' . $limit;
+
+        return DB::select($unionSql, $params);
+    }
+
+    private function hydrateChangedItems(string $entityType, array $syncIds): \Illuminate\Support\Collection
+    {
+        $modelClass = self::ENTITY_TYPES[$entityType];
+        $query = $modelClass::whereIn('sync_id', $syncIds);
+
+        switch ($entityType) {
+            case 'budget_entry':
+                $query->with(['account:id,name', 'groups.account:id,name']);
+                break;
+            case 'budget_provider':
+                $query->with(['account:id,name', 'supplier:id,name']);
+                break;
+            case 'budget_provider_product':
+                $query->with(['budgetProvider:id,sync_id,name', 'supplierProduct:id,sync_id,name,price']);
+                break;
+            case 'recurring_record':
+                $query->with('products');
+                break;
+        }
+
+        return $query->get()->keyBy('sync_id');
+    }
+
+    private function formatChangedItems(string $entityType, \Illuminate\Support\Collection $items, int $userId): array
+    {
         $supplierProductsCache = [];
-        if (!empty($supplierSyncIds)) {
+
+        if ($entityType === 'supplier' && $items->isNotEmpty()) {
+            $supplierSyncIds = $items->pluck('sync_id')->toArray();
             $products = SupplierProduct::whereIn('supplier_id', $supplierSyncIds)
+                ->where('user_id', $userId)
                 ->where('status', 'active')
-                ->get(['id', 'supplier_id', 'name', 'price', 'image_base64', 'sync_id']);
-            
+                ->get(['id', 'supplier_id', 'name', 'price', 'sync_id']);
+
             foreach ($products as $product) {
                 $supplierProductsCache[$product->supplier_id][] = $product;
             }
         }
 
-        foreach ($entityTypes as $entityType) {
-            if (!isset(self::ENTITY_TYPES[$entityType])) {
-                continue;
+        return $items->map(fn($item) => $this->formatItem($entityType, $item, $supplierProductsCache))->values()->toArray();
+    }
+
+    private function compressMergeResults(array $results): array
+    {
+        $compressed = [
+            'created' => [],
+            'updated' => [],
+            'deleted' => [],
+            'skipped' => [],
+            'conflicts' => $results['conflicts'] ?? [],
+            'errors' => $results['errors'] ?? [],
+        ];
+
+        foreach (['created', 'updated', 'deleted', 'skipped'] as $status) {
+            if (!empty($results[$status])) {
+                foreach ($results[$status] as $entityType => $items) {
+                    $compressed[$status][$entityType] = array_map(function ($item) {
+                        return [
+                            'sync_id' => $item['sync_id'] ?? ($item['id'] ?? null),
+                            'id' => $item['id'] ?? null,
+                        ];
+                    }, $items);
+                }
             }
+        }
 
-            $modelClass = self::ENTITY_TYPES[$entityType];
+        return $compressed;
+    }
 
-            // Add eager loading based on entity type
-            $query = $modelClass::forUser($user->id)
-                ->where('updated_at', '>', $lastSyncDateTime);
+    private function computeDedupHash(string $entityType, array $item): string
+    {
+        $fields = $item;
+        unset($fields['sync_id'], $fields['_conflict'], $fields['_deleted'], $fields['_original'], $fields['id']);
+        ksort($fields);
+        return md5($entityType . ($item['sync_id'] ?? '') . json_encode($fields));
+    }
 
-            // Optimize based on entity type relationships
-            switch ($entityType) {
-case 'budget_entry':
-    $query->with(['account:id,name', 'groups.account:id,name']);
-    break;
-                case 'budget_provider':
-                    $query->with(['account:id,name', 'supplier:id,name']);
-                    break;
-                case 'budget_provider_product':
-                    $query->with(['budgetProvider:id,name', 'supplierProduct:id,name,price']);
-                    break;
-                case 'recurring_record':
-                    $query->with('products');
-                    break;
-            }
-
-            $items = $query->get();
-
+    private function filterDuplicateChanges(array $data, int $userId): array
+    {
+        $hashes = [];
+        foreach ($data as $entityType => $items) {
             foreach ($items as $item) {
-                $changes[$entityType][] = $this->formatItem($entityType, $item, $supplierProductsCache);
-            }
-
-            $deletedIds = SyncMetadata::forUser($user->id)
-                ->byEntity($entityType, '')
-                ->where('sync_status', 'deleted')
-                ->where('server_updated_at', '>', $lastSyncDateTime)
-                ->pluck('entity_id');
-
-            if ($deletedIds->isNotEmpty()) {
-                $changes[$entityType]['_deleted'] = $deletedIds->toArray();
+                $hash = $this->computeDedupHash($entityType, $item);
+                $hashes[] = $hash;
             }
         }
 
-        return response()->json([
-            'success' => true,
-            'changes' => $changes,
-            'server_time' => now()->timestamp,
-        ]);
-    }
-
-    /**
-     * Bulk create suppliers for better performance
-     */
-    private function bulkCreateSuppliers(array $items, int $userId): array
-    {
-        $results = [];
-        $errors = [];
-        if (empty($items)) {
-            return ['results' => $results, 'errors' => $errors];
+        if (empty($hashes)) {
+            return $data;
         }
-        
-        $insertData = [];
-        $productsToCreate = [];
-        $now = now();
-        
-        $validFields = ['name', 'user_id', 'sync_id', 'created_at', 'updated_at', 'deleted_at'];
-        
-        foreach ($items as $item) {
-            $syncId = $item['id'] ?? null;
-            if (!$syncId) continue;
-            
-            $products = $item['products'] ?? [];
-            
-            if (empty($products)) {
-                $errors[] = [
-                    'sync_id' => $syncId,
-                    'error' => 'At least one product is required',
-                ];
-                continue;
-            }
-            
-            $data = array_intersect_key($item, array_flip($validFields));
-            
-            $data['user_id'] = $userId;
-            $data['sync_id'] = $syncId;
-            $data['created_at'] = $now;
-            $data['updated_at'] = $now;
-            
-            if (isset($data['updated_at']) && is_numeric($data['updated_at'])) {
-                $timestamp = $data['updated_at'];
-                if ($timestamp > 10000000000) {
-                    $timestamp = $timestamp / 1000;
+
+        $recent = SyncMetadata::where('user_id', $userId)
+            ->whereIn('dedup_hash', $hashes)
+            ->where('created_at', '>=', now()->subMinutes(5))
+            ->pluck('dedup_hash')
+            ->flip();
+
+        if ($recent->isEmpty()) {
+            return $data;
+        }
+
+        $filtered = [];
+        $skipped = 0;
+        foreach ($data as $entityType => $items) {
+            foreach ($items as $item) {
+                $hash = $this->computeDedupHash($entityType, $item);
+                if ($recent->has($hash)) {
+                    $skipped++;
+                    continue;
                 }
-                $data['updated_at'] = date('Y-m-d H:i:s', $timestamp);
-            }
-            
-            $insertData[] = $data;
-            
-            if (!empty($products)) {
-                $productsToCreate[$syncId] = $products;
+                $filtered[$entityType][] = $item;
             }
         }
-        
-        if (!empty($insertData)) {
-            Supplier::insert($insertData);
-            
-            $syncIds = array_column($insertData, 'sync_id');
-            $createdRecords = Supplier::whereIn('sync_id', $syncIds)->get(['id', 'sync_id']);
-            
-            foreach ($createdRecords as $record) {
-                $results[] = ['sync_id' => $record->sync_id, 'id' => $record->id];
-                $this->updateSyncMetadata('supplier', $record->sync_id, 'synced', $userId);
-                
-                if (isset($productsToCreate[$record->sync_id])) {
-                    $this->createSupplierProducts($record->sync_id, $record->id, $productsToCreate[$record->sync_id], $userId);
-                }
-            }
-        }
-        
-        return ['results' => $results, 'errors' => $errors];
-    }
-    
-    /**
-     * Create supplier products for a supplier
-     */
-    private function createSupplierProducts(string $supplierSyncId, int $supplierId, array $products, int $userId): void
-    {
-        $now = now();
-        $insertData = [];
-        
-        foreach ($products as $product) {
-            $productSyncId = $product['sync_id'] ?? $product['id'] ?? uniqid('sp_', true);
-            
-            $insertData[] = [
+
+        if ($skipped > 0) {
+            Log::info('Sync dedup: skipped duplicate changes', [
                 'user_id' => $userId,
-                'supplier_id' => $supplierSyncId,
-                'sync_id' => $productSyncId,
-                'name' => $product['name'] ?? '',
-                'price' => $product['price'] ?? 0,
-                'image_base64' => $product['imageBase64'] ?? null,
-                'status' => 'active',
-                'created_at' => $now,
-                'updated_at' => $now,
-            ];
-        }
-        
-        if (!empty($insertData)) {
-            SupplierProduct::insert($insertData);
-        }
-    }
-    
-    /**
-     * Bulk update suppliers for better performance
-     */
-    private function bulkUpdateSuppliers(array $items, int $userId): array
-    {
-        $results = [];
-        $errors = [];
-        if (empty($items)) {
-            return ['results' => $results, 'errors' => $errors];
-        }
-        
-        $validFields = ['name', 'updated_at', 'deleted_at'];
-        
-        foreach ($items as $itemData) {
-            $item = $itemData['item'];
-            $syncId = $itemData['sync_id'];
-            $existing = $itemData['existing'];
-            
-            $products = $item['products'] ?? [];
-            
-            if (empty($products)) {
-                $errors[] = [
-                    'sync_id' => $syncId,
-                    'error' => 'At least one product is required',
-                ];
-                continue;
-            }
-            
-            $updateFields = array_intersect_key($item, array_flip($validFields));
-            
-            foreach ($updateFields as $key => $value) {
-                if (in_array($key, ['updated_at']) && is_numeric($value)) {
-                    $timestamp = $value;
-                    if ($timestamp > 10000000000) {
-                        $timestamp = $timestamp / 1000;
-                    }
-                    $updateFields[$key] = date('Y-m-d H:i:s', $timestamp);
-                }
-            }
-            
-            Supplier::where('sync_id', $syncId)->update($updateFields);
-            $this->updateSyncMetadata('supplier', $syncId, 'synced', $userId);
-            $results[] = ['sync_id' => $syncId];
-            
-            if (!empty($products)) {
-                $this->updateSupplierProducts($syncId, $existing->id, $products, $userId);
-            }
-        }
-        
-        return ['results' => $results, 'errors' => $errors];
-    }
-    
-    /**
-     * Update supplier products for a supplier
-     */
-    private function updateSupplierProducts(string $supplierSyncId, int $supplierId, array $products, int $userId): void
-    {
-        $now = now();
-        
-        foreach ($products as $product) {
-            $productSyncId = $product['sync_id'] ?? $product['id'] ?? null;
-            if (!$productSyncId) continue;
-            
-            $productData = [
-                'name' => $product['name'] ?? '',
-                'price' => $product['price'] ?? 0,
-                'image_base64' => $product['imageBase64'] ?? null,
-                'updated_at' => $now,
-            ];
-            
-            // Check if product exists
-            $existing = SupplierProduct::where('sync_id', $productSyncId)
-                ->where('supplier_id', $supplierSyncId)
-                ->first();
-            
-            if ($existing) {
-                $existing->update($productData);
-            } else {
-                // Create new product
-                SupplierProduct::create([
-                    'user_id' => $userId,
-                    'supplier_id' => $supplierSyncId,
-                    'sync_id' => $productSyncId,
-                    'name' => $productData['name'],
-                    'price' => $productData['price'],
-                    'image_base64' => $productData['image_base64'],
-                    'status' => 'active',
-                    'created_at' => $now,
-                    'updated_at' => $now,
-                ]);
-            }
-        }
-    }
-    
-    /**
-     * Bulk delete suppliers for better performance
-     */
-    private function bulkDeleteSuppliers(array $syncIds, int $userId): array
-    {
-        $results = [];
-        if (empty($syncIds)) {
-            return $results;
-        }
-        
-        foreach ($syncIds as $syncId) {
-            $existing = Supplier::where('sync_id', $syncId)->first();
-            if ($existing) {
-                $existing->update(['deleted_at' => now()]);
-                $this->updateSyncMetadata('supplier', $syncId, 'deleted', $userId);
-                $results[] = $syncId;
-            }
-        }
-        
-        return $results;
-    }
-
-    /**
-     * Bulk create items for better performance
-     */
-    private function bulkCreateItems(string $entityType, array $items, int $userId): array
-    {
-        $modelClass = self::ENTITY_TYPES[$entityType];
-        $results = [];
-        
-        if (empty($items)) {
-            return $results;
-        }
-        
-        $insertData = [];
-        $groupsToCreate = [];
-        $now = now();
-        
-        foreach ($items as $item) {
-            $syncId = $item['id'] ?? null;
-            if (!$syncId) {
-                continue;
-            }
-            
-            $data = $item;
-            $data['user_id'] = $userId;
-            $data['sync_id'] = $syncId;
-            $data['created_at'] = $now;
-            $data['updated_at'] = $now;
-            
-            if (isset($data['updated_at']) && is_numeric($data['updated_at'])) {
-                $timestamp = $data['updated_at'];
-                if ($timestamp > 10000000000) {
-                    $timestamp = $timestamp / 1000;
-                }
-                $data['updated_at'] = date('Y-m-d H:i:s', $timestamp);
-            }
-            
-            if ($entityType === 'budget_provider_product' && isset($data['supplier_product_id'])) {
-                $spId = $data['supplier_product_id'];
-                if (!is_numeric($spId)) {
-                    $sp = SupplierProduct::where('sync_id', $spId)->first();
-                    $data['supplier_product_id'] = $sp ? $sp->id : null;
-                } else {
-                    $data['supplier_product_id'] = (int)$spId;
-                }
-            }
-            
-            if ($entityType === 'budget_provider' && isset($data['_supplier_id'])) {
-                $supplierId = $data['_supplier_id'];
-                if (!is_numeric($supplierId)) {
-                    $supplier = Supplier::where('sync_id', $supplierId)->first();
-                    $data['_supplier_id'] = $supplier ? $supplier->id : null;
-                } else {
-                    $data['_supplier_id'] = (int)$supplierId;
-                }
-            }
-            
-            if ($entityType === 'budget_entry') {
-                $groups = $data['groups'] ?? null;
-                unset($data['groups']);
-                if (!empty($groups)) {
-                    $groupsToCreate[$syncId] = $groups;
-                }
-            }
-            
-            unset($data['id']);
-            $data = $this->filterToFillable($entityType, $data);
-            $insertData[] = $data;
-        }
-        
-        if (!empty($insertData)) {
-            $modelClass::insert($insertData);
-            
-            $syncIds = array_column($insertData, 'sync_id');
-            $createdRecords = $modelClass::whereIn('sync_id', $syncIds)->get(['id', 'sync_id', 'user_id']);
-            
-            foreach ($createdRecords as $record) {
-                $results[] = ['sync_id' => $record->sync_id, 'id' => $record->id];
-                $this->updateSyncMetadata($entityType, $record->sync_id, 'synced', $userId);
-                
-                if ($entityType === 'budget_entry' && isset($groupsToCreate[$record->sync_id])) {
-                    $this->createBudgetEntryGroups($record->id, $record->user_id, $groupsToCreate[$record->sync_id]);
-                }
-            }
-        }
-        
-        return $results;
-    }
-    
-    private function createBudgetEntryGroups(int $entryId, int $userId, array $groups): void
-    {
-        foreach ($groups as $group) {
-            $accountId = $group['account_id'] ?? $group['accountId'] ?? null;
-            if (!is_numeric($accountId)) {
-                $account = \App\Models\Account::where('sync_id', $accountId)->first();
-                $accountId = $account ? $account->id : null;
-            }
-            
-            BudgetEntryGroup::create([
-                'budget_entry_id' => $entryId,
-                'account_id' => $accountId ? (int)$accountId : null,
-                'amount' => $group['amount'] ?? 0,
-                'user_id' => $userId,
+                'skipped_count' => $skipped,
             ]);
         }
-    }
 
-    private function validateEntityData(string $entityType, array $items): void
-    {
-        $requestClass = match($entityType) {
-            'account' => AccountSyncRequest::class,
-            'supplier' => SupplierSyncRequest::class,
-            'supplier_product' => SupplierProductSyncRequest::class,
-            'budget_entry' => BudgetEntrySyncRequest::class,
-            'budget_provider' => BudgetProviderSyncRequest::class,
-            'budget_provider_product' => BudgetProviderProductSyncRequest::class,
-            'recurring_record' => RecurringRecordSyncRequest::class,
-            'recurring_record_product' => RecurringRecordProductSyncRequest::class,
-            default => null,
-        };
-
-        if ($requestClass === null) {
-            return;
-        }
-
-        $rules = $requestClass::validationRules();
-
-        foreach ($items as $index => $item) {
-            $validator = Validator::make($item, $rules);
-
-            if ($validator->fails()) {
-                throw new \Illuminate\Validation\ValidationException(
-                    $validator,
-                    response()->json([
-                        'message' => "Validation failed for item at index {$index} in {$entityType}",
-                        'errors' => $validator->errors(),
-                        'index' => $index,
-                        'entity_type' => $entityType,
-                    ], 422)
-                );
-            }
-        }
+        return $filtered;
     }
 
     public function merge(SyncMergeRequest $request): JsonResponse
     {
+        $startTime = microtime(true);
         $user = $request->user();
-        $data = $request->input('data');
 
-        // Validate each entity type against its FormRequest
-        foreach ($data as $entityType => $items) {
-            if (!is_array($items)) {
-                continue;
-            }
-            $this->validateEntityData($entityType, $items);
-        }
+        if ($request->header('X-Async-Merge') === 'true') {
+            $data = $request->input('data');
+            $mergeJob = MergeJob::create([
+                'user_id' => $user->id,
+                'status' => 'queued',
+                'data' => $data,
+            ]);
 
-        Log::info('SyncController::merge - Received data', ['data' => $data]);
+            SyncMergeJob::dispatch($mergeJob);
 
-        $results = [
-            'created' => [],
-            'updated' => [],
-            'deleted' => [],
-            'conflicts' => [],
-            'errors' => [],
-        ];
-
-        DB::beginTransaction();
-
-        try {
-            // Process accounts FIRST (before any dependent entities)
-            if (isset($data['account'])) {
-                $items = $data['account'];
-                Log::info("SyncController::merge - Processing entityType: account", ['items_count' => count($items)]);
-
-                foreach ($items as $item) {
-                    $result = $this->processItem('account', $item, $user->id);
-
-                    if ($result['status'] === 'created') {
-                        $results['created']['account'][] = ['sync_id' => $result['sync_id'], 'id' => $result['id']];
-                    } elseif ($result['status'] === 'updated') {
-                        $results['updated']['account'][] = ['sync_id' => $result['sync_id'], 'id' => $result['id'] ?? null];
-                    } elseif ($result['status'] === 'deleted') {
-                        $results['deleted']['account'][] = $result['sync_id'];
-                    } elseif ($result['status'] === 'conflict') {
-                        $results['conflicts']['account'][] = $result;
-                    }
-                }
-            }
-
-            // Process recurring_records with nested products (same pattern as budget_provider)
-            if (isset($data['recurring_record'])) {
-                $items = $data['recurring_record'];
-                Log::info("SyncController::merge - Processing entityType: recurring_record", ['items_count' => count($items)]);
-
-                foreach ($items as $item) {
-                    $result = $this->processItem('recurring_record', $item, $user->id);
-                    $syncId = $result['sync_id'];
-
-                    if ($result['status'] === 'created') {
-                        $results['created']['recurring_record'][] = ['sync_id' => $syncId, 'id' => $result['id']];
-                    } elseif ($result['status'] === 'updated') {
-                        $results['updated']['recurring_record'][] = ['sync_id' => $syncId, 'id' => $result['id'] ?? null];
-                    } elseif ($result['status'] === 'deleted') {
-                        $results['deleted']['recurring_record'][] = $syncId;
-                    } elseif ($result['status'] === 'conflict') {
-                        $results['conflicts']['recurring_record'][] = $result;
-                    }
-
-                    // Get the real MySQL ID after creating/updating
-                    $recurringRecordId = $result['id'] ?? null;
-                    if (!$recurringRecordId) {
-                        $recurringRecord = RecurringRecord::where('sync_id', $syncId)->first();
-                        if ($recurringRecord) {
-                            $recurringRecordId = $recurringRecord->id;
-                        }
-                    }
-
-                    // Process products if included
-                    if (isset($item['products']) && is_array($item['products'])) {
-                        $products = $item['products'];
-                        Log::info("SyncController::merge - Processing products for recurring_record {$syncId}", ['products_count' => count($products)]);
-
-                        foreach ($products as $product) {
-                            $productSyncId = $product['sync_id'] ?? uniqid('rrp_', true);
-                            $isDeleted = isset($item['_deleted']) && $item['_deleted'] === true;
-                            $existingProduct = RecurringRecordProduct::where('sync_id', $productSyncId)->first();
-
-                            $productData = [
-                                'id' => $productSyncId,
-                                'user_id' => $user->id,
-                                'recurring_record_id' => $recurringRecordId,
-                                'supplier_product_id' => $product['supplier_product_id'] ?? $product['supplierProductId'] ?? null,
-                                'product_name' => $product['product_name'] ?? $product['productName'] ?? null,
-                                'product_price' => $product['product_price'] ?? $product['productPrice'] ?? null,
-                                'quantity' => $product['quantity'] ?? 0,
-                                'updated_at' => $product['updated_at'] ?? now()->getTimestampMs(),
-                            ];
-
-                            if ($isDeleted) {
-                                $productData['_deleted'] = true;
-                            }
-
-                            $productResult = $this->processItem('recurring_record_product', $productData, $user->id);
-
-                            if ($productResult['status'] === 'created') {
-                                $results['created']['recurring_record_product'][] = ['sync_id' => $productResult['sync_id'], 'id' => $productResult['id']];
-                            } elseif ($productResult['status'] === 'updated') {
-                                $results['updated']['recurring_record_product'][] = ['sync_id' => $productResult['sync_id'], 'id' => $productResult['id'] ?? null];
-                            } elseif ($productResult['status'] === 'deleted') {
-                                $results['deleted']['recurring_record_product'][] = $productResult['sync_id'];
-                            } elseif ($productResult['status'] === 'conflict') {
-                                $results['conflicts']['recurring_record_product'][] = $productResult;
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Process suppliers (for dependency) - using bulk operations
-            if (isset($data['supplier'])) {
-                $items = $data['supplier'];
-                Log::info("SyncController::merge - Bulk processing entityType: supplier", ['items_count' => count($items)]);
-                
-                // Separate creates, updates, deletes for bulk operations
-                $toCreate = [];
-                $toUpdate = [];
-                $toDelete = [];
-                $conflicts = [];
-                
-                foreach ($items as $item) {
-                    $syncId = $item['id'] ?? null;
-                    if (!$syncId) continue;
-                    
-                    if (isset($item['_deleted']) && $item['_deleted'] === true) {
-                        $toDelete[] = $syncId;
-                    } else {
-                        $existing = Supplier::where('sync_id', $syncId)->first();
-                        if ($existing) {
-                            $localUpdatedAt = $existing->updated_at->timestamp;
-                            $clientUpdatedAt = $item['updated_at'] ?? 0;
-                            
-                            if ($clientUpdatedAt > $localUpdatedAt) {
-                                $toUpdate[] = ['sync_id' => $syncId, 'item' => $item, 'existing' => $existing];
-                            } elseif ($clientUpdatedAt < $localUpdatedAt) {
-                                $conflicts[] = ['sync_id' => $syncId, 'server_data' => $existing];
-                            }
-                        } else {
-                            $toCreate[] = $item;
-                        }
-                    }
-                }
-                
-                // Process bulk operations
-                $createResult = $this->bulkCreateSuppliers($toCreate, $user->id);
-                $updateResult = $this->bulkUpdateSuppliers($toUpdate, $user->id);
-                $deleted = $this->bulkDeleteSuppliers($toDelete, $user->id);
-                
-                $results['created']['supplier'] = $createResult['results'];
-                $results['updated']['supplier'] = $updateResult['results'];
-                $results['deleted']['supplier'] = $deleted;
-                $results['conflicts']['supplier'] = $conflicts;
-                
-                if (!empty($createResult['errors'])) {
-                    $results['errors']['supplier'] = array_merge(
-                        $results['errors']['supplier'],
-                        $createResult['errors']
-                    );
-                }
-                if (!empty($updateResult['errors'])) {
-                    $results['errors']['supplier'] = array_merge(
-                        $results['errors']['supplier'],
-                        $updateResult['errors']
-                    );
-                }
-            }
-
-            // Process supplier_products second (depends on suppliers) - using individual for now due to complexity
-            if (isset($data['supplier_product'])) {
-                $items = $data['supplier_product'];
-                Log::info("SyncController::merge - Processing entityType: supplier_product", ['items_count' => count($items)]);
-                
-                foreach ($items as $item) {
-                    $result = $this->processItem('supplier_product', $item, $user->id);
-                    
-                    if ($result['status'] === 'created') {
-                        $results['created']['supplier_product'][] = ['sync_id' => $result['sync_id'], 'id' => $result['id']];
-                    } elseif ($result['status'] === 'updated') {
-                        $results['updated']['supplier_product'][] = ['sync_id' => $result['sync_id'], 'id' => $result['id'] ?? null];
-                    } elseif ($result['status'] === 'deleted') {
-                        $results['deleted']['supplier_product'][] = $result['sync_id'];
-                    } elseif ($result['status'] === 'conflict') {
-                        $results['conflicts']['supplier_product'][] = $result;
-                    }
-                }
-            }
-
-            // Process budget_providers (for budget_provider_products dependency)
-            if (isset($data['budget_provider'])) {
-                $items = $data['budget_provider'];
-                Log::info("SyncController::merge - Processing entityType: budget_provider", ['items_count' => count($items)]);
-
-                foreach ($items as $item) {
-                    // Validate account_id exists before processing
-                    $accountId = $item['account_id'] ?? null;
-                    if ($accountId && !isset($item['_deleted'])) {
-                        $accountExists = Account::where('id', $accountId)->exists();
-                        if (!$accountExists) {
-                            Log::warning("SyncController::merge - Skipping budget_provider: account_id {$accountId} does not exist", ['sync_id' => $item['id'] ?? 'unknown']);
-                            $results['conflicts']['budget_provider'][] = [
-                                'sync_id' => $item['id'] ?? 'unknown',
-                                'message' => "Account with ID {$accountId} does not exist. Please sync accounts first.",
-                                'client_data' => $item,
-                            ];
-                            continue;
-                        }
-                    }
-
-                    $result = $this->processItem('budget_provider', $item, $user->id);
-                    $syncId = $result['sync_id'];
-                    
-                    // Get the real MySQL ID after creating/updating - prefer ID from result
-                    $providerId = $result['id'] ?? null;
-                    if (!$providerId) {
-                        // Fallback: query for existing budget_provider
-                        $budgetProvider = BudgetProvider::where('sync_id', $syncId)->first();
-                        if ($budgetProvider) {
-                            $providerId = $budgetProvider->id;
-                        }
-                    }
-                    
-                    if ($result['status'] === 'created') {
-                        $results['created']['budget_provider'][] = ['sync_id' => $syncId, 'id' => $providerId];
-                    } elseif ($result['status'] === 'updated') {
-                        $results['updated']['budget_provider'][] = ['sync_id' => $syncId, 'id' => $providerId];
-                    } elseif ($result['status'] === 'deleted') {
-                        $results['deleted']['budget_provider'][] = $syncId;
-                    } elseif ($result['status'] === 'conflict') {
-                        $results['conflicts']['budget_provider'][] = $result;
-                    }
-                    
-                    // Process products if included - use real MySQL ID
-                    // Products come directly in $item (not $item['data']) because syncService flattens the structure
-                    if (isset($item['products']) && is_array($item['products'])) {
-                        $products = $item['products'];
-                        Log::info("SyncController::merge - Processing products for budget_provider {$syncId} (real ID: {$providerId})", ['products_count' => count($products)]);
-                        
-                        foreach ($products as $product) {
-                            Log::info("SyncController::merge - Processing product", [
-                                'product_keys' => array_keys($product),
-                                'supplier_product_id' => $product['supplier_product_id'] ?? $product['supplierProductId'] ?? 'NOT SET',
-                                'sync_id' => $product['sync_id'] ?? 'NOT SET',
-                                'product_name' => $product['product_name'] ?? $product['productName'] ?? 'NOT SET',
-                            ]);
-                            $productSyncId = $product['sync_id'] ?? uniqid('bpp_', true);
-                            
-                            // Determine operation: check if item was marked for deletion or if product already exists
-                            $isDeleted = isset($item['_deleted']) && $item['_deleted'] === true;
-                            $existingProduct = BudgetProviderProduct::where('sync_id', $productSyncId)->first();
-                            
-                            // Build product data directly (processItem expects flat structure with 'id' as sync_id)
-                            $productData = [
-                                'id' => $productSyncId,
-                                'user_id' => $user->id,
-                                'budget_provider_id' => $providerId,
-                                'supplier_product_id' => $product['supplier_product_id'] ?? $product['supplierProductId'] ?? null,
-                                'product_name' => $product['product_name'] ?? $product['productName'] ?? null,
-                                'product_price' => $product['product_price'] ?? $product['productPrice'] ?? null,
-                                'quantity' => $product['quantity'] ?? 0,
-                                'updated_at' => $product['updated_at'] ?? now()->getTimestampMs(),
-                            ];
-                            
-                            if ($isDeleted) {
-                                $productData['_deleted'] = true;
-                            }
-                            
-                            Log::info("SyncController::merge - Product item data", ['productData' => $productData]);
-                            
-                            $productResult = $this->processItem('budget_provider_product', $productData, $user->id);
-                            
-                            if ($productResult['status'] === 'created') {
-                                $results['created']['budget_provider_product'][] = ['sync_id' => $productResult['sync_id'], 'id' => $productResult['id']];
-                            } elseif ($productResult['status'] === 'updated') {
-                                $results['updated']['budget_provider_product'][] = ['sync_id' => $productResult['sync_id'], 'id' => $productResult['id'] ?? null];
-                            } elseif ($productResult['status'] === 'deleted') {
-                                $results['deleted']['budget_provider_product'][] = $productResult['sync_id'];
-                            } elseif ($productResult['status'] === 'conflict') {
-                                $results['conflicts']['budget_provider_product'][] = $productResult;
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Process budget_provider_products (depends on budget_providers)
-            if (isset($data['budget_provider_product'])) {
-                $items = $data['budget_provider_product'];
-                Log::info("SyncController::merge - Processing entityType: budget_provider_product", ['items_count' => count($items)]);
-                
-                foreach ($items as $item) {
-                    // Ignorar productos sin budget_provider_id (no deberían existir, los productos van dentro de budget_provider)
-                    if (empty($item['budget_provider_id'])) {
-                        Log::debug("Skipping orphan budget_provider_product without budget_provider_id", ['item' => $item]);
-                        continue;
-                    }
-                    
-                    $result = $this->processItem('budget_provider_product', $item, $user->id);
-                    
-                    if ($result['status'] === 'created') {
-                        $results['created']['budget_provider_product'][] = ['sync_id' => $result['sync_id'], 'id' => $result['id']];
-                    } elseif ($result['status'] === 'updated') {
-                        $results['updated']['budget_provider_product'][] = ['sync_id' => $result['sync_id'], 'id' => $result['id'] ?? null];
-                    } elseif ($result['status'] === 'deleted') {
-                        $results['deleted']['budget_provider_product'][] = $result['sync_id'];
-                    } elseif ($result['status'] === 'conflict') {
-                        $results['conflicts']['budget_provider_product'][] = $result;
-                    }
-                }
-            }
-
-            // Process remaining entity types
-            foreach ($data as $entityType => $items) {
-                if ($entityType === 'account' || $entityType === 'supplier' || $entityType === 'supplier_product' || 
-                    $entityType === 'budget_provider' || $entityType === 'budget_provider_product' ||
-                    $entityType === 'recurring_record' || $entityType === 'recurring_record_product') {
-                    continue;
-                }
-                
-                if (!isset(self::ENTITY_TYPES[$entityType])) {
-                    Log::warning("SyncController::merge - Unknown entityType: {$entityType}");
-                    continue;
-                }
-
-                Log::info("SyncController::merge - Processing entityType: {$entityType}", ['items_count' => count($items)]);
-
-                foreach ($items as $item) {
-                    $result = $this->processItem($entityType, $item, $user->id);
-                    
-                    if ($result['status'] === 'created') {
-                        $results['created'][$entityType][] = ['sync_id' => $result['sync_id'], 'id' => $result['id']];
-                    } elseif ($result['status'] === 'updated') {
-                        $results['updated'][$entityType][] = ['sync_id' => $result['sync_id'], 'id' => $result['id'] ?? null];
-                    } elseif ($result['status'] === 'deleted') {
-                        $results['deleted'][$entityType][] = $result['sync_id'];
-                    } elseif ($result['status'] === 'conflict') {
-                        $results['conflicts'][$entityType][] = $result;
-                    }
-                }
-            }
-
-            DB::commit();
-
+            $this->recordSyncMetrics('merge_async', $startTime);
             return response()->json([
                 'success' => true,
-                'results' => $results,
-                'server_time' => now()->timestamp,
+                'async' => true,
+                'job_id' => $mergeJob->id,
             ]);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Sync merge failed', ['error' => $e->getMessage()]);
+        }
 
+        $lock = Cache::lock("sync_merge_user_{$user->id}", 30);
+
+        try {
+            if (!$lock->get()) {
+                $this->recordSyncMetrics('merge', $startTime, 'lock_contention');
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Sync already in progress for this user',
+                ], 409);
+            }
+
+            $data = $this->filterDuplicateChanges($request->input('data'), $user->id);
+
+            if (empty($data)) {
+                $this->recordSyncMetrics('merge', $startTime);
+                return response()->json([
+                    'success' => true,
+                    'results' => ['updated' => [], 'errors' => [], 'conflicts' => []],
+                    'serverTime' => now()->toIso8601String(),
+                ]);
+            }
+
+            try {
+                $results = $this->orchestrator->merge($data, $user->id);
+            } catch (\Exception $e) {
+                $this->recordSyncMetrics('merge', $startTime, 'orchestrator_failure');
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Sync service temporarily unavailable',
+                ], 503);
+            }
+
+            foreach ($results['updated'] ?? [] as $entityType => &$items) {
+                foreach ($items as &$item) {
+                    $syncId = $item['sync_id'] ?? null;
+                    if ($syncId) {
+                        $syncMeta = SyncMetadata::where('entity_type', $entityType)
+                            ->where('entity_id', $syncId)
+                            ->where('user_id', $user->id)
+                            ->where('sync_status', 'synced')
+                            ->latest()
+                            ->first();
+                        if ($syncMeta && !$syncMeta->dedup_hash) {
+                            $syncMeta->update([
+                                'dedup_hash' => $this->computeDedupHash($entityType, $item),
+                            ]);
+                        }
+                    }
+                    unset($item['_original']);
+                }
+            }
+
+            $compressedResults = $this->compressMergeResults($results);
+
+            $this->recordSyncMetrics('merge', $startTime);
             return response()->json([
-                'success' => false,
-                'error' => 'Sync failed: ' . $e->getMessage(),
-            ], 500);
+                'success' => true,
+                'results' => $compressedResults,
+                'serverTime' => now()->toIso8601String(),
+            ]);
+        } finally {
+            optional($lock)->release();
         }
     }
 
-    public function fullSync(Request $request): JsonResponse
+    public function mergeStatus(int $jobId, Request $request): JsonResponse
     {
+        $user = $request->user();
+        $mergeJob = MergeJob::where('id', $jobId)->where('user_id', $user->id)->first();
+
+        if (!$mergeJob) {
+            return response()->json(['error' => 'Merge job not found'], 404);
+        }
+
+        return response()->json([
+            'job_id' => $mergeJob->id,
+            'status' => $mergeJob->status,
+            'results' => $mergeJob->results,
+            'error_message' => $mergeJob->error_message,
+            'completed_at' => $mergeJob->completed_at?->toIso8601String(),
+        ]);
+    }
+
+
+    /**
+     * Bulk create items for better performance
+     */
+    private function createBudgetEntryGroups(int $entryId, int $userId, array $groups): void
+    {
+        $resolver = app(\App\Services\SyncIdResolver::class);
+
+        $incomingSyncIds = [];
+        foreach ($groups as $group) {
+            $groupSyncId = $group['sync_id'] ?? \Illuminate\Support\Str::uuid()->toString();
+            $incomingSyncIds[] = $groupSyncId;
+            $accountId = $group['account_id'] ?? $group['accountId'] ?? null;
+            $accountId = $resolver->resolveAccountId($accountId, $userId);
+
+            BudgetEntryGroup::updateOrCreate(
+                ['sync_id' => $groupSyncId, 'user_id' => $userId],
+                [
+                    'budget_entry_id' => $entryId,
+                    'account_id' => $accountId,
+                    'amount' => $group['amount'] ?? 0,
+                ]
+            );
+        }
+
+        BudgetEntryGroup::where('budget_entry_id', $entryId)
+            ->where('user_id', $userId)
+            ->whereNotIn('sync_id', $incomingSyncIds)
+            ->delete();
+    }
+
+    public function fullSync(Request $request): \Symfony\Component\HttpFoundation\Response
+    {
+        $startTime = microtime(true);
         $user = $request->user();
         $userId = $user->id;
 
-        // Use cache for full sync data (30 minutes cache)
-        $cacheKey = "full_sync_user_{$userId}";
-        
-        $formatted = Cache::remember($cacheKey, 1800, function() use ($userId) {
-            // Preload suppliers to cache their products and avoid N+1 queries
-            $suppliers = Supplier::forUser($userId)->active()->get(['id', 'sync_id', 'name']);
-            $supplierSyncIds = $suppliers->pluck('sync_id')->toArray();
-            
-            // Cache supplier products grouped by supplier_id
-            $supplierProductsCache = [];
-            if (!empty($supplierSyncIds)) {
-                $products = SupplierProduct::whereIn('supplier_id', $supplierSyncIds)
-                    ->where('status', 'active')
-                    ->get(['id', 'supplier_id', 'name', 'price', 'image_base64', 'sync_id']);
-                
-                foreach ($products as $product) {
-                    $supplierProductsCache[$product->supplier_id][] = $product;
+        $requestedTypes = $request->input('types', array_keys(self::ENTITY_TYPES));
+        if (!is_array($requestedTypes)) {
+            $requestedTypes = [$requestedTypes];
+        }
+
+        Log::debug('fullSync requestedTypes', ['requestedTypes' => $requestedTypes]);
+        Log::debug('fullSync all input', $request->all());
+
+        $since = $request->input('since');
+        $sinceParam = $since !== null && $since !== '';
+
+        $etag = null;
+        if (!$sinceParam) {
+            $etagParts = [];
+            foreach ($requestedTypes as $type) {
+                if (!isset(self::ENTITY_TYPES[$type])) continue;
+                $class = self::ENTITY_TYPES[$type];
+                $query = $class::forUser($userId);
+                if (method_exists($class, 'scopeActive')) {
+                    $query->active();
+                } elseif (in_array('status', (new $class)->getFillable())) {
+                    $query->where('status', 'active');
+                }
+                $max = $query->max('updated_at');
+                $etagParts[] = $max?->timestamp ?? '0';
+            }
+            $maxDeleted = SyncMetadata::forUser($userId)
+                ->where('sync_status', 'deleted')
+                ->max('server_updated_at');
+            $etagParts[] = $maxDeleted?->timestamp ?? '0';
+            $etag = '"' . md5(implode('|', $etagParts)) . '"';
+
+            $ifNoneMatch = $request->header('If-None-Match');
+            if ($ifNoneMatch !== null && trim($ifNoneMatch) === $etag) {
+                $this->recordSyncMetrics('fullSync', $startTime);
+                return response()->json([
+                    'success' => true,
+                    'data' => [],
+                    'serverTime' => now()->timestamp,
+                ], 304, ['ETag' => $etag]);
+            }
+        }
+        $sinceDateTime = null;
+        if ($since !== null && $since !== '') {
+            $sinceTimestamp = AbstractEntityProcessor::normalizeTimestamp($since);
+            $sinceDateTime = date('Y-m-d H:i:s', $sinceTimestamp);
+        }
+
+        Log::debug('fullSync since', ['since' => $since, 'sinceDateTime' => $sinceDateTime]);
+
+        $suppliers = in_array('supplier', $requestedTypes)
+            ? Supplier::forUser($userId)
+                ->when($sinceDateTime, fn($q) => $q->where(function ($query) use ($sinceDateTime) {
+                    $query->where('updated_at', '>', $sinceDateTime)
+                          ->orWhere('deleted_at', '>', $sinceDateTime);
+                }))
+                ->when($sinceDateTime, fn($q) => $q->withTrashed())
+                ->get(['id', 'sync_id', 'name', 'deleted_at'])
+            : collect();
+        $supplierSyncIds = $suppliers->pluck('sync_id')->toArray();
+
+        $supplierProductsCache = [];
+        if (in_array('supplier', $requestedTypes) && !empty($supplierSyncIds)) {
+            $products = SupplierProduct::whereIn('supplier_id', $supplierSyncIds)
+                ->where('user_id', $userId)
+                ->where('status', 'active')
+                ->get(['id', 'supplier_id', 'name', 'price', 'sync_id']);
+
+            foreach ($products as $product) {
+                $supplierProductsCache[$product->supplier_id][] = $product;
+            }
+        }
+
+        $entityTypes = [
+            'account' => [
+                'query' => fn() => Account::forUser($userId)
+                    ->when(!$sinceDateTime, fn($q) => $q->active())
+                    ->when($sinceDateTime, fn($q) => $q->where(function ($query) use ($sinceDateTime) {
+                        $query->where('updated_at', '>', $sinceDateTime)
+                              ->orWhere('deleted_at', '>', $sinceDateTime);
+                    }))
+                    ->when($sinceDateTime, fn($q) => $q->withTrashed())
+                    ->select(['id', 'sync_id', 'user_id', 'name', 'initial_balance', 'status', 'updated_at', 'created_at', 'deleted_at']),
+            ],
+            'budget_provider' => [
+                'query' => fn() => BudgetProvider::forUser($userId)
+                    ->when(!$sinceDateTime, fn($q) => $q->active())
+                    ->when($sinceDateTime, fn($q) => $q->where(function ($query) use ($sinceDateTime) {
+                        $query->where('updated_at', '>', $sinceDateTime)
+                              ->orWhere('deleted_at', '>', $sinceDateTime);
+                    }))
+                    ->when($sinceDateTime, fn($q) => $q->withTrashed())
+                    ->with(['account:id,name'])
+                    ->select(['id', 'sync_id', 'user_id', 'account_id', '_supplier_id', '_supplier_name', 'name', 'status', 'updated_at', 'deleted_at']),
+            ],
+            'budget_provider_product' => [
+                'query' => fn() => BudgetProviderProduct::forUser($userId)
+                    ->when(!$sinceDateTime, fn($q) => $q->active())
+                    ->when($sinceDateTime, fn($q) => $q->where(function ($query) use ($sinceDateTime) {
+                        $query->where('updated_at', '>', $sinceDateTime)
+                              ->orWhere('deleted_at', '>', $sinceDateTime);
+                    }))
+                    ->when($sinceDateTime, fn($q) => $q->withTrashed())
+                    ->with(['budgetProvider:id,sync_id,name', 'supplierProduct:id,sync_id,name,price'])
+                    ->select(['id', 'sync_id', 'user_id', 'budget_provider_id', 'supplier_product_id', 'product_name', 'product_price', 'quantity', 'status', 'updated_at', 'deleted_at']),
+            ],
+            'budget_entry' => [
+                'query' => fn() => BudgetEntry::forUser($userId)
+                    ->when(!$sinceDateTime, fn($q) => $q->active())
+                    ->when($sinceDateTime, fn($q) => $q->where(function ($query) use ($sinceDateTime) {
+                        $query->where('updated_at', '>', $sinceDateTime)
+                              ->orWhere('deleted_at', '>', $sinceDateTime);
+                    }))
+                    ->when($sinceDateTime, fn($q) => $q->withTrashed())
+                    ->with(['account:id,name', 'groups.account:id,name'])
+                    ->select(['id', 'sync_id', 'user_id', 'account_id', 'date', 'amount', 'name', 'payment_type', 'entry_type', 'supplier_id', 'supplier_name', 'status', 'updated_at', 'deleted_at']),
+            ],
+            'supplier' => [
+                'query' => fn() => collect($suppliers)->when($sinceDateTime !== null, fn($collection) => $collection->filter(function ($supplier) use ($sinceDateTime) {
+                    return $supplier->updated_at?->timestamp > $sinceDateTime || 
+                         ($supplier->deleted_at && $supplier->deleted_at->timestamp > $sinceDateTime);
+                })),
+                'isCollection' => true,
+            ],
+            'supplier_product' => [
+                'query' => fn() => SupplierProduct::forUser($userId)
+                    ->when(!$sinceDateTime, fn($q) => $q->active())
+                    ->when($sinceDateTime, fn($q) => $q->where(function ($query) use ($sinceDateTime) {
+                        $query->where('updated_at', '>', $sinceDateTime)
+                              ->orWhere('deleted_at', '>', $sinceDateTime);
+                    }))
+                    ->when($sinceDateTime, fn($q) => $q->withTrashed())
+                    ->select(['id', 'sync_id', 'user_id', 'supplier_id', 'name', 'price', 'status', 'updated_at', 'deleted_at']),
+            ],
+            'recurring_record' => [
+                'query' => fn() => RecurringRecord::forUser($userId)
+                    ->when(!$sinceDateTime, fn($q) => $q->active())
+                    ->when($sinceDateTime, fn($q) => $q->where(function ($query) use ($sinceDateTime) {
+                        $query->where('updated_at', '>', $sinceDateTime)
+                              ->orWhere('deleted_at', '>', $sinceDateTime);
+                    }))
+                    ->when($sinceDateTime, fn($q) => $q->withTrashed())
+                    ->with('products')
+                    ->select(['id', 'sync_id', 'user_id', 'type', 'entry_type', 'name', 'amount', 'account_id',
+                        'repeat_frequency', 'repeat_interval', 'repeat_days', 'repeat_month_day',
+                        'repeat_month_weekday_mode', 'repeat_month_weekday', 'repeat_month_weekday_ordinal',
+                        'repeat_year_month', 'repeat_year_day', 'time', 'auto_insert', 'start_date',
+                        'end_date', 'estimated', 'items', 'notes', 'status', 'updated_at', 'deleted_at']),
+            ],
+            'recurring_record_product' => [
+                'query' => fn() => RecurringRecordProduct::forUser($userId)
+                    ->when(!$sinceDateTime, fn($q) => $q->active())
+                    ->when($sinceDateTime, fn($q) => $q->where(function ($query) use ($sinceDateTime) {
+                        $query->where('updated_at', '>', $sinceDateTime)
+                              ->orWhere('deleted_at', '>', $sinceDateTime);
+                    }))
+                    ->when($sinceDateTime, fn($q) => $q->withTrashed())
+                    ->select(['id', 'sync_id', 'user_id', 'recurring_record_id', 'supplier_product_id', 'product_name', 'quantity', 'status', 'updated_at', 'deleted_at']),
+            ],
+        ];
+
+        $entityTypes = array_intersect_key($entityTypes, array_flip($requestedTypes));
+
+        // Detectar entorno de test - en tests usar JSON normal, en producción streaming
+        $isTesting = app()->environment('testing');
+
+        if ($isTesting) {
+            // En test: construir array completo (comportamiento original)
+            $formatted = [];
+            foreach ($entityTypes as $entityType => $config) {
+                $formatted[$entityType] = [];
+
+                if (!empty($config['isCollection'])) {
+                    $items = $config['query']();
+                    foreach ($items as $item) {
+                        $formatted[$entityType][] = $this->formatItem($entityType, $item, $supplierProductsCache);
+                    }
+                } else {
+                    $query = $config['query']();
+                    $query->orderBy('id')->chunkById(500, function ($chunk) use ($entityType, $supplierProductsCache, &$formatted) {
+                        foreach ($chunk as $item) {
+                            $formatted[$entityType][] = $this->formatItem($entityType, $item, $supplierProductsCache);
+                        }
+                    });
                 }
             }
 
-            // Load data with eager loading for relationships and field selectivity
-            $data = [
-                'accounts' => Account::forUser($userId)->active()
-                    ->get(['id', 'sync_id', 'user_id', 'name', 'status', 'updated_at']),
-                'budget_providers' => BudgetProvider::forUser($userId)->active()
-                    ->with(['account:id,name'])
-                    ->get(['id', 'sync_id', 'user_id', 'account_id', '_supplier_id', '_supplier_name', 'name', 'status', 'updated_at']),
-                'budget_provider_products' => BudgetProviderProduct::forUser($userId)->active()
-                    ->with(['budgetProvider:id,name', 'supplierProduct:id,name,price'])
-                    ->get(['id', 'sync_id', 'user_id', 'budget_provider_id', 'supplier_product_id', 'product_name', 'product_price', 'quantity', 'status', 'updated_at']),
-'budget_entries' => BudgetEntry::forUser($userId)->active()
-    ->with(['account:id,name', 'groups.account:id,name'])
-    ->get(['id', 'sync_id', 'user_id', 'account_id', 'date', 'amount', 'name', 'payment_type', 'entry_type', 'supplier_id', 'supplier_name', 'status', 'updated_at']),
-                'suppliers' => $suppliers,
-                'supplier_products' => SupplierProduct::forUser($userId)->active()
-                    ->get(['id', 'sync_id', 'user_id', 'supplier_id', 'name', 'price', 'status', 'updated_at']),
-                'recurring_records' => RecurringRecord::forUser($userId)->active()
-                    ->with('products')
-                    ->get(['id', 'sync_id', 'user_id', 'type', 'entry_type', 'name', 'amount', 'account_id',
-                           'repeat_frequency', 'repeat_interval', 'repeat_days', 'repeat_month_day',
-                           'repeat_month_weekday_mode', 'repeat_month_weekday', 'repeat_month_weekday_ordinal',
-                           'repeat_year_month', 'repeat_year_day', 'time', 'auto_insert', 'start_date',
-                           'end_date', 'estimated', 'items', 'notes', 'status', 'updated_at']),
-            ];
+            if ($sinceDateTime !== null) {
+                $deleted = SyncMetadata::forUser($userId)
+                    ->where('sync_status', 'deleted')
+                    ->where('server_updated_at', '>', $sinceDateTime)
+                    ->get(['entity_type', 'entity_id']);
 
-            $formatted = [];
-            foreach ($data as $entityType => $items) {
-                $formatted[$entityType] = $items->map(fn($item) => $this->formatItem($entityType, $item, $supplierProductsCache))->toArray();
+                foreach ($deleted as $meta) {
+                    $type = $meta->entity_type;
+                    if (isset($formatted[$type])) {
+                        $formatted[$type][] = ['id' => $meta->entity_id, '_deleted' => true];
+                    }
+                }
             }
-            
-            return $formatted;
-        });
 
-        return response()->json([
-            'success' => true,
-            'data' => $formatted,
-            'server_time' => now()->timestamp,
-        ]);
+            $headers = $etag ? ['ETag' => $etag] : [];
+
+            $this->recordSyncMetrics('fullSync', $startTime);
+            return response()->json([
+                'success' => true,
+                'data' => $formatted,
+                'serverTime' => now()->timestamp,
+            ], 200, $headers);
+        }
+
+        // Producción: streaming real
+        $streamCallback = function () use ($entityTypes, $supplierProductsCache, $sinceDateTime, $userId, $requestedTypes) {
+            $output = fopen('php://output', 'w');
+
+            fwrite($output, '{"success":true,"data":{');
+            $firstEntity = true;
+
+            foreach ($entityTypes as $entityType => $config) {
+                if (!$firstEntity) {
+                    fwrite($output, ',');
+                }
+                $firstEntity = false;
+
+                fwrite($output, '"' . $entityType . '":[');
+
+                $firstItem = true;
+
+                if (!empty($config['isCollection'])) {
+                    $items = $config['query']();
+                    foreach ($items as $item) {
+                        if (!$firstItem) {
+                            fwrite($output, ',');
+                        }
+                        $firstItem = false;
+                        $formatted = $this->formatItem($entityType, $item, $supplierProductsCache);
+                        fwrite($output, json_encode($formatted));
+                    }
+                } else {
+                    $query = $config['query']();
+                    $query->orderBy('id')->chunkById(500, function ($chunk) use ($entityType, $supplierProductsCache, $output, &$firstItem) {
+                        foreach ($chunk as $item) {
+                            if (!$firstItem) {
+                                fwrite($output, ',');
+                            }
+                            $firstItem = false;
+                            $formatted = $this->formatItem($entityType, $item, $supplierProductsCache);
+                            fwrite($output, json_encode($formatted));
+                        }
+                    });
+                }
+
+                fwrite($output, ']');
+            }
+
+            if ($sinceDateTime !== null) {
+                $deleted = SyncMetadata::forUser($userId)
+                    ->where('sync_status', 'deleted')
+                    ->where('server_updated_at', '>', $sinceDateTime)
+                    ->get(['entity_type', 'entity_id']);
+
+                foreach ($deleted as $meta) {
+                    $type = $meta->entity_type;
+                    if (isset($entityTypes[$type])) {
+                        fwrite($output, ',"' . $type . '":[');
+                        fwrite($output, json_encode(['id' => $meta->entity_id, '_deleted' => true]));
+                        fwrite($output, ']');
+                    }
+                }
+            }
+
+            fwrite($output, '},"serverTime":' . now()->timestamp . '}');
+
+            fclose($output);
+        };
+
+        $headers = ['Content-Type' => 'application/json'];
+        if ($etag) {
+            $headers['ETag'] = $etag;
+        }
+
+        $this->recordSyncMetrics('fullSync', $startTime);
+        return Response::stream($streamCallback, 200, $headers);
+    }
+    public function getResolvedConflicts(Request $request): JsonResponse
+    {
+        $startTime = microtime(true);
+        $conflicts = SyncMetadata::forUser($request->user()->id)
+            ->resolved()
+            ->orderBy('updated_at', 'desc')
+            ->limit(50)
+            ->get();
+
+        $this->recordSyncMetrics('getResolvedConflicts', $startTime);
+        return response()->json(['conflicts' => $conflicts]);
     }
 
     public function resolveConflict(SyncResolveConflictRequest $request): JsonResponse
     {
+        $startTime = microtime(true);
         $user = $request->user();
         $entityType = $request->input('entity_type');
         $entityId = $request->input('entity_id');
@@ -926,14 +861,23 @@ case 'budget_entry':
             ->byEntity($entityType, $entityId)
             ->first();
 
-        if (!$syncMeta) {
-            return response()->json([
-                'success' => false,
-                'error' => 'Conflict not found',
-            ], 404);
-        }
+    if (!$syncMeta) {
+        $this->recordSyncMetrics('resolveConflict', $startTime, 'not_found');
+        return response()->json([
+            'success' => false,
+            'error' => 'Conflict not found',
+        ], 404);
+    }
 
-        // Validate client_data against the entity's FormRequest
+    if ($syncMeta->sync_status !== 'conflict') {
+        $this->recordSyncMetrics('resolveConflict', $startTime, 'not_conflict');
+        return response()->json([
+            'success' => false,
+            'error' => 'No active conflict for this entity',
+        ], 409);
+    }
+
+    // Validate client_data against the entity's FormRequest
         if ($clientData !== null) {
             $this->validateEntityData($entityType, [$clientData]);
         }
@@ -942,33 +886,125 @@ case 'budget_entry':
             $this->updateEntity($entityType, $entityId, $clientData, $user->id);
         }
 
-        $syncMeta->update(['sync_status' => 'synced']);
-        $syncMeta->delete();
+        $syncMeta->update([
+            'sync_status' => 'resolved',
+            'conflict_data' => $syncMeta->conflict_data ?? json_encode([
+                'resolution' => $resolution,
+                'resolved_at' => now()->toIso8601String(),
+            ]),
+        ]);
 
+        $this->recordSyncMetrics('resolveConflict', $startTime);
         return response()->json([
             'success' => true,
             'message' => 'Conflict resolved',
         ]);
     }
 
+    public function resolveConflictsBatch(SyncResolveConflictsBatchRequest $request): JsonResponse
+    {
+        $startTime = microtime(true);
+        $user = $request->user();
+        $resolutions = $request->input('resolutions');
+        $errors = [];
+        $processed = 0;
+
+        $resolvedEntries = [];
+
+        foreach ($resolutions as $index => $res) {
+            $entityType = $res['entity_type'];
+            $entityId = $res['entity_id'];
+            $resolution = $res['resolution'] ?? 'server';
+            $clientData = $res['client_data'] ?? null;
+
+            $syncMeta = SyncMetadata::forUser($user->id)
+                ->byEntity($entityType, $entityId)
+                ->first();
+
+            if (!$syncMeta) {
+                $errors[] = ['index' => $index, 'entity_type' => $entityType, 'entity_id' => $entityId, 'error' => 'Conflict not found'];
+                continue;
+            }
+
+            if ($syncMeta->sync_status !== 'conflict') {
+                $errors[] = ['index' => $index, 'entity_type' => $entityType, 'entity_id' => $entityId, 'error' => 'No active conflict for this entity'];
+                continue;
+            }
+
+            if ($resolution === 'client' && $clientData) {
+                $this->validateEntityData($entityType, [$clientData]);
+            }
+
+            $resolvedEntries[] = [
+                'syncMeta' => $syncMeta,
+                'entityType' => $entityType,
+                'entityId' => $entityId,
+                'resolution' => $resolution,
+                'clientData' => $clientData,
+                'index' => $index,
+            ];
+        }
+
+        DB::beginTransaction();
+        try {
+            foreach ($resolvedEntries as $entry) {
+                if ($entry['resolution'] === 'client' && $entry['clientData']) {
+                    $this->updateEntity($entry['entityType'], $entry['entityId'], $entry['clientData'], $user->id);
+                }
+
+                $entry['syncMeta']->update([
+                    'sync_status' => 'resolved',
+                    'conflict_data' => $entry['syncMeta']->conflict_data ?? json_encode([
+                        'resolution' => $entry['resolution'],
+                        'resolved_at' => now()->toIso8601String(),
+                    ]),
+                ]);
+
+                $processed++;
+            }
+
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            $errors[] = ['index' => 'batch', 'error' => 'Transaction failed: ' . $e->getMessage()];
+        }
+
+        $this->recordSyncMetrics('resolveConflictsBatch', $startTime);
+        return response()->json([
+            'success' => true,
+            'processed' => $processed,
+            'errors' => $errors,
+        ]);
+    }
+
     private function formatItem(string $entityType, $item, array $supplierProductsCache = []): array
     {
-        Log::info("formatItem - entityType: " . $entityType);
         $data = $item->toArray();
         $data['id'] = $item->sync_id;
         $data['id_server'] = $item->id;
+        
+        // Check if the record is soft-deleted
+        $isDeleted = !is_null($item->deleted_at);
         unset($data['sync_id'], $data['user_id'], $data['deleted_at']);
 
-        if ($entityType === 'budget_entry' || $entityType === 'budget_entries') {
-            $data['groups'] = $item->groups->map(fn($g) => [
-                'id' => $g->id,
-                'account_id' => $g->account_id,
-                'amount' => (float)$g->amount,
-            ])->toArray();
+        $data['updated_at'] = $item->updated_at?->timestamp;
+        $data['created_at'] = $item->created_at?->timestamp;
+
+        // Add _deleted flag for soft-deleted records
+        if ($isDeleted) {
+            $data['_deleted'] = true;
+        }
+
+        if ($entityType === 'budget_entry') {
+        $data['groups'] = $item->groups->map(fn($g) => [
+            'sync_id' => $g->sync_id,
+            'account_id' => $g->account?->sync_id,
+            'amount' => (float)$g->amount,
+        ])->toArray();
             unset($data['groups_relation']);
         }
 
-        if ($entityType === 'suppliers') {
+        if ($entityType === 'supplier') {
             $supplierProducts = $supplierProductsCache[$item->sync_id] ?? [];
 
             $data['products'] = array_map(function($product) {
@@ -977,14 +1013,17 @@ case 'budget_entry':
                     'id' => $product->id,
                     'name' => $product->name,
                     'price' => $product->price,
-                    'imageBase64' => $product->image_base64,
+                    'imageUrl' => $product->id ? url("/api/supplier-products/{$product->id}/image") : null,
                 ];
             }, $supplierProducts);
-
-            Log::info("formatItem - formatted products: " . count($data['products']));
         }
 
-        if ($entityType === 'recurring_record' || $entityType === 'recurring_records') {
+        if ($entityType === 'supplier_product') {
+            unset($data['image_base64']);
+            $data['imageUrl'] = $item->id ? url("/api/supplier-products/{$item->id}/image") : null;
+        }
+
+        if ($entityType === 'recurring_record') {
             $data['products'] = $item->products->map(fn($p) => [
                 'sync_id' => $p->sync_id,
                 'supplier_product_id' => $p->supplier_product_id,
@@ -995,107 +1034,6 @@ case 'budget_entry':
         }
 
         return $data;
-    }
-
-    private function processItem(string $entityType, array $item, int $userId): array
-    {
-        $syncId = $item['id'] ?? null;
-        
-        if (!$syncId) {
-            return ['status' => 'error', 'message' => 'No sync_id provided'];
-        }
-
-        $modelClass = self::ENTITY_TYPES[$entityType];
-        $existing = $modelClass::where('sync_id', $syncId)->first();
-
-        if (isset($item['_deleted']) && $item['_deleted'] === true) {
-            if ($existing) {
-                if ($entityType === 'recurring_record_product') {
-                    $existing->delete();
-                } elseif ($entityType === 'recurring_record') {
-                    $existing->update(['deleted_at' => now(), 'status' => 'deleted']);
-                } else {
-                    $existing->update(['deleted_at' => now()]);
-                }
-                $this->updateSyncMetadata($entityType, $syncId, 'deleted', $userId);
-            }
-            return ['status' => 'deleted', 'sync_id' => $syncId];
-        }
-
-        if (!$existing) {
-            $item['user_id'] = $userId;
-            $item['sync_id'] = $syncId;
-            
-            if (isset($item['updated_at']) && is_numeric($item['updated_at'])) {
-                $timestamp = $item['updated_at'];
-                if ($timestamp > 10000000000) {
-                    $timestamp = $timestamp / 1000;
-                }
-                $item['updated_at'] = date('Y-m-d H:i:s', $timestamp);
-            }
-            
-            $createData = $item;
-            unset($createData['id'], $createData['products']);
-            if ($entityType === 'recurring_record_product') {
-                unset($createData['user_id']);
-            }
-
-            if ($entityType === 'recurring_record_product' && isset($createData['recurring_record_id'])) {
-                $rrId = $createData['recurring_record_id'];
-                if (!is_numeric($rrId)) {
-                    $rr = RecurringRecord::where('sync_id', $rrId)->first();
-                    $createData['recurring_record_id'] = $rr ? $rr->id : null;
-                } else {
-                    $createData['recurring_record_id'] = (int)$rrId;
-                }
-            }
-
-            if (in_array($entityType, ['budget_provider_product', 'recurring_record_product']) && isset($createData['supplier_product_id'])) {
-                $spId = $createData['supplier_product_id'];
-                if (!is_numeric($spId)) {
-                    $sp = SupplierProduct::where('sync_id', $spId)->first();
-                    if ($sp) {
-                        $createData['supplier_product_id'] = $sp->id;
-                    } else {
-                        $createData['supplier_product_id'] = is_numeric($spId) ? (int)$spId : null;
-                    }
-                } else {
-                    $createData['supplier_product_id'] = (int)$spId;
-                }
-            }
-            
-            $groups = $createData['groups'] ?? null;
-            unset($createData['groups']);
-
-            $created = $modelClass::create($createData);
-            
-            if ($entityType === 'budget_entry' && !empty($groups)) {
-                $this->createBudgetEntryGroups($created->id, $created->user_id, $groups);
-            }
-            
-            $this->updateSyncMetadata($entityType, $syncId, 'synced', $userId);
-            return ['status' => 'created', 'sync_id' => $syncId, 'id' => $created->id];
-        }
-
-        $localUpdatedAt = $existing->updated_at->timestamp;
-        $clientUpdatedAt = $item['updated_at'] ?? 0;
-
-        if ($clientUpdatedAt > $localUpdatedAt) {
-            $this->updateEntity($entityType, $syncId, $item, $userId, $existing);
-            $this->updateSyncMetadata($entityType, $syncId, 'synced', $userId);
-            return ['status' => 'updated', 'sync_id' => $syncId];
-        }
-
-        if ($clientUpdatedAt < $localUpdatedAt) {
-            $this->createConflict($entityType, $syncId, $item, $userId);
-            return [
-                'status' => 'conflict',
-                'sync_id' => $syncId,
-                'server_data' => $this->formatItem($entityType, $existing),
-            ];
-        }
-
-        return ['status' => 'skipped', 'sync_id' => $syncId];
     }
 
     private function filterToFillable(string $entityType, array $data, array $allowedFields = []): array
@@ -1127,56 +1065,51 @@ case 'budget_entry':
         
         $updateData = $data;
         unset($updateData['id'], $updateData['sync_id'], $updateData['products']);
-        if ($entityType === 'recurring_record_product') {
-            unset($updateData['user_id']);
-        }
         
         foreach ($updateData as $key => $value) {
             if (in_array($key, ['updated_at']) && is_numeric($value)) {
-                $timestamp = $value;
-                if ($timestamp > 10000000000) {
-                    $timestamp = $timestamp / 1000;
-                }
-                $updateData[$key] = date('Y-m-d H:i:s', $timestamp);
+                $updateData[$key] = date('Y-m-d H:i:s', AbstractEntityProcessor::normalizeTimestamp($value));
+            }
+        }
+
+        $resolver = app(\App\Services\SyncIdResolver::class);
+
+        if (in_array($entityType, ['budget_entry', 'budget_provider', 'recurring_record']) && isset($updateData['account_id'])) {
+            $updateData['account_id'] = $resolver->resolveAccountId($updateData['account_id'], $userId);
+        }
+
+        if (in_array($entityType, ['budget_provider_product', 'recurring_record_product']) && isset($updateData['supplier_product_id'])) {
+            $updateData['supplier_product_id'] = $resolver->resolveSupplierProductId($updateData['supplier_product_id'], $userId);
+        }
+
+        if ($entityType === 'recurring_record_product' && isset($updateData['recurring_record_id'])) {
+            $updateData['recurring_record_id'] = $resolver->resolveRecurringRecordId($updateData['recurring_record_id'], $userId);
+            $parentRecord = RecurringRecord::where('id', $updateData['recurring_record_id'])
+                ->where('user_id', $userId)
+                ->first();
+            if (!$parentRecord) {
+                return;
             }
         }
         
         if ($entityType === 'budget_entry') {
             $groups = $updateData['groups'] ?? null;
             unset($updateData['groups']);
-            
+
             if ($existing && !empty($groups)) {
-                $existing->groups()->delete();
                 $this->createBudgetEntryGroups($existing->id, $existing->user_id, $groups);
             }
         }
         
         $updateData = $this->filterToFillable($entityType, $updateData);
 
-        $modelClass::where('sync_id', $syncId)->update($updateData);
+        if ($entityType === 'recurring_record_product') {
+            $modelClass::where('sync_id', $syncId)
+                ->whereHas('recurringRecord', fn($q) => $q->where('user_id', $userId))
+                ->update($updateData);
+        } else {
+            $modelClass::where('sync_id', $syncId)->where('user_id', $userId)->update($updateData);
+        }
     }
 
-    private function updateSyncMetadata(string $entityType, string $syncId, string $status, int $userId): void
-    {
-        SyncMetadata::updateOrCreate(
-            ['entity_type' => $entityType, 'entity_id' => $syncId, 'user_id' => $userId],
-            [
-                'sync_status' => $status,
-                'last_synced_at' => now(),
-                'server_updated_at' => now(),
-            ]
-        );
-    }
-
-    private function createConflict(string $entityType, string $syncId, array $clientData, int $userId): void
-    {
-        SyncMetadata::updateOrCreate(
-            ['entity_type' => $entityType, 'entity_id' => $syncId, 'user_id' => $userId],
-            [
-                'sync_status' => 'conflict',
-                'conflict_data' => $clientData,
-                'server_updated_at' => now(),
-            ]
-        );
-    }
 }

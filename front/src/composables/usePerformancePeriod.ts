@@ -1,4 +1,4 @@
-import { ref, reactive } from 'vue';
+import { reactive } from 'vue';
 import { formatLocalDate } from '@/utils/date';
 
 /**
@@ -34,7 +34,7 @@ export function usePerformancePeriod() {
   function setHover(key: string, value: boolean) {
     try {
       hovered[key] = value;
-    } catch (_e) {
+    } catch {
       // noop
     }
   }
@@ -54,7 +54,7 @@ export function usePerformancePeriod() {
       if (sumPayments > 0) return sumPayments;
       const e = Number(p?.estimated || 0);
       return e;
-    } catch (_e) {
+    } catch {
       return 0;
     }
   }

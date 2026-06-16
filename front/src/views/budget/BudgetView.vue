@@ -11,7 +11,7 @@
         <ion-buttons slot="end">
           <ion-button v-if="pendingRecurringRecords.length > 0" @click="showPendingModal = true">
             <ion-icon :icon="timeOutline"></ion-icon>
-            <ion-badge color="warning" slot="end">{{ pendingRecurringRecords.length }}</ion-badge>
+            <ion-badge slot="end" color="warning">{{ pendingRecurringRecords.length }}</ion-badge>
           </ion-button>
           <ion-button @click="openMoreOptions({ event: $event })">
             <ion-icon :icon="ellipsisVerticalOutline"></ion-icon>
@@ -476,7 +476,7 @@ async function performClearDay() {
       }
 
       // Eliminar archivos pendientes de localStorage
-      pendingAttachmentsService.removePendingAttachment(entry.sync_id);
+      await pendingAttachmentsService.removePendingAttachment(entry.sync_id);
     }
   }
 

@@ -4,20 +4,26 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class RecurringRecordProduct extends Model
 {
+    use SoftDeletes;
+
     protected $table = 'recurring_record_products';
 
     protected $fillable = [
-        'recurring_record_id', 'sync_id', 'supplier_product_id',
-        'product_name', 'product_price', 'quantity',
+        'user_id', 'recurring_record_id', 'sync_id', 'supplier_product_id',
+        'product_name', 'product_price', 'quantity', 'status',
     ];
 
     protected $casts = [
         'product_price' => 'decimal:2',
         'quantity' => 'integer',
+        'deleted_at' => 'datetime',
     ];
+
+    protected $hidden = ['deleted_at'];
 
     public function recurringRecord(): BelongsTo
     {
@@ -29,10 +35,13 @@ class RecurringRecordProduct extends Model
         return $this->belongsTo(SupplierProduct::class, 'supplier_product_id');
     }
 
+    public function scopeActive($query)
+    {
+        return $query->where('status', 'active');
+    }
+
     public function scopeForUser($query, $userId)
     {
-        return $query->whereHas('recurringRecord', function ($q) use ($userId) {
-            $q->where('user_id', $userId);
-        });
+        return $query->where('user_id', $userId);
     }
 }

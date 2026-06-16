@@ -48,10 +48,9 @@ export function usePdfReport() {
 
     try {
       const html2canvasModule = await import('html2canvas');
-      const html2canvas = html2canvasModule && (html2canvasModule.default ?? html2canvasModule);
+      const html2canvas = (html2canvasModule && (html2canvasModule.default ?? html2canvasModule)) as any;
       const jsPDFModule = await import('jspdf');
       const jsPDF = (jsPDFModule as any).jsPDF || (jsPDFModule as any).default || jsPDFModule;
-      const doc = new jsPDF();
 
       const el = elRef.value as HTMLElement;
 

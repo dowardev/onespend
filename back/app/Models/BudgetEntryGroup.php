@@ -10,6 +10,7 @@ class BudgetEntryGroup extends Model
     protected $table = 'budget_entry_groups';
 
     protected $fillable = [
+        'sync_id',
         'budget_entry_id',
         'account_id',
         'amount',

@@ -31,7 +31,7 @@ import { SyncController } from '@/controllers/syncController';
 // End Components
 
 // Vars
-const syncController = new SyncController();
+const syncController = SyncController;
 // End Vars
 
 // Functions

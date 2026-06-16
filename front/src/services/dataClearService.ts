@@ -1,6 +1,4 @@
-import { DixieController } from '@/controllers/dixie';
-
-const DIXIE_DB_NAME = 'ABOgazDB';
+import { db } from '@/db/OneSpendDB';
 
 const LOCAL_STORAGE_KEYS = [
   'auth_token',
@@ -8,6 +6,10 @@ const LOCAL_STORAGE_KEYS = [
   'last_sync',
   'dixie:lastError',
   'budget:selectedDate',
+  'dexie_migration_completed',
+  'onespend-sync-lock',
+  'pending_attachments',
+  'pending_attachments_dexie_migrated',
 ];
 
 export async function clearAllUserData(): Promise<void> {
@@ -39,53 +41,21 @@ async function clearLocalStorage(): Promise<void> {
 
 async function clearIndexedDB(): Promise<void> {
   if (typeof window === 'undefined') return;
-
-  const stores = ['suppliers', 'accounts', 'templates', 'budget', 'backups', 'config'];
-
-  for (const storeName of stores) {
-    await clearStore(storeName);
-  }
-}
-
-async function clearStore(storeName: string): Promise<void> {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(storeName, 'readwrite');
-    const store = tx.objectStore(storeName);
-    const req = store.clear();
-
-    req.onsuccess = () => {
-      console.log(`Cleared IndexedDB store: ${storeName}`);
-      resolve();
-    };
-
-    req.onerror = () => {
-      console.error(`Failed to clear IndexedDB store: ${storeName}`, req.error);
-      reject(req.error);
-    };
-
-    tx.oncomplete = () => {
+  const pendingItems = await db.table('syncQueue').count();
+  if (pendingItems > 0) {
+    const items = await db.table('syncQueue').toArray();
+    try {
+      localStorage.setItem('orphaned_sync_queue', JSON.stringify(items));
+    } catch {
+      console.warn('[dataClearService] localStorage quota exceeded, truncating');
       try {
-        db.close();
-      } catch (e) {
-        console.warn('Error closing database:', e);
+        localStorage.setItem('orphaned_sync_queue', JSON.stringify(items.slice(0, 100)));
+      } catch {
+        console.warn('[dataClearService] localStorage still exceeded, skipping orphan storage');
       }
-    };
-  });
-}
-
-function openDB(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DIXIE_DB_NAME);
-
-    req.onsuccess = () => {
-      resolve(req.result);
-    };
-
-    req.onerror = () => {
-      reject(req.error);
-    };
-  });
+    }
+  }
+  await db.delete();
 }
 
 export const dataClearService = {

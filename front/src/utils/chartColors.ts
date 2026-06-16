@@ -25,7 +25,7 @@ function getComputedVar(name: string): string {
           .getPropertyValue(name)
           .trim();
         if (v) {
-          // eslint-disable-next-line no-console
+           
           console.debug(
             '[chartColors] found CSS var',
             name,
@@ -35,12 +35,12 @@ function getComputedVar(name: string): string {
           );
           return v;
         }
-      } catch (_e) {
+      } catch {
         // continue
       }
     }
     return '';
-  } catch (_e) {
+  } catch {
     return '';
   }
 }
@@ -130,7 +130,7 @@ function resolveColorRgb(varNameRgb: string, varNameHex: string, fallbackHex: st
       const fromHex2 = hexToRgb(computed);
       if (fromHex2) return fromHex2;
     }
-  } catch (_e) {
+  } catch {
     // ignore
   }
 
@@ -145,13 +145,13 @@ const SUCCESS_RGB = resolveColorRgb(
 );
 const DANGER_RGB = resolveColorRgb('--ion-color-danger-rgb', '--ion-color-danger', DEFAULT_DANGER);
 
-const successBg = `rgba(${SUCCESS_RGB}, 0.15)`;
-const successBorder = `rgba(${SUCCESS_RGB}, 1)`;
-const successHover = `rgba(${SUCCESS_RGB}, 0.25)`;
+const _successBg = `rgba(${SUCCESS_RGB}, 0.15)`;
+const _successBorder = `rgba(${SUCCESS_RGB}, 1)`;
+const _successHover = `rgba(${SUCCESS_RGB}, 0.25)`;
 
-const dangerBg = `rgba(${DANGER_RGB}, 0.15)`;
-const dangerBorder = `rgba(${DANGER_RGB}, 1)`;
-const dangerHover = `rgba(${DANGER_RGB}, 0.25)`;
+const _dangerBg = `rgba(${DANGER_RGB}, 0.15)`;
+const _dangerBorder = `rgba(${DANGER_RGB}, 1)`;
+const _dangerHover = `rgba(${DANGER_RGB}, 0.25)`;
 
 function isEgresoLabel(label: unknown) {
   if (!label) return false;
@@ -218,9 +218,9 @@ export function applyNeonStyles(
   try {
     const ss = resolveColorRgb('--ion-color-success-rgb', '--ion-color-success', DEFAULT_SUCCESS);
     const dd = resolveColorRgb('--ion-color-danger-rgb', '--ion-color-danger', DEFAULT_DANGER);
-    // eslint-disable-next-line no-console
+     
     console.log('[chartColors] resolved success rgb:', ss, 'danger rgb:', dd);
-  } catch (_e) {
+  } catch {
     /* ignore */
   }
 
@@ -245,7 +245,7 @@ export function applyNeonStyles(
         hoverBgColors.push(colors.hover);
       }
       try {
-        // eslint-disable-next-line no-console
+         
         console.log(
           '[chartColors] dataset',
           datasetIndex,
@@ -253,7 +253,7 @@ export function applyNeonStyles(
           'per-item colors used',
           bgColors.slice(0, 5),
         );
-      } catch (_e) {
+      } catch {
         /* noop */
       }
 
@@ -275,7 +275,7 @@ export function applyNeonStyles(
       ? buildColors(datasetIndex === 1 ? 'danger' : 'success')
       : pickColorForValue(val, dataset.label, datasetIndex);
     try {
-      // eslint-disable-next-line no-console
+       
       console.log(
         '[chartColors] dataset',
         datasetIndex,
@@ -283,7 +283,7 @@ export function applyNeonStyles(
         'single colors used',
         colors,
       );
-    } catch (_e) {
+    } catch {
       /* noop */
     }
     return {

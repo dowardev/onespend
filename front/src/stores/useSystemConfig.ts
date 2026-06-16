@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { isPlatform } from '@ionic/vue';
-import { configController } from '@/controllers/dixie';
+import { configDb } from '@/db/controllers/configDb';
 
 export type SystemMode = 'ios' | 'md';
 export type ThemeMode =
@@ -40,7 +40,7 @@ export const useSystemConfig = defineStore('systemConfig', () => {
 
   async function getTheme(): Promise<ThemeMode> {
     if (theme.value !== 'auto') return theme.value;
-    const saved = await configController.getConfig({ key: 'theme' });
+    const saved = await configDb.get({ key: 'theme' });
     if (
       ['light', 'dark', 'auto', 'catppuccin-latte-maroon', 'catppuccin-macchiato-maroon'].includes(
         saved as ThemeMode,
@@ -53,11 +53,11 @@ export const useSystemConfig = defineStore('systemConfig', () => {
 
   async function setTheme(val: ThemeMode) {
     theme.value = val;
-    await configController.setConfig({ key: 'theme', value: val });
+    await configDb.set({ key: 'theme', value: val });
   }
 
   async function getAutoLightTheme(): Promise<ThemeMode> {
-    const saved = await configController.getConfig({ key: 'autoLightTheme' });
+    const saved = await configDb.get({ key: 'autoLightTheme' });
     if (
       ['light', 'dark', 'catppuccin-latte-maroon', 'catppuccin-macchiato-maroon'].includes(
         saved as ThemeMode,
@@ -70,11 +70,11 @@ export const useSystemConfig = defineStore('systemConfig', () => {
 
   async function setAutoLightTheme(val: ThemeMode) {
     autoLightTheme.value = val;
-    await configController.setConfig({ key: 'autoLightTheme', value: val });
+    await configDb.set({ key: 'autoLightTheme', value: val });
   }
 
   async function getAutoDarkTheme(): Promise<ThemeMode> {
-    const saved = await configController.getConfig({ key: 'autoDarkTheme' });
+    const saved = await configDb.get({ key: 'autoDarkTheme' });
     if (
       ['light', 'dark', 'catppuccin-latte-maroon', 'catppuccin-macchiato-maroon'].includes(
         saved as ThemeMode,
@@ -87,21 +87,7 @@ export const useSystemConfig = defineStore('systemConfig', () => {
 
   async function setAutoDarkTheme(val: ThemeMode) {
     autoDarkTheme.value = val;
-    await configController.setConfig({ key: 'autoDarkTheme', value: val });
-  }
-
-  const weekStartDay = ref(0);
-  async function getWeekStartDay(): Promise<number> {
-    const saved = await configController.getConfig({ key: 'weekStartDay' });
-    if (saved !== null && saved !== undefined) {
-      weekStartDay.value = Number(saved);
-    }
-    return weekStartDay.value;
-  }
-
-  async function setWeekStartDay(val: number) {
-    weekStartDay.value = val;
-    await configController.setConfig({ key: 'weekStartDay', value: val });
+    await configDb.set({ key: 'autoDarkTheme', value: val });
   }
 
   return {

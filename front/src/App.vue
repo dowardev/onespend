@@ -45,11 +45,11 @@ import {
   migrateNormalizeBackupDates,
 } from '@/migrations/normalizeBackupsDates';
 import { needsEntriesKeyCheck } from '@/migrations/addEntriesKeyToBackups';
+import { runMigration } from '@/db/migrateFromLegacy';
 // End Imports
 
 // Controllers
 import systemController from '@/controllers/systemConfigController';
-import dixieController from '@/controllers/dixie';
 import authController from '@/controllers/authController';
 import accountsController from '@/controllers/accountsController';
 // End Controllers
@@ -190,6 +190,15 @@ async function showMigrationToast() {
 
 // Life cycle
 onMounted(async () => {
+  try {
+    const result = await runMigration()
+    if (result.migrated) {
+      console.log(`[migration] Dexie migration completed:`, result.stats)
+    }
+  } catch (e) {
+    console.error('[migration] Failed:', e)
+  }
+
   setDesignMode();
   setupThemeListener();
   await applyTheme();
@@ -207,13 +216,6 @@ onMounted(async () => {
     ]);
     needsNormalize.value = !!normalizeNeeded;
     needsEntries.value = !!entriesNeeded;
-    if ((import.meta as unknown as { env?: Record<string, string | undefined> }).env?.DEV) {
-      try {
-        const backups = await dixieController.listBackups();
-      } catch (e) {
-        console.error('App.onMounted: failed to listBackups', e);
-      }
-    }
   } catch (e) {
     console.error('migration checks failed', e);
     needsNormalize.value = false;

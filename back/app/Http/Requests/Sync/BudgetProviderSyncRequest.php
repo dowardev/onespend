@@ -12,7 +12,7 @@ class BudgetProviderSyncRequest extends FormRequest
             'name' => 'required|string|max:255',
             'date' => 'required|date',
             'estimated' => 'required|numeric',
-            'account_id' => 'nullable|integer|exists:accounts,id',
+            'account_id' => 'nullable|string|max:100',
             'efectivo' => 'nullable|numeric|min:0',
             'tarjeta' => 'nullable|numeric|min:0',
             'credito' => 'nullable|numeric|min:0',

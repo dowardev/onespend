@@ -56,7 +56,7 @@ export async function reassignEntry(params: {
     // load source bucket
     try {
       await budgetDayStore.loadBudgetForDate({ date: srcDate });
-    } catch (_) {}
+    } catch {}
 
     // find entry in source
     const storeEntry = (entriesStore.entries || []).find(
@@ -103,7 +103,7 @@ export async function reassignEntry(params: {
 
         try {
           await budgetDayStore.loadBudgetForDate({ date: destDate });
-        } catch (_) {}
+        } catch {}
         if ((srcEntry as any).entryType === 'ingreso') {
           const created = await budgetEntriesController.addIngreso(payload) as any;
           if (created) idToUse = created.id;
@@ -123,14 +123,14 @@ export async function reassignEntry(params: {
     if (restoreSelectedDate && prevSelected) {
       try {
         await budgetDayStore.loadBudgetForDate({ date: prevSelected });
-      } catch (_) {}
+      } catch {}
     }
 
     return { moved, id: idToUse };
   } catch (error) {
     try {
       console.error('reassignEntry error', error);
-    } catch (e) {}
+    } catch {}
     return { moved: false, id: idToUse, error };
   }
 }

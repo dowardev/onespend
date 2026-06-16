@@ -474,9 +474,9 @@ async function handleSave() {
   router.back();
 }
 
-function onAttachmentsSave(params: { newFiles: File[]; deletedIds: number[] }) {
-  handleAttachmentsSave(params);
-}
+  async function onAttachmentsSave(params: { newFiles: File[]; deletedIds: number[] }) {
+    await handleAttachmentsSave(params);
+  }
 
 async function openReassignPopover(params: { e: Event }) {
   const { e } = params;

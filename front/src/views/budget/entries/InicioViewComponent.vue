@@ -6,7 +6,7 @@
           <ion-list-header>
             <ion-label>Registro</ion-label>
 
-            <ion-button :disabled="isDayClosed" id="add-btn">
+            <ion-button id="add-btn" :disabled="isDayClosed">
               <ion-icon :icon="addOutline"></ion-icon>
             </ion-button>
           </ion-list-header>
@@ -118,12 +118,12 @@
   >
     <ion-content>
       <ion-list lines="none">
-        <ion-item button @click="handleRegistroClick" :disabled="isDayClosed">
-          <ion-icon :icon="documentTextOutline" slot="start"></ion-icon>
+        <ion-item button :disabled="isDayClosed" @click="handleRegistroClick">
+          <ion-icon slot="start" :icon="documentTextOutline"></ion-icon>
           <ion-label>Registro</ion-label>
         </ion-item>
-        <ion-item button @click="handleProveedoresClick" :disabled="isDayClosed">
-          <ion-icon :icon="peopleOutline" slot="start"></ion-icon>
+        <ion-item button :disabled="isDayClosed" @click="handleProveedoresClick">
+          <ion-icon slot="start" :icon="peopleOutline"></ion-icon>
           <ion-label>Proveedores</ion-label>
         </ion-item>
       </ion-list>

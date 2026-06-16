@@ -1,5 +1,5 @@
 import { ref } from 'vue';
-import type { Chart as ChartJS, ChartData, ChartOptions } from 'chart.js';
+import type { Chart as ChartJS } from 'chart.js';
 
 export function useChart() {
   const isLoaded = ref(false);

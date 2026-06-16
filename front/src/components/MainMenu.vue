@@ -35,7 +35,7 @@
         <div class="user-info">
           <ion-icon :icon="personCircleOutline" class="user-avatar"></ion-icon>
           <ion-label class="user-name">{{ userName }}</ion-label>
-          <ion-button fill="clear" size="small" @click="handleLogout" class="logout-button">
+          <ion-button fill="clear" size="small" class="logout-button" @click="handleLogout">
             <ion-icon :icon="logOutOutline"></ion-icon>
           </ion-button>
         </div>
@@ -240,7 +240,7 @@ const emit = defineEmits<{
 const menuRef = ref();
 const route = useRoute();
 
-const syncController = new SyncController();
+const syncController = SyncController;
 const pendingChanges = computed(() => syncController.getPendingChanges());
 
 const appName =

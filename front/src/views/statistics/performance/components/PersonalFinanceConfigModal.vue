@@ -20,7 +20,7 @@
         <ion-select
           v-model="selectedWeekStart"
           label="Día de inicio"
-          @ionChange="onWeekStartChange"
+          @ion-change="onWeekStartChange"
         >
           <ion-select-option value="0">Domingo</ion-select-option>
           <ion-select-option value="1">Lunes</ion-select-option>

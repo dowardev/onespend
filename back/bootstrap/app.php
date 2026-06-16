@@ -15,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // Ya no necesitamos sesiones para la API, usamos Bearer tokens
         $middleware->alias([
             'verified' => \App\Http\Middleware\EnsureEmailIsVerified::class,
+            'sync.version' => \App\Http\Middleware\SyncProtocolVersion::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

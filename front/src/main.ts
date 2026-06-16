@@ -45,7 +45,9 @@ try {
   (window as any).budgetEntriesController = budgetEntriesController;
   // @ts-ignore
   (window as any).budgetProvidersController = budgetProvidersController;
-} catch (e) {}
+} catch (e) {
+  void e;
+}
 
 function getIonicBreakpoint(): string {
   const width = window.innerWidth;
@@ -67,7 +69,7 @@ router.isReady().then(async () => {
   try {
     // Load budget data for the current selected date before mounting to ensure UI
     // renders persisted entries immediately after load.
-    // eslint-disable-next-line no-console
+     
     console.log('[main] Loading budget data before mount');
     // budget controllers may perform IndexedDB operations; await completion.
     // If it fails, continue mounting so app is usable.
@@ -75,10 +77,12 @@ router.isReady().then(async () => {
       const dayStore = useBudgetDayStore();
       await dayStore.loadBudgetForDate({ date: dayStore.selectedDate });
     } catch (e) {
-      // eslint-disable-next-line no-console
+        
       console.warn('[main] loadDataForDate failed', e);
     }
-  } catch (e) {}
+  } catch (e) {
+    void e;
+  }
 
   app.mount('#app');
   logBreakpoint();
@@ -102,5 +106,7 @@ router.isReady().then(async () => {
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     window.budgetProvidersController = budgetProvidersController;
-  } catch (e) {}
+  } catch (e) {
+    void e;
+  }
 });
