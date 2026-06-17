@@ -1,3 +1,10 @@
+## [v0.70.1] - 2026-06-17
+
+### Fixed
+- Sync store reactive refs when reading theme config from DB
+- Fix CSS `@import` syntax by removing invalid `url()` wrapper and placing imports before other rules per spec
+
+
 ## [v0.70.0] - 2026-06-16
 
 ### Added

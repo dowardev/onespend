@@ -46,7 +46,8 @@ export const useSystemConfig = defineStore('systemConfig', () => {
         saved as ThemeMode,
       )
     ) {
-      return saved as ThemeMode;
+      theme.value = saved as ThemeMode;
+      return theme.value;
     }
     return 'auto';
   }
@@ -63,7 +64,8 @@ export const useSystemConfig = defineStore('systemConfig', () => {
         saved as ThemeMode,
       )
     ) {
-      return saved as ThemeMode;
+      autoLightTheme.value = saved as ThemeMode;
+      return autoLightTheme.value;
     }
     return 'light';
   }
@@ -80,7 +82,8 @@ export const useSystemConfig = defineStore('systemConfig', () => {
         saved as ThemeMode,
       )
     ) {
-      return saved as ThemeMode;
+      autoDarkTheme.value = saved as ThemeMode;
+      return autoDarkTheme.value;
     }
     return 'dark';
   }
