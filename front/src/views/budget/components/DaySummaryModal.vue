@@ -301,16 +301,16 @@ const paymentTypeBreakdown = computed(() => {
   return out;
 });
 
-function groupBySum(items: any[], key: string) {
+function groupBySum(items: any[], key: string): Record<string, { total: number; count: number }> {
   return items.reduce(
-    (acc: Record<string, any>, it: any) => {
+    (acc, it) => {
       const k = it[key] ?? 'unknown';
       acc[k] = acc[k] || { total: 0, count: 0 };
       acc[k].total += Number(it.amount || 0);
       acc[k].count += 1;
       return acc;
     },
-    {} as Record<string, any>,
+    {} as Record<string, { total: number; count: number }>,
   );
 }
 

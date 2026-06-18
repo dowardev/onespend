@@ -1,3 +1,17 @@
+## [v0.71.0] - 2026-06-18
+
+### Added
+- Auto-create missing accounts with proper error handling in random data generator
+- Responsive cash flow page layout (grid adapts to screen size)
+- Random data generator for budget page testing
+
+### Fixed
+- Cash flow components no longer mutate parent popover state (Vue anti-pattern)
+- Remove duplicate prop keys in Day/Month/Week/Year components
+- Empty catch blocks in Month/Year chart components now include intentional comment
+- Remove unused variable in DayPerformanceChart
+- Fix TypeScript errors across 18 files (App.vue router, Vuelidate optional chaining, type casts)
+
 ## [v0.70.1] - 2026-06-17
 
 ### Fixed

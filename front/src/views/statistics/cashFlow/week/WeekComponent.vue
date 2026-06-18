@@ -8,12 +8,7 @@
           <ion-icon :icon="chevronBackOutline"> </ion-icon>
         </ion-button>
 
-        <ion-button
-          @click="
-            popovers.mainDate.event = $event;
-            popovers.mainDate.open = true;
-          "
-        >
+        <ion-button @click="openPopover($event)">
           {{ weekRangeLabel }}
         </ion-button>
 
@@ -25,7 +20,7 @@
 
     <div class="list-content">
       <ion-row>
-        <ion-col size="6">
+        <ion-col size="12" size-md="6">
           <ion-card class="shadow2">
             <ion-item lines="none">
               <ion-label>Ganancia semanal actual</ion-label>
@@ -35,7 +30,7 @@
           </ion-card>
         </ion-col>
 
-        <ion-col size="6">
+        <ion-col size="12" size-md="6">
           <WeekChartComponent :chart-data="chartData" :chart-options="chartOptions" />
         </ion-col>
       </ion-row>
@@ -44,10 +39,10 @@
 
   <!-- popovers -->
   <ion-popover
-    :is-open="popovers.mainDate.open"
-    :event="popovers.mainDate.event"
+    :is-open="popoverOpen"
+    :event="popoverEvent"
     keep-contents-mounted
-    @did-dismiss="popovers.mainDate.open = false"
+    @did-dismiss="$emit('update:popoverOpen', false)"
   >
     <ion-content>
       <ion-datetime
@@ -74,37 +69,49 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps } from 'vue';
+import { defineProps, defineEmits, type PropType } from 'vue';
+import type { ChartData, ChartOptions } from 'chart.js';
 import WeekChartComponent from '@/views/statistics/cashFlow/week/WeekChartComponent.vue';
 import { chevronBackOutline, chevronForwardOutline } from 'ionicons/icons';
 
-const props = defineProps({
-  chartData: { type: Object, default: () => ({ labels: [], datasets: [] }) },
-  chartOptions: { type: Object, default: () => ({}) },
+defineProps({
+  chartData: { type: Object as PropType<ChartData<'bar'>>, default: () => ({ labels: [], datasets: [] }) },
+  chartOptions: { type: Object as PropType<ChartOptions<'bar'>>, default: () => ({}) },
   weekRangeLabel: { type: String, default: '' },
   formattedWeeklyProfit: { type: String, default: '' },
   selectedDate: { type: String, default: '' },
-  popovers: { type: Object, default: () => ({ mainDate: { open: false, event: null } }) },
-  onPrev: { type: Function, required: false },
-  onNext: { type: Function, required: false },
-  onPopoverDateChange: { type: Function, required: false },
-  resetToToday: { type: Function, required: false },
+  popoverOpen: { type: Boolean, default: false },
+  popoverEvent: { type: Object as PropType<Event | null>, default: null },
 });
 
+const emit = defineEmits<{
+  'update:popoverOpen': [v: boolean]
+  'update:popoverEvent': [e: Event | null]
+  prev: []
+  next: []
+  'popover-date-change': [e: CustomEvent]
+  'reset-today': []
+}>()
+
+function openPopover(event: Event) {
+  emit('update:popoverEvent', event)
+  emit('update:popoverOpen', true)
+}
+
 function prevWeek() {
-  if (props.onPrev) props.onPrev();
+  emit('prev')
 }
 
 function nextWeek() {
-  if (props.onNext) props.onNext();
+  emit('next')
 }
 
 function onPopoverDateChange(e: CustomEvent) {
-  if (props.onPopoverDateChange) props.onPopoverDateChange(e);
+  emit('popover-date-change', e)
 }
 
 function resetToToday() {
-  if (props.resetToToday) props.resetToToday();
+  emit('reset-today')
 }
 </script>
 

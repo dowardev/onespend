@@ -9,66 +9,70 @@
       <ion-grid style="height: 100%">
         <ion-row style="height: 100%; overflow: auto">
           <!-- day -->
-          <ion-col size="6">
-            <DayComponent
+<ion-col size="12" size-lg="6">
+          <DayComponent
+              v-model:popover-open="day.popovers.mainDate.open"
+              v-model:popover-event="day.popovers.mainDate.event"
               :chart-data="day.chartData"
               :chart-options="day.chartOptions"
               :day-label="day.dayLabel"
               :formatted-daily-profit="day.formattedDailyProfit"
               :selected-date="day.selectedDate"
-              :on-prev="dayPrev"
-              :on-next="dayNext"
-              :on-popover-date-change="dayOnPopoverDateChange"
-              :reset-to-today="dayResetToToday"
-              :popovers="day.popovers"
+              @prev="dayPrev"
+              @next="dayNext"
+              @popover-date-change="dayOnPopoverDateChange"
+              @reset-today="dayResetToToday"
             />
           </ion-col>
 
           <!-- week -->
-          <ion-col size="6">
+          <ion-col size="12" size-lg="6">
             <WeekComponent
+              v-model:popover-open="week.popovers.mainDate.open"
+              v-model:popover-event="week.popovers.mainDate.event"
               :chart-data="week.chartData"
               :chart-options="week.chartOptions"
               :week-range-label="week.weekRangeLabel"
               :formatted-weekly-profit="week.formattedWeeklyProfit"
               :selected-date="week.selectedDate"
-              :on-prev="weekPrev"
-              :on-next="weekNext"
-              :on-popover-date-change="weekOnPopoverDateChange"
-              :reset-to-today="weekResetToToday"
-              :popovers="week.popovers"
+              @prev="weekPrev"
+              @next="weekNext"
+              @popover-date-change="weekOnPopoverDateChange"
+              @reset-today="weekResetToToday"
             />
           </ion-col>
 
           <!-- month -->
-          <ion-col size="6">
+          <ion-col size="12" size-lg="6">
             <MonthComponent
+              v-model:popover-open="month.popovers.mainDate.open"
+              v-model:popover-event="month.popovers.mainDate.event"
               :chart-data="month.chartData"
               :chart-options="month.chartOptions"
               :month-range-label="month.monthRangeLabel"
               :formatted-monthly-profit="month.formattedMonthlyProfit"
               :selected-date="month.selectedDate"
-              :on-prev="monthPrev"
-              :on-next="monthNext"
-              :on-popover-date-change="monthOnPopoverDateChange"
-              :reset-to-today="monthResetToToday"
-              :popovers="month.popovers"
+              @prev="monthPrev"
+              @next="monthNext"
+              @popover-date-change="monthOnPopoverDateChange"
+              @reset-today="monthResetToToday"
             />
           </ion-col>
 
           <!-- year -->
-          <ion-col size="6">
+          <ion-col size="12" size-lg="6">
             <YearComponent
+              v-model:popover-open="year.popovers.mainDate.open"
+              v-model:popover-event="year.popovers.mainDate.event"
               :chart-data="year.chartData"
               :chart-options="year.chartOptions"
               :year-label="year.yearLabel"
               :formatted-year-profit="year.formattedYearProfit"
               :selected-date="year.selectedDate"
-              :on-prev="yearPrev"
-              :on-next="yearNext"
-              :on-popover-date-change="yearOnPopoverDateChange"
-              :reset-to-today="yearResetToToday"
-              :popovers="year.popovers"
+              @prev="yearPrev"
+              @next="yearNext"
+              @popover-date-change="yearOnPopoverDateChange"
+              @reset-today="yearResetToToday"
             />
           </ion-col>
         </ion-row>
@@ -186,9 +190,8 @@ function sumEgresosFromData(d: any) {
           0,
         );
     }
-    if (entriesEgresos && entriesEgresos !== 0) return entriesEgresos;
-
-    // Otherwise fall back to proveedores/providers arrays or explicit egresos/gastos arrays
+    // Sum both entries-based egresos and provider expenses
+    // (not early-return so provider expenses aren't missed)
     let proveedoresSum = 0;
     if (Array.isArray(d.proveedores)) {
       proveedoresSum += d.proveedores.reduce((s: number, p: any) => {
@@ -219,10 +222,7 @@ function sumEgresosFromData(d: any) {
       }
     }
 
-    if (proveedoresSum && proveedoresSum !== 0) return proveedoresSum;
-
-    // final fallback: try to extract any numeric amount from object
-    return extractAmountFromItem(d) || 0;
+    return entriesEgresos + proveedoresSum;
   } catch (_e) {
     return 0;
   }
@@ -234,8 +234,6 @@ function isoDate(d: Date) {
 
 function getBackupSelectedDate(b: any) {
   try {
-    const sd = b && b.data && b.data.selectedDate;
-    if (sd) return String(sd).slice(0, 10);
     const id = b && (b.id || b.key || b.name);
     if (id && String(id).includes(':')) {
       return String(id).split(':')[1].slice(0, 10);
@@ -516,26 +514,7 @@ async function loadWeeklyData() {
         }
       });
 
-      // expose all matches for this day (safe copy) to help debugging when sums differ
-      try {
-        const safeMatchesAll = (matches || []).slice(0, 50).map((m) => {
-          try {
-            return JSON.parse(JSON.stringify(m));
-          } catch (_e) {
-            return {
-              id: m && (m.id || m.key || m.name),
-              createdAt: m && m.createdAt,
-              dataKeys: m && m.data ? Object.keys(m.data) : null,
-            };
-          }
-        });
-        try {
-          (window as any).__debug_week_allMatches = (window as any).__debug_week_allMatches || {};
-          (window as any).__debug_week_allMatches[target] = safeMatchesAll;
-        } catch (_e) {}
-      } catch (_e) {
-        /* ignore debug helpers */
-      }
+
 
       const latest = (matches || []).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))[0];
 
@@ -558,52 +537,14 @@ async function loadWeeklyData() {
       ingresosArr.push(Number(ingresosSum || 0));
       egresosArr.push(Number(proveedoresSum || 0));
 
-      // collect minimal debug info about the 'latest' backup used for this day
-      try {
-        const safeLatest =
-          latest && typeof latest === 'object'
-            ? {
-                id: latest.id || latest.key || latest.name || null,
-                createdAt: latest.createdAt || null,
-                selectedDate: getBackupSelectedDate(latest) || null,
-                dataKeys: latest.data ? Object.keys(latest.data) : null,
-                ingresosSample:
-                  latest.data && Array.isArray(latest.data.ingresos)
-                    ? (latest.data.ingresos || []).slice(0, 5)
-                    : null,
-                proveedoresSample:
-                  latest.data && Array.isArray(latest.data.proveedores)
-                    ? (latest.data.proveedores || []).slice(0, 5)
-                    : null,
-                entriesSample:
-                  latest.data && Array.isArray(latest.data.entries)
-                    ? (latest.data.entries || []).slice(0, 10)
-                    : null,
-              }
-            : null;
-        try {
-          (window as any).__debug_week_backups = (window as any).__debug_week_backups || [];
-          if (safeLatest) (window as any).__debug_week_backups.push(safeLatest);
-        } catch (_e) {}
-      } catch (_e) {
-        /* ignore debug collection errors */
-      }
+
     }
 
     week.chartData.labels = labels as string[];
     week.chartData.datasets[0].data = ingresosArr as number[];
     week.chartData.datasets[1].data = egresosArr as number[];
 
-    try {
-      // expose week debug object for easier inspection in browser console
-      try {
-        (window as any).__debug_week = {
-          labels: labels.slice(0, 50),
-          ingresosArr: ingresosArr.slice(0, 50),
-          egresosArr: egresosArr.slice(0, 50),
-        };
-      } catch (_e) {}
-    } catch (_e) {}
+
 
     try {
       const totalIngresos = ingresosArr.reduce((s, v) => s + Number(v || 0), 0);
@@ -710,35 +651,6 @@ async function loadMonthlyData() {
         }
       });
 
-      // expose a safe copy of matches to window for debugging in browser
-      try {
-        // keep only first 10 matches to avoid huge payloads
-        const safeMatches = (matches || []).slice(0, 10).map((m) => {
-          try {
-            return JSON.parse(JSON.stringify(m));
-          } catch (_e) {
-            return {
-              id: m && (m.id || m.key || m.name),
-              data: (m && m.data) || null,
-              createdAt: m && m.createdAt,
-            };
-          }
-        });
-         
-        console.log(
-          '[loadMonthlyData] debug: exported safeMatches to window.__debug_month_matches (count:',
-          safeMatches.length,
-          ')',
-        );
-        try {
-          (window as any).__debug_month_matches = safeMatches;
-        } catch (_e) {
-          /* ignore */
-        }
-      } catch (_e) {
-        /* ignore */
-      }
-
       // latest per day
       const latestPerDay: Record<string, any> = {};
       (matches || []).forEach((mb) => {
@@ -771,27 +683,20 @@ async function loadMonthlyData() {
     }
 
     month.chartData.labels = labels as string[];
-    // replace datasets array completely to ensure reactivity and correct types
     month.chartData.datasets = [
       { label: 'Ingresos', data: ingresosArr.map((v) => Number(v || 0)) },
       { label: 'Egresos', data: egresosArr.map((v) => Number(v || 0)) },
     ];
 
     try {
-       
-      console.log(
-        '[loadMonthlyData] assigned month.chartData.datasets sample:',
-        JSON.stringify(month.chartData.datasets),
-      );
-    } catch (_e) {}
-
-    try {
       // monthlyProfit based on selectedDate's month within this year
+      // If selectedDate is YYYY-01-01 (year-only selection), use current month instead
       const selParsed = parseLocalDate({ d: String(month.selectedDate).slice(0, 10) });
-      const selMonth = isNaN(selParsed.getTime()) ? new Date().getMonth() : selParsed.getMonth();
-      if (selMonth >= 0 && selMonth < ingresosArr.length)
+      const isYearOnly = String(month.selectedDate).endsWith('-01-01');
+      const monthIndex = isYearOnly ? new Date().getMonth() : (isNaN(selParsed.getTime()) ? new Date().getMonth() : selParsed.getMonth());
+      if (monthIndex >= 0 && monthIndex < ingresosArr.length)
         month.monthlyProfit =
-          Number(ingresosArr[selMonth] || 0) - Number(egresosArr[selMonth] || 0);
+          Number(ingresosArr[monthIndex] || 0) - Number(egresosArr[monthIndex] || 0);
       else month.monthlyProfit = 0;
     } catch (_err) {
       month.monthlyProfit = 0;
@@ -879,29 +784,10 @@ async function loadYearData() {
     }
 
     year.chartData.labels = labels as string[];
-    // replace datasets to ensure reactivity and numeric types (Ingresos / Egresos)
     year.chartData.datasets = [
       { label: 'Ingresos', data: yearIngresosTotals.map((v) => Number(v || 0)) },
       { label: 'Egresos', data: yearEgresosTotals.map((v) => Number(v || 0)) },
     ];
-    try {
-       
-      console.log(
-        '[loadYearData] assigned year.chartData.datasets sample:',
-        JSON.stringify(year.chartData.datasets),
-      );
-    } catch (_e) {}
-
-    try {
-      // expose simple year debug totals for console inspection
-      try {
-        (window as any).__debug_year_totals = {
-          labels: labels.slice(0, 20),
-          ingresos: yearIngresosTotals.slice(0, 20),
-          egresos: yearEgresosTotals.slice(0, 20),
-        };
-      } catch (_e) {}
-    } catch (_e) {}
 
     try {
       const selectedIndex = yearsArr.indexOf(selectedYear);
@@ -1061,16 +947,5 @@ function yearResetToToday() {
 // Initial load
 onMounted(() => {
   void Promise.all([loadDayData(), loadWeeklyData(), loadMonthlyData(), loadYearData()]);
-  try {
-    // expose month for debugging in browser console
-     
-    (window as any).__debug_month = month;
-    // expose year for debugging
-    try {
-      (window as any).__debug_year = year;
-    } catch (_e) {}
-  } catch (_e) {
-    /* ignore */
-  }
 });
 </script>

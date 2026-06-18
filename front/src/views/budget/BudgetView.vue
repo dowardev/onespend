@@ -13,6 +13,9 @@
             <ion-icon :icon="timeOutline"></ion-icon>
             <ion-badge slot="end" color="warning">{{ pendingRecurringRecords.length }}</ion-badge>
           </ion-button>
+          <ion-button v-if="isDev" @click="generateRandomData">
+            <ion-icon :icon="diceOutline"></ion-icon>
+          </ion-button>
           <ion-button @click="openMoreOptions({ event: $event })">
             <ion-icon :icon="ellipsisVerticalOutline"></ion-icon>
           </ion-button>
@@ -150,19 +153,22 @@ import {
   IonAlert,
   onIonViewWillEnter,
   onIonViewWillLeave,
+  toastController,
 } from '@ionic/vue';
 import {
   chevronBackOutline,
   chevronForwardOutline,
+  diceOutline,
   ellipsisVerticalOutline,
   trashOutline,
   addOutline,
   timeOutline,
 } from 'ionicons/icons';
 import { computed, ref } from 'vue';
-import { format } from 'date-fns';
+import { format, subDays } from 'date-fns';
 import { parseLocalDate, formatLocalDate } from '@/utils/date';
 import { es as esLocale } from 'date-fns/locale';
+import { faker } from '@faker-js/faker';
 // end imports
 
 // controllers
@@ -186,6 +192,7 @@ import PendingRecurringModal from './components/PendingRecurringModal.vue';
 // end components
 
 // interface and types imports
+import type { PaymentType } from '@/controllers/budgetEntriesController';
 // end interface and types imports
 
 // main
@@ -600,6 +607,176 @@ async function insertTestData() {
 
   await budgetDayStore.saveBudgetData();
   showMoreOptions.value = false;
+}
+
+async function generateRandomData() {
+  const days = 30;
+  const startDate = budgetDayStore.selectedDate;
+  if (!startDate) return;
+
+  let accountIds = await getRandomAccountIds();
+  if (accountIds.length === 0) {
+    console.log('[generateRandomData] No hay cuentas, creando automáticamente...');
+    const defaultAccountNames = [
+      'Caja Principal',
+      'Banco',
+      'Tarjeta de Crédito',
+      'Efectivo',
+      'Cuenta Corriente',
+    ];
+
+    for (const name of defaultAccountNames) {
+      try {
+        await accountsController.addAccount({
+          account: { name, initialBalance: faker.number.int({ min: 0, max: 50000 }) },
+        });
+      } catch (e) {
+        console.warn('[generateRandomData] Error creando cuenta', name, e);
+      }
+    }
+
+    accountIds = await getRandomAccountIds();
+    if (accountIds.length === 0) {
+      const toast = await toastController.create({
+        message: 'No se pudieron crear cuentas automáticamente',
+        duration: 3000,
+        position: 'bottom',
+        color: 'danger',
+      });
+      await toast.present();
+      return;
+    }
+  }
+
+  const toast = await toastController.create({
+    message: `Generando datos aleatorios para ${days} días...`,
+    duration: 0,
+    position: 'bottom',
+  });
+  await toast.present();
+
+  const paymentTypes: PaymentType[] = ['cash', 'digital'];
+  const ingresoCategories = [
+    'Venta de', 'Servicio de', 'Cobro por', 'Honorarios de',
+    'Comisión por', 'Renta de', 'Consultoría de',
+  ];
+  const ingresoItems = [
+    'productos', 'mercancía', 'servicios profesionales', 'asesoría legal',
+    'diseño gráfico', 'desarrollo web', 'consultoría', 'capacitación',
+    'mantenimiento', 'instalación', 'transporte', 'logística',
+  ];
+  const egresoItems = [
+    'Compra de', 'Pago de', 'Renta de', 'Mantenimiento de',
+    'Suscripción de', 'Servicio de', 'Suministro de',
+  ];
+  const egresoCategories = [
+    'materiales', 'insumos', 'oficina', 'electricidad', 'agua',
+    'internet', 'telefonía', 'seguros', 'transporte', 'combustible',
+    'publicidad', 'marketing', 'hosting', 'software', 'equipo',
+  ];
+
+  let successCount = 0;
+  let failCount = 0;
+
+  for (let i = 0; i < days; i++) {
+    try {
+      const date = format(subDays(parseLocalDate({ d: startDate }), i), 'yyyy-MM-dd');
+
+      budgetDayStore.setSelectedDate(date);
+      await budgetDayStore.loadBudgetForDate({ date });
+
+      budgetEntriesController.getStore().clearEntries();
+      budgetProvidersController.getStore().clearProviders();
+
+      // Generate ingresos (3-8)
+      const ingresoCount = faker.number.int({ min: 3, max: 8 });
+      for (let j = 0; j < ingresoCount; j++) {
+        const category = faker.helpers.arrayElement(ingresoCategories);
+        const item = faker.helpers.arrayElement(ingresoItems);
+        const name = `${category} ${item}`;
+        const amount = faker.number.int({ min: 500, max: 20000 });
+        const paymentType = faker.helpers.arrayElement(paymentTypes);
+        const accountId = faker.helpers.arrayElement(accountIds);
+
+        await budgetEntriesController.addIngreso({
+          name,
+          amount,
+          paymentType,
+          accountId,
+          date,
+        });
+      }
+
+      // Generate egresos (2-6)
+      const egresoCount = faker.number.int({ min: 2, max: 6 });
+      for (let j = 0; j < egresoCount; j++) {
+        const prefix = faker.helpers.arrayElement(egresoItems);
+        const category = faker.helpers.arrayElement(egresoCategories);
+        const name = `${prefix} ${category}`;
+        const amount = faker.number.int({ min: 100, max: 10000 });
+        const paymentType = faker.helpers.arrayElement(paymentTypes);
+        const accountId = faker.helpers.arrayElement(accountIds);
+
+        await budgetEntriesController.addEgreso({
+          name,
+          amount,
+          paymentType,
+          accountId,
+          date,
+        });
+      }
+
+      // Generate proveedores (1-4)
+      const providerCount = faker.number.int({ min: 1, max: 4 });
+      for (let j = 0; j < providerCount; j++) {
+        const name = faker.company.name();
+        const estimated = faker.number.int({ min: 200, max: 5000 });
+        const accountId = Number(faker.helpers.arrayElement(accountIds));
+
+        await budgetProvidersController.addProvider({
+          name,
+          estimated,
+          accountId,
+          date,
+        });
+      }
+
+      await budgetDayStore.saveBudgetData();
+      successCount++;
+      console.log(`[generateRandomData] Día ${date}: OK`);
+    } catch (e) {
+      failCount++;
+      console.error('[generateRandomData] Error en día', i, e);
+    }
+  }
+
+  // Restore original selected date
+  budgetDayStore.setSelectedDate(startDate);
+  await budgetDayStore.loadBudgetForDate({ date: startDate });
+
+  await toast.dismiss();
+  const color = failCount > 0 ? (successCount > 0 ? 'warning' : 'danger') : 'success';
+  const message = failCount > 0
+    ? `Generados ${successCount}/${days} días (${failCount} fallos)`
+    : `Datos generados para ${days} días`;
+
+  const resultToast = await toastController.create({
+    message,
+    duration: 4000,
+    position: 'bottom',
+    color,
+  });
+  await resultToast.present();
+}
+
+async function getRandomAccountIds(): Promise<(string | number)[]> {
+  try {
+    const accounts = await accountsController.loadAll();
+    if (accounts.length === 0) return [];
+    return accounts.map((a) => a.id);
+  } catch {
+    return [];
+  }
 }
 
 async function applySinglePendingRecord(params: { record: RecurringRecord }) {

@@ -8,12 +8,7 @@
           <ion-icon :icon="chevronBackOutline"> </ion-icon>
         </ion-button>
 
-        <ion-button
-          @click="
-            popovers.mainDate.event = $event;
-            popovers.mainDate.open = true;
-          "
-        >
+        <ion-button @click="openPopover($event)">
           {{ dayLabel }}
         </ion-button>
 
@@ -25,7 +20,7 @@
 
     <div class="list-content">
       <ion-row>
-        <ion-col size="6">
+        <ion-col size="12" size-md="6">
           <ion-card class="shadow2">
             <ion-item lines="none">
               <ion-label>Ganancia del día</ion-label>
@@ -35,7 +30,7 @@
           </ion-card>
         </ion-col>
 
-        <ion-col size="6">
+        <ion-col size="12" size-md="6">
           <DayChartComponent
             :chart-data="chartData"
             :chart-options="chartOptions"
@@ -48,10 +43,10 @@
 
   <!-- popovers -->
   <ion-popover
-    :is-open="popovers.mainDate.open"
-    :event="popovers.mainDate.event"
+    :is-open="popoverOpen"
+    :event="popoverEvent"
     keep-contents-mounted
-    @did-dismiss="popovers.mainDate.open = false"
+    @did-dismiss="$emit('update:popoverOpen', false)"
   >
     <ion-content>
       <ion-datetime
@@ -95,36 +90,49 @@ import {
   IonPopover,
   IonRow,
 } from '@ionic/vue';
-import { defineProps } from 'vue';
+import { defineProps, defineEmits, type PropType } from 'vue';
+import type { ChartData, ChartOptions } from 'chart.js';
 import DayChartComponent from '@/views/statistics/cashFlow/day/DayChartComponent.vue';
 import { chevronBackOutline, chevronForwardOutline } from 'ionicons/icons';
 
-// Props - this component is now presentational. Data and handlers come from parent.
-const props = defineProps({
-  chartData: { type: Object, default: () => ({ labels: [], datasets: [] }) },
-  chartOptions: { type: Object, default: () => ({}) },
+// Props - this component is presentational. Popover state is managed via v-model.
+defineProps({
+  chartData: { type: Object as PropType<ChartData<'bar'>>, default: () => ({ labels: [], datasets: [] }) },
+  chartOptions: { type: Object as PropType<ChartOptions<'bar'>>, default: () => ({}) },
   dayLabel: { type: String, default: '' },
   formattedDailyProfit: { type: String, default: '' },
   selectedDate: { type: String, default: '' },
-  popovers: { type: Object, default: () => ({ mainDate: { open: false, event: null } }) },
-  onPrev: { type: Function, required: false },
-  onNext: { type: Function, required: false },
-  onPopoverDateChange: { type: Function, required: false },
-  resetToToday: { type: Function, required: false },
+  popoverOpen: { type: Boolean, default: false },
+  popoverEvent: { type: Object as PropType<Event | null>, default: null },
 });
 
-function handlePrev() {
-  if (props.onPrev) props.onPrev();
+const emit = defineEmits<{
+  'update:popoverOpen': [v: boolean]
+  'update:popoverEvent': [e: Event | null]
+  prev: []
+  next: []
+  'popover-date-change': [e: CustomEvent]
+  'reset-today': []
+}>()
+
+function openPopover(event: Event) {
+  emit('update:popoverEvent', event)
+  emit('update:popoverOpen', true)
 }
-function handleNext() {
-  if (props.onNext) props.onNext();
+
+function onPrev() {
+  emit('prev')
 }
-function handlePopoverDateChange(e: CustomEvent) {
-  if (props.onPopoverDateChange) props.onPopoverDateChange(e);
+function onNext() {
+  emit('next')
 }
-function handleResetToToday() {
-  if (props.resetToToday) props.resetToToday();
+function onPopoverDateChange(e: CustomEvent) {
+  emit('popover-date-change', e)
+}
+function resetToToday() {
+  emit('reset-today')
 }
 </script>
+
 
 <style scoped></style>

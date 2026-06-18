@@ -65,7 +65,7 @@ watch(
     const cloned = v ? JSON.parse(JSON.stringify(v)) : { labels: [], datasets: [] };
     cloned.labels = (cloned.labels || []).map(translateDayLabel);
     // Apply shared pastel-neon palette on updates
-    safeChartData.value = applyNeonStyles(cloned, props.colorIndex);
+    safeChartData.value = applyNeonStyles({ data: cloned, colorIndex: props.colorIndex });
   },
   { immediate: true, deep: true },
 );

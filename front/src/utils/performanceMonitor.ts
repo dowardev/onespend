@@ -105,7 +105,7 @@ export function usePerformanceMonitoring() {
       jsonParseTime += performance.now() - t1
 
       const t2 = performance.now()
-      structuredClone(obj as StructuredCloneable)
+      structuredClone(obj as any)
       structuredCloneTime += performance.now() - t2
     }
 

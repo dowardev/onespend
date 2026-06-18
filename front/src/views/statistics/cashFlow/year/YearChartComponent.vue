@@ -9,7 +9,7 @@ import { shallowRef, watch, onMounted, computed, ref } from 'vue';
 import { Bar } from 'vue-chartjs';
 import type { ChartOptions, ChartData } from 'chart.js';
 import { applyNeonStyles } from '@/utils/chartColors';
-import { parseLocalDate, safeIntlFormat } from '@/utils/date';
+import { safeIntlFormat } from '@/utils/date';
 import { useChart } from '@/composables/useChart';
 
 // Initialize chart dependencies
@@ -55,15 +55,15 @@ const canRenderChart = computed(() => hasData.value && isLoaded.value);
 // Provide reactive shallow refs that mirror the incoming props but are safe for vue-chartjs
 const safeChartData = shallowRef<ChartData<'bar'>>(
   props.chartData
-    ? applyNeonStyles(
-        JSON.parse(
+    ? applyNeonStyles({
+        data: JSON.parse(
           JSON.stringify({
             ...props.chartData,
             labels: (props.chartData.labels || []).map(translateDayLabel),
           }),
         ),
-        props.colorIndex,
-      )
+        colorIndex: props.colorIndex,
+      })
     : { labels: [], datasets: [] },
 );
 const safeChartOptions = shallowRef<ChartOptions<'bar'>>(
@@ -81,17 +81,14 @@ watch(
   (v) => {
     const cloned = v ? JSON.parse(JSON.stringify(v)) : { labels: [], datasets: [] };
     cloned.labels = (cloned.labels || []).map(translateDayLabel);
-    safeChartData.value = applyNeonStyles(cloned, props.colorIndex);
+    safeChartData.value = applyNeonStyles({ data: cloned, colorIndex: props.colorIndex });
     try {
       chartKey.value = (chartKey.value || 0) + 1;
-    } catch (_e) {}
+    } catch (_e) { /* intentionally ignored */ }
   },
   { immediate: true, deep: true },
 );
 // end watch
-
-// computed
-// end computed
 
 // functions
 function translateDayLabel(label: unknown): string {
