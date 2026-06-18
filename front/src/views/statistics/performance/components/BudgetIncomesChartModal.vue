@@ -70,6 +70,7 @@ import { Pie } from 'vue-chartjs';
 ChartJS.register(ArcElement, Tooltip, Legend);
 
 interface BudgetEntry {
+  name?: string;
   description?: string;
   category?: string;
   amount: number;

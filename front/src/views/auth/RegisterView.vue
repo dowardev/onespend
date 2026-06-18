@@ -27,8 +27,8 @@
               @ion-blur="v$.name.$touch()"
             ></ion-input>
           </ion-item>
-          <div v-if="v$.name.$error" class="field-error">
-            <span v-if="v$.name.required.$invalid">El nombre es obligatorio</span>
+          <div v-if="v$.name?.$error" class="field-error">
+            <span v-if="v$.name?.required?.$invalid">El nombre es obligatorio</span>
           </div>
 
           <ion-item>
@@ -38,11 +38,11 @@
               type="text"
               required
               placeholder="Tu usuario"
-              @ion-blur="v$.user.$touch()"
+              @ion-blur="v$.user?.$touch()"
             ></ion-input>
           </ion-item>
-          <div v-if="v$.user.$error" class="field-error">
-            <span v-if="v$.user.required.$invalid">El usuario es obligatorio</span>
+          <div v-if="v$.user?.$error" class="field-error">
+            <span v-if="v$.user?.required?.$invalid">El usuario es obligatorio</span>
           </div>
 
           <ion-item>
@@ -52,12 +52,12 @@
               type="email"
               required
               placeholder="tu@email.com"
-              @ion-blur="v$.email.$touch()"
+              @ion-blur="v$.email?.$touch()"
             ></ion-input>
           </ion-item>
-          <div v-if="v$.email.$error" class="field-error">
-            <span v-if="v$.email.required.$invalid">El email es obligatorio</span>
-            <span v-else-if="v$.email.email.$invalid">Ingresa un email válido</span>
+          <div v-if="v$.email?.$error" class="field-error">
+            <span v-if="v$.email?.required?.$invalid">El email es obligatorio</span>
+            <span v-else-if="v$.email?.email?.$invalid">Ingresa un email válido</span>
           </div>
 
           <ion-item>
@@ -67,12 +67,12 @@
               type="password"
               required
               placeholder="Mínimo 8 caracteres"
-              @ion-blur="v$.password.$touch()"
+              @ion-blur="v$.password?.$touch()"
             ></ion-input>
           </ion-item>
-          <div v-if="v$.password.$error" class="field-error">
-            <span v-if="v$.password.required.$invalid">La contraseña es obligatoria</span>
-            <span v-else-if="v$.password.minLength.$invalid">Mínimo 8 caracteres</span>
+          <div v-if="v$.password?.$error" class="field-error">
+            <span v-if="v$.password?.required?.$invalid">La contraseña es obligatoria</span>
+            <span v-else-if="v$.password?.minLength?.$invalid">Mínimo 8 caracteres</span>
           </div>
 
           <ion-item>
@@ -82,12 +82,12 @@
               type="password"
               required
               placeholder="Repite tu contraseña"
-              @ion-blur="v$.passwordConfirmation.$touch()"
+              @ion-blur="v$.passwordConfirmation?.$touch()"
             ></ion-input>
           </ion-item>
-          <div v-if="v$.passwordConfirmation.$error" class="field-error">
-            <span v-if="v$.passwordConfirmation.required.$invalid">Confirma tu contraseña</span>
-            <span v-else-if="v$.passwordConfirmation.sameAs.$invalid"
+          <div v-if="v$.passwordConfirmation?.$error" class="field-error">
+            <span v-if="v$.passwordConfirmation?.required?.$invalid">Confirma tu contraseña</span>
+            <span v-else-if="v$.passwordConfirmation?.sameAs?.$invalid"
               >Las contraseñas no coinciden</span
             >
           </div>
@@ -195,7 +195,7 @@ const formRules = computed(() => ({
   },
 }));
 
-const v$ = useVuelidate(formRules, form);
+const v$ = useVuelidate(formRules, form) as any;
 
 const isFormValid = computed(() => {
   return !v$.value.$invalid;

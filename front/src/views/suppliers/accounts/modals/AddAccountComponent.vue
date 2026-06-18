@@ -71,6 +71,7 @@ import { reactive, computed, watch, ref } from 'vue';
 import { closeOutline, saveOutline, trashOutline } from 'ionicons/icons';
 import { required, minValue, maxLength, helpers } from '@vuelidate/validators';
 import useVuelidate from '@vuelidate/core';
+import type { Account } from '@/stores/accountsStore';
 
 interface AccountPayload {
   name: string;

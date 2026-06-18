@@ -55,7 +55,7 @@
       <AddAccountComponent
         :account="modalAccount"
         @dismiss="cancelModal"
-        @saved="(p) => onModalSaved({ payload: p })"
+        @saved="(p: any) => onModalSaved({ payload: p })"
         @delete="(id) => onDeleteAccount({ id })"
       />
     </ion-modal>
@@ -87,14 +87,8 @@ import AddAccountComponent from '@/views/suppliers/accounts/modals/AddAccountCom
 // End Components
 
 // Vars
-interface AccountWithBalance {
-  id: string | number;
-  name: string;
-  initialBalance: number;
-  ingresos: number;
-  egresos: number;
-  balance: number;
-}
+import type { AccountWithBalance } from '@/utils/budgetTypes';
+import type { Account } from '@/stores/accountsStore';
 
 defineProps<{
   accounts: AccountWithBalance[];
@@ -126,13 +120,13 @@ function cancelModal() {
   modalAccount.value = null;
 }
 
-async function onModalSaved(params: { payload: AccountWithBalance }) {
+async function onModalSaved(params: { payload: Record<string, unknown> }) {
   const { payload } = params;
   if (!payload) return;
   if (payload.id != null) {
-    await updateAccount({ account: payload });
+    await updateAccount({ account: payload as Account });
   } else {
-    await createAccount({ account: payload });
+    await createAccount({ account: payload as Account });
   }
   cancelModal();
   await loadAll();

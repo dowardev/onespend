@@ -18,7 +18,7 @@ export function useQuickAccount(params: {
   async function createQuickAccount(params: { name: string; initialBalance: number }) {
     const { name, initialBalance } = params;
     const newAccount = await accountsController.addAccount({
-      a: { name, initialBalance },
+      account: { name, initialBalance },
     });
 
     if (newAccount && quickAccountTargetIndex.value !== null) {

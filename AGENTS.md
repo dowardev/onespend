@@ -157,16 +157,79 @@ All Vue components must follow the structure and rules defined in `guides/Templa
 - Content, modals, popovers, and alerts in dedicated comment-delimited sections
 
 **Script (`<script lang="ts" setup>`):**
-1. Imports (ionic/vue/ionicons)
-2. Controllers / Composables
-3. Components
-4. Interface and types imports
-5. Main (props, emits, etc.)
-6. Vars and const
-7. Watch
-8. Computed
-9. OnMounted
-10. Functions (must use named parameters pattern)
+
+**Estructura obligatoria con comentarios de sección numerados:**
+
+```ts
+<script setup lang="ts>
+// 1. Imports (ionic/vue/ionicons)
+//    - Vue: ref, computed, watch, onMounted, etc.
+//    - Ionicons: addOutline, chevronBackOutline, etc.
+//    - Utilidades: date-fns, mensajes, db, etc.
+//    - Ionic: IonButton, IonContent, IonDatetime, etc.
+//    - Paquetes locales: @/utils/..., @/store/..., etc.
+import { ref, computed, onMounted } from 'vue'
+import { addOutline } from 'ionicons/icons'
+import { format } from 'date-fns'
+import { IonButton, IonContent, IonDatetime } from '@ionic/vue'
+
+// 2. Controllers / Composables
+//    - Importar e instanciar controladores/composables
+import { AuthController } from '@/controllers/authController'
+const authController = new AuthController()
+
+// 3. Components
+//    - Importar componentes Vue hijos
+import ChildComponent from '@/components/ChildComponent.vue'
+
+// 4. Interface and types imports
+//    - SOLO types/interfaces (import type)
+import type { User, EventItem } from '@/stores/userStore'
+import type { ViewCalendar } from '@/store/calendarStore'
+
+// 5. Main (props, emits, etc.)
+defineProps<{ items: Item[] }>()
+defineEmits<{ update: [value: string] }>()
+
+// 6. Vars and const
+const isOpen = ref(false)
+const loading = ref(false)
+
+// 7. Watch
+watch(() => props.items, (val) => { /* ... */ })
+
+// 8. Computed
+const filtered = computed(() => items.value.filter(...))
+
+// 9. OnMounted
+onMounted(() => { loadData() })
+
+// 10. Functions (named parameters pattern)
+function loadData(params: { force?: boolean }) { /* ... */ }
+</script>
+```
+
+**Reglas:**
+- Cada sección **debe** tener su comentario numerado (`// 1.`, `// 2.`, etc.)
+- La sección 1 agrupa **todos** los imports de valores (no types)
+- La sección 4 es **exclusivamente** `import type`
+- ⚠️ **Los imports de Ionic van en la sección 1**, nunca en la sección 4
+
+### Frontend (Vue Components): Ionic Imports
+
+Todos los componentes Vue que usen componentes de Ionic en su template **deben importar explícitamente** dichos componentes en la **sección 1** (`// 1. Imports (ionic/vue/ionicons)`) del script.
+
+```ts
+// ✅ Correcto — importa lo que usa el template en sección 1
+import { IonButton, IonContent, IonDatetime, IonPopover } from '@ionic/vue'
+
+// ❌ Incorrecto — usa IonDatetime en template pero no lo importa
+// (TypeScript no puede inferir tipos: $el es never, métodos reset/confirm/cancel no existen)
+
+// ❌ Incorrecto — importar Ionic en sección 4 (types)
+```
+
+> Ionic Vue registra componentes globalmente via `app.use(IonicVue)`, pero TypeScript necesita la importación en la **sección 1** para inferir tipos correctamente (ej. `InstanceType<typeof IonDatetime>`, acceso a `$el`, métodos como `reset()`, `confirm()`, `cancel()`).
 
 ## Commit Policy
 

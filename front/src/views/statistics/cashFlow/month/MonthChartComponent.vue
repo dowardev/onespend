@@ -44,15 +44,15 @@ const canRenderChart = computed(() => hasData.value && isLoaded.value);
 // vars
 const safeChartData = shallowRef<ChartData<'bar'>>(
   props.chartData
-    ? applyNeonStyles(
-        JSON.parse(
+    ? applyNeonStyles({
+        data: JSON.parse(
           JSON.stringify({
             ...props.chartData,
             labels: (props.chartData.labels || []).map(translateMonthLabel),
           }),
         ),
-        props.colorIndex,
-      )
+        colorIndex: props.colorIndex,
+      })
     : { labels: [], datasets: [] },
 );
 const safeChartOptions = shallowRef<ChartOptions<'bar'>>(
@@ -77,11 +77,11 @@ watch(
   (v) => {
     const cloned = v ? JSON.parse(JSON.stringify(v)) : { labels: [], datasets: [] };
     cloned.labels = (cloned.labels || []).map(translateMonthLabel);
-    safeChartData.value = applyNeonStyles(cloned, props.colorIndex);
+    safeChartData.value = applyNeonStyles({ data: cloned, colorIndex: props.colorIndex });
     // bump key to force Bar remount (works around chart update detection issues)
     try {
       chartKey.value = (chartKey.value || 0) + 1;
-    } catch (_e) {}
+    } catch (_e) { /* intentionally ignored */ }
     // debug logs removed
   },
   { immediate: true, deep: true },
@@ -98,7 +98,7 @@ watch(
 // watch chart loading state to help debugging
 watch(
   () => isLoaded.value,
-  (v) => {
+  () => {
     // debug logs removed
   },
   { immediate: true },
