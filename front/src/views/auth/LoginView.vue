@@ -25,8 +25,8 @@
               required
               placeholder="tu@email.com o usuario"
             ></ion-input>
-            <div v-if="v$.login.$error" class="validation-error">
-              <span v-if="v$.login.required.$invalid">El email o usuario es obligatorio</span>
+            <div v-if="v$.login?.$error" class="validation-error">
+              <span v-if="v$.login?.required?.$invalid">El email o usuario es obligatorio</span>
             </div>
           </ion-item>
 
@@ -38,9 +38,9 @@
               required
               placeholder="Tu contraseña"
             ></ion-input>
-            <div v-if="v$.password.$error" class="validation-error">
-              <span v-if="v$.password.required.$invalid">La contraseña es obligatoria</span>
-              <span v-else-if="v$.password.minLength.$invalid">La contraseña debe tener al menos 6 caracteres</span>
+            <div v-if="v$.password?.$error" class="validation-error">
+              <span v-if="v$.password?.required?.$invalid">La contraseña es obligatoria</span>
+              <span v-else-if="v$.password?.minLength?.$invalid">La contraseña debe tener al menos 6 caracteres</span>
             </div>
           </ion-item>
 
@@ -105,7 +105,7 @@ const rules = computed(() => ({
   password: { required, minLength: minLength(6) },
 }))
 
-const v$ = useVuelidate(rules, { login, password })
+const v$ = useVuelidate(rules, { login, password }) as any
 // End Computed
 
 // Functions

@@ -115,13 +115,6 @@ watch(
     const cloned = v ? JSON.parse(JSON.stringify(v)) : { labels: [], datasets: [] };
     cloned.labels = (cloned.labels || []).map((l) => translateDayLabel({ label: l }));
     safeChartData.value = applyNeonStyles(cloned);
-    // Debug: show final chart data sent to vue-chartjs
-    try {
-       
-      console.log('[DayChart] safeChartData:', JSON.parse(JSON.stringify(safeChartData.value)));
-    } catch (_e) {
-      /* ignore */
-    }
   },
   { immediate: true, deep: true },
 );

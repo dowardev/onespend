@@ -38,8 +38,8 @@
                     />
                   </ion-item>
 
-                    <div v-if="v$.name.$error" class="validation-error">
-                      <span v-if="v$.name.required?.$invalid">El nombre es obligatorio</span>
+                    <div v-if="v$.name?.$error" class="validation-error">
+                      <span v-if="v$.name?.required?.$invalid">El nombre es obligatorio</span>
                     </div>
 
                   <ion-item lines="full" class="transparent" button @click="entryDatePicker.openPopover({ e: $event })">
@@ -47,8 +47,8 @@
                     <ion-label slot="end">{{ toShortDate({ isoDate: entryDatePicker.dateISO.value }) }}</ion-label>
                   </ion-item>
 
-                    <div v-if="v$.date.$error" class="validation-error">
-                      <span v-if="v$.date.required?.$invalid">La fecha es obligatoria</span>
+                    <div v-if="v$.date?.$error" class="validation-error">
+                      <span v-if="v$.date?.required?.$invalid">La fecha es obligatoria</span>
                     </div>
 
                 </ion-card>
@@ -247,7 +247,7 @@ const v$ = useVuelidate(rules, computed(() => {
     entryType: entryData.value.entryType,
     items: entryItems.value,
   }
-}))
+})) as any
 // end vuelidate
 
 // Computed from route

@@ -147,7 +147,7 @@
         header="Confirmar migración"
         :message="confirmAlert.message"
         :buttons="confirmButtons"
-        @did-dismiss="onAlertDidDismiss({ ev: $event })"
+        @did-dismiss="onAlertDidDismiss({ event: $event })"
       />
     </ion-content>
   </ion-page>

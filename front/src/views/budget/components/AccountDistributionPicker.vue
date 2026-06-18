@@ -61,7 +61,7 @@
         </ion-buttons>
         <ion-title>Seleccionar Cuenta</ion-title>
         <ion-buttons slot="end">
-          <ion-button @click="openQuickAccountAlert({ targetIndex: selectedAccountIndex.value })">
+          <ion-button @click="openQuickAccountAlert({ targetIndex: selectedAccountIndex })">
             <ion-icon :icon="addOutline" />
           </ion-button>
         </ion-buttons>
@@ -91,7 +91,7 @@
             @click="selectAccount({ acc })"
           >
             <ion-label>{{ acc.name }}</ion-label>
-            <ion-label slot="end">{{ acc.type || '' }}</ion-label>
+            <ion-label slot="end"></ion-label>
           </ion-item>
           <ion-item
             v-for="acc in sortedAccounts.selected"

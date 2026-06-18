@@ -18,8 +18,8 @@
             <!-- Provider form -->
             <ion-list class="ion-padding-start ion-padding-end">
               <ion-card class="shadow1">
-                <div v-if="v$.name.$error" class="validation-error">
-                  <span v-if="v$.name.required?.$invalid">Debes seleccionar un proveedor</span>
+                <div v-if="v$.name?.$error" class="validation-error">
+                  <span v-if="v$.name?.required?.$invalid">Debes seleccionar un proveedor</span>
                 </div>
 
                 <ion-item class="transparent" button lines="full" @click="showProviderModal = true">
@@ -607,7 +607,7 @@ const rules = computed(() => ({
 const v$ = useVuelidate(rules, computed(() => ({
   name: selectedProvider.value?.name || '',
   items: items.value,
-})))
+}))) as any
 // end vuelidate
 
 // onMounted - initialize form based on route params

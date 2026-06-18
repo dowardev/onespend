@@ -3,16 +3,16 @@
     <ion-item class="panel border-rounded" lines="none">
       <ion-label>
         <h3>{{ currentLabel }}</h3>
-        <p>Total ventas: {{ formatCurrency({ val: snapshots.current.totalSales }) }}</p>
-        <p>Utilidad neta: {{ formatCurrency({ val: snapshots.current.netProfit }) }}</p>
+        <p>Total ventas: {{ formatCurrency({ value: snapshots.current.totalSales }) }}</p>
+        <p>Utilidad neta: {{ formatCurrency({ value: snapshots.current.netProfit }) }}</p>
       </ion-label>
     </ion-item>
 
     <ion-item class="panel border-rounded" lines="none">
       <ion-label>
         <h3>{{ previousLabel }}</h3>
-        <p>Total ventas: {{ formatCurrency({ val: snapshots.previous.totalSales }) }}</p>
-        <p>Utilidad neta: {{ formatCurrency({ val: snapshots.previous.netProfit }) }}</p>
+        <p>Total ventas: {{ formatCurrency({ value: snapshots.previous.totalSales }) }}</p>
+        <p>Utilidad neta: {{ formatCurrency({ value: snapshots.previous.netProfit }) }}</p>
       </ion-label>
     </ion-item>
   </div>

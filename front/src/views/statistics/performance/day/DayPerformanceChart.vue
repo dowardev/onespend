@@ -21,7 +21,6 @@ const props = defineProps<{
 
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 let chartInstance: Chart<'bar'> | null = null;
-let ChartJSInstance: Chart | null = null;
 
 const hasData = computed(
   () =>
@@ -40,13 +39,13 @@ async function createChart() {
   const { ChartJS } = await loadChartDependencies();
   if (!ChartJS || !canvasRef.value) return;
 
-  ChartJSInstance = ChartJS;
-
   // clean up previous instance if any
   if (chartInstance) {
     try {
       chartInstance.destroy();
-    } catch (_e) {}
+    } catch (_e) {
+      // ignore
+    }
     chartInstance = null;
   }
 
