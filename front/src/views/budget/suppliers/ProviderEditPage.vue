@@ -220,7 +220,6 @@
                   :items="items"
                   header-label="Distribución por Cuenta"
                   header-subtitle="Distribuye el monto entre las cuentas"
-                  :can-add-more="true"
                   reverse-order
                   @add-item="handleAddItem"
                   @remove-item="removeItem"
@@ -769,6 +768,7 @@ async function initializeFromProvider() {
 }
 
 // computed
+
 const pageTitle = computed(() => {
   if (isEntryMode.value) {
     return 'Editar Entrada';
@@ -987,10 +987,6 @@ function addItem() {
 }
 
 function handleAddItem() {
-  if (!itemsValidator(items.value)) {
-    showIncompleteGroupToast.value = true;
-    return;
-  }
   addItem();
 }
 

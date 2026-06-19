@@ -150,15 +150,48 @@ authApi.login(params)
 
 ### Frontend (Vue Components): Template Structure
 
-All Vue components must follow the structure and rules defined in `guides/TemplateView.vue`. Key sections in order:
+There are two distinct template patterns depending on the file type: **Pages** (route-level views) and **Components** (reusable UI blocks). Both must follow the numbered section structure in the script.
 
-**Template:**
-- `<ion-page>` as root with `<ion-header>` and `<ion-content>`
-- Content, modals, popovers, and alerts in dedicated comment-delimited sections
+#### Pages (`src/views/`)
 
-**Script (`<script lang="ts" setup>`):**
+Pages are route-level views. Root element is `<ion-page>` with `<ion-header>` and `<ion-content>`.
+Reference: `guides/TemplatePage.vue`
 
-**Estructura obligatoria con comentarios de sección numerados:**
+```vue
+<template>
+  <ion-page>
+    <ion-header>...</ion-header>
+    <ion-content>
+      <ion-grid>
+        <ion-row class="ion-justify-content-center">
+          <ion-col size="4"><!-- content --></ion-col>
+        </ion-row>
+      </ion-grid>
+    </ion-content>
+    <!-- popovers -->
+    <!-- alerts -->
+    <!-- modals -->
+  </ion-page>
+</template>
+```
+
+#### Components (`src/views/**/components/` or `src/components/`)
+
+Components are reusable blocks. NO `<ion-page>`, NO `<ion-header>`, NO `<ion-content>`.
+Reference: `guides/TemplateComponent.vue`
+
+```vue
+<template>
+  <!-- No ion-page — this is a reusable component -->
+  <ion-list class="transparent">
+    <ion-card class="shadow1">
+      <ion-item lines="full" class="transparent">...</ion-item>
+    </ion-card>
+  </ion-list>
+</template>
+```
+
+**Script (`<script lang="ts" setup>`) — same numbered section structure for both:**
 
 ```ts
 <script setup lang="ts>
@@ -215,6 +248,24 @@ function loadData(params: { force?: boolean }) { /* ... */ }
 - La sección 4 es **exclusivamente** `import type`
 - ⚠️ **Los imports de Ionic van en la sección 1**, nunca en la sección 4
 
+### Frontend (Vue Components): Controller vs Composable Decision
+
+Determina cuándo usar un **controller** vs un **composable**:
+
+| Escenario | Usar | Ejemplo |
+|-----------|------|---------|
+| Lógica de negocio pura (CRUD, cálculos, reglas) | Controller | `accountsController.getAccounts()` |
+| Estado reactivo + lógica (ref, computed, watch) | Composable | `useAccountSelection({ items, getAccountId })` |
+| Acceso a store Pinia + lógica | Controller o Composable | `budgetDayStore.saveBudgetData()` en controller |
+| Lógica compartida entre múltiples componentes | Composable | `useAttachments`, `useDatePicker` |
+| Operaciones que NO requieren estado Vue | Controller | `budgetEntriesController.getEntries()` |
+| Operaciones que SÍ requieren estado reactivo | Composable | `useDeleteConfirm({ onConfirm })` |
+
+**Regla general:** Si necesitas `ref`, `computed`, `watch`, o `onMounted` → **composable**.
+Si solo necesitas funciones puras o acceso a datos → **controller**.
+
+---
+
 ### Frontend (Vue Components): Ionic Imports
 
 Todos los componentes Vue que usen componentes de Ionic en su template **deben importar explícitamente** dichos componentes en la **sección 1** (`// 1. Imports (ionic/vue/ionicons)`) del script.
@@ -230,6 +281,18 @@ import { IonButton, IonContent, IonDatetime, IonPopover } from '@ionic/vue'
 ```
 
 > Ionic Vue registra componentes globalmente via `app.use(IonicVue)`, pero TypeScript necesita la importación en la **sección 1** para inferir tipos correctamente (ej. `InstanceType<typeof IonDatetime>`, acceso a `$el`, métodos como `reset()`, `confirm()`, `cancel()`).
+
+### Frontend (Ionic): Ionic-First Layout
+
+Preferir las utilidades de layout de Ionic sobre CSS personalizado:
+
+- `ion-grid` / `ion-row` / `ion-col` para diseño responsivo (nunca `flexbox` manual para layout de página)
+- Clases utilitarias: `ion-padding-*`, `ion-margin-*`, `ion-text-*`, `ion-justify-content-*`, `ion-align-items-*`
+- `ion-list` con `ion-item` para formularios en lugar de `<div>` con CSS
+- `ion-card` para tarjetas
+- Modales: `ion-modal` con `ion-header` + `ion-content`
+- Popovers: `ion-popover` con `ion-content`
+- NO usar `<div>` con estilos manuales cuando existe un componente Ionic equivalente
 
 ## Commit Policy
 
