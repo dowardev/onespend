@@ -57,7 +57,6 @@
               <AccountDistributionPicker
                 :items="entryItems"
                 header-label="Cuentas"
-                :can-add-more="canAddMoreItems"
                 :is-day-closed="isDayClosed"
                 @add-item="addEntryItem"
                 @remove-item="removeEntryItem"
@@ -253,8 +252,6 @@ const v$ = useVuelidate(rules, computed(() => {
 // Computed from route
 const isEditing = computed(() => !!route.query.entryId);
 const isDayClosed = computed(() => false);
-
-const canAddMoreItems = computed(() => true);
 // end computed
 
 // onmounted
