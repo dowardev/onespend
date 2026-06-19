@@ -7,7 +7,7 @@
           {{ headerSubtitle }}
         </p>
       </ion-label>
-      <ion-button :disabled="!canAddMore || isDayClosed" @click="$emit('addItem')">
+      <ion-button :disabled="isDayClosed" @click="handleAddClick">
         <ion-icon :icon="addOutline" />
       </ion-button>
     </ion-list-header>
@@ -25,7 +25,7 @@
           </ion-button>
         </div>
 
-        <ion-item lines="full" class="transparent" button @click="openAccountModal({ index: realIndex(displayIdx) })">
+        <ion-item lines="full" class="transparent" :class="{ 'ion-invalid ion-touched': forceValidation && !getAccountIdValue(item.accountId) }" button @click="openAccountModal({ index: realIndex(displayIdx) })">
           <ion-label>
             Cuenta
             <p>{{ getAccountName({ accountId: item.accountId }) || 'Seleccionar cuenta' }}</p>
@@ -40,8 +40,8 @@
             type="number"
             placeholder="0"
             :class="{
-              'ion-invalid': isAmountInvalid({ value: item.amount }),
-              'ion-touched': isAmountTouched({ value: item.amount }),
+              'ion-invalid': forceValidation || isAmountInvalid({ value: item.amount }),
+              'ion-touched': forceValidation || isAmountTouched({ value: item.amount }),
             }"
             :error-text="getAmountError({ value: item.amount })"
             @update:model-value="$emit('updateItemAmount', { index: realIndex(displayIdx), amount: $event })"
@@ -122,6 +122,14 @@
     :buttons="quickAccountButtons"
     @did-dismiss="showQuickAccountAlert = false"
   />
+
+  <ion-toast
+    :is-open="showIncompleteToast"
+    message="Completa los campos pendientes antes de añadir otra distribución"
+    :duration="3000"
+    color="warning"
+    @did-dismiss="showIncompleteToast = false"
+  />
 </template>
 
 <script lang="ts" setup>
@@ -143,9 +151,10 @@ import {
   IonContent,
   IonSearchbar,
   IonAlert,
+  IonToast,
 } from '@ionic/vue';
 import { addOutline, closeOutline } from 'ionicons/icons';
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { isAmountInvalid, isAmountTouched, getAmountError } from '@/utils/amountValidation';
 import accountsController, { type Account } from '@/controllers/accountsController';
 import { useQuickAccount } from '@/composables/useQuickAccount';
@@ -159,7 +168,6 @@ const props = defineProps<{
   items: DistributionItem[];
   headerLabel: string;
   headerSubtitle?: string;
-  canAddMore: boolean;
   isDayClosed?: boolean;
   reverseOrder?: boolean;
 }>();
@@ -174,6 +182,25 @@ const emit = defineEmits<{
 const displayItems = computed(() => {
   return props.reverseOrder ? [...props.items].reverse() : props.items;
 });
+
+const forceValidation = ref(false);
+const showIncompleteToast = ref(false);
+
+function hasIncompleteItems(params?: { items: DistributionItem[] }): boolean {
+  const { items: checkItems = props.items } = params ?? {};
+  return checkItems.some(item => {
+    const amount = String(item.amount).trim();
+    const hasAmount = amount !== '' && !isNaN(Number(amount)) && Number(amount) > 0;
+    const hasAccount = getAccountIdValue(item.accountId) != null;
+    return !hasAmount || !hasAccount;
+  });
+}
+
+watch(() => props.items, () => {
+  if (!hasIncompleteItems()) {
+    forceValidation.value = false;
+  }
+}, { deep: true });
 
 function realIndex(displayIndex: number): number {
   if (props.reverseOrder) {
@@ -236,6 +263,17 @@ function getAccountName(params: { accountId: unknown }): string {
   return acc?.name || '';
 }
 
+function handleAddClick() {
+  if (hasIncompleteItems()) {
+    forceValidation.value = true;
+    showIncompleteToast.value = true;
+    return;
+  }
+  selectedAccountIndex.value = null;
+  accountSearchQuery.value = '';
+  showAccountModal.value = true;
+}
+
 function openAccountModal(params: { index: number }) {
   const { index } = params;
   selectedAccountIndex.value = index;
@@ -251,9 +289,13 @@ function onAccountModalDismiss() {
 
 function selectAccount(params: { acc: Account }) {
   const { acc } = params;
+  const accountIdValue = acc.id as string | number;
   if (selectedAccountIndex.value !== null) {
-    const accountIdValue = acc.id as string | number;
     emit('updateItemAccount', { index: selectedAccountIndex.value, accountId: { id: accountIdValue } });
+  } else {
+    const newIndex = props.items.length;
+    emit('addItem');
+    emit('updateItemAccount', { index: newIndex, accountId: { id: accountIdValue } });
   }
   showAccountModal.value = false;
   selectedAccountIndex.value = null;
@@ -269,7 +311,13 @@ const {
   onAccountCreated: (params: { newAccount: { id: IDBValidKey }; targetIndex: number }) => {
     const { newAccount, targetIndex } = params;
     const accountIdValue = newAccount.id as string | number;
-    emit('updateItemAccount', { index: targetIndex, accountId: { id: accountIdValue } });
+    if (targetIndex !== null && targetIndex !== undefined) {
+      emit('updateItemAccount', { index: targetIndex, accountId: { id: accountIdValue } });
+    } else {
+      const newIndex = props.items.length;
+      emit('addItem');
+      emit('updateItemAccount', { index: newIndex, accountId: { id: accountIdValue } });
+    }
   },
 });
 </script>
