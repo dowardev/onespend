@@ -1,3 +1,27 @@
+## [v0.72.0] - 2026-06-22
+
+### Added
+- Income statement (Estado de Resultados) with responsive grid layout
+- Financial glossary popovers for all statement terms (Ingresos, Costo de Vida, Utilidad Bruta, etc.)
+- Skeleton loading placeholders with CSS pulse animation for performance views
+- Actionable empty states with icon and "Agregar" button
+
+### Changed
+- Refactored performance page to Ionic-First layout (ion-grid/row/col, shadow1 cards, Ionic color props)
+- Extracted reusable composables: useBudgetEntries, useDatePopover, usePeriodConfig
+- Removed 6 orphaned components and cleaned up StatisticsController (4 dead methods removed)
+
+### Fixed
+- FinancialInfoPopover dark mode compatibility (use --ion-color-medium/light instead of step vars)
+- Popover CSS variables for dark/light mode in PerformanceComponent
+- BudgetDetailModal CSS replaced with Ionic color props
+- Mobile and tablet responsivity across all performance views
+- Add account budget flow
+
+### Accessibility
+- Added aria-labels to icon buttons and color indicators in performance views
+- Added keyboard support for FinancialInfoPopover trigger
+
 ## [v0.71.0] - 2026-06-18
 
 ### Added
