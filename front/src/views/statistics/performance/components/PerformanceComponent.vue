@@ -1,55 +1,235 @@
 <template>
-  <PeriodLayout
-    :title="periodLabels[period]"
-    :date-label="dateLabel"
-    :on-prev="handlePrevPeriod"
-    :on-next="handleNextPeriod"
-    :on-date-click="onMainDateClick"
-  >
-    <template #analysis>
-      <ion-item>
-        <ion-label>Resumen del {{ periodLabels[period] }} {{ dateLabel }}</ion-label>
-
-        <ion-label slot="end" :color="realBalance >= 0 ? 'success' : 'danger'">{{
-          formatCurrency(realBalance)
-        }}</ion-label>
+  <!-- Skeleton loading -->
+  <template v-if="isLoading">
+    <ion-list>
+      <ion-item lines="none" class="ion-padding-horizontal">
+        <ion-skeleton-text animated style="width: 30px; margin-right: auto"></ion-skeleton-text>
+        <ion-skeleton-text animated style="width: 80px"></ion-skeleton-text>
+        <ion-skeleton-text animated style="width: 30px; margin-left: auto"></ion-skeleton-text>
       </ion-item>
+    </ion-list>
+    <ion-list class="ion-padding-horizontal">
+      <ion-item-divider class="transparent">
+        <ion-skeleton-text animated style="width: 30%"></ion-skeleton-text>
+        <ion-skeleton-text slot="end" animated style="width: 20%"></ion-skeleton-text>
+      </ion-item-divider>
+      <ion-item lines="full" class="ion-no-padding">
+        <ion-skeleton-text animated style="width: 80%"></ion-skeleton-text>
+        <ion-skeleton-text slot="end" animated style="width: 15%"></ion-skeleton-text>
+      </ion-item>
+      <ion-item lines="full" class="ion-no-padding">
+        <ion-skeleton-text animated style="width: 60%"></ion-skeleton-text>
+        <ion-skeleton-text slot="end" animated style="width: 20%"></ion-skeleton-text>
+      </ion-item>
+      <ion-item lines="full" class="ion-no-padding">
+        <ion-skeleton-text animated style="width: 70%"></ion-skeleton-text>
+        <ion-skeleton-text slot="end" animated style="width: 15%"></ion-skeleton-text>
+      </ion-item>
+      <ion-card class="shadow1">
+        <ion-card-content class="ion-padding">
+          <ion-item lines="none" class="ion-no-padding">
+            <ion-skeleton-text animated style="width: 40%"></ion-skeleton-text>
+          </ion-item>
+          <ion-row
+            class="ion-justify-content-between ion-padding-top ion-padding-start ion-padding-end"
+          >
+            <ion-skeleton-text animated style="width: 30%"></ion-skeleton-text>
+            <ion-skeleton-text animated style="width: 25%"></ion-skeleton-text>
+          </ion-row>
+        </ion-card-content>
+      </ion-card>
+    </ion-list>
+    <ion-list class="ion-padding-horizontal">
+      <ion-item-divider class="transparent">
+        <ion-skeleton-text animated style="width: 35%"></ion-skeleton-text>
+        <ion-skeleton-text slot="end" animated style="width: 20%"></ion-skeleton-text>
+      </ion-item-divider>
+      <ion-item lines="full" class="ion-no-padding">
+        <ion-skeleton-text animated style="width: 50%"></ion-skeleton-text>
+        <ion-skeleton-text slot="end" animated style="width: 20%"></ion-skeleton-text>
+      </ion-item>
+      <ion-card class="shadow1">
+        <ion-card-content class="ion-padding">
+          <ion-item lines="none" class="ion-no-padding">
+            <ion-skeleton-text animated style="width: 35%"></ion-skeleton-text>
+          </ion-item>
+          <ion-row
+            class="ion-justify-content-between ion-padding-top ion-padding-start ion-padding-end"
+          >
+            <ion-skeleton-text animated style="width: 30%"></ion-skeleton-text>
+            <ion-skeleton-text animated style="width: 25%"></ion-skeleton-text>
+          </ion-row>
+        </ion-card-content>
+      </ion-card>
+    </ion-list>
+  </template>
 
-      <ion-grid>
-        <ion-row>
-          <ion-col size="6">
-            <EntriesList
-              title="Ingresos"
-              :items="incomesList"
-              :total="incomesTotal"
-              footer-label="Total ingresos"
-              :show-chart="true"
-              :chart-colors="incomeChartColors"
-              @edit="openEditEntryModal"
-            />
-          </ion-col>
+  <!-- Period navigation -->
+  <ion-list v-if="!isLoading" class="ion-padding-horizontal">
+    <ion-item lines="none" class="ion-no-padding">
+      <ion-button slot="start" fill="clear" aria-label="Período anterior" @click="handlePrevPeriod">
+        <ion-icon :icon="chevronBackOutline" />
+      </ion-button>
+      <ion-button
+        fill="clear"
+        aria-label="Seleccionar fecha"
+        style="font-weight: 600; font-size: 0.95rem"
+        @click="onMainDateClick($event)"
+      >
+        {{ dateLabel }}
+      </ion-button>
+      <ion-button slot="end" fill="clear" aria-label="Período siguiente" @click="handleNextPeriod">
+        <ion-icon :icon="chevronForwardOutline" />
+      </ion-button>
+    </ion-item>
+  </ion-list>
 
-          <ion-col size="6">
-            <EntriesList
-              title="Gastos"
-              :items="expensesList"
-              :total="expensesTotal"
-              footer-label="Total gastos"
-              :show-chart="true"
-              :chart-colors="expenseChartColors"
-              @edit="openEditEntryModal"
-            />
-          </ion-col>
-        </ion-row>
-      </ion-grid>
+  <!-- Income Statement -->
+  <ion-grid v-if="!isLoading" class="ion-no-padding">
+    <template v-for="(section, idx) in sections" :key="section.title">
+      <ion-row>
+        <ion-col size="12">
+          <ion-item-divider v-if="idx > 0" class="transparent" />
+
+          <ion-list class="transparent section-list">
+            <ion-list-header class="section-header">
+              <ion-label class="section-title">
+                <FinancialInfoPopover :term="section.title" inline>
+                  <template #trigger>
+                    <strong style="cursor: pointer">{{ section.title }}</strong>
+                  </template>
+                </FinancialInfoPopover>
+              </ion-label>
+              <ion-label slot="end" class="section-total-label">
+                <strong>{{ fmt(section.total) }}</strong>
+              </ion-label>
+            </ion-list-header>
+
+            <template v-if="section.items.length > 0">
+              <IncomeStatementRow v-for="item in section.items" :key="item.name" :item="item" />
+              <ion-item lines="full" class="section-separator">
+                <ion-label class="separator-label">Total {{ section.title }}</ion-label>
+                <ion-label slot="end" class="separator-amount">{{ fmt(section.total) }}</ion-label>
+              </ion-item>
+            </template>
+            <ion-item v-else lines="full" class="empty-section">
+              <ion-icon slot="start" :icon="fileTrayOutline" color="medium" />
+              <ion-label color="medium">
+                <p>Sin {{ section.title.toLowerCase() }} en este periodo</p>
+              </ion-label>
+              <ion-button
+                slot="end"
+                fill="clear"
+                size="small"
+                color="primary"
+                @click="handleEmptyAction"
+              >
+                Agregar
+              </ion-button>
+            </ion-item>
+          </ion-list>
+
+          <template v-if="cards[idx]">
+            <ion-item-divider class="transparent" />
+            <ion-card class="shadow1">
+              <ion-card-content
+                class="ion-padding-start ion-padding-end ion-padding-top ion-padding-bottom"
+              >
+                <ion-item lines="none" class="transparent ion-no-padding summary-label-item">
+                  <ion-label class="summary-label">
+                    <FinancialInfoPopover :term="cards[idx].label" inline>
+                      <template #trigger>
+                        <strong style="cursor: pointer">{{ cards[idx].label }}</strong>
+                      </template>
+                    </FinancialInfoPopover>
+                  </ion-label>
+                </ion-item>
+                <ion-row
+                  class="ion-justify-content-between ion-align-items-center ion-padding-start ion-padding-end"
+                >
+                  <ion-col size="auto">
+                    <ion-label
+                      class="summary-percent"
+                      :color="cards[idx].amount >= 0 ? 'success' : 'danger'"
+                      :aria-label="`${cards[idx].amount >= 0 ? 'Positivo' : 'Negativo'}: ${cards[idx].percent}%`"
+                    >
+                      {{ cards[idx].percent }}%
+                    </ion-label>
+                  </ion-col>
+                  <ion-col size="auto">
+                    <ion-label
+                      class="summary-amount"
+                      :color="cards[idx].amount >= 0 ? 'success' : 'danger'"
+                      :aria-label="`${cards[idx].amount >= 0 ? 'Positivo' : 'Negativo'}: ${fmt(cards[idx].amount)}`"
+                    >
+                      {{ fmt(cards[idx].amount) }}
+                    </ion-label>
+                  </ion-col>
+                </ion-row>
+                <ion-item
+                  v-if="cards[idx].diff !== null"
+                  lines="none"
+                  class="transparent ion-no-padding"
+                >
+                  <ion-label class="comparison-label">vs periodo anterior</ion-label>
+                  <ion-label
+                    slot="end"
+                    class="comparison-value"
+                    :color="(cards[idx].diff ?? 0) >= 0 ? 'success' : 'danger'"
+                    :aria-label="`${(cards[idx].diff ?? 0) >= 0 ? 'Incremento' : 'Disminución'} de ${fmt(cards[idx].diff ?? 0)}`"
+                  >
+                    <ion-icon
+                      :icon="(cards[idx].diff ?? 0) >= 0 ? trendingUpOutline : trendingDownOutline"
+                      size="small"
+                    />
+                    {{ fmt(cards[idx].diff ?? 0) }}
+                  </ion-label>
+                </ion-item>
+              </ion-card-content>
+            </ion-card>
+          </template>
+        </ion-col>
+      </ion-row>
     </template>
-  </PeriodLayout>
+  </ion-grid>
 
+  <!-- Period Comparison -->
+  <ion-list v-if="!isLoading && comparison && comparisonRows.length > 0" class="comparison-section">
+    <ion-list-header>
+      <ion-label>Comparativa vs periodo anterior</ion-label>
+    </ion-list-header>
+
+    <ion-item v-for="row in comparisonRows" :key="row.key" lines="full">
+      <ion-label class="cmp-name">
+        <FinancialInfoPopover :term="row.label" inline>
+          <template #trigger>
+            <strong style="cursor: pointer">{{ row.label }}</strong>
+          </template>
+        </FinancialInfoPopover>
+      </ion-label>
+
+      <ion-note slot="end" class="cmp-old">{{ fmt(row.previous) }}</ion-note>
+
+      <ion-label slot="end" class="cmp-current">{{ fmt(row.current) }}</ion-label>
+
+      <ion-label
+        slot="end"
+        class="cmp-diff"
+        :color="row.diff >= 0 ? 'success' : 'danger'"
+        :aria-label="`${row.diff >= 0 ? 'Incremento' : 'Disminución'}: ${row.diffPercent}%`"
+      >
+        <ion-icon :icon="row.diff >= 0 ? trendingUpOutline : trendingDownOutline" size="small" />
+        {{ row.diff >= 0 ? '+' : '' }}{{ row.diffPercent }}%
+      </ion-label>
+    </ion-item>
+  </ion-list>
+
+  <!-- Date popover -->
   <ion-popover
-    :is-open="popovers.mainDate.open"
-    :event="popovers.mainDate.event"
+    :is-open="datePopover.open"
+    :event="datePopover.event"
     keep-contents-mounted
-    @did-dismiss="popovers.mainDate.open = false"
+    @did-dismiss="closeDatePopover()"
   >
     <ion-content>
       <ion-datetime
@@ -57,8 +237,7 @@
         style="background: transparent"
         presentation="date"
         @ion-change="onPopoverDateChange"
-      ></ion-datetime>
-
+      />
       <ion-item lines="full">
         <ion-button
           slot="end"
@@ -73,51 +252,52 @@
       </ion-item>
     </ion-content>
   </ion-popover>
-
-  <ion-loading :is-open="isGeneratingPdf" message="Generando PDF..." />
 </template>
 
 <script setup lang="ts">
 import {
+  IonButton,
+  IonCard,
+  IonCardContent,
   IonCol,
   IonContent,
-  IonLoading,
   IonDatetime,
-  IonButton,
+  IonGrid,
+  IonIcon,
   IonItem,
+  IonItemDivider,
   IonLabel,
+  IonList,
+  IonListHeader,
+  IonNote,
   IonPopover,
   IonRow,
-  IonAlert,
-  IonGrid,
+  IonSkeletonText,
 } from '@ionic/vue';
-import PeriodLayout from '../components/PeriodLayout.vue';
-import EntriesList from './EntriesList.vue';
-import { computed, reactive, onMounted, ref, watch, toRef } from 'vue';
-import { format, addDays } from 'date-fns';
+import {
+  chevronBackOutline,
+  chevronForwardOutline,
+  trendingUpOutline,
+  trendingDownOutline,
+  fileTrayOutline,
+} from 'ionicons/icons';
+import { computed, onMounted, watch, toRef } from 'vue';
+import { format } from 'date-fns';
 import { parseLocalDate } from '@/utils/date';
-import { useBudgetDayStore } from '@/stores/budgetDayStore';
-import { useBudgetEntriesStore } from '@/stores/budgetEntriesStore';
-import systemController from '@/controllers/systemConfigController';
-import { useRouter } from 'vue-router';
-import { StatisticsController, type Snapshots } from '@/controllers/statisticsController';
 import { usePeriodRange, type PeriodType } from '@/composables/usePeriodRange';
-import type { Income } from '@/stores/budgetEntriesStore';
+import { usePeriodConfig } from '@/composables/usePeriodConfig';
+import { useDatePopover } from '@/composables/useDatePopover';
+import { useBudgetEntries } from '@/composables/useBudgetEntries';
+import { useIncomeStatement } from '@/composables/useIncomeStatement';
+import IncomeStatementRow from './IncomeStatementRow.vue';
+import FinancialInfoPopover from './FinancialInfoPopover.vue';
 
 const props = defineProps<{
   period: PeriodType;
 }>();
 
-const periodLabels: Record<PeriodType, string> = {
-  day: 'Día',
-  week: 'Semana',
-  month: 'Mes',
-  year: 'Año',
-};
-
-// Period range composable
-const weekStartDay = ref(1);
 const periodRef = toRef(props, 'period');
+const { weekStartDay, load: loadConfig } = usePeriodConfig();
 const {
   referenceDate,
   dateLabel,
@@ -128,125 +308,115 @@ const {
   resetToToday,
 } = usePeriodRange(periodRef, { weekStartDay });
 
-// Statistics controller for popovers and snapshots
-const statisticsController = new StatisticsController();
-const popovers = statisticsController.getPopovers();
-const setSnapshots = (val: Snapshots) => statisticsController.setSnapshots(val);
+const { currentEntries, previousEntries, isLoading, fetchPeriod } = useBudgetEntries();
+const { statement, comparison } = useIncomeStatement({
+  entries: currentEntries,
+  previousEntries,
+});
 
-async function loadWeekStartDayConfig() {
-  try {
-    const savedWeekStart = await systemController.getWeekStartDay();
-    if (savedWeekStart !== undefined && savedWeekStart !== null) {
-      weekStartDay.value = savedWeekStart;
-    }
-  } catch (e) {
-    console.error('Error loading week start day config:', e);
-  }
+const { popover: datePopover, open: openDatePopover, close: closeDatePopover } = useDatePopover();
+
+const sections = computed(() => [
+  statement.value.incomes,
+  statement.value.costOfLife,
+  statement.value.discretionaryExpenses,
+  statement.value.financialExpenses,
+]);
+
+interface CardData {
+  label: string;
+  amount: number;
+  percent: number;
+  diff: number | null;
 }
 
-const isGeneratingPdf = ref(false);
-
-const router = useRouter();
-
-const income = reactive({
-  salary: 0,
-  investments: 0,
-  other: 0,
-  total: 0,
+const cards = computed<Record<number, CardData>>(() => {
+  const s = statement.value;
+  const c = comparison.value;
+  return {
+    1: {
+      label: 'Utilidad Bruta',
+      amount: s.grossProfit,
+      percent: s.grossProfitPercent,
+      diff: c ? s.grossProfit - c.grossProfit : null,
+    },
+    2: {
+      label: 'Ahorro Operativo',
+      amount: s.operatingSavings,
+      percent: s.operatingSavingsPercent,
+      diff: c ? s.operatingSavings - c.operatingSavings : null,
+    },
+    3: {
+      label: 'Resultado Neto',
+      amount: s.netResult,
+      percent: s.netResultPercent,
+      diff: c ? s.netResult - c.netResult : null,
+    },
+  };
 });
 
-const expenses = reactive({
-  housing: 0,
-  food: 0,
-  transport: 0,
-  entertainment: 0,
-  health: 0,
-  other: 0,
-  total: 0,
-});
-
-const summary = reactive({
-  balance: 0,
-  savings: 0,
-  savingsPercentage: 0,
-});
-
-const previousIncome = ref(0);
-const previousExpenses = ref(0);
-const previousBalance = ref(0);
-
-const periodEntries = ref<Income[]>([]);
-const expensesTotal = computed(() => {
-  return periodEntries.value
-    .filter((entry) => entry.entryType !== 'ingreso')
-    .reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
-});
-
-const incomesTotal = computed(() => {
-  return periodEntries.value
-    .filter((entry) => entry.entryType === 'ingreso')
-    .reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
-});
-
-const realBalance = computed(() => incomesTotal.value - expensesTotal.value);
-
-const realBalanceClass = computed(() =>
-  Number(realBalance.value) < 0 ? 'negative-profit' : 'positive-profit',
-);
-
-const incomesList = computed(() => {
-  return periodEntries.value
-    .filter((entry) => entry.entryType === 'ingreso')
-    .map((entry) => ({
-      ...entry,
-      name: entry.name,
-      amount: Number(entry.amount || 0),
-    }));
-});
-
-const expensesList = computed(() => {
-  return periodEntries.value
-    .filter((entry) => entry.entryType !== 'ingreso')
-    .map((entry) => ({
-      ...entry,
-      name: entry.name,
-      amount: Number(entry.amount || 0),
-    }));
-});
-
-const incomeChartColors = [
-  '#4BC0C0',
-  '#36A2EB',
-  '#FFCE56',
-  '#FF6384',
-  '#9966FF',
-  '#FF9F40',
-  '#7BC225',
-  '#C9CBCF',
-];
-const expenseChartColors = [
-  '#FF6384',
-  '#36A2EB',
-  '#FFCE56',
-  '#4BC0C0',
-  '#9966FF',
-  '#FF9F40',
-  '#C9CBCF',
-  '#7BC225',
-];
-
-const isDayClosed = computed(() => false);
-
-function openEditEntryModal(item: Income) {
-  router.push(`/budget/entry/edit?entryId=${item.id}`);
+interface ComparisonRow {
+  key: string;
+  label: string;
+  current: number;
+  previous: number;
+  diff: number;
+  diffPercent: number;
 }
 
-// Wrappers for period navigation that also reload data
+function computePercentDiff(current: number, previous: number): number {
+  if (previous === 0) return current > 0 ? 100 : 0;
+  return Number((((current - previous) / Math.abs(previous)) * 100).toFixed(1));
+}
+
+const comparisonRows = computed<ComparisonRow[]>(() => {
+  if (!comparison.value) return [];
+  const s = statement.value;
+  const p = comparison.value;
+  return [
+    {
+      key: 'incomes',
+      label: 'Ingresos',
+      current: s.incomes.total,
+      previous: p.incomesTotal,
+      diff: s.incomes.total - p.incomesTotal,
+      diffPercent: computePercentDiff(s.incomes.total, p.incomesTotal),
+    },
+    {
+      key: 'costOfLife',
+      label: 'Costo de Vida',
+      current: s.costOfLife.total,
+      previous: p.costOfLifeTotal,
+      diff: s.costOfLife.total - p.costOfLifeTotal,
+      diffPercent: computePercentDiff(s.costOfLife.total, p.costOfLifeTotal),
+    },
+    {
+      key: 'grossProfit',
+      label: 'Utilidad Bruta',
+      current: s.grossProfit,
+      previous: p.grossProfit,
+      diff: s.grossProfit - p.grossProfit,
+      diffPercent: computePercentDiff(s.grossProfit, p.grossProfit),
+    },
+    {
+      key: 'netResult',
+      label: 'Resultado Neto',
+      current: s.netResult,
+      previous: p.netResult,
+      diff: s.netResult - p.netResult,
+      diffPercent: computePercentDiff(s.netResult, p.netResult),
+    },
+  ];
+});
+
+function fmt(val: number): string {
+  return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(val || 0);
+}
+
 function handlePrevPeriod() {
   prevPeriod();
   void loadData();
 }
-
 function handleNextPeriod() {
   nextPeriod();
   void loadData();
@@ -254,164 +424,152 @@ function handleNextPeriod() {
 
 function handleResetToToday() {
   resetToToday();
-  popovers.mainDate.open = false;
+  closeDatePopover();
   void loadData();
 }
 
+function handleEmptyAction() {
+  // Navigate to budget page to add entries
+  // Placeholder - router navigation will be added when routing is available
+  console.log('[PerformanceComponent] Navigate to budget');
+}
+
 async function loadData() {
-  try {
-    const { start, end } = getBudgetDateRange();
-    const allEntries: any[] = [];
-    let periodIncome = 0;
-    let periodExpenses = 0;
+  const { start, end } = getBudgetDateRange();
+  const { start: prevStart, end: prevEnd } = getPreviousPeriodDateRange();
+  await fetchPeriod({ start, end, previousStart: prevStart, previousEnd: prevEnd });
+}
 
-    const { start: prevStart, end: prevEnd } = getPreviousPeriodDateRange();
-    let prevIncome = 0;
-    let prevExpenses = 0;
-
-    let currentDateIter = new Date(start);
-    while (currentDateIter <= end) {
-      const dateStr = format(currentDateIter, 'yyyy-MM-dd');
-      await useBudgetDayStore().loadBudgetForDate({ date: dateStr });
-
-      const entriesStore = useBudgetEntriesStore();
-      const entries = entriesStore.entries;
-
-      for (const entry of entries) {
-        // ensure each entry carries its budget date so modals can show it
-        const annotated = { ...entry, date: entry.date || dateStr };
-        allEntries.push(annotated);
-        const amount = Number(entry.amount || 0);
-        if (entry.entryType === 'ingreso') {
-          periodIncome += amount;
-        } else {
-          periodExpenses += amount;
-        }
-      }
-
-      currentDateIter = addDays(currentDateIter, 1);
-    }
-
-    currentDateIter = new Date(prevStart);
-    while (currentDateIter <= prevEnd) {
-      const dateStr = format(currentDateIter, 'yyyy-MM-dd');
-      await useBudgetDayStore().loadBudgetForDate({ date: dateStr });
-
-      const entriesStore = useBudgetEntriesStore();
-      const entries = entriesStore.entries;
-      for (const entry of entries) {
-        // annotate previous period entries with their date as well
-        // (not added to allEntries but used for totals)
-        const amount = Number(entry.amount || 0);
-        if (entry.entryType === 'ingreso') {
-          prevIncome += amount;
-        } else {
-          prevExpenses += amount;
-        }
-      }
-
-      currentDateIter = addDays(currentDateIter, 1);
-    }
-
-    periodEntries.value = allEntries;
-
-    income.total = periodIncome;
-    income.salary = Math.floor(periodIncome * 0.7);
-    income.investments = Math.floor(periodIncome * 0.1);
-    income.other = Math.floor(periodIncome * 0.2);
-
-    expenses.total = periodExpenses;
-    expenses.housing = Math.floor(periodExpenses * 0.5);
-    expenses.food = Math.floor(periodExpenses * 0.2);
-    expenses.transport = Math.floor(periodExpenses * 0.1);
-    expenses.entertainment = Math.floor(periodExpenses * 0.1);
-    expenses.health = Math.floor(periodExpenses * 0.05);
-    expenses.other = Math.floor(periodExpenses * 0.05);
-
-    summary.balance = income.total - expenses.total;
-    summary.savings = summary.balance;
-    summary.savingsPercentage =
-      income.total > 0 ? Number(((summary.savings / income.total) * 100).toFixed(1)) : 0;
-
-    previousIncome.value = prevIncome;
-    previousExpenses.value = prevExpenses;
-    previousBalance.value = prevIncome - prevExpenses;
-
-    setSnapshots({
-      current: {
-        totalSales: Number(income.total ?? 0),
-        netProfit: Number(summary.balance ?? 0),
-      },
-      previous: {
-        totalSales: Number(previousIncome.value ?? 0),
-        netProfit: Number(previousBalance.value ?? 0),
-      },
-    });
-  } catch (e) {
-    console.error('loadData error', e);
-  }
+async function refresh() {
+  await loadConfig();
+  await loadData();
 }
 
 function onMainDateClick(e: Event | null) {
-  popovers.mainDate.event = e || null;
-  popovers.mainDate.open = true;
+  openDatePopover(e);
 }
 
 function onPopoverDateChange(e: CustomEvent) {
   const val = e?.detail?.value || format(referenceDate.value, 'yyyy-MM-dd');
   const parsed = parseLocalDate({ d: String(val).slice(0, 10) });
   referenceDate.value = parsed;
-  popovers.mainDate.open = false;
+  closeDatePopover();
   void loadData();
-}
-
-function formatCurrency(val: number | null | undefined) {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-  }).format(val || 0);
 }
 
 onMounted(() => {
-  void loadWeekStartDayConfig();
+  void loadConfig();
   void loadData();
-
   watch(
     () => props.period,
-    (newPeriod, oldPeriod) => {
-      if (oldPeriod !== newPeriod) {
-        handleResetToToday();
-      }
+    (np, op) => {
+      if (op !== np) handleResetToToday();
     },
   );
 });
 
-defineExpose({
-  income,
-  expenses,
-  summary,
-  dateLabel,
-  incomesTotal,
-  expensesTotal,
-  realBalance,
-  loadData,
-});
+defineExpose({ statement, dateLabel, loadData, refresh });
 </script>
 
 <style scoped>
-.positive-profit {
-  color: #155724;
-  background: rgba(21, 87, 36, 0.06);
-  border-radius: 4px;
+/* Sections */
+.section-list {
+  margin-bottom: 0;
 }
-
-.negative-profit {
-  color: #721c24;
-  background: rgba(114, 28, 36, 0.06);
-  border-radius: 4px;
+.section-header {
+  --background: transparent;
+  padding-top: 8px;
+  padding-inline-start: 8px;
+  padding-inline-end: 8px;
 }
-
-.total-amount {
+.section-title {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: unset;
+  font-size: clamp(0.85rem, 2.5vw, 1rem);
+}
+.section-total-label {
+  font-size: clamp(0.85rem, 2.5vw, 0.95rem);
+  flex-shrink: 0;
+}
+.section-separator {
+  --background: transparent;
+  --border-style: dashed;
+  --border-color: var(--ion-color-step-300, #ccc);
+  font-weight: 600;
+}
+.separator-label {
+  font-size: 0.85rem;
+  color: var(--ion-color-medium, #666);
+}
+.separator-amount {
+  font-size: 0.9rem;
   font-weight: 700;
+}
+.empty-section {
+  --background: transparent;
+  --min-height: 44px;
+}
+.empty-section ion-label {
+  flex: 1;
+}
+.empty-section ion-label p {
+  margin: 0;
+  white-space: normal;
+}
+
+/* Summary cards */
+.summary-label-item {
+  --min-height: 24px;
+  margin-bottom: 4px;
+}
+.summary-label {
+  font-weight: 700;
+  font-size: clamp(0.8rem, 2.5vw, 0.95rem);
+}
+.summary-percent {
+  font-weight: 600;
+  font-size: clamp(0.75rem, 2vw, 0.85rem);
+  text-align: right;
+}
+.summary-amount {
+  font-weight: 700;
+  font-size: clamp(0.85rem, 2.5vw, 1rem);
+  text-align: right;
+  min-width: 90px;
+}
+.comparison-label {
+  font-size: 0.75rem;
+  color: var(--ion-color-medium, #666);
+  flex: 1 1 auto;
+}
+.comparison-value {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.comparison-section {
+  margin-top: 8px;
+}
+.cmp-name {
+  font-size: 0.85rem;
+  flex: 1;
+}
+.cmp-old {
+  font-size: 0.75rem;
+  min-width: 90px;
+  text-align: right;
+  margin-right: 8px;
+}
+.cmp-current {
+  font-size: 0.85rem;
+  font-weight: 600;
+  min-width: 100px;
+  text-align: right;
+}
+.cmp-diff {
+  font-size: 0.8rem;
+  font-weight: 700;
+  min-width: 55px;
+  text-align: right;
 }
 </style>

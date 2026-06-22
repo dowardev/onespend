@@ -63,15 +63,15 @@ class SystemConfigController {
     await store.setAutoDarkTheme(value);
   }
 
-  getWeekStartDay(): number {
-    const store = useSystemConfig() as any;
+  async getWeekStartDay(): Promise<number> {
+    const store = useSystemConfig();
     return store.getWeekStartDay();
   }
 
-  setWeekStartDay(params: { value: number }) {
+  async setWeekStartDay(params: { value: number }) {
     const { value } = params;
-    const store = useSystemConfig() as any;
-    store.setWeekStartDay(value);
+    const store = useSystemConfig();
+    await store.setWeekStartDay(value);
   }
 }
 

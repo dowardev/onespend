@@ -17,17 +17,22 @@
     </ion-header>
 
     <ion-content>
-      <div class="summary-card">
-        <ion-item lines="none">
-          <ion-label>
-            <div class="total-label">Total</div>
-            <div class="total-amount" :class="amountClass">{{ formatCurrency(totalAmount) }}</div>
-            <div class="total-count">
-              {{ items.length }} registro{{ items.length !== 1 ? 's' : '' }}
-            </div>
-          </ion-label>
-        </ion-item>
-      </div>
+      <ion-card class="shadow1 summary-card">
+        <ion-card-content class="ion-padding">
+          <ion-item lines="none" class="ion-no-padding transparent">
+            <ion-label>
+              <div class="total-label">Total</div>
+              <div
+                class="total-amount"
+                :color="type === 'ingreso' ? 'success' : 'danger'"
+              >{{ formatCurrency(totalAmount) }}</div>
+              <div class="total-count">
+                {{ items.length }} registro{{ items.length !== 1 ? 's' : '' }}
+              </div>
+            </ion-label>
+          </ion-item>
+        </ion-card-content>
+      </ion-card>
 
       <ion-list v-if="items.length > 0">
         <ion-list-header>
@@ -55,6 +60,8 @@
 
 <script lang="ts" setup>
 import {
+  IonCard,
+  IonCardContent,
   IonPage,
   IonHeader,
   IonToolbar,
@@ -105,10 +112,6 @@ const totalAmount = computed(() => {
   return props.items.reduce((sum, item) => sum + item.amount, 0);
 });
 
-const amountClass = computed(() => {
-  return props.type === 'ingreso' ? 'positive-profit' : 'negative-profit';
-});
-
 const sortedItems = computed(() => {
   return [...props.items].sort((a, b) => {
     if (a.time && b.time) {
@@ -140,13 +143,6 @@ function close() {
 </script>
 
 <style scoped>
-.summary-card {
-  background: var(--ion-color-light, #f4f5f8);
-  margin: 16px;
-  border-radius: 12px;
-  padding: 8px;
-}
-
 .total-label {
   font-size: 14px;
   color: var(--ion-color-medium, #666);
