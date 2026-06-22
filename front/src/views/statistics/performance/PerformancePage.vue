@@ -4,13 +4,27 @@
       <ion-toolbar>
         <ion-title>Mis Finanzas</ion-title>
         <ion-buttons slot="end">
-          <ion-button :disabled="isExporting" @click="exportToExcel">
+          <ion-button :disabled="isExporting" aria-label="Exportar a Excel" @click="exportToExcel">
             <ion-icon :icon="downloadOutline"></ion-icon>
           </ion-button>
 
-          <ion-button @click="openConfigModal">
+          <ion-button id="help-trigger" fill="clear" aria-label="Ayuda">
+            <ion-icon :icon="helpCircleOutline" />
+          </ion-button>
+
+          <ion-button aria-label="Configuración" @click="openConfigModal">
             <ion-icon :icon="settingsOutline"></ion-icon>
           </ion-button>
+
+          <ion-popover trigger="help-trigger" trigger-action="click" side="bottom" alignment="end">
+            <ion-content class="ion-padding">
+              <p class="ion-text-wrap" style="max-width: 280px">
+                <strong>¿Cómo funciona?</strong><br /><br />
+                Haz click en cualquier <strong>título de sección</strong> o
+                <strong>concepto</strong> para ver su descripción y fórmula de cálculo.
+              </p>
+            </ion-content>
+          </ion-popover>
         </ion-buttons>
       </ion-toolbar>
     </ion-header>
@@ -28,9 +42,9 @@
         </ion-row>
       </ion-grid>
 
-      <ion-grid style="height: 94%">
+      <ion-grid>
         <ion-row class="ion-justify-content-center">
-          <ion-col size="12" size-md="10" size-lg="8">
+          <ion-col size="12" size-md="12" size-lg="8" size-xl="6">
             <PerformanceComponent ref="performanceComponentRef" :period="mainSegment" />
           </ion-col>
         </ion-row>
@@ -62,11 +76,12 @@ import {
   IonIcon,
   IonModal,
   IonLoading,
+  IonPopover,
 } from '@ionic/vue';
 import { ref } from 'vue';
-import { downloadOutline, settingsOutline } from 'ionicons/icons';
-import { format } from 'date-fns';
+import { downloadOutline, settingsOutline, helpCircleOutline } from 'ionicons/icons';
 import { StatisticsController } from '@/controllers/statisticsController';
+import type { IncomeStatementResult } from '@/composables/useIncomeStatement';
 
 import PerformanceComponent from '@/views/statistics/performance/components/PerformanceComponent.vue';
 import PersonalFinanceConfigModal from '@/views/statistics/performance/components/PersonalFinanceConfigModal.vue';
@@ -88,45 +103,68 @@ function closeConfigModal() {
 
 async function onConfigSave() {
   isConfigModalOpen.value = false;
-  await performanceComponentRef.value?.loadConfig();
+  await performanceComponentRef.value?.refresh();
 }
 
 async function exportToExcel() {
-  if (isExporting.value) {
+  if (isExporting.value) return;
+  isExporting.value = true;
+
+  const instance = performanceComponentRef.value;
+  if (!instance) {
+    isExporting.value = false;
     return;
   }
 
-  isExporting.value = true;
+  const stmt = instance.statement?.value as IncomeStatementResult | undefined;
+  if (!stmt) {
+    isExporting.value = false;
+    return;
+  }
+
+  function mapItems(items: Array<{ name: string; amount: number }>): Record<string, number> {
+    return Object.fromEntries(items.map((i) => [i.name, i.amount]));
+  }
+
+  const incomeMap = mapItems(stmt.incomes.items);
+  const costMap = mapItems(stmt.costOfLife.items);
+  const discMap = mapItems(stmt.discretionaryExpenses.items);
+  const finMap = mapItems(stmt.financialExpenses.items);
+
+  const label =
+    typeof instance.dateLabel === 'object' && 'value' in instance.dateLabel
+      ? (instance.dateLabel as { value: string }).value
+      : String(instance.dateLabel ?? '');
 
   try {
     await statisticsController.downloadExcel({
       period: mainSegment.value,
-      dateLabel: performanceComponentRef.value?.dateLabel || format(new Date(), 'yyyy-MM-dd'),
+      dateLabel: label,
       incomeData: {
-        salary: performanceComponentRef.value?.income?.salary || 0,
-        investments: performanceComponentRef.value?.income?.investments || 0,
-        other: performanceComponentRef.value?.income?.other || 0,
-        total: performanceComponentRef.value?.income?.total || 0,
+        salary: incomeMap['Salario'] ?? 0,
+        investments: incomeMap['Inversiones'] ?? 0,
+        other: incomeMap['Otros ingresos'] ?? 0,
+        total: stmt.incomes.total,
       },
       expensesData: {
-        housing: performanceComponentRef.value?.expenses?.housing || 0,
-        food: performanceComponentRef.value?.expenses?.food || 0,
-        transport: performanceComponentRef.value?.expenses?.transport || 0,
-        entertainment: performanceComponentRef.value?.expenses?.entertainment || 0,
-        health: performanceComponentRef.value?.expenses?.health || 0,
-        other: performanceComponentRef.value?.expenses?.other || 0,
-        total: performanceComponentRef.value?.expenses?.total || 0,
+        housing: costMap['Vivienda'] ?? 0,
+        food: costMap['Alimentación'] ?? 0,
+        transport: costMap['Transporte'] ?? 0,
+        entertainment: discMap['Entretenimiento'] ?? 0,
+        health: costMap['Salud'] ?? 0,
+        other: (discMap['Otros'] ?? 0) + Object.values(finMap).reduce((a, b) => a + b, 0),
+        total:
+          stmt.costOfLife.total + stmt.discretionaryExpenses.total + stmt.financialExpenses.total,
       },
       summaryData: {
-        balance: performanceComponentRef.value?.summary?.balance || 0,
-        savings: performanceComponentRef.value?.summary?.savings || 0,
-        savingsPercentage: performanceComponentRef.value?.summary?.savingsPercentage || 0,
+        balance: stmt.netResult,
+        savings: stmt.netResult,
+        savingsPercentage: stmt.netResultPercent,
       },
       configData: {
-        savingsPercent: performanceComponentRef.value?.config?.savingsPercent || 20,
+        savingsPercent: 20,
       },
-      filenameFactory: () =>
-        `reporte_${mainSegment.value}_${format(new Date(), 'yyyy-MM-dd')}.xlsx`,
+      filenameFactory: () => `reporte_${mainSegment.value}_${label}.xlsx`,
     });
   } catch (error) {
     console.error('[PerformancePage] Excel error:', error);

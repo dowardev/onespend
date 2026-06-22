@@ -36,26 +36,30 @@
 
         <template v-else>
           <ion-item v-for="(item, idx) in serviceItems" :key="item.id || idx">
-            <div style="width: 100%; display: flex; gap: 8px; align-items: center">
-              <ion-input
-                v-model="item.name"
-                placeholder="Descripción"
-                style="flex: 2"
-                @ion-blur="() => updateItem(item)"
-              ></ion-input>
-
-              <ion-input
-                v-model.number="item.amount"
-                type="number"
-                placeholder="Cantidad"
-                style="width: 120px"
-                @ion-blur="() => updateItem(item)"
-              ></ion-input>
-
-              <ion-button color="danger" fill="clear" @click="removeItem(idx)">
-                <ion-icon :icon="trashOutline"></ion-icon>
-              </ion-button>
-            </div>
+            <ion-grid class="ion-no-padding">
+              <ion-row class="ion-align-items-center">
+                <ion-col size="12" size-md="6" class="ion-padding-bottom">
+                  <ion-input
+                    v-model="item.name"
+                    placeholder="Descripción"
+                    @ion-blur="() => updateItem(item)"
+                  ></ion-input>
+                </ion-col>
+                <ion-col size="12" size-md="3" class="ion-padding-bottom">
+                  <ion-input
+                    v-model.number="item.amount"
+                    type="number"
+                    placeholder="Cantidad"
+                    @ion-blur="() => updateItem(item)"
+                  ></ion-input>
+                </ion-col>
+                <ion-col size="12" size-md="3" class="ion-text-end">
+                  <ion-button color="danger" fill="clear" @click="removeItem(idx)">
+                    <ion-icon :icon="trashOutline"></ion-icon>
+                  </ion-button>
+                </ion-col>
+              </ion-row>
+            </ion-grid>
           </ion-item>
         </template>
       </div>
@@ -64,7 +68,7 @@
 </template>
 
 <script setup lang="ts">
-import { IonPage, IonItem, IonLabel, IonNote, IonInput } from '@ionic/vue';
+import { IonItem, IonLabel, IonNote, IonInput, IonGrid, IonRow, IonCol, IonIcon, IonButton } from '@ionic/vue';
 import { computed, reactive, onMounted, defineEmits } from 'vue';
 
 // constrollers

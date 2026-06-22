@@ -93,6 +93,20 @@ export const useSystemConfig = defineStore('systemConfig', () => {
     await configDb.set({ key: 'autoDarkTheme', value: val });
   }
 
+  const weekStartDay = ref(1);
+  async function getWeekStartDay(): Promise<number> {
+    const saved = await configDb.get({ key: 'weekStartDay' });
+    if (typeof saved === 'number') {
+      weekStartDay.value = saved;
+      return saved;
+    }
+    return weekStartDay.value;
+  }
+  async function setWeekStartDay(val: number) {
+    weekStartDay.value = val;
+    await configDb.set({ key: 'weekStartDay', value: val });
+  }
+
   return {
     designMode,
     theme,
@@ -110,5 +124,8 @@ export const useSystemConfig = defineStore('systemConfig', () => {
     setAutoLightTheme,
     getAutoDarkTheme,
     setAutoDarkTheme,
+    weekStartDay,
+    getWeekStartDay,
+    setWeekStartDay,
   };
 });
