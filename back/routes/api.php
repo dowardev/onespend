@@ -1,8 +1,6 @@
 <?php
 
 use App\Http\Controllers\AccountController;
-use App\Http\Controllers\Auth\AuthenticatedSessionController;
-use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\BudgetEntryController;
 use App\Http\Controllers\BudgetEntryGroupController;
@@ -18,16 +16,11 @@ use App\Http\Controllers\HealthController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-// Rutas públicas
-Route::post('/login', [AuthenticatedSessionController::class, 'store']);
-Route::post('/register', [RegisteredUserController::class, 'store']);
-
-// Rutas protegidas
-Route::middleware(['auth:sanctum'])->group(function () {
+// Rutas protegidas (autenticación via SSO OAuth2 + JWT)
+Route::middleware(['sso.auth', 'sso.user'])->group(function () {
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
-    Route::post('/logout', [AuthenticatedSessionController::class, 'destroy']);
     
     Route::middleware(['throttle:30,1', 'sync.version'])->group(function () {
         Route::get('/sync/changes', [SyncController::class, 'getChanges']);

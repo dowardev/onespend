@@ -1,4 +1,4 @@
-import { createRouter, createWebHashHistory } from '@ionic/vue-router';
+import { createRouter, createWebHistory } from '@ionic/vue-router';
 import { RouteRecordRaw } from 'vue-router';
 import { setupNavigationCleanup, removeTemporaryElements } from '@/utils/domCleanup';
 // Static imports (no relative paths) — match original file structure but using '@' alias
@@ -15,6 +15,7 @@ import SyncView from '@/views/sync/SyncView.vue';
 import DLQView from '@/views/sync/DLQView.vue';
 import LoginView from '@/views/auth/LoginView.vue';
 import RegisterView from '@/views/auth/RegisterView.vue';
+import AuthCallbackPage from '@/views/auth/AuthCallbackPage.vue';
 import PerformanceTestPage from '@/views/test/PerformanceTestPage.vue';
 import CashFlowPage from '@/views/statistics/cashFlow/CashFlow.vue';
 import PerformancePage from '@/views/statistics/performance/PerformancePage.vue';
@@ -135,6 +136,11 @@ const routes: Array<RouteRecordRaw> = [
     component: RegisterView,
   },
   {
+    path: '/auth/callback',
+    name: 'AuthCallback',
+    component: AuthCallbackPage,
+  },
+  {
     path: '/test/performance',
     name: 'PerformanceTest',
     component: PerformanceTestPage,
@@ -142,8 +148,20 @@ const routes: Array<RouteRecordRaw> = [
 ];
 
 const router = createRouter({
-  history: createWebHashHistory(),
+  history: createWebHistory(),
   routes,
+});
+
+router.beforeEach((to, from, next) => {
+  removeTemporaryElements();
+
+  if (from.path === '/test/performance') {
+    setTimeout(() => {
+      removeTemporaryElements();
+    }, 100);
+  }
+
+  next();
 });
 
 // Setup automatic cleanup on route navigation

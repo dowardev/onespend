@@ -8,11 +8,24 @@
         "framework"
     ],
     "license": "MIT",
+    "repositories": [
+        {
+            "type": "path",
+            "url": "/home/dowardev/Documentos/programacion/sso-client/packages/sso-server"
+        }
+    ],
+    "repositories": [
+        {
+            "type": "path",
+            "url": "/home/dowardev/Documentos/programacion/sso-client/packages/sso-server"
+        }
+    ],
     "require": {
         "php": "^8.2",
         "laravel/framework": "^12.0",
         "laravel/sanctum": "^4.0",
-        "laravel/tinker": "^2.10.1"
+        "laravel/tinker": "^2.10.1",
+        "tu-org/sso-server": "*"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

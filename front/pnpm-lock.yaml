@@ -32,12 +32,18 @@ importers:
       '@ionic/vue-router':
         specifier: ^8.0.0
         version: 8.7.7(@stencil/core@4.38.2)(vue-router@4.6.3(vue@3.5.22(typescript@5.6.3)))(vue@3.5.22(typescript@5.6.3))
+      '@tu-org/sso-client':
+        specifier: file:./packages/sso-client
+        version: file:packages/sso-client
       '@vuelidate/core':
         specifier: ^2.0.3
         version: 2.0.3(vue@3.5.22(typescript@5.6.3))
       '@vuelidate/validators':
         specifier: ^2.0.4
         version: 2.0.4(vue@3.5.22(typescript@5.6.3))
+      axios:
+        specifier: ^1.6.0
+        version: 1.13.2
       chart.js:
         specifier: ^4.4.0
         version: 4.5.1
@@ -1727,6 +1733,9 @@ packages:
   '@trickfilm400/rollup-plugin-off-main-thread@3.0.0-pre1':
     resolution: {integrity: sha512-/67zpWDBLV+oYAEL682s1ktXL0HgqX76f6gaVGkGnVZlBbm1zd0v4Bz8MFF2GGhoX9rvfq3KSQHubFHwa6w6/Q==}
     engines: {node: '>=12'}
+
+  '@tu-org/sso-client@file:packages/sso-client':
+    resolution: {directory: packages/sso-client, type: directory}
 
   '@types/cacheable-request@6.0.3':
     resolution: {integrity: sha512-IQ3EbTzGxIigb1I3qPZc1rWJnH0BmSKv5QYTalEwweFvyBDLSAe24zP0le/hyi7ecGfZVlIVAg4BZqb8WBwKqw==}
@@ -6488,6 +6497,12 @@ snapshots:
       json5: 2.2.3
       magic-string: 0.30.21
       string.prototype.matchall: 4.0.12
+
+  '@tu-org/sso-client@file:packages/sso-client':
+    dependencies:
+      axios: 1.13.2
+    transitivePeerDependencies:
+      - debug
 
   '@types/cacheable-request@6.0.3':
     dependencies:
