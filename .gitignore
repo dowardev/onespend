@@ -43,8 +43,17 @@ build/
 .opencode/
 docs/superpowers/
 
+# Claude (agente CLI)
+.claude/
+
 # Oxfmtrc
 .oxfmtrc.json
 
 # Development artifacts
 plan.md
+
+# Cache files
+front/.eslintcache
+
+# Unused test artifacts
+back/tests/Feature/Concerns/

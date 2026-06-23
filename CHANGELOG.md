@@ -1,3 +1,24 @@
+## [v0.73.0] - 2026-06-23
+
+### Added
+- SSO authentication integration via `@tu-org/sso-client` package (PKCE + DPoP)
+- Auth callback page to handle SSO redirects
+- SSO-aware router guard and auth state sync with Pinia store
+
+### Changed
+- Replaced local auth (Breeze) with SSO OAuth2 Authorization Code + PKCE flow
+- Login and Register views now redirect to SSO portal
+- Router history mode from hash-based (`createWebHashHistory`) to HTML5 (`createWebHistory`)
+- `ResolveSsoUser` middleware uses `SsoServerClient` DI and `firstOrCreate` to avoid race conditions
+
+### Removed
+- Breeze auth routes, controllers, and request classes (`routes/auth.php`, `app/Http/Controllers/Auth/*`)
+- Legacy auth tests (`AuthenticationTest`, `RegistrationTest`, `EmailVerificationTest`, `PasswordResetTest`)
+
+### Fixed
+- Race condition in `ResolveSsoUser` user provisioning (now uses `firstOrCreate`)
+- SSO user resolution by injecting `SsoServerClient` instead of making HTTP calls to SSO server
+
 ## [v0.72.0] - 2026-06-22
 
 ### Added
