@@ -1,5 +1,8 @@
 import { defineStore } from 'pinia';
-import { ref, computed } from 'vue';
+import { computed } from 'vue';
+import type { BudgetEntryRow } from '@/db/types';
+import { dataMediator } from '@/services/dataMediator';
+import { useBudgetDayStore } from './budgetDayStore';
 
 export type PaymentType = 'cash' | 'digital';
 export type EntryType = 'ingreso' | 'egreso';
@@ -25,8 +28,39 @@ export interface Income {
   _fromRecurringId?: string;
 }
 
+export function mapEntryRow(row: BudgetEntryRow): Income {
+  return {
+    id: row.sync_id,
+    sync_id: row.sync_id,
+    serverId: row.serverId ?? null,
+    name: row.name ?? '',
+    amount: row.amount ?? 0,
+    date: row.date ?? '',
+    paymentType: (row.paymentType as PaymentType) || 'cash',
+    entryType: (row.entryType as EntryType) || 'egreso',
+    accountId: row.accountId ?? null,
+    groups: row.groups?.map((g) => ({ amount: g.amount, accountId: g.accountId ?? null })),
+    supplierId: row.supplierId as string,
+    supplierName: row.supplierName,
+    createdAt: row.createdAt || Date.now(),
+    synced_at: row.syncedAt,
+  }
+}
+
 export const useBudgetEntriesStore = defineStore('budgetEntries', () => {
-  const entries = ref<Income[]>([]);
+  const rawEntries = dataMediator.refs.entries;
+
+  const entries = computed<Income[]>(() => {
+    const dayStore = useBudgetDayStore();
+    const currentDate = dayStore.selectedDate;
+    return rawEntries.value
+      .filter(row => row.date === currentDate)
+      .map(mapEntryRow)
+  });
+
+  async function reload() {
+    await dataMediator.reload('entries')
+  }
 
   const financialSummary = computed(() => {
     let ingresos = 0, egresos = 0, ingresosEfectivo = 0, ingresosTarjeta = 0, egresosEfectivo = 0, egresosTarjeta = 0;
@@ -66,45 +100,27 @@ export const useBudgetEntriesStore = defineStore('budgetEntries', () => {
   const egresosEfectivo = computed(() => financialSummary.value.egresosEfectivo);
   const egresosTarjeta = computed(() => financialSummary.value.egresosTarjeta);
 
-  function loadEntries(items: Income[]) {
-    entries.value.splice(0, entries.value.length, ...items);
-  }
-
-  function addEntry(entry: Income) {
-    entries.value.push(entry);
-  }
-
-  function updateEntry(id: string | number, changes: Partial<Income>) {
-    const idx = entries.value.findIndex((e) => e.id === id);
-    if (idx === -1) return;
-    const updated = { ...entries.value[idx], ...changes };
-    entries.value.splice(idx, 1, updated);
-  }
-
-  function removeEntry(id: string | number) {
-    const idx = entries.value.findIndex((e) => e.id === id);
-    if (idx >= 0) entries.value.splice(idx, 1);
-  }
-
   function removeEgresosGroup(supplierId: string | number) {
     const targetId = String(supplierId);
-    for (let i = entries.value.length - 1; i >= 0; i--) {
-      if (String(entries.value[i].supplierId) === targetId) {
-        entries.value.splice(i, 1);
+    for (let i = rawEntries.value.length - 1; i >= 0; i--) {
+      if (String((rawEntries.value[i] as any).supplierId) === targetId) {
+        rawEntries.value.splice(i, 1);
       }
     }
   }
 
   function clearEntries() {
-    entries.value.splice(0, entries.value.length);
+    rawEntries.value.splice(0, rawEntries.value.length);
   }
 
   return {
+    rawEntries,
     entries,
     ingresos, egresos,
     totalIngresos, totalEgresos, netTotal,
     ingresosEfectivo, ingresosTarjeta, egresosEfectivo, egresosTarjeta,
     financialSummary,
-    loadEntries, addEntry, updateEntry, removeEntry, removeEgresosGroup, clearEntries,
+    removeEgresosGroup, clearEntries,
+    reload,
   };
 });

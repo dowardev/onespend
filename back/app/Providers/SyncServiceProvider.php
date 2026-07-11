@@ -2,6 +2,9 @@
 
 namespace App\Providers;
 
+use App\Repositories\SyncMetadataRepository;
+use App\Services\Sync\ConflictDetector;
+use App\Services\Sync\ForeignKeyResolver;
 use App\Services\Sync\SyncOrchestratorService;
 use App\Services\SyncIdResolver;
 use App\Services\Sync\Processors\AccountProcessor;
@@ -19,9 +22,15 @@ class SyncServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(SyncIdResolver::class);
+        $this->app->singleton(ConflictDetector::class);
+        $this->app->singleton(ForeignKeyResolver::class);
+        $this->app->singleton(SyncMetadataRepository::class);
 
         $this->app->singleton(SyncOrchestratorService::class, function ($app) {
-            $orchestrator = new SyncOrchestratorService($app->make(SyncIdResolver::class));
+            $orchestrator = new SyncOrchestratorService(
+                $app->make(SyncIdResolver::class),
+                $app->make(ForeignKeyResolver::class),
+            );
 
             $orchestrator->registerProcessor('account', $app->make(AccountProcessor::class));
             $orchestrator->registerProcessor('budget_entry', $app->make(BudgetEntryProcessor::class));

@@ -3,31 +3,18 @@
 namespace App\Services\Sync\Processors;
 
 use App\Models\RecurringRecordProduct;
-use App\Services\Sync\Processors\Concerns\ResolvesSupplierProductId;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class RecurringRecordProductProcessor extends AbstractEntityProcessor
 {
-    use ResolvesSupplierProductId;
-
     protected function getModel(): string
     {
         return RecurringRecordProduct::class;
     }
 
     protected function getEntityName(): string
-    {
-        return 'recurring_record_product';
-    }
-
-    public function canProcess(string $entityType): bool
-    {
-        return $entityType === 'recurring_record_product';
-    }
-
-    public function getEntityType(): string
     {
         return 'recurring_record_product';
     }
@@ -110,14 +97,18 @@ class RecurringRecordProductProcessor extends AbstractEntityProcessor
         }
     }
 
-    protected function preprocessData(array $item, int $userId): array
+    public function preprocessData(array $item, int $userId): array
     {
-        $item = $this->resolveSupplierProductFields($item, $userId);
+        $item = $this->resolveForeignKeys($item, $userId);
 
-        if (isset($item['recurringRecordId'])) {
-            $item['recurring_record_id'] = $item['recurringRecordId'];
+        if (isset($item['productName'])) {
+            $item['product_name'] = $item['productName'];
         }
-        unset($item['recurringRecordId']);
+        if (isset($item['productPrice'])) {
+            $item['product_price'] = $item['productPrice'];
+        }
+
+        unset($item['recurringRecordId'], $item['productName'], $item['productPrice']);
 
         return $item;
     }

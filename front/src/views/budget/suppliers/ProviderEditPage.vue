@@ -436,7 +436,7 @@ import type { SupplierFormPayload } from '@/views/suppliers/modals/SupplierFormC
 // end imports
 
 // controllers
-import { useBudgetDayStore } from '@/stores/budgetDayStore';
+import { useBudgetDay } from '@/composables/useBudgetDay';
 import budgetEntriesController from '@/controllers/budgetEntriesController';
 import budgetProvidersController from '@/controllers/budgetProvidersController';
 import { SuppliersController } from '@/controllers/suppliersController';
@@ -832,7 +832,7 @@ const productsCoverage = computed(() => {
 
 // functions
 async function setTodayDate() {
-  const selectedDate = useBudgetDayStore().selectedDate;
+  const selectedDate = useBudgetDay().selectedDate;
   const dateToUse = selectedDate || format(new Date(), 'yyyy-MM-dd');
   reassignPicker.setDate({ date: dateToUse });
 }
@@ -1136,7 +1136,7 @@ async function handleSave() {
         date: payload.date,
       },
     });
-    await useBudgetDayStore().saveBudgetData();
+
   } else if (routeProviderId.value) {
     const firstAccountId = getAccountIdAsNumber(payload.items[0]?.accountId);
 
@@ -1158,7 +1158,7 @@ async function handleSave() {
         date: payload.date,
       },
     });
-    await useBudgetDayStore().saveBudgetData();
+
     savedProviderSyncId = providerSyncId.value;
   } else {
     const firstAccountId = getAccountIdAsNumber(payload.items[0]?.accountId);
@@ -1180,7 +1180,7 @@ async function handleSave() {
       notes: providerNotes.value,
       date: payload.date,
     });
-    await useBudgetDayStore().saveBudgetData();
+
     savedProviderSyncId = newProvider?.sync_id ?? null;
   }
 
@@ -1234,12 +1234,12 @@ function handleDeleteFromPopover() {
 async function confirmDelete() {
   if (isEntryMode.value && routeEntryId.value) {
     await budgetEntriesController.removeEntry({ id: Number(routeEntryId.value) });
-    await useBudgetDayStore().saveBudgetData();
+
   } else if (routeProviderId.value) {
     await deleteAllAttachments();
 
     await budgetProvidersController.removeProvider({ id: Number(routeProviderId.value) });
-    await useBudgetDayStore().saveBudgetData();
+
   }
 
   router.back();
@@ -1272,9 +1272,9 @@ function getAccountIdValue(
 
 function getAccountIdAsNumber(
   accountId: string | number | { id: string | number } | null | undefined,
-): number {
+): number | null {
   const val = getAccountIdValue(accountId);
-  return val !== null ? Number(val) || 0 : 0;
+  return val !== null ? Number(val) || 0 : null;
 }
 // end helpers
 </script>

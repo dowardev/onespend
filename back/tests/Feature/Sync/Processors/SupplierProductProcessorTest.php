@@ -158,10 +158,12 @@ class SupplierProductProcessorTest extends TestCase
             ['id' => $syncId, 'name' => 'Client SP', 'updated_at' => $oldTimestamp],
         ], $this->user->id);
 
-        $this->assertEmpty($result['conflicts']);
+        $this->assertCount(1, $result['conflicts']);
+        $this->assertEquals('concurrent_edit', $result['conflicts'][0]['conflict_type']);
+        $this->assertEquals('Client SP', $result['conflicts'][0]['client_data']['name']);
         $this->assertDatabaseHas('supplier_products', [
             'sync_id' => $syncId,
-            'name' => 'Client SP',
+            'name' => 'Original SP',
         ]);
     }
 

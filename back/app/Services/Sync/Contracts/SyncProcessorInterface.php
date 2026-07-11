@@ -19,4 +19,7 @@ interface SyncProcessorInterface
     /** @return array{conflicts: array, existingMap: \Illuminate\Support\Collection} */
     public function detectConflicts(array $items, int $userId): array;
     public function getModelClass(): string;
+    public function getCachedFillable(): array;
+    public function preprocessData(array $item, int $userId): array;
+    public function filterToFillableFromCache(array $data, array $fillable): array;
 }

@@ -1,6 +1,82 @@
 ## [v0.73.0] - 2026-06-23
 
 ### Added
+
+- Shared utility functions `formatCurrency` and `calcProviderProductsTotal` (`front/src/utils/currency.ts`)
+- Shared budget types `AccountWithBalance`, `ProviderItem`, `EntryGroup` (`front/src/utils/budgetTypes.ts`)
+- `user_id` field to `BudgetEntryGroup` fillable and corresponding migration
+- `Supplier` type import to `budgetStore`
+- `notes` optional field to `ProviderData` interface
+
+### Changed
+
+- Migrate budget components to use shared formatting utilities (SummaryCards, DaySummaryModal, AccountCards, ProviderCardComponent, InicioViewComponent)
+- Migrate budget components to use shared budget types (InicioViewComponent, ProviderEditPage)
+- Migrate ProvidersSummary from direct store access to controller pattern
+- Apply named parameters pattern to domain functions across ProviderEditPage, ProvidersComponent, AccountCards
+- Pass `user_id` when creating budget entry groups in SyncController
+
+### Removed
+
+- Remove 13 dead functions and variables from ProvidersComponent
+- Remove dead code from ProviderEditPage (`_isAccountInvalid`, `_isAccountTouched`)
+- Remove unused `AccountWithBalance` import from ProviderEditPage
+- Remove dead CSS and empty methods from ProviderCardComponent
+- Remove unused imports from EntryEditPage
+
+### Fixed
+
+- Broken `EditEntryModal.vue` import in InicioViewComponent
+- `removeEgresosGroup` string comparison bug in budgetStore
+- `d_asset` → `danger` invalid Ionic color in ProvidersSummary
+- `danget` → `danger` typo in ProvidersSummary
+- Reassign variable bug in EntryEditPage (`applyPopoverReassign` name collision)
+- `updateAccount({ a })` → `updateAccount({ account })` broken named param in AccountCards
+- `filteProducts` → `filterProducts` typo breaking filter popover in ProductsModalComponent
+- `PoductsModal` → `ProductsModalComponent` filename typo
+- `Provedores` → `Proveedores` typo in EntryEditPage
+- Missing `IonRow` import in ProviderEditPage
+- Missing `ProviderData` import in ProvidersComponent
+- Empty products array edge case in `calcProviderProductsTotal`
+- ProviderCardComponent typing and dead code issues
+
+## [v0.63.0] - 2026-05-20
+
+### Changed
+
+- Migrate budget components to use shared formatting utilities (SummaryCards, DaySummaryModal, AccountCards, ProviderCardComponent, InicioViewComponent)
+- Migrate budget components to use shared budget types (InicioViewComponent, ProviderEditPage)
+- Migrate ProvidersSummary from direct store access to controller pattern
+- Apply named parameters pattern to domain functions across ProviderEditPage, ProvidersComponent, AccountCards
+- Pass `user_id` when creating budget entry groups in SyncController
+
+### Removed
+
+- Remove 13 dead functions and variables from ProvidersComponent
+- Remove dead code from ProviderEditPage (`_isAccountInvalid`, `_isAccountTouched`)
+- Remove unused `AccountWithBalance` import from ProviderEditPage
+- Remove dead CSS and empty methods from ProviderCardComponent
+- Remove unused imports from EntryEditPage
+
+### Fixed
+
+- Broken `EditEntryModal.vue` import in InicioViewComponent
+- `removeEgresosGroup` string comparison bug in budgetStore
+- `d_asset` → `danger` invalid Ionic color in ProvidersSummary
+- `danget` → `danger` typo in ProvidersSummary
+- Reassign variable bug in EntryEditPage (`applyPopoverReassign` name collision)
+- `updateAccount({ a })` → `updateAccount({ account })` broken named param in AccountCards
+- `filteProducts` → `filterProducts` typo breaking filter popover in ProductsModalComponent
+- `PoductsModal` → `ProductsModalComponent` filename typo
+- `Provedores` → `Proveedores` typo in EntryEditPage
+- Missing `IonRow` import in ProviderEditPage
+- Missing `ProviderData` import in ProvidersComponent
+- Empty products array edge case in `calcProviderProductsTotal`
+- ProviderCardComponent typing and dead code issues
+
+## [v0.63.0] - 2026-05-20
+
+### Added
 - SSO authentication integration via `@tu-org/sso-client` package (PKCE + DPoP)
 - Auth callback page to handle SSO redirects
 - SSO-aware router guard and auth state sync with Pinia store

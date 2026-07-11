@@ -19,7 +19,7 @@ export type Supplier = {
 };
 
 class SuppliersController {
-  private getStore() {
+  getStore() {
     return useSuppliersStore();
   }
 
@@ -101,8 +101,6 @@ class SuppliersController {
 
       await suppliersDb.put({ entry: entry as unknown as SupplierRow });
 
-      store.suppliers = [result, ...store.suppliers];
-
       console.log('[suppliersController] Esperando sincronizacion...');
       console.log(
         '%c[suppliersController] 🔄 LLAMANDO syncService.processQueue()',
@@ -176,8 +174,6 @@ class SuppliersController {
 
       await suppliersDb.put({ entry: entry as unknown as SupplierRow });
 
-      store.suppliers = store.suppliers.map((s) => (s.id === entry.id ? entry : s));
-
       return entry;
     } catch (e) {
       store.error = e as Error;
@@ -199,8 +195,6 @@ class SuppliersController {
         syncQueue.syncProvider({ provider: supplier, operation: 'delete' });
         await suppliersDb.delete({ syncId: supplier.sync_id });
       }
-
-      store.suppliers = allSuppliers.filter((s) => s.id !== id);
     } catch (e) {
       store.error = e as Error;
       throw e;
@@ -232,7 +226,6 @@ class SuppliersController {
 
         if (!hasToken()) {
           console.log('suppliersController.listSuppliers - No authentication token, skipping sync');
-          store.suppliers = [];
           return [];
         }
 
@@ -249,12 +242,10 @@ class SuppliersController {
             'suppliersController.listSuppliers - Suppliers after sync:',
             allAfterSync?.length || 0,
           );
-          store.suppliers = allAfterSync;
           return allAfterSync;
         } catch (syncError) {
           console.error('suppliersController.listSuppliers - Sync error:', syncError);
           // Continue with empty list on sync error
-          store.suppliers = [];
           return [];
         }
       }
@@ -280,7 +271,6 @@ class SuppliersController {
         })),
       );
 
-      store.suppliers = sorted;
       return sorted;
     } catch (e) {
       store.error = e as Error;

@@ -29,6 +29,7 @@ Route::middleware(['sso.auth', 'sso.user'])->group(function () {
         Route::post('/sync/resolve-conflict', [SyncController::class, 'resolveConflict']);
         Route::post('/sync/resolve-conflicts-batch', [SyncController::class, 'resolveConflictsBatch']);
         Route::get('/sync/conflicts', [SyncController::class, 'getResolvedConflicts']);
+        Route::get('/sync/active-conflicts', [SyncController::class, 'getActiveConflicts']);
         Route::get('/sync/merge-status/{jobId}', [SyncController::class, 'mergeStatus']);
     });
 

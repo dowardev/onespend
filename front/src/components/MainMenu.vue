@@ -99,7 +99,10 @@
           >
             <ion-icon slot="start" :icon="syncOutline"></ion-icon>
             <ion-label>Sincronización</ion-label>
-            <ion-badge v-if="pendingChanges > 0" slot="end" color="secondary">{{
+            <ion-badge data-cy="menu-conflict-badge" v-if="conflictCount > 0" slot="end" color="danger">{{
+              conflictCount
+            }}</ion-badge>
+            <ion-badge v-else-if="pendingChanges > 0" slot="end" color="secondary">{{
               pendingChanges
             }}</ion-badge>
           </ion-item>
@@ -117,10 +120,10 @@
             lines="none"
             :class="{ 'menu-active': isStatisticsCashFlow }"
             :aria-current="isStatisticsCashFlow ? 'page' : undefined"
-            @click="navigate({ name: 'StatisticsCashFlow' })"
+            @click="navigate({ name: 'CashFlow' })"
           >
-            <ion-icon slot="start" :icon="statsChartOutline"></ion-icon>
-            <ion-label>Flujo de caja</ion-label>
+            <ion-icon slot="start" :icon="trendingUpOutline"></ion-icon>
+            <ion-label>Flujo de Caja</ion-label>
           </ion-item>
 
           <ion-item
@@ -151,12 +154,6 @@
           >
             <ion-icon slot="start" :icon="constructOutline"></ion-icon>
             <ion-label>Mantenimiento</ion-label>
-            <ion-badge
-              v-if="(needsNormalize || needsEntries) && !migrationDismissed"
-              slot="end"
-              color="danger"
-              >!</ion-badge
-            >
           </ion-item>
 
           <ion-item
@@ -212,7 +209,6 @@ import {
   layersOutline,
   repeatOutline,
   syncOutline,
-  statsChartOutline,
   speedometerOutline,
   constructOutline,
   colorPaletteOutline,
@@ -220,6 +216,7 @@ import {
   personAddOutline,
   personCircleOutline,
   logOutOutline,
+  trendingUpOutline,
 } from 'ionicons/icons';
 import SyncStatus from './SyncStatus.vue';
 // End Imports
@@ -227,6 +224,7 @@ import SyncStatus from './SyncStatus.vue';
 // Controllers
 import authController from '@/controllers/authController';
 import { SyncController } from '@/controllers/syncController';
+import { conflictResolutionService } from '@/services/sync/ConflictResolutionService';
 // End Controllers
 
 // Components
@@ -242,6 +240,7 @@ const route = useRoute();
 
 const syncController = SyncController;
 const pendingChanges = computed(() => syncController.getPendingChanges());
+const conflictCount = ref(0);
 
 const appName =
   (import.meta as unknown as { env?: Record<string, string | undefined> }).env?.VITE_APP_NAME ||
@@ -272,6 +271,7 @@ const userName = computed(() => authController.getUserName());
 // Life cycle
 onMounted(async () => {
   await authController.checkAuth();
+  conflictCount.value = await conflictResolutionService.getStore().getCount();
 });
 
 // End Life cycle
@@ -297,12 +297,6 @@ async function handleLogout() {
   });
   await alert.present();
 }
-
-defineProps<{
-  needsNormalize: boolean;
-  needsEntries: boolean;
-  migrationDismissed: boolean;
-}>();
 
 async function navigate(params: { path?: string; name?: string }) {
   try {

@@ -54,6 +54,11 @@ class BudgetProvider extends Model
         return $this->belongsTo(Account::class);
     }
 
+    public function supplier(): BelongsTo
+    {
+        return $this->belongsTo(Supplier::class, '_supplier_id');
+    }
+
     public function products(): HasMany
     {
         return $this->hasMany(BudgetProviderProduct::class, 'budget_provider_id', 'sync_id');

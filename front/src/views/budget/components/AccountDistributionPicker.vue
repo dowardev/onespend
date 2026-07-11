@@ -7,7 +7,7 @@
           {{ headerSubtitle }}
         </p>
       </ion-label>
-      <ion-button :disabled="isDayClosed" @click="handleAddClick">
+      <ion-button @click="handleAddClick">
         <ion-icon :icon="addOutline" />
       </ion-button>
     </ion-list-header>
@@ -18,7 +18,6 @@
           <ion-button
             fill="clear"
             size="small"
-            :disabled="isDayClosed"
             @click="$emit('removeItem', { index: realIndex(displayIdx) })"
           >
             <ion-icon :icon="closeOutline" color="danger" />
@@ -168,7 +167,6 @@ const props = defineProps<{
   items: DistributionItem[];
   headerLabel: string;
   headerSubtitle?: string;
-  isDayClosed?: boolean;
   reverseOrder?: boolean;
 }>();
 

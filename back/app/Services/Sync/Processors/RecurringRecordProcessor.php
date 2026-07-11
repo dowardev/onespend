@@ -18,7 +18,7 @@ class RecurringRecordProcessor extends AbstractEntityProcessor
         return 'recurring_record';
     }
 
-    protected function preprocessData(array $item, int $userId): array
+    public function preprocessData(array $item, int $userId): array
     {
         $resolver = $this->idResolver;
 
@@ -102,7 +102,14 @@ class RecurringRecordProcessor extends AbstractEntityProcessor
                 }
             }
 
-            $this->bulkUpdateSyncMetadata($syncIds, 'synced', $userId);
+            $fieldHashes = [];
+            $baseDataMap = [];
+            foreach ($insertData as $item) {
+                $fieldHashes[$item['sync_id']] = $this->computeFieldHash($item);
+                $baseDataMap[$item['sync_id']] = $item;
+            }
+
+            $this->bulkUpdateSyncMetadata($syncIds, 'synced', $userId, [], $fieldHashes, $baseDataMap);
             \Illuminate\Support\Facades\DB::commit();
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\DB::rollBack();
@@ -125,6 +132,7 @@ class RecurringRecordProcessor extends AbstractEntityProcessor
             \Illuminate\Support\Facades\DB::beginTransaction();
 
             $productsBySyncId = [];
+            $filteredDataBySyncId = [];
 
             foreach ($items as $item) {
                 $syncId = $item['id'] ?? null;
@@ -132,6 +140,7 @@ class RecurringRecordProcessor extends AbstractEntityProcessor
 
                 $preprocessed = $this->preprocessData($item, $userId);
             $data = $this->filterToFillableFromCache($preprocessed, $this->getCachedFillable());
+                $filteredDataBySyncId[$syncId] = $data;
                 unset($data['id'], $data['sync_id'], $data['user_id'], $data['created_at'],
                     $data['products'], $data['_deleted']);
                 $data['updated_at'] = now();
@@ -242,7 +251,13 @@ class RecurringRecordProcessor extends AbstractEntityProcessor
                 ['sync_id', 'user_id'],
                 ['recurring_record_id', 'supplier_product_id', 'product_name', 'product_price', 'quantity', 'status', 'deleted_at', 'updated_at']
             );
-            $this->bulkUpdateSyncMetadata($productSyncIds, 'synced', $userId);
+            $fieldHashes = [];
+            $baseDataMap = [];
+            foreach ($upsertData as $item) {
+                $fieldHashes[$item['sync_id']] = $this->computeFieldHash($item);
+                $baseDataMap[$item['sync_id']] = $item;
+            }
+            $this->bulkUpdateSyncMetadata($productSyncIds, 'synced', $userId, [], $fieldHashes, $baseDataMap);
         }
     }
 }

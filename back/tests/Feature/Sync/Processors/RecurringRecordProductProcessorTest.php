@@ -203,10 +203,12 @@ class RecurringRecordProductProcessorTest extends TestCase
             ['id' => $syncId, 'product_name' => 'Client RRP', 'updated_at' => $oldTimestamp],
         ], $this->user->id);
 
-        $this->assertEmpty($result['conflicts']);
+        $this->assertCount(1, $result['conflicts']);
+        $this->assertEquals('concurrent_edit', $result['conflicts'][0]['conflict_type']);
+        $this->assertEquals('Client RRP', $result['conflicts'][0]['client_data']['product_name']);
         $this->assertDatabaseHas('recurring_record_products', [
             'sync_id' => $syncId,
-            'product_name' => 'Client RRP',
+            'product_name' => 'Original RRP',
         ]);
     }
 

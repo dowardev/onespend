@@ -1,0 +1,53 @@
+- generic [ref=e2]:
+  - generic [ref=e4]:
+    - banner [ref=e5]:
+      - generic [ref=e8]:
+        - generic: Iniciar Sesión
+    - main [ref=e9]:
+      - generic [ref=e13]:
+        - generic [ref=e14]:
+          - img "Logo SSO Server" [ref=e16]
+          - heading "Iniciar Sesión" [level=2] [ref=e17]
+          - paragraph [ref=e18]: Accede a tu cuenta de SSO Server
+        - generic [ref=e19]:
+          - generic [ref=e25]:
+            - generic:
+              - generic: Usuario / Email
+            - textbox "Usuario / Email" [ref=e27]:
+              - /placeholder: Ingresa tu usuario
+              - text: admin@admin.com
+          - generic [ref=e33]:
+            - generic:
+              - generic: Contraseña
+            - generic [ref=e34]:
+              - textbox "Contraseña" [ref=e35]:
+                - /placeholder: Ingresa tu contraseña
+                - text: admin
+              - button "Show password" [ref=e38] [cursor=pointer]:
+                - generic [ref=e39]:
+                  - generic:
+                    - img:
+                      - generic:
+                        - img
+          - generic [ref=e41] [cursor=pointer]:
+            - switch [ref=e42]
+            - generic [ref=e50]: Mantener sesión abierta
+          - alert [ref=e63]:
+            - img [ref=e64]:
+              - img [ref=e66]
+            - text: Credenciales inválidas
+          - button "Ingresar" [ref=e53] [cursor=pointer]:
+            - generic [ref=e68]: Ingresar
+        - generic [ref=e56]:
+          - button "Crear cuenta" [ref=e58] [cursor=pointer]:
+            - generic [ref=e59]:
+              - generic: Crear cuenta
+          - button "Volver" [ref=e61] [cursor=pointer]:
+            - generic [ref=e62]:
+              - generic:
+                - img:
+                  - generic:
+                    - img
+              - generic: Volver
+  - status [ref=e71]:
+    - generic [ref=e72]: Credenciales inválidas

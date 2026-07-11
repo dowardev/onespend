@@ -199,10 +199,12 @@ class BudgetProviderProductProcessorTest extends TestCase
             ['id' => $syncId, 'product_name' => 'Client BPP', 'updated_at' => $oldTimestamp],
         ], $this->user->id);
 
-        $this->assertEmpty($result['conflicts']);
+        $this->assertCount(1, $result['conflicts']);
+        $this->assertEquals('concurrent_edit', $result['conflicts'][0]['conflict_type']);
+        $this->assertEquals('Client BPP', $result['conflicts'][0]['client_data']['product_name']);
         $this->assertDatabaseHas('budget_provider_products', [
             'sync_id' => $syncId,
-            'product_name' => 'Client BPP',
+            'product_name' => 'Original BPP',
         ]);
     }
 

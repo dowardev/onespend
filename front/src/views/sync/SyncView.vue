@@ -64,8 +64,9 @@
             </div>
 
             <ion-button
+              data-cy="sync-btn"
               expand="block"
-              :disabled="!isOnline || isSyncing || pendingChanges === 0"
+              :disabled="!isOnline || isSyncing || (pendingChanges === 0 && activeConflictDiffs.length === 0)"
               class="sync-button"
               @click="handleSyncNow"
             >
@@ -119,6 +120,17 @@
               Forzar sincronización completa
             </ion-button>
 
+            <ion-button
+              expand="block"
+              fill="outline"
+              color="warning"
+              :disabled="!isOnline || isRepairing"
+              @click="handleRepairSync"
+            >
+              <ion-icon slot="start" :icon="constructOutline"></ion-icon>
+              Reparar sincronización
+            </ion-button>
+
             <ion-button expand="block" fill="outline" @click="handleRefreshStatus">
               <ion-icon slot="start" :icon="refreshOutline"></ion-icon>
               Actualizar estado
@@ -142,13 +154,13 @@
         </ion-card-content>
       </ion-card>
 
-      <ion-card v-if="activeConflictDiffs.length > 0">
+      <ion-card data-cy="conflicts-card" v-if="activeConflictDiffs.length > 0">
         <ion-card-header>
-          <ion-card-title>Conflictos activos <ion-badge color="warning">{{ activeConflictDiffs.length }}</ion-badge></ion-card-title>
+          <ion-card-title>Conflictos activos <ion-badge data-cy="conflict-count-badge" color="warning">{{ activeConflictDiffs.length }}</ion-badge></ion-card-title>
         </ion-card-header>
         <ion-card-content>
           <ion-list>
-            <ion-item v-for="(entry, idx) in activeConflictDiffs" :key="entry.sync_id + idx">
+            <ion-item data-cy="conflict-item" v-for="(entry, idx) in activeConflictDiffs" :key="entry.sync_id + idx">
               <ion-label>
                 <h3>{{ getEntityLabel(entry.entityType) }}</h3>
                 <p v-if="entry.diffs.length > 0" class="conflict-fields">
@@ -168,6 +180,7 @@
                 </p>
               </ion-label>
               <ion-badge
+                data-cy="conflict-badge"
                 slot="end"
                 :color="entry.diffs.some(d => d.changed_in === 'both') ? 'danger' : 'warning'"
                 @click="showConflictDiff(entry)"
@@ -197,38 +210,76 @@
         </ion-card-content>
       </ion-card>
 
-      <ion-modal :is-open="showConflictModal" @did-dismiss="showConflictModal = false">
+      <ion-modal data-cy="conflict-modal" :is-open="showConflictModal" @did-dismiss="showConflictModal = false" css-class="conflict-modal-large">
         <ion-header>
           <ion-toolbar>
             <ion-buttons slot="start">
               <ion-button @click="showConflictModal = false">Cerrar</ion-button>
             </ion-buttons>
-            <ion-title>Comparar cambios</ion-title>
+            <ion-title>Conflicto detectado</ion-title>
           </ion-toolbar>
         </ion-header>
         <ion-content>
-          <div v-if="selectedConflict" class="conflict-detail">
-            <div class="conflict-entity-header">
-              <h2>{{ getEntityLabel(selectedConflict.entityType) }}</h2>
-              <p class="conflict-sync-id">ID: {{ selectedConflict.sync_id }}</p>
+          <div v-if="selectedConflict" class="conflict-detail-new">
+            <div class="conflict-intro">
+              <ion-icon :icon="warningOutline" size="large" color="warning" />
+              <div>
+                <h2>{{ getEntityLabel(selectedConflict.entityType) }}</h2>
+                <p class="conflict-intro-text">Este registro se modificó desde dos sitios a la vez. Elige qué versión quieres conservar:</p>
+                <p class="conflict-intro-hint">↕ Los valores que difieren entre versiones están resaltados en ambas columnas</p>
+              </div>
             </div>
-            <ion-list>
-              <ion-item v-for="diff in selectedConflict.diffs" :key="diff.field" class="diff-item">
-                <ion-label>
-                  <div class="diff-field-name">{{ diff.field }}</div>
-                  <div class="diff-values">
-                    <div class="diff-value diff-server">
-                      <ion-chip color="medium" size="small">Servidor</ion-chip>
-                      <span class="diff-value-text">{{ formatDiffValue(diff.server_value) }}</span>
-                    </div>
-                    <div class="diff-value diff-client">
-                      <ion-chip color="primary" size="small">Cliente</ion-chip>
-                      <span class="diff-value-text">{{ formatDiffValue(diff.client_value) }}</span>
-                    </div>
-                  </div>
-                </ion-label>
-              </ion-item>
-            </ion-list>
+
+            <div class="conflict-cards-grid">
+              <div class="version-card version-local">
+                <div class="version-card-header">
+                  <span class="version-card-badge version-card-badge-local">Tu versión</span>
+                  <span class="version-card-time">{{ formatRelativeTime(clientTimestamp) }}</span>
+                </div>
+                <ion-list class="transparent">
+                  <ion-item v-for="rf in displayableFields" :key="rf.field"
+                    lines="full">
+                    <ion-label>
+                      <h3>{{ rf.label }}</h3>
+                      <p class="field-value">{{ rf.clientDisplay }}</p>
+                    </ion-label>
+                  </ion-item>
+                </ion-list>
+                <div v-if="sameFieldCount > 0" class="version-card-footer">
+                  ✓ {{ sameFieldCount }} campo{{ sameFieldCount === 1 ? '' : 's' }} coinciden — no hay cambios
+                </div>
+              </div>
+
+              <div class="version-card version-server">
+                <div class="version-card-header">
+                  <span class="version-card-badge version-card-badge-server">Versión del servidor</span>
+                  <span class="version-card-time">{{ formatRelativeTime(serverTimestamp) }}</span>
+                </div>
+                <ion-list class="transparent">
+                  <ion-item v-for="rf in displayableFields" :key="rf.field"
+                    lines="full">
+                    <ion-label>
+                      <h3>{{ rf.label }}</h3>
+                      <p class="field-value">{{ rf.serverDisplay }}</p>
+                    </ion-label>
+                  </ion-item>
+                </ion-list>
+                <div v-if="sameFieldCount > 0" class="version-card-footer">
+                  ✓ {{ sameFieldCount }} campo{{ sameFieldCount === 1 ? '' : 's' }} coinciden — no hay cambios
+                </div>
+              </div>
+            </div>
+
+            <div class="conflict-actions">
+              <ion-button data-cy="resolve-client-btn" expand="block" shape="round" color="primary" @click="handleResolveClient">
+                <ion-icon slot="start" :icon="personOutline" />
+                Conservar lo que tengo aquí
+              </ion-button>
+              <ion-button data-cy="resolve-server-btn" expand="block" shape="round" fill="outline" color="medium" @click="handleResolveServer">
+                <ion-icon slot="start" :icon="cloudOutline" />
+                Conservar lo del servidor
+              </ion-button>
+            </div>
           </div>
         </ion-content>
       </ion-modal>
@@ -245,8 +296,60 @@
           </ion-card-content>
         </ion-card>
       </div>
-    </ion-content>
-  </ion-page>
+      <ion-modal
+        :is-open="showRepairModal"
+        :backdrop-dismiss="!isRepairing"
+        css-class="repair-modal"
+        @did-dismiss="handleRepairDismiss"
+      >
+        <ion-header>
+          <ion-toolbar>
+            <ion-title>Reparando sincronización</ion-title>
+            <ion-buttons slot="end">
+              <ion-button
+                v-if="!isRepairing"
+                fill="clear"
+                @click="closeRepairModal"
+              >
+                <ion-icon :icon="closeOutline" slot="icon-only" />
+              </ion-button>
+            </ion-buttons>
+          </ion-toolbar>
+        </ion-header>
+        <ion-content class="ion-padding">
+          <div class="repair-container">
+            <div class="repair-icon">
+              <ion-icon
+                :icon="constructOutline"
+                :class="{ 'repair-spinning': isRepairing }"
+                size="large"
+                color="warning"
+              />
+            </div>
+            <p class="repair-message">{{ repairMessage }}</p>
+            <ion-progress-bar
+              :value="repairPercent / 100"
+              :color="repairStep === 'error' ? 'danger' : 'warning'"
+            />
+            <p class="repair-percent">{{ Math.round(repairPercent) }}%</p>
+            <div v-if="isRepairing" class="repair-spinner">
+              <ion-spinner name="dots" color="warning" />
+            </div>
+            <ion-button
+              v-else
+              expand="block"
+              fill="solid"
+              color="primary"
+              @click="closeRepairModal"
+              class="ion-margin-top"
+            >
+              Cerrar
+            </ion-button>
+          </div>
+        </ion-content>
+      </ion-modal>
+  </ion-content>
+</ion-page>
 </template>
 
 <script setup lang="ts">
@@ -273,10 +376,12 @@ import {
   IonNote,
   IonModal,
   IonChip,
+  IonProgressBar,
+  IonSpinner,
   alertController,
   toastController,
 } from '@ionic/vue';
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import {
   cloudOutline,
@@ -291,11 +396,18 @@ import {
   codeOutline,
   alertCircleOutline,
   warningOutline,
+  personOutline,
+  constructOutline,
+  closeOutline,
 } from 'ionicons/icons';
 // End Imports
 
 // Controllers
 import { SyncController } from '@/controllers/syncController';
+import type { RepairProgress } from '@/controllers/syncController';
+import { conflictResolutionService } from '@/services/sync/ConflictResolutionService';
+import { resolveConflictFields } from '@/controllers/lookupResolver';
+import type { DisplayField } from '@/controllers/lookupResolver';
 // End Controllers
 
 // Components
@@ -332,7 +444,27 @@ const resolvedConflicts = ref<ResolvedConflict[]>([]);
 const activeConflictDiffs = ref<ActiveConflict[]>([]);
 const showConflictModal = ref(false);
 const selectedConflict = ref<ActiveConflict | null>(null);
+const resolvedFields = ref<DisplayField[]>([]);
+const clientTimestamp = computed(() => {
+  const ts = selectedConflict.value?.client_data?.updated_at
+  if (!ts) return undefined
+  const d = new Date(String(ts))
+  return isNaN(d.getTime()) ? undefined : d.getTime() / 1000
+})
+const serverTimestamp = computed(() => {
+  const ts = selectedConflict.value?.server_data?.updated_at
+  if (!ts) return undefined
+  const d = new Date(String(ts))
+  return isNaN(d.getTime()) ? undefined : d.getTime() / 1000
+})
+const displayableFields = computed(() => resolvedFields.value.filter(f => f.hasDifference))
+const sameFieldCount = computed(() => resolvedFields.value.length - displayableFields.value.length)
 const router = useRouter();
+const showRepairModal = ref(false);
+const isRepairing = ref(false);
+const repairStep = ref<RepairProgress['step']>('pulling_server');
+const repairMessage = ref('');
+const repairPercent = ref(0);
 // End Vars
 
 // Functions
@@ -348,13 +480,24 @@ function showConflictDiff(conflict: ActiveConflict) {
   showConflictModal.value = true;
 }
 
-function formatDiffValue(val: unknown): string {
-  if (val === undefined || val === null) return '—';
-  if (typeof val === 'boolean') return val ? 'Sí' : 'No';
-  if (typeof val === 'object') {
-    try { return JSON.stringify(val) } catch { return String(val) }
+watch(selectedConflict, async (conflict) => {
+  if (!conflict) {
+    resolvedFields.value = []
+    return
   }
-  return String(val);
+  resolvedFields.value = await resolveConflictFields({
+    serverData: conflict.server_data,
+    clientData: conflict.client_data,
+  })
+}, { immediate: true })
+
+function formatRelativeTime(timestamp?: number): string {
+  if (timestamp === undefined || timestamp === null) return ''
+  const diff = Date.now() / 1000 - timestamp
+  if (diff < 60) return 'hace unos segundos'
+  if (diff < 3600) return `hace ${Math.floor(diff / 60)} min`
+  if (diff < 86400) return `hace ${Math.floor(diff / 3600)} h`
+  return `hace ${Math.floor(diff / 86400)} días`
 }
 
 async function handleShowDLQ() {
@@ -379,11 +522,15 @@ function getEntityLabel(entity: string) {
   const labels: Record<string, string> = {
     account: 'Cuentas',
     budget: 'Presupuestos',
+    budget_entry: 'Entradas de gasto',
+    budget_entry_group: 'Grupos de entradas',
     budget_provider: 'Proveedores del presupuesto',
     budget_provider_product: 'Productos de proveedores',
     entry: 'Entradas',
+    income: 'Ingresos',
     supplier: 'Proveedores',
     supplier_product: 'Productos de proveedores',
+    template: 'Plantillas',
   };
   return labels[entity] || entity;
 }
@@ -487,6 +634,59 @@ async function handleRefreshStatus() {
   await toast.present();
 }
 
+async function handleResolveClient() {
+  if (!selectedConflict.value) return;
+  const result = await syncController.resolveConflict({
+    entity_type: selectedConflict.value.entityType,
+    entity_id: selectedConflict.value.sync_id,
+    resolution: 'client',
+    client_data: selectedConflict.value.client_data,
+  });
+  if (result.ok) {
+    showConflictModal.value = false;
+    await refreshStatus();
+    const toast = await toastController.create({
+      message: 'Conflicto resuelto: se aplicó tu versión',
+      duration: 2000,
+      color: 'success',
+    });
+    await toast.present();
+  } else {
+    const toast = await toastController.create({
+      message: result.error ? `Error al resolver el conflicto: ${result.error}` : 'Error al resolver el conflicto',
+      duration: 3000,
+      color: 'danger',
+    });
+    await toast.present();
+  }
+}
+
+async function handleResolveServer() {
+  if (!selectedConflict.value) return;
+  const result = await syncController.resolveConflict({
+    entity_type: selectedConflict.value.entityType,
+    entity_id: selectedConflict.value.sync_id,
+    resolution: 'server',
+  });
+  if (result.ok) {
+    showConflictModal.value = false;
+    await refreshStatus();
+    const toast = await toastController.create({
+      message: 'Conflicto resuelto: se aceptó la versión del servidor',
+      duration: 2000,
+      color: 'success',
+    });
+    await toast.present();
+  } else {
+    const toast = await toastController.create({
+      message: result.error ? `Error al resolver el conflicto: ${result.error}` : 'Error al resolver el conflicto',
+      duration: 3000,
+      color: 'danger',
+    });
+    await toast.present();
+  }
+}
+
 function handleShowDebug() {
   showDebugInfo.value = !showDebugInfo.value;
 }
@@ -501,6 +701,65 @@ function formatResolvedAt(conflict: ResolvedConflict): string {
   if (diff < 3600000) return `Hace ${Math.floor(diff / 60000)} min`;
   if (diff < 86400000) return `Hace ${Math.floor(diff / 3600000)} h`;
   return `Hace ${Math.floor(diff / 86400000)} días`;
+}
+
+async function handleRepairSync() {
+  const alert = await alertController.create({
+    header: 'Reparar sincronización',
+    message: 'Esto escaneará toda tu base local y la comparará con el servidor para recuperar elementos que no se hayan sincronizado. Puede subir cambios que borraste de la cola intencionalmente. ¿Continuar?',
+    buttons: [
+      { text: 'Cancelar', role: 'cancel' },
+      { text: 'Entendido, reparar', role: 'confirm', handler: async () => { await startRepair(); } },
+    ],
+  });
+  await alert.present();
+}
+
+async function startRepair() {
+  showRepairModal.value = true;
+  isRepairing.value = true;
+  repairStep.value = 'pulling_server';
+  repairPercent.value = 0;
+  repairMessage.value = 'Iniciando reparación...';
+
+  const result = await syncController.repairSync({
+    onProgress: (p: RepairProgress) => {
+      repairStep.value = p.step;
+      repairMessage.value = p.message;
+      repairPercent.value = p.percent;
+      if (p.step === 'done' || p.step === 'error') {
+        isRepairing.value = false;
+      }
+    },
+  });
+
+  if (result.ok) {
+    await refreshStatus();
+    const toast = await toastController.create({
+      message: `Reparación completada: ${result.created} elemento(s) sincronizado(s)`,
+      duration: 3000,
+      color: 'success',
+    });
+    await toast.present();
+  } else {
+    const toast = await toastController.create({
+      message: 'Error en reparación. Revisa la conexión e intenta de nuevo.',
+      duration: 4000,
+      color: 'danger',
+    });
+    await toast.present();
+  }
+}
+
+function handleRepairDismiss(event: CustomEvent) {
+  if (isRepairing.value) {
+    event.detail.preventDefault?.();
+    showRepairModal.value = true;
+  }
+}
+
+function closeRepairModal() {
+  showRepairModal.value = false;
 }
 // End Functions
 
@@ -678,32 +937,175 @@ ion-card {
   color: var(--ion-color-medium);
 }
 
-.diff-item {
-  --padding-start: 0;
+.conflict-detail-new {
+  padding: 16px;
 }
 
-.diff-field-name {
-  font-weight: 600;
-  font-size: 0.9rem;
-  margin-bottom: 8px;
-  text-transform: capitalize;
-}
-
-.diff-values {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.diff-value {
+.conflict-intro {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
-  font-size: 0.85rem;
+  gap: 12px;
+  margin-bottom: 20px;
 }
 
-.diff-value-text {
-  word-break: break-all;
-  line-height: 1.4;
+.conflict-intro h2 {
+  margin: 0 0 4px;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.conflict-intro-text {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--ion-color-medium);
+}
+
+.conflict-cards-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+@media (min-width: 768px) {
+  .conflict-cards-grid {
+    flex-direction: row;
+  }
+  .version-card {
+    flex: 1;
+  }
+}
+
+.version-card {
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.version-local {
+  border: 1px solid var(--ion-color-tertiary-tint);
+  background: linear-gradient(135deg, rgba(var(--ion-color-tertiary-rgb), 0.04), transparent);
+  border-top: 4px solid var(--ion-color-tertiary);
+}
+
+.version-server {
+  border: 1px solid var(--ion-color-secondary-tint);
+  background: linear-gradient(135deg, rgba(var(--ion-color-secondary-rgb), 0.04), transparent);
+  border-top: 4px solid var(--ion-color-secondary);
+}
+
+.version-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--ion-color-light-shade);
+}
+
+.version-card-badge {
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 20px;
+}
+
+.version-card-badge-local {
+  background: rgba(var(--ion-color-tertiary-rgb), 0.15);
+  color: var(--ion-color-tertiary-contrast);
+}
+
+.version-card-badge-server {
+  background: rgba(var(--ion-color-secondary-rgb), 0.15);
+  color: var(--ion-color-secondary-contrast);
+}
+
+.version-card-time {
+  font-size: 0.75rem;
+  color: var(--ion-color-medium);
+}
+
+.field-value {
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin: 4px 0 0;
+}
+
+.version-card-footer {
+  font-size: 0.8rem;
+  color: var(--ion-color-medium);
+  padding: 12px 16px;
+  border-top: 1px solid var(--ion-color-light-shade);
+  font-style: italic;
+}
+
+.conflict-intro-hint {
+  margin: 16px 0 0;
+  font-size: 0.8rem;
+  color: var(--ion-color-medium);
+  font-style: italic;
+}
+
+.conflict-actions {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.conflict-modal-large {
+  --width: 90vw;
+  --max-width: 1100px;
+  --height: 90vh;
+  --max-height: 800px;
+  --border-radius: 16px;
+}
+
+.repair-modal {
+  --width: 320px;
+  --height: 280px;
+  --border-radius: 16px;
+}
+
+.repair-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 16px;
+  text-align: center;
+}
+
+.repair-icon {
+  margin-bottom: 4px;
+}
+
+.repair-icon .repair-spinning {
+  animation: repairSpin 2s linear infinite;
+}
+
+@keyframes repairSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.repair-message {
+  font-size: 0.9rem;
+  color: var(--ion-color-medium);
+  margin: 0;
+  padding: 0 16px;
+}
+
+.repair-percent {
+  font-size: 0.8rem;
+  color: var(--ion-color-medium-shade);
+  margin: 0;
+}
+
+.repair-spinner {
+  margin-top: 4px;
+}
+
+ion-progress-bar {
+  width: 80%;
 }
 </style>

@@ -2,9 +2,8 @@
   <ion-page>
     <EditPageHeader
       :title="isEditing ? 'Editar Entrada' : 'Nueva Entrada'"
-      :is-save-disabled="v$.$invalid || isDayClosed"
+      :is-save-disabled="v$.$invalid"
       :show-options-button="isEditing"
-      :is-options-disabled="isDayClosed"
       @back="handleBack"
       @save="handleSave"
       @options="openOptionsPopover"
@@ -35,6 +34,7 @@
                       label="Nombre"
                       label-placement="floating"
                       placeholder="Pepito"
+                      data-cy="entry-name-input"
                     />
                   </ion-item>
 
@@ -57,7 +57,6 @@
               <AccountDistributionPicker
                 :items="entryItems"
                 header-label="Cuentas"
-                :is-day-closed="isDayClosed"
                 @add-item="addEntryItem"
                 @remove-item="removeEntryItem"
                 @update-item-amount="updateItemAmount"
@@ -108,10 +107,10 @@
       @did-dismiss="optionsPopoverState.open = false"
     >
       <ion-content>
-        <ion-item button :disabled="isDayClosed" @click="handleReassignFromPopover">
+        <ion-item button @click="handleReassignFromPopover">
           <ion-label>Reasignar fecha</ion-label>
         </ion-item>
-        <ion-item button :disabled="isDayClosed" @click="handleDeleteFromPopover">
+        <ion-item button @click="handleDeleteFromPopover">
           <ion-icon slot="start" :icon="trashOutline" color="danger" />
           <ion-label color="danger">Eliminar</ion-label>
         </ion-item>
@@ -154,7 +153,7 @@ import { trashOutline } from 'ionicons/icons';
 import { computed, ref, onMounted, reactive } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { format } from 'date-fns';
-import { useBudgetDayStore } from '@/stores/budgetDayStore';
+import { useBudgetDay } from '@/composables/useBudgetDay';
 import budgetEntriesController from '@/controllers/budgetEntriesController';
 import { useAttachments } from '@/composables/useAttachments';
 import { parseDateValue, toShortDate } from '@/utils/dateHelpers';
@@ -167,6 +166,7 @@ import AccountDistributionPicker from '@/views/budget/components/AccountDistribu
 import DeleteConfirmAlert from '@/views/budget/components/DeleteConfirmAlert.vue';
 import DatePickerPopover from '@/views/budget/components/DatePickerPopover.vue';
 import DetailsSection from '@/views/budget/components/DetailsSection.vue';
+import { useEntryLoader } from '@/composables/useEntryLoader';
 // end imports
 
 // interface and types imports
@@ -251,7 +251,6 @@ const v$ = useVuelidate(rules, computed(() => {
 
 // Computed from route
 const isEditing = computed(() => !!route.query.entryId);
-const isDayClosed = computed(() => false);
 // end computed
 
 // onmounted
@@ -260,7 +259,7 @@ onMounted(async () => {
     await loadEntry(route.query.entryId as string);
   } else {
     entryItems.value = [{ amount: '', accountId: null }];
-    const budgetDayStore = useBudgetDayStore();
+    const budgetDayStore = useBudgetDay();
     const selectedDate = budgetDayStore.selectedDate;
     const dateStr = selectedDate
       ? selectedDate.slice(0, 10) + 'T00:00:00'
@@ -272,10 +271,19 @@ onMounted(async () => {
 
 // functions
 async function loadEntry(entryId: string) {
-  const entries = budgetEntriesController.getEntries();
-  const entry = entries.find((e: any) => String(e.id) === String(entryId));
+  const { loadEntryFromDb } = useEntryLoader();
+  const entry = await loadEntryFromDb({ entryId });
 
-  if (!entry) return;
+  if (!entry) {
+    const { toastController } = await import('@ionic/vue');
+    const toast = await toastController.create({
+      message: 'No se encontró la entrada',
+      duration: 3000,
+    });
+    await toast.present();
+    router.replace('/budget');
+    return;
+  }
 
   const entryAny = entry as any;
   entryData.value = {
@@ -340,8 +348,6 @@ async function confirmDelete() {
     if (entrySyncId.value) {
       await deleteAllAttachments();
     }
-    const budgetDayStore = useBudgetDayStore();
-    budgetDayStore.saveBudgetData();
   }
   deleteConfirm.showDeleteAlert.value = false;
   router.back();
@@ -351,7 +357,7 @@ function resolveEntryDate(entry: any): string {
   if (entry?.date) {
     return parseDateValue({ raw: entry.date }).slice(0, 10);
   }
-  const budgetDayStore = useBudgetDayStore();
+  const budgetDayStore = useBudgetDay();
   const selectedDate = budgetDayStore.selectedDate;
   if (selectedDate) return parseDateValue({ raw: selectedDate }).slice(0, 10);
   return format(new Date(), 'yyyy-MM-dd');
@@ -408,24 +414,24 @@ async function handleSave() {
     payload.date = entryDatePicker.dateISO.value.slice(0, 10);
   }
 
-  let savedEntry;
+  let createdSyncId: string | undefined;
+  const isEditingMode = !!route.query.entryId;
 
-  if (entryData.value.id) {
+  if (isEditingMode) {
+    const targetId = entryData.value.id ?? String(route.query.entryId);
     const originalDate = entryData.value.date;
     const hasDateChanged = payload.date && payload.date !== originalDate;
 
     if (hasDateChanged) {
       const { reassignEntry } = await import('@/composables/useReassignEntry');
       reassignEntry({
-        entryId: entryData.value.id,
+        entryId: targetId,
         newDate: payload.date,
-        originalDate: originalDate,
-        restoreSelectedDate: true,
         verbose: false,
       });
     } else {
       await budgetEntriesController.updateIngreso({
-        id: entryData.value.id,
+        id: targetId,
         changes: {
           entryType: payload.entryType,
           name: payload.name,
@@ -436,32 +442,27 @@ async function handleSave() {
         } as any,
       });
     }
-    savedEntry = budgetEntriesController
-      .getEntries()
-      .find((e: any) => String(e.id) === String(entryData.value.id));
-  } else {
-    if (totalAmount > 0) {
-      const entryDataAny: any = {
-        name: payload.name,
-        amount: payload.amount,
-        accountId: payload.accountId,
-        groups: payload.groups,
-      };
-      if (payload.date) {
-        entryDataAny.date = payload.date;
-      }
-      if (payload.entryType === 'ingreso') {
-        savedEntry = await budgetEntriesController.addIngreso(entryDataAny);
-      } else {
-        savedEntry = await budgetEntriesController.addEgreso(entryDataAny);
-      }
+  } else if (totalAmount > 0) {
+    const entryDataAny: any = {
+      name: payload.name,
+      amount: payload.amount,
+      accountId: payload.accountId,
+      groups: payload.groups,
+    };
+    if (payload.date) {
+      entryDataAny.date = payload.date;
+    }
+    if (payload.entryType === 'ingreso') {
+      const saved = await budgetEntriesController.addIngreso(entryDataAny);
+      createdSyncId = saved?.sync_id;
+    } else {
+      const saved = await budgetEntriesController.addEgreso(entryDataAny);
+      createdSyncId = saved?.sync_id;
     }
   }
 
-  await useBudgetDayStore().saveBudgetData();
-
-  const entrySyncIdValue = savedEntry?.sync_id || entrySyncId.value;
-  const isNewEntry = !entryData.value.id;
+  const entrySyncIdValue = entrySyncId.value || createdSyncId || String(route.query.entryId ?? '') || null;
+  const isNewEntry = !isEditingMode;
 
   if (entrySyncIdValue) {
     entrySyncId.value = entrySyncIdValue;
@@ -499,8 +500,6 @@ async function applyReassignDate() {
     await reassignEntry({
       entryId,
       newDate: finalDate,
-      originalDate: entryData.value.date || undefined,
-      restoreSelectedDate: true,
       verbose: false,
     });
   } catch (err) {
