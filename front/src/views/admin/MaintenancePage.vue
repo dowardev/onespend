@@ -15,12 +15,7 @@
                 <ion-label>Herramientas de mantenimiento del sistema</ion-label>
               </ion-list-header>
 
-              <ion-item button @click="goToMigrateDates">
-                <ion-label>Migrar Fechas</ion-label>
-              </ion-item>
-              <ion-item button @click="goToMigrateEntries">
-                <ion-label>Añadir `entries` a backups</ion-label>
-              </ion-item>
+
             </ion-list>
           </ion-col>
         </ion-row>
@@ -54,21 +49,6 @@ import { useRouter } from 'vue-router';
 const router = useRouter();
 
 // End Vars
-
-// Functions
-function goToMigrateDates() {
-  if ((import.meta as unknown as { env?: Record<string, string | undefined> }).env?.DEV) {
-    console.log('MaintenancePage: navigating to migrate-dates');
-  }
-  router.push({ name: 'MigrateDates' });
-}
-
-function goToMigrateEntries() {
-  if ((import.meta as unknown as { env?: Record<string, string | undefined> }).env?.DEV) {
-    console.log('MaintenancePage: navigating to migrate-entries');
-  }
-  router.push({ name: 'MigrateEntries' });
-}
 
 // End Functions
 

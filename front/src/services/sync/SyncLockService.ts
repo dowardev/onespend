@@ -1,14 +1,11 @@
 const SYNC_LOCK_KEY = 'onespend-sync-lock';
 const HEARTBEAT_INTERVAL = 10000;
 const LOCK_TIMEOUT = 30000;
-const WEB_LOCK_NAME = 'onespend-sync';
 
 export class SyncLockService {
   private tabId: string;
   private heartbeatInterval: ReturnType<typeof setInterval> | null = null;
   private _isLocked = false;
-  private webLockHeld = false;
-  private lockResolve: (() => void) | null = null;
 
   constructor() {
     this.tabId = crypto.randomUUID();
@@ -26,24 +23,6 @@ export class SyncLockService {
 
   private async tryAcquire(): Promise<boolean> {
     if (this._isLocked) return false;
-
-    if (navigator.locks) {
-      try {
-        let granted = false;
-        await navigator.locks.request(WEB_LOCK_NAME, { ifAvailable: true }, async () => {
-          this._isLocked = true;
-          this.webLockHeld = true;
-          granted = true;
-          this.startHeartbeat();
-          return new Promise<void>((resolve) => {
-            this.lockResolve = resolve;
-          });
-        });
-        return granted;
-      } catch {
-        return false;
-      }
-    }
 
     const existing = localStorage.getItem(SYNC_LOCK_KEY);
     if (existing) {
@@ -69,7 +48,6 @@ export class SyncLockService {
   private startHeartbeat() {
     this.stopHeartbeat();
     this.heartbeatInterval = setInterval(() => {
-      if (this.webLockHeld) return;
       const current = localStorage.getItem(SYNC_LOCK_KEY);
       if (current) {
         try {
@@ -94,11 +72,6 @@ export class SyncLockService {
   release() {
     this.stopHeartbeat();
     this._isLocked = false;
-    this.webLockHeld = false;
-    if (this.lockResolve) {
-      this.lockResolve();
-      this.lockResolve = null;
-    }
     const current = localStorage.getItem(SYNC_LOCK_KEY);
     if (current) {
       try {

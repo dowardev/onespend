@@ -8,8 +8,6 @@ import SuppliersPage from '@/views/suppliers/SuppliersPage.vue';
 import AccountsPage from '@/views/suppliers/accounts/AccountsPage.vue';
 import StatisticsConfigPage from '@/views/statistics/performance/config/StatisticsConfigPage.vue';
 import MaintenancePage from '@/views/admin/MaintenancePage.vue';
-import MigrateDates from '@/views/admin/maintenance/MigrateDates.vue';
-import MigrateEntries from '@/views/admin/maintenance/MigrateEntries.vue';
 import PersonalizationPage from '@/views/admin/PersonalizationPage.vue';
 import SyncView from '@/views/sync/SyncView.vue';
 import DLQView from '@/views/sync/DLQView.vue';
@@ -17,8 +15,8 @@ import LoginView from '@/views/auth/LoginView.vue';
 import RegisterView from '@/views/auth/RegisterView.vue';
 import AuthCallbackPage from '@/views/auth/AuthCallbackPage.vue';
 import PerformanceTestPage from '@/views/test/PerformanceTestPage.vue';
-import CashFlowPage from '@/views/statistics/cashFlow/CashFlow.vue';
 import PerformancePage from '@/views/statistics/performance/PerformancePage.vue';
+import CashFlow from '@/views/statistics/cashFlow/CashFlow.vue';
 
 import ProviderEditPage from '@/views/budget/suppliers/ProviderEditPage.vue';
 import EntryEditPage from '@/views/budget/entries/EntryEditPage.vue';
@@ -72,8 +70,8 @@ const routes: Array<RouteRecordRaw> = [
   },
   {
     path: '/statistics/cash-flow',
-    name: 'StatisticsCashFlow',
-    component: CashFlowPage,
+    name: 'CashFlow',
+    component: CashFlow,
   },
   {
     path: '/statistics/performance',
@@ -109,16 +107,6 @@ const routes: Array<RouteRecordRaw> = [
     path: '/admin/maintenance',
     name: 'MaintenancePage',
     component: MaintenancePage,
-  },
-  {
-    path: '/admin/maintenance/dates',
-    name: 'MigrateDates',
-    component: MigrateDates,
-  },
-  {
-    path: '/admin/maintenance/entries',
-    name: 'MigrateEntries',
-    component: MigrateEntries,
   },
   {
     path: '/admin/maintenance/statistics-fields',

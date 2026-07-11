@@ -10,7 +10,7 @@
       <ion-title>{{ title }}</ion-title>
 
       <ion-buttons slot="end">
-        <ion-button :disabled="isSaveDisabled" @click="$emit('save')">
+        <ion-button data-cy="save-entry-btn" :disabled="isSaveDisabled" @click="$emit('save')">
           <ion-icon :icon="saveOutline" />
         </ion-button>
         <ion-button

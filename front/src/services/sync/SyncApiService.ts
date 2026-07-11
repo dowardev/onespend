@@ -129,6 +129,22 @@ export class SyncApiService {
     });
   }
 
+  async getActiveConflicts(params: { entityType?: string; timeoutMs?: number } = {}): Promise<Response> {
+    const { entityType, timeoutMs = 15000 } = params;
+    const headers = await this.getAuthHeaders();
+    const searchParams = new URLSearchParams();
+    if (entityType) searchParams.set('entity_type', entityType);
+    const queryString = searchParams.toString();
+    const url = queryString
+      ? `${API_URL}/api/sync/active-conflicts?${queryString}`
+      : `${API_URL}/api/sync/active-conflicts`;
+    return fetchWithTimeout({
+      url,
+      options: { method: 'GET', headers },
+      timeoutMs,
+    });
+  }
+
   async getResolvedConflicts(params: { timeoutMs?: number } = {}): Promise<Response> {
     const { timeoutMs = 15000 } = params;
     const headers = await this.getAuthHeaders();

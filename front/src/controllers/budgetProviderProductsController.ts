@@ -1,5 +1,4 @@
 import { budgetProviderProductsDb } from '@/db/controllers/budgetProviderProductsDb'
-import { syncQueue } from '@/services/syncQueue';
 import type { BudgetProviderProduct } from '@/stores/budgetProvidersStore';
 import { generateSyncId } from '@/utils/generateSyncId';
 
@@ -29,20 +28,15 @@ class BudgetProviderProductsController {
 
     const id = await budgetProviderProductsDb.add({ entry: newProduct as any });
 
-    syncQueue.syncBudgetProviderProduct({ product: newProduct as any, operation: 'create' });
-
     return { ...newProduct, id };
   }
 
   async removeProductsByProviderId(params: { providerId: string | number }) {
     const { providerId } = params;
     const products = await this.getByProviderId({ providerId });
-    const ctrl = budgetProviderProductsDb;
-
     for (const product of products) {
       if (product.sync_id != null) {
-        syncQueue.syncBudgetProviderProduct({ product: product as any, operation: 'delete' });
-        await ctrl.delete({ syncId: product.sync_id! });
+        await budgetProviderProductsDb.delete({ syncId: product.sync_id! });
       }
     }
   }

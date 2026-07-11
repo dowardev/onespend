@@ -1,20 +1,14 @@
-import { budgetDaySnapshotsDb } from '@/db/controllers/budgetDaySnapshotsDb'
 import { budgetEntriesDb } from '@/db/controllers/budgetEntriesDb'
-import { useBudgetEntriesStore } from '@/stores/budgetEntriesStore';
+import { toBudgetEntryRow } from '@/db/mappers'
+import { useBudgetEntriesStore, mapEntryRow } from '@/stores/budgetEntriesStore';
 import { useBudgetDayStore } from '@/stores/budgetDayStore';
 import { syncQueue } from '@/services/syncQueue';
 import { formatLocalDate } from '@/utils/date';
 import type { Income, PaymentType, EntryType } from '@/stores/budgetEntriesStore';
+import type { BudgetEntryRow } from '@/db/types';
 import { generateSyncId } from '@/utils/generateSyncId';
 
 export type { Income, PaymentType, EntryType };
-
-interface BudgetData {
-  entries: Income[];
-  proveedores: any[];
-  isDayClosed?: boolean;
-  finishDayData?: any;
-}
 
 class BudgetEntriesController {
   getStore() {
@@ -29,19 +23,26 @@ class BudgetEntriesController {
     return [...this.getStore().entries];
   }
 
-  async addEntry(params: { entry: Income }) {
-    const { entry } = params;
-    const store = this.getStore();
-    if (!entry.sync_id) {
-      entry.sync_id = generateSyncId();
-    }
+  async getEntriesBetween(params: { start: Date; end: Date }): Promise<Income[]> {
+    const { start, end } = params
+    const fromStr = start.toISOString().slice(0, 10)
+    const toStr = end.toISOString().slice(0, 10)
+    const rows: BudgetEntryRow[] = await budgetEntriesDb.getByDateRange({ from: fromStr, to: toStr })
+    return rows.map(mapEntryRow)
+  }
 
+  async addEntry(params: { entry: Income }) {
+    const { entry: input } = params;
+    const entry = input.sync_id
+      ? input
+      : { ...input, sync_id: generateSyncId() };
+    if (import.meta.env.DEV) { console.log('[CTRL] addEntry:', entry.name, 'sync_id:', entry.sync_id, 'entryType:', entry.entryType); }
+
+    await budgetEntriesDb.add({ entry: toBudgetEntryRow(entry) });
     syncQueue.syncEntry({ entry: entry as any, operation: 'create' });
 
-    const id = await budgetEntriesDb.add({ entry: entry as any });
-    const newEntry: Income = { ...entry, id: id as string | number };
-    store.addEntry(newEntry);
-    return newEntry;
+    if (import.meta.env.DEV) { console.log('[CTRL] addEntry done, sync_id:', entry.sync_id); }
+    return { ...entry, id: entry.sync_id as string | number };
   }
 
   async addIngreso(params: {
@@ -106,71 +107,49 @@ class BudgetEntriesController {
 
   async updateEntry(params: { id: string | number; changes: Partial<Income> }) {
     const { id, changes } = params;
-    const store = this.getStore();
-
-    store.updateEntry(id, changes);
-    const entry = store.entries.find((e) => e.id === id);
-    if (entry) {
-      syncQueue.syncEntry({ entry, operation: 'update' });
+    const idStr = String(id);
+    let entry = this.getStore().entries.find((e) => String(e.id) === idStr);
+    if (!entry) {
+      if (import.meta.env.DEV) { console.log('[CTRL] updateEntry — not in store, Dexie fallback. id:', id); }
+      const row = await budgetEntriesDb.getBySyncId({ syncId: String(id) });
+      if (!row) {
+        if (import.meta.env.DEV) { console.log('[CTRL] updateEntry — not in Dexie either, bail. id:', id); }
+        return;
+      }
+      entry = mapEntryRow(row) as unknown as Income;
     }
+    const updated = { ...entry, ...changes, updatedAt: Date.now() };
+    if (import.meta.env.DEV) { console.log('[CTRL] updateEntry:', id, 'name:', updated.name); }
+    await budgetEntriesDb.put({ entry: toBudgetEntryRow(updated) });
+    if (import.meta.env.DEV) { console.log('[CTRL] updateEntry — calling syncQueue.syncEntry'); }
+    syncQueue.syncEntry({ entry: updated, operation: 'update' });
   }
 
   async updateIngreso(params: { id: string | number; changes: Partial<Income> }) {
     const { id, changes } = params;
-    const store = this.getStore();
-    const dayStore = useBudgetDayStore();
-
-    const newDate = changes.date;
-    const currentDate = dayStore.selectedDate;
-
-    if (newDate && newDate !== currentDate) {
-      const entry = store.entries.find((e) => e.id === id);
-      if (!entry) return;
-
-      const updatedEntry = { ...entry, ...changes };
-      store.removeEntry(id);
-
-      const dateKey = `budget:${currentDate}`;
-      const existing = await budgetDaySnapshotsDb.getById({ id: dateKey }) as { data?: BudgetData } | null;
-      const entries = existing?.data?.entries ? JSON.parse(JSON.stringify(existing.data.entries)).filter((e: any) => String(e.id) !== String(id)) : [];
-      const providers = existing?.data?.proveedores ? JSON.parse(JSON.stringify(existing.data.proveedores)) : [];
-      await budgetDaySnapshotsDb.put({
-        entry: {
-          id: dateKey,
-          data: { entries, proveedores: providers, isDayClosed: dayStore.isDayClosed, finishDayData: dayStore.finishDayData },
-        },
-      });
-
-      const targetKey = `budget:${newDate}`;
-      const targetData = await budgetDaySnapshotsDb.getById({ id: targetKey }) as { data?: BudgetData } | null;
-      const targetEntries = targetData?.data?.entries ? JSON.parse(JSON.stringify(targetData.data.entries)) : [];
-      const targetProviders = targetData?.data?.proveedores ? JSON.parse(JSON.stringify(targetData.data.proveedores)) : [];
-      targetEntries.push(JSON.parse(JSON.stringify(updatedEntry)));
-      await budgetDaySnapshotsDb.put({
-        entry: {
-          id: targetKey,
-          data: { entries: targetEntries, proveedores: targetProviders, isDayClosed: false, finishDayData: { totalSalesEfectivo: 0, totalSalesTarjeta: 0, totalSalesCredito: 0, type: '%', margin: 0 } },
-        },
-      });
-
-      syncQueue.syncEntry({ entry: updatedEntry, operation: 'update' });
-    } else {
-      store.updateEntry(id, changes);
-      const entry = store.entries.find((e) => e.id === id);
-      if (entry) {
-        syncQueue.syncEntry({ entry, operation: 'update' });
+    const idStr = String(id);
+    let entry = this.getStore().entries.find((e) => String(e.id) === idStr);
+    if (!entry) {
+      if (import.meta.env.DEV) { console.log('[CTRL] updateIngreso — not in store, Dexie fallback. id:', id); }
+      const row = await budgetEntriesDb.getBySyncId({ syncId: String(id) });
+      if (!row) {
+        if (import.meta.env.DEV) { console.log('[CTRL] updateIngreso — not in Dexie either, bail. id:', id); }
+        return;
       }
+      entry = mapEntryRow(row) as unknown as Income;
     }
+    const updated = { ...entry, ...changes, updatedAt: Date.now() };
+    if (import.meta.env.DEV) { console.log('[CTRL] updateIngreso:', id, 'name:', updated.name); }
+    await budgetEntriesDb.put({ entry: toBudgetEntryRow(updated) });
+    if (import.meta.env.DEV) { console.log('[CTRL] updateIngreso — calling syncQueue.syncEntry'); }
+    syncQueue.syncEntry({ entry: updated, operation: 'update' });
   }
 
   async removeEntry(params: { id: string | number }) {
     const { id } = params;
-    const store = this.getStore();
-    const entry = store.entries.find((e) => e.id === id);
-
-    store.removeEntry(id);
-
+    const entry = this.getStore().entries.find((e) => String(e.id) === String(id));
     if (entry) {
+      await budgetEntriesDb.delete({ syncId: entry.sync_id as string });
       syncQueue.syncEntry({ entry, operation: 'delete' });
     }
   }

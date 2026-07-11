@@ -1,20 +1,14 @@
-import { budgetDaySnapshotsDb } from '@/db/controllers/budgetDaySnapshotsDb'
+import { toBudgetProviderRow } from '@/db/mappers'
 import { useBudgetProvidersStore } from '@/stores/budgetProvidersStore';
 import { useBudgetDayStore } from '@/stores/budgetDayStore';
-import { useBudgetEntriesStore } from '@/stores/budgetEntriesStore';
 import { syncQueue } from '@/services/syncQueue';
+import { budgetProvidersDb } from '@/db/controllers/budgetProvidersDb';
+
 import type { Provider, BudgetProviderProduct } from '@/stores/budgetProvidersStore';
 import type { Supplier } from './suppliersController';
 import { generateSyncId } from '@/utils/generateSyncId';
 
 export type { Provider, BudgetProviderProduct };
-
-interface BudgetData {
-  entries: any[];
-  proveedores: Provider[];
-  isDayClosed?: boolean;
-  finishDayData?: any;
-}
 
 class BudgetProvidersController {
   private pendingTimeouts: Set<any> | null = null;
@@ -46,7 +40,7 @@ class BudgetProvidersController {
     _fromRecurringId?: string;
   }) {
     const {
-      name = '', estimated = 0, accountId = 0, allowEmpty = false,
+      name = '', estimated = 0, accountId = null, allowEmpty = false,
       _supplierId, _supplierName, _supplier, notes, products, items, date, _fromRecurringId,
     } = params;
     if (!name && !allowEmpty) return;
@@ -56,7 +50,6 @@ class BudgetProvidersController {
     const localId = Date.now() + Math.random();
     const supplierSyncId = _supplierId as string | undefined;
     const providerDate = date || dayStore.selectedDate;
-    const currentDate = dayStore.selectedDate;
 
     const newProvider: Provider = {
       id: localId,
@@ -64,7 +57,7 @@ class BudgetProvidersController {
       name,
       date: providerDate,
       estimated: Number(estimated) || 0,
-      accountId: Number(accountId) || 0,
+      accountId: accountId ? Number(accountId) : null,
       efectivo: 0,
       tarjeta: 0,
       credito: 0,
@@ -81,13 +74,9 @@ class BudgetProvidersController {
       _fromRecurringId,
     };
 
-    if (providerDate !== currentDate) {
-      await this.saveProviderToDate(newProvider, providerDate);
-      syncQueue.syncBudgetProvider({ provider: newProvider as any, operation: 'create', products: products as any, supplierSyncId });
-    } else {
-      store.addProvider(newProvider);
-      syncQueue.syncBudgetProvider({ provider: newProvider as any, operation: 'create', products: products as any, supplierSyncId });
-    }
+    const id = await budgetProvidersDb.add({ entry: toBudgetProviderRow(newProvider) });
+
+    syncQueue.syncBudgetProvider({ provider: newProvider as any, operation: 'create', products: products as any, supplierSyncId });
 
     const timeoutId = setTimeout(() => {
       const provider = store.providers.find((p) => p.id === newProvider.id);
@@ -122,78 +111,24 @@ class BudgetProvidersController {
 
     if (newDate && newDate !== currentDate) {
       const updatedProvider = { ...provider, ...changes };
-      store.removeProvider(id);
-
-      await dayStore.saveBudgetData();
-
-      await this.saveProviderToDate(updatedProvider, newDate);
-
+      await budgetProvidersDb.put({ entry: toBudgetProviderRow(updatedProvider) });
       syncQueue.syncBudgetProvider({ provider: updatedProvider, operation: 'update', products: productsToSync, supplierSyncId });
       return true;
     } else {
-      store.updateProvider(id, changes);
-      syncQueue.syncBudgetProvider({ provider: { ...provider, ...changes }, operation: 'update', products: productsToSync, supplierSyncId });
+      const updatedProvider = { ...provider, ...changes };
+      await budgetProvidersDb.put({ entry: toBudgetProviderRow(updatedProvider) });
+      syncQueue.syncBudgetProvider({ provider: updatedProvider, operation: 'update', products: productsToSync, supplierSyncId });
       return false;
-    }
-  }
-
-  private async saveProviderToDate(provider: Provider, targetDate: string) {
-    try {
-      const dateKey = `budget:${targetDate}`;
-      const plainProvider = JSON.parse(JSON.stringify(provider));
-      const existing = await budgetDaySnapshotsDb.getById({ id: dateKey }) as { data?: BudgetData } | null;
-      const entries = existing?.data?.entries ? JSON.parse(JSON.stringify(existing.data.entries)) : [];
-      const providers = existing?.data?.proveedores ? JSON.parse(JSON.stringify(existing.data.proveedores)) : [];
-      const isDayClosed = existing?.data?.isDayClosed || false;
-      const finishDayData = existing?.data?.finishDayData || {};
-
-      providers.push(plainProvider);
-
-      await budgetDaySnapshotsDb.put({
-        entry: { id: dateKey, data: { entries, proveedores: providers, isDayClosed, finishDayData } },
-      });
-    } catch (e) {
-      console.error('[BudgetProvidersController.saveProviderToDate] Error:', e);
     }
   }
 
   async removeProvider(params: { id: string | number }) {
     const { id } = params;
-    const store = this.getStore();
-    const provider = store.providers.find((p) => p.id === id);
-    store.removeProvider(id);
-
+    const provider = this.getStore().providers.find((p) => p.id === id);
     if (provider) {
+      await budgetProvidersDb.delete({ syncId: provider.sync_id as string });
       syncQueue.syncBudgetProvider({ provider, operation: 'delete' });
     }
-  }
-
-  addProviderEgresos(params: { provider: Provider }) {
-    const { provider } = params;
-    const dayStore = useBudgetDayStore();
-    const entriesStore = useBudgetEntriesStore();
-    const now = Date.now();
-    const amount = Number(provider.estimated || 0);
-
-    if (amount <= 0) return;
-
-    const newEntry: import('@/stores/budgetEntriesStore').Income = {
-      id: Date.now() + Math.random(),
-      sync_id: generateSyncId(),
-      name: provider.name,
-      amount,
-      date: dayStore.selectedDate,
-      paymentType: 'cash',
-      entryType: 'egreso',
-      createdAt: now,
-      accountId: provider.accountId,
-      supplierId: String(provider._supplierId || provider.id),
-      supplierName: provider.name,
-    };
-
-    entriesStore.addEntry(newEntry);
-
-    syncQueue.syncEntry({ entry: newEntry as any, operation: 'create' });
   }
 
   clearAllProviders() {

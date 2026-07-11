@@ -26,12 +26,23 @@ import './theme/variables.css';
 import { createPinia, setActivePinia } from 'pinia';
 import { setSSOClient } from '@/ssoClientAccessor';
 import { useAuthStore } from '@/stores/authStore';
+import { useAccountsStore } from '@/stores/accountsStore';
+import { useBudgetEntriesStore } from '@/stores/budgetEntriesStore';
+import { useBudgetProvidersStore } from '@/stores/budgetProvidersStore';
+import { useSuppliersStore } from '@/stores/suppliersStore';
+import { syncService } from '@/services/syncService';
 import budgetEntriesController from './controllers/budgetEntriesController';
 import budgetProvidersController from './controllers/budgetProvidersController';
 import { useBudgetDayStore } from './stores/budgetDayStore';
 
 const pinia = createPinia();
 setActivePinia(pinia);
+
+// Eager-init stores so Pinia is ready when DataMediator feeds them
+useAccountsStore();
+useBudgetEntriesStore();
+useBudgetProvidersStore();
+useSuppliersStore();
 
 // SSO Client
 import { SSOClient } from '@tu-org/sso-client';
@@ -56,6 +67,15 @@ ssoClient.onAuthStateChange((state) => {
       user: state.user.user || '',
       email: state.user.email || '',
     });
+    // Trigger initial sync after login
+    syncService.fullSyncAndSave(async () => {
+      try {
+        const dayStore = useBudgetDayStore();
+        await dayStore.loadBudgetForDate({ date: dayStore.selectedDate });
+      } catch (e) {
+        console.warn('[main] Failed to reload budget after sync:', e);
+      }
+    }).catch(console.error);
   } else {
     authStore.logout();
   }

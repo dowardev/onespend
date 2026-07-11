@@ -3,6 +3,7 @@ export interface AccountRow {
   serverId?: number | null
   name: string
   initialBalance: number
+  version?: number
   status?: string
   createdAt?: number
   updatedAt?: number
@@ -23,6 +24,7 @@ export interface BudgetEntryRow {
   fromRecurringId?: string | null
   providerGroupId?: string | null
   providerName?: string
+  version?: number
   status?: string
   isDayClosed?: boolean
   finishDayData?: unknown
@@ -55,6 +57,7 @@ export interface BudgetProviderRow {
   supplierId?: string | null
   supplierName?: string
   fromRecurringId?: string | null
+  version?: number
   status?: string
   products?: BudgetProviderProductRow[]
   createdAt?: number
@@ -70,6 +73,7 @@ export interface BudgetProviderProductRow {
   productName: string
   productPrice: number
   quantity: number
+  version?: number
   status?: string
   createdAt?: number
   updatedAt?: number
@@ -80,6 +84,7 @@ export interface SupplierRow {
   sync_id: string
   serverId?: number | null
   name: string
+  version?: number
   status?: string
   createdAt?: number
   updatedAt?: number
@@ -104,6 +109,7 @@ export interface SupplierProductRow {
   price: number
   imageBase64?: string | null
   imageUrl?: string | null
+  version?: number
   status?: string
   createdAt?: number
   updatedAt?: number
@@ -134,6 +140,7 @@ export interface RecurringRecordRow {
   estimated?: number
   items?: unknown[]
   notes?: string
+  version?: number
   status: string
   products?: RecurringRecordProductRow[]
   createdAt?: number
@@ -186,16 +193,6 @@ export interface DeadLetterItem {
 export interface ConfigRow {
   id: string
   value: unknown
-}
-
-export interface BudgetDaySnapshotRow {
-  id: string
-  data: {
-    entries: unknown[]
-    proveedores: unknown[]
-    isDayClosed?: boolean
-    finishDayData?: unknown
-  }
 }
 
 export interface StatisticsConfigRow {

@@ -3,12 +3,9 @@
 namespace App\Services\Sync\Processors;
 
 use App\Models\BudgetProviderProduct;
-use App\Services\Sync\Processors\Concerns\ResolvesSupplierProductId;
 
 class BudgetProviderProductProcessor extends AbstractEntityProcessor
 {
-    use ResolvesSupplierProductId;
-
     protected function getModel(): string
     {
         return BudgetProviderProduct::class;
@@ -19,20 +16,19 @@ class BudgetProviderProductProcessor extends AbstractEntityProcessor
         return 'budget_provider_product';
     }
 
-    public function canProcess(string $entityType): bool
+    public function preprocessData(array $item, int $userId): array
     {
-        return $entityType === 'budget_provider_product';
-    }
+        $item = $this->resolveForeignKeys($item, $userId);
 
-    public function getEntityType(): string
-    {
-        return 'budget_provider_product';
-    }
+        if (isset($item['productName'])) {
+            $item['product_name'] = $item['productName'];
+        }
+        if (isset($item['productPrice'])) {
+            $item['product_price'] = $item['productPrice'];
+        }
 
-    protected function preprocessData(array $item, int $userId): array
-    {
-        $item = $this->resolveSupplierProductFields($item, $userId);
-        unset($item['budgetProviderId']);
+        unset($item['budgetProviderId'], $item['productName'], $item['productPrice']);
+
         return $item;
     }
 }

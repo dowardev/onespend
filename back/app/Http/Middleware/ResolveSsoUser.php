@@ -28,8 +28,8 @@ class ResolveSsoUser
             $ssoUser = $this->ssoClient->getUser();
 
             if ($ssoUser) {
-                $user = User::firstOrCreate(
-                    ['id' => $ssoUser->id],
+                $user = User::updateOrCreate(
+                    ['email' => $ssoUser->email],
                     [
                         'name' => $ssoUser->name ?? '',
                         'user' => $ssoUser->userName ?? '',

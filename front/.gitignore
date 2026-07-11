@@ -34,3 +34,4 @@ npm-debug.log*
 /release/
 /build/icons/
 /squashfs-root/
+.playwright-cli/

@@ -138,10 +138,12 @@ class ThreeWayMergeTest extends TestCase
             ['id' => 'acc-2', 'name' => 'Original Name', 'initial_balance' => 200.00, 'status' => 'active'],
         ], $this->user->id);
 
-        $this->assertEmpty($result['conflicts']);
+        $this->assertCount(1, $result['conflicts']);
+        $this->assertEquals('concurrent_edit', $result['conflicts'][0]['conflict_type']);
+        $this->assertEquals(200.00, $result['conflicts'][0]['client_data']['initial_balance']);
 
         $updated = Account::where('sync_id', 'acc-2')->first();
-        $this->assertEquals(200.00, $updated->initial_balance);
+        $this->assertEquals(100.00, (float) $updated->initial_balance);
         $this->assertEquals('Original Name', $updated->name);
     }
 
@@ -253,10 +255,12 @@ class ThreeWayMergeTest extends TestCase
             ['id' => 'sup-1', 'name' => 'Original Supplier', 'status' => 'inactive'],
         ], $this->user->id);
 
-        $this->assertEmpty($result['conflicts']);
+        $this->assertCount(1, $result['conflicts']);
+        $this->assertEquals('concurrent_edit', $result['conflicts'][0]['conflict_type']);
+        $this->assertEquals('inactive', $result['conflicts'][0]['client_data']['status']);
 
         $updated = Supplier::where('sync_id', 'sup-1')->first();
-        $this->assertEquals('inactive', $updated->status);
+        $this->assertEquals('active', $updated->status);
     }
 
     /** @test */

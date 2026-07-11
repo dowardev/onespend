@@ -1,0 +1,151 @@
+- generic [ref=e3]:
+  - generic:
+    - navigation "menu" [ref=e4]:
+      - generic [ref=e5]:
+        - generic:
+          - generic [ref=e8]:
+            - generic: OneSpend
+          - generic [ref=e11]:
+            - generic:
+              - generic [ref=e12]:
+                - generic [ref=e13]:
+                  - img [ref=e14]:
+                    - img [ref=e16]
+                  - generic [ref=e19]: Test User
+                  - button [ref=e21] [cursor=pointer]:
+                    - generic [ref=e22]:
+                      - generic:
+                        - img:
+                          - generic:
+                            - img
+                - generic [ref=e24]:
+                  - img [ref=e25]:
+                    - img [ref=e27]
+                  - generic [ref=e30]: Sin sincronizar
+              - list [ref=e31]:
+                - generic [ref=e32]:
+                  - listitem [ref=e33]:
+                    - button "Presupuesto" [ref=e34] [cursor=pointer]:
+                      - img [ref=e35]:
+                        - img [ref=e37]
+                      - generic [ref=e43]: Presupuesto
+                  - listitem [ref=e44]:
+                    - button "Provedores" [ref=e45] [cursor=pointer]:
+                      - img [ref=e46]:
+                        - img [ref=e48]
+                      - generic [ref=e55]: Provedores
+                  - listitem [ref=e56]:
+                    - button "Cargos Recurrentes" [ref=e57] [cursor=pointer]:
+                      - img [ref=e58]:
+                        - img [ref=e60]
+                      - generic [ref=e66]: Cargos Recurrentes
+                  - listitem [ref=e67]:
+                    - button "Cuentas" [ref=e68] [cursor=pointer]:
+                      - img [ref=e69]:
+                        - img [ref=e71]
+                      - generic [ref=e76]: Cuentas
+                  - listitem [ref=e77]:
+                    - button "Sincronización" [ref=e78] [cursor=pointer]:
+                      - img [ref=e79]:
+                        - img [ref=e81]
+                      - generic [ref=e86]: Sincronización
+              - list [ref=e87]:
+                - generic [ref=e90]: Estadisticas
+                - generic [ref=e91]:
+                  - listitem [ref=e92]:
+                    - button "Flujo de caja" [ref=e93] [cursor=pointer]:
+                      - img [ref=e94]:
+                        - img [ref=e96]
+                      - generic [ref=e103]: Flujo de caja
+                  - listitem [ref=e104]:
+                    - button "Rendimiento" [ref=e105] [cursor=pointer]:
+                      - img [ref=e106]:
+                        - img [ref=e108]
+                      - generic [ref=e114]: Rendimiento
+              - list [ref=e115]:
+                - generic [ref=e118]: Administracion
+                - generic [ref=e119]:
+                  - listitem [ref=e120]:
+                    - button "Mantenimiento" [ref=e121] [cursor=pointer]:
+                      - img [ref=e122]:
+                        - img [ref=e124]
+                      - generic [ref=e130]: Mantenimiento
+                  - listitem [ref=e131]:
+                    - button "Personalización" [ref=e132] [cursor=pointer]:
+                      - img [ref=e133]:
+                        - img [ref=e135]
+                      - generic [ref=e144]: Personalización
+                  - listitem [ref=e145]:
+                    - button "Pruebas Rendimiento" [ref=e146] [cursor=pointer]:
+                      - img [ref=e147]:
+                        - img [ref=e149]
+                      - generic [ref=e155]: Pruebas Rendimiento
+    - generic [ref=e234]:
+      - banner [ref=e235]:
+        - generic [ref=e237]:
+          - button "back" [ref=e240] [cursor=pointer]:
+            - generic [ref=e241]:
+              - img:
+                - generic:
+                  - img
+          - generic [ref=e244]:
+            - generic: Sincronización
+      - main [ref=e245]:
+        - generic [ref=e248]:
+          - generic [ref=e249]:
+            - generic:
+              - heading "Estado de sincronización" [level=2] [ref=e251]:
+                - generic: Estado de sincronización
+              - generic [ref=e252]:
+                - generic [ref=e253]:
+                  - generic [ref=e254]:
+                    - img [ref=e255]:
+                      - img [ref=e257]
+                    - generic [ref=e260]:
+                      - generic [ref=e261]: Estado
+                      - generic [ref=e262]: Sincronizado
+                  - generic [ref=e263]:
+                    - img [ref=e264]:
+                      - img [ref=e266]
+                    - generic [ref=e268]:
+                      - generic [ref=e269]: Conexión
+                      - generic [ref=e270]: En línea
+                  - generic [ref=e271]:
+                    - img [ref=e272]:
+                      - img [ref=e274]
+                    - generic [ref=e277]:
+                      - generic [ref=e278]: Pendientes
+                      - generic [ref=e279]: 0 cambios
+                  - generic [ref=e280]:
+                    - img [ref=e281]:
+                      - img [ref=e283]
+                    - generic [ref=e295]:
+                      - generic [ref=e296]: Última sincronización
+                      - generic [ref=e297]: Nunca
+                - generic:
+                  - button "Sincronizar ahora" [disabled]:
+                    - generic:
+                      - generic:
+                        - img:
+                          - generic:
+                            - img
+                      - generic: Sincronizar ahora
+          - generic [ref=e298]:
+            - generic:
+              - heading "Acciones" [level=2] [ref=e300]:
+                - generic: Acciones
+              - generic [ref=e301]:
+                - button "Forzar sincronización completa" [ref=e303] [cursor=pointer]:
+                  - generic [ref=e304]:
+                    - generic:
+                      - img:
+                        - generic:
+                          - img
+                    - generic: Forzar sincronización completa
+                - button "Actualizar estado" [ref=e306] [cursor=pointer]:
+                  - generic [ref=e307]:
+                    - generic:
+                      - img:
+                        - generic:
+                          - img
+                    - generic: Actualizar estado

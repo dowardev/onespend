@@ -604,7 +604,7 @@ import { format, getHours, getMinutes } from 'date-fns';
 import { toShortDate } from '@/utils/dateHelpers';
 import { useDeleteConfirm } from '@/composables/useDeleteConfirm';
 import { useDatePicker } from '@/composables/useDatePicker';
-import { useSync } from '@/composables/useSync';
+import { syncQueue } from '@/services/syncQueue';
 import recurringRecordsController from '@/controllers/recurringRecordsController';
 import type { Supplier } from '@/controllers/suppliersController';
 import type { Product } from '@/controllers/supplierProductsController';
@@ -768,7 +768,7 @@ const deleteConfirm = useDeleteConfirm({
   onConfirm: confirmDelete,
 });
 
-const { syncRecurringRecord } = useSync();
+const syncRecurringRecord = syncQueue.syncRecurringRecord;
 // end vars and const
 
 // computed
