@@ -6,6 +6,7 @@ import type { SyncItem } from '@/services/syncService';
 const mockGetChanges = vi.fn();
 const mockFullSync = vi.fn();
 const mockMerge = vi.fn();
+const mockGetActiveConflicts = vi.fn();
 
 function createOkResponse(body: unknown): Response {
   return {
@@ -49,6 +50,7 @@ vi.mock('@/services/sync/SyncApiService', () => ({
     getChanges: (...args: unknown[]) => mockGetChanges(...args),
     fullSync: (...args: unknown[]) => mockFullSync(...args),
     merge: (...args: unknown[]) => mockMerge(...args),
+    getActiveConflicts: (...args: unknown[]) => mockGetActiveConflicts(...args),
   },
 }));
 
@@ -79,7 +81,20 @@ vi.mock('@/services/sync/SyncLockService', () => {
   const mockRelease = vi.fn();
   return { syncLockService: { acquire: mockAcquire, release: mockRelease } };
 });
-vi.mock('@/services/sync/ConflictResolutionService', () => ({ conflictResolutionService: { resolveConflicts: vi.fn(), handleConflicts: vi.fn() } }));
+const mockConflictStoreRemove = vi.fn();
+const mockConflictStoreGetAll = vi.fn();
+const mockConflictStoreAdd = vi.fn();
+vi.mock('@/services/sync/ConflictResolutionService', () => ({
+  conflictResolutionService: {
+    resolveConflicts: vi.fn(),
+    handleConflicts: vi.fn(),
+    getStore: vi.fn(() => ({
+      remove: mockConflictStoreRemove,
+      getAll: mockConflictStoreGetAll,
+      add: mockConflictStoreAdd,
+    })),
+  },
+}));
 vi.mock('@/services/pendingAttachmentsService', () => ({ default: { getAllPendingAttachments: vi.fn(() => []), base64ToFile: vi.fn(), removePendingAttachment: vi.fn(), hasPendingAttachments: vi.fn(() => false), uploadPendingAttachments: vi.fn(), removeFileFromPending: vi.fn() } }));
 vi.mock('@/services/attachmentService', () => ({ default: vi.fn() }));
 
@@ -292,6 +307,8 @@ describe('SyncQueueService.processQueue', () => {
     const { syncQueueDb } = await import('@/db/controllers/syncQueueDb');
     (syncQueueDb.getAll as ReturnType<typeof vi.fn>).mockResolvedValue(items);
 
+    localStorage.setItem('last_sync', '1');
+
     mockMerge.mockResolvedValue(mockSuccessResponse(items.map((i) => i.id), 5000));
 
     await service.processQueue();
@@ -332,5 +349,191 @@ describe('SyncQueueService.processQueue', () => {
 
     const result = await service.processQueue();
     expect(result).toBeNull();
+  });
+});
+
+describe('SyncQueueService.reconcileLocalConflictsFromServer', () => {
+  let service: SyncQueueService;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    service = new SyncQueueService();
+    service.setOnline(true);
+  });
+
+  test('removes local conflicts not active on server', async () => {
+    mockGetActiveConflicts.mockResolvedValue(
+      createOkResponse({ conflicts: [{ entity_type: 'budget_entry', entity_id: 'active-1' }] })
+    );
+    mockConflictStoreGetAll.mockResolvedValue([
+      { entityType: 'budget_entry', item: { sync_id: 'active-1' } },
+      { entityType: 'budget_entry', item: { sync_id: 'stale-1' } },
+    ]);
+
+    await (service as any).reconcileLocalConflictsFromServer();
+
+    expect(mockConflictStoreRemove).toHaveBeenCalledTimes(1);
+    expect(mockConflictStoreRemove).toHaveBeenCalledWith({
+      entityType: 'budget_entry',
+      sync_id: 'stale-1',
+    });
+  });
+
+  test('keeps local conflicts that are active on server', async () => {
+    mockGetActiveConflicts.mockResolvedValue(
+      createOkResponse({ conflicts: [{ entity_type: 'budget_entry', entity_id: 'active-1' }] })
+    );
+    mockConflictStoreGetAll.mockResolvedValue([
+      { entityType: 'budget_entry', item: { sync_id: 'active-1' } },
+    ]);
+
+    await (service as any).reconcileLocalConflictsFromServer();
+
+    expect(mockConflictStoreRemove).not.toHaveBeenCalled();
+  });
+
+  test('does not throw on network error', async () => {
+    mockGetActiveConflicts.mockRejectedValue(new Error('Network error'));
+    mockConflictStoreGetAll.mockResolvedValue([
+      { entityType: 'budget_entry', item: { sync_id: 's1' } },
+    ]);
+
+    await expect(
+      (service as any).reconcileLocalConflictsFromServer()
+    ).resolves.toBeUndefined();
+
+    expect(mockConflictStoreRemove).not.toHaveBeenCalled();
+  });
+
+  test('does nothing when server returns no conflicts', async () => {
+    mockGetActiveConflicts.mockResolvedValue(
+      createOkResponse({ conflicts: [] })
+    );
+    mockConflictStoreGetAll.mockResolvedValue([
+      { entityType: 'budget_entry', item: { sync_id: 's1' } },
+    ]);
+
+    await (service as any).reconcileLocalConflictsFromServer();
+
+    expect(mockConflictStoreRemove).toHaveBeenCalledWith({
+      entityType: 'budget_entry',
+      sync_id: 's1',
+    });
+  });
+
+  test('does nothing when server response is not ok', async () => {
+    mockGetActiveConflicts.mockResolvedValue(createErrorResponse(500, 'Server error'));
+    mockConflictStoreGetAll.mockResolvedValue([
+      { entityType: 'budget_entry', item: { sync_id: 's1' } },
+    ]);
+
+    await (service as any).reconcileLocalConflictsFromServer();
+
+    expect(mockConflictStoreRemove).not.toHaveBeenCalled();
+  });
+});
+
+describe('SyncQueueService.bulkUpsertByEntityType (public)', () => {
+  let service: SyncQueueService;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    service = new SyncQueueService();
+    service.setOnline(true);
+  });
+
+  test('calls the correct db accessor with mapped rows', async () => {
+    const { accountsDb } = await import('@/db/controllers/accountsDb');
+    (accountsDb.bulkGet as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+
+    await service.bulkUpsertByEntityType('account', [
+      { item: { id: 'acc-1', name: 'Test Account', initial_balance: 100, status: 'active' } as any, syncId: 'acc-1' },
+    ]);
+
+    expect(accountsDb.bulkGet).toHaveBeenCalled();
+    expect(accountsDb.bulkPut).toHaveBeenCalled();
+    const putCall = (accountsDb.bulkPut as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(putCall.entries).toHaveLength(1);
+    expect(putCall.entries[0].sync_id).toBe('acc-1');
+    expect(putCall.entries[0].name).toBe('Test Account');
+  });
+
+  test('skips entity types without a db accessor', async () => {
+    const { accountsDb } = await import('@/db/controllers/accountsDb');
+    await service.bulkUpsertByEntityType('unknown_type', [
+      { item: { id: 'x' }, syncId: 'x' },
+    ]);
+    expect(accountsDb.bulkPut).not.toHaveBeenCalled();
+  });
+
+  test('merges server data onto existing local row', async () => {
+    const { accountsDb } = await import('@/db/controllers/accountsDb');
+    (accountsDb.bulkGet as ReturnType<typeof vi.fn>).mockResolvedValue([
+      { sync_id: 'acc-1', name: 'Old Name', initial_balance: 50, status: 'active', syncedAt: 100 },
+    ]);
+
+    await service.bulkUpsertByEntityType('account', [
+      { item: { id: 'acc-1', name: 'New Name', initial_balance: 200, status: 'active' } as any, syncId: 'acc-1' },
+    ]);
+
+    const putCall = (accountsDb.bulkPut as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(putCall.entries[0].name).toBe('New Name');
+    expect(putCall.entries[0].initialBalance).toBe(200);
+  });
+});
+
+describe('SyncQueueService.getConflicts (new implementation)', () => {
+  let service: SyncQueueService;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    service = new SyncQueueService();
+    service.setOnline(true);
+  });
+
+  test('returns mapped conflicts from server', async () => {
+    mockGetActiveConflicts.mockResolvedValue(createOkResponse({
+      conflicts: [
+        {
+          entity_type: 'budget_entry',
+          entity_id: 'be-1',
+          sync_status: 'conflict',
+          conflict_data: {
+            server_data: { name: 'server', amount: 100 },
+            client_data: { name: 'client', amount: 200 },
+            conflict_type: 'semantic',
+            overlapping_fields: ['name'],
+          },
+        },
+      ],
+    }));
+
+    const result = await service.getConflicts();
+
+    expect(result.budget_entry).toHaveLength(1);
+    expect(result.budget_entry[0].sync_id).toBe('be-1');
+    expect(result.budget_entry[0].client_data).toEqual({ name: 'client', amount: 200 });
+    expect(result.budget_entry[0].server_data).toEqual({ name: 'server', amount: 100 });
+    expect(result.budget_entry[0].conflict_type).toBe('semantic');
+    expect(mockGetActiveConflicts).toHaveBeenCalledTimes(1);
+  });
+
+  test('returns empty object when no active conflicts', async () => {
+    mockGetActiveConflicts.mockResolvedValue(createOkResponse({ conflicts: [] }));
+
+    const result = await service.getConflicts();
+
+    expect(result).toEqual({});
+  });
+
+  test('returns empty on API error', async () => {
+    mockGetActiveConflicts.mockResolvedValue(createErrorResponse(500, 'Server error'));
+
+    const result = await service.getConflicts();
+
+    expect(result).toEqual({});
   });
 });

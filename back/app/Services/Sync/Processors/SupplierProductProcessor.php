@@ -15,14 +15,4 @@ class SupplierProductProcessor extends AbstractEntityProcessor
     {
         return 'supplier_product';
     }
-
-    public function canProcess(string $entityType): bool
-    {
-        return $entityType === 'supplier_product';
-    }
-
-    public function getEntityType(): string
-    {
-        return 'supplier_product';
-    }
 }

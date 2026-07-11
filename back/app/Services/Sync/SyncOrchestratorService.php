@@ -2,19 +2,24 @@
 
 namespace App\Services\Sync;
 
+use App\Repositories\SyncMetadataRepository;
 use App\Services\Sync\Contracts\SyncProcessorInterface;
-use App\Models\SyncMetadata;
 use App\Services\SyncIdResolver;
+use App\Services\Sync\ForeignKeyResolver;
 use Illuminate\Support\Facades\Log;
 
 class SyncOrchestratorService
 {
     private array $processors = [];
     private SyncIdResolver $idResolver;
+    private ForeignKeyResolver $foreignKeyResolver;
+    private SyncMetadataRepository $syncMetadataRepo;
 
-    public function __construct(SyncIdResolver $idResolver)
+    public function __construct(SyncIdResolver $idResolver, ForeignKeyResolver $foreignKeyResolver)
     {
         $this->idResolver = $idResolver;
+        $this->foreignKeyResolver = $foreignKeyResolver;
+        $this->syncMetadataRepo = app(SyncMetadataRepository::class);
     }
 
     public function registerProcessor(string $entityType, SyncProcessorInterface $processor): void
@@ -59,7 +64,7 @@ class SyncOrchestratorService
             $items = $data[$entityType];
             $processed[] = $entityType;
 
-            $this->resolveForeignKeysForEntity($entityType, $data, $userId);
+            $this->foreignKeyResolver->warmCache($entityType, $data, $userId);
 
             $processor = $this->processors[$entityType] ?? null;
 
@@ -107,7 +112,7 @@ class SyncOrchestratorService
                 continue;
             }
 
-            $this->resolveForeignKeysForEntity($entityType, $data, $userId);
+            $this->foreignKeyResolver->warmCache($entityType, $data, $userId);
 
             $processor = $this->processors[$entityType];
 
@@ -134,64 +139,6 @@ class SyncOrchestratorService
         }
 
         return $results;
-    }
-
-    private function resolveForeignKeysForEntity(string $entityType, array $data, int $userId): void
-    {
-        $accountSyncIds = [];
-        $supplierSyncIds = [];
-        $supplierProductSyncIds = [];
-        $recurringRecordSyncIds = [];
-
-        $items = $data[$entityType] ?? [];
-
-        foreach ($items as $item) {
-            if (in_array($entityType, ['budget_entry', 'budget_provider', 'recurring_record'])) {
-                $accountId = $item['account_id'] ?? $item['accountId'] ?? null;
-                if ($accountId && is_string($accountId) && !is_numeric($accountId)) {
-                    $accountSyncIds[] = $accountId;
-                }
-            }
-
-            if (in_array($entityType, ['budget_provider'])) {
-                $supplierId = $item['_supplier_id'] ?? $item['supplierId'] ?? null;
-                if ($supplierId && is_string($supplierId) && !is_numeric($supplierId)) {
-                    $supplierSyncIds[] = $supplierId;
-                }
-            }
-
-            if (in_array($entityType, ['budget_provider_product', 'recurring_record_product'])) {
-                $spId = $item['supplier_product_id'] ?? $item['supplierProductId'] ?? null;
-                if ($spId && is_string($spId) && !is_numeric($spId)) {
-                    $supplierProductSyncIds[] = $spId;
-                }
-            }
-
-            if ($entityType === 'recurring_record_product') {
-                $rrId = $item['recurring_record_id'] ?? $item['recurringRecordId'] ?? null;
-                if ($rrId && is_string($rrId) && !is_numeric($rrId)) {
-                    $recurringRecordSyncIds[] = $rrId;
-                }
-            }
-        }
-
-        $accountSyncIds = array_unique($accountSyncIds);
-        $supplierSyncIds = array_unique($supplierSyncIds);
-        $supplierProductSyncIds = array_unique($supplierProductSyncIds);
-        $recurringRecordSyncIds = array_unique($recurringRecordSyncIds);
-
-        if (!empty($accountSyncIds)) {
-            $this->idResolver->resolveBatch('account', $accountSyncIds, $userId);
-        }
-        if (!empty($supplierSyncIds)) {
-            $this->idResolver->resolveBatch('supplier', $supplierSyncIds, $userId);
-        }
-        if (!empty($supplierProductSyncIds)) {
-            $this->idResolver->resolveBatch('supplier_product', $supplierProductSyncIds, $userId);
-        }
-        if (!empty($recurringRecordSyncIds)) {
-            $this->idResolver->resolveBatch('recurring_record', $recurringRecordSyncIds, $userId);
-        }
     }
 
     private function processEntityType(
@@ -223,7 +170,7 @@ class SyncOrchestratorService
                     if ($c['sync_id'] === $syncId) {
                         $conflictInfo = array_intersect_key(
                             $c,
-                            array_flip(['conflict_type', 'server_hash', 'client_hash', 'overlapping_fields'])
+                            array_flip(['conflict_type', 'server_hash', 'client_hash', 'overlapping_fields', 'server_data'])
                         );
                         break;
                     }
@@ -244,9 +191,11 @@ class SyncOrchestratorService
             }
         }
 
+        $updated = $processor->update($toUpdate, $userId, $existingMap);
+
         $result = [
             'created' => $processor->create($toCreate, $userId),
-            'updated' => $processor->update($toUpdate, $userId, $existingMap),
+            'updated' => $updated,
             'deleted' => $processor->delete($toDelete, $userId),
             'conflicts' => $conflicts,
             'errors' => [],
@@ -256,27 +205,12 @@ class SyncOrchestratorService
 
     private function saveConflictMetadata(string $entityType, string $syncId, int $userId, array $clientData, array $conflictInfo = []): void
     {
-        $meta = new SyncMetadata();
         $conflictData = $clientData;
         if (!empty($conflictInfo)) {
             $conflictData = array_merge($clientData, $conflictInfo);
         }
-        $meta->conflict_data = $conflictData;
-        $serializedConflictData = $meta->getAttributes()['conflict_data'];
 
-        SyncMetadata::upsert(
-            [
-                'entity_type' => $entityType,
-                'entity_id' => $syncId,
-                'user_id' => $userId,
-                'sync_status' => 'conflict',
-                'last_synced_at' => now(),
-                'server_updated_at' => now(),
-                'conflict_data' => $serializedConflictData,
-            ],
-            ['entity_type', 'entity_id', 'user_id'],
-            ['sync_status', 'last_synced_at', 'server_updated_at', 'conflict_data']
-        );
+        $this->syncMetadataRepo->markConflict($entityType, $syncId, $userId, $conflictData);
     }
 
 }

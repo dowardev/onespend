@@ -217,11 +217,11 @@ import {
 import budgetEntriesController from '@/controllers/budgetEntriesController';
 import budgetProvidersController from '@/controllers/budgetProvidersController';
 import accountsController from '@/controllers/accountsController';
-import { useBudgetDayStore } from '@/stores/budgetDayStore';
+import { useBudgetDay } from '@/composables/useBudgetDay';
 import { closeOutline } from 'ionicons/icons';
 import { formatCurrency } from '@/utils/currency';
 
-const budgetDayStore = useBudgetDayStore();
+const budgetDayStore = useBudgetDay();
 
 function formatTime(params: { timestamp: number }) {
   const { timestamp } = params;

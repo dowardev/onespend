@@ -6,7 +6,7 @@
           <ion-list-header>
             <ion-label>Registro</ion-label>
 
-            <ion-button id="add-btn" :disabled="isDayClosed">
+            <ion-button id="add-btn">
               <ion-icon :icon="addOutline"></ion-icon>
             </ion-button>
           </ion-list-header>
@@ -35,7 +35,6 @@
                     :lines="bIdx === renderedEntries.length - 1 ? 'none' : 'full'"
                     class="transparent"
                     button
-                    :disabled="isDayClosed"
                     @click="handleUnifiedItemClick(block.item)"
                   >
                     <ion-label>
@@ -118,11 +117,11 @@
   >
     <ion-content>
       <ion-list lines="none">
-        <ion-item button :disabled="isDayClosed" @click="handleRegistroClick">
+        <ion-item button @click="handleRegistroClick">
           <ion-icon slot="start" :icon="documentTextOutline"></ion-icon>
           <ion-label>Registro</ion-label>
         </ion-item>
-        <ion-item button :disabled="isDayClosed" @click="handleProveedoresClick">
+        <ion-item button @click="handleProveedoresClick">
           <ion-icon slot="start" :icon="peopleOutline"></ion-icon>
           <ion-label>Proveedores</ion-label>
         </ion-item>
@@ -164,7 +163,7 @@ import accountsController from '@/controllers/accountsController';
 import type { Account } from '@/stores/accountsStore';
 import type { Income } from '@/stores/budgetEntriesStore';
 import type { Provider } from '@/stores/budgetProvidersStore';
-import { useBudgetDayStore } from '@/stores/budgetDayStore';
+import { useBudgetDay } from '@/composables/useBudgetDay';
 import type { AccountWithBalance, EntryGroup } from '@/utils/budgetTypes';
 import { formatCurrency, calcProviderProductsTotal } from '@/utils/currency';
 
@@ -191,10 +190,7 @@ const router = useRouter();
 // End Vars
 
 // Computed
-// Day-close concept removed; always treat as open
-const isDayClosed = computed(() => false);
-const budgetDayStore = useBudgetDayStore();
-const frozenSnapshot = computed(() => budgetDayStore.frozenSnapshot);
+const budgetDayStore = useBudgetDay();
 
 const accountsList = computed(() => {
   const list = accountsController.getAccounts();
@@ -205,10 +201,7 @@ const accountsList = computed(() => {
 function calculateAccountBalance(acc: Account, accountId: string | number) {
   const initialBalance = Number(acc.initialBalance) || 0;
 
-  const entries =
-    isDayClosed.value && frozenSnapshot.value
-      ? frozenSnapshot.value.entries
-      : budgetEntriesController.getEntries();
+  const entries = budgetEntriesController.getEntries();
 
   const entriesForAccount = entries.filter((e: Income) => {
     if (String(e.accountId) === String(accountId)) return true;
@@ -252,20 +245,14 @@ const accountsWithBalance = computed(() => {
 });
 
 const totalIngresos = computed(() => {
-    const entries =
-    isDayClosed.value && frozenSnapshot.value
-      ? frozenSnapshot.value.entries
-      : budgetEntriesController.getEntries();
+    const entries = budgetEntriesController.getEntries();
   return entries
     .filter((e: Income) => e.entryType === 'ingreso')
     .reduce((sum: number, e: Income) => sum + Number(e.amount || 0), 0);
 });
 
 const totalEgresos = computed(() => {
-  const entries =
-    isDayClosed.value && frozenSnapshot.value
-      ? frozenSnapshot.value.entries
-      : budgetEntriesController.getEntries();
+  const entries = budgetEntriesController.getEntries();
   const entriesTotal = entries
     .filter((e: Income) => e.entryType === 'egreso')
     .reduce((sum: number, e: Income) => sum + Number(e.amount || 0), 0);
@@ -304,10 +291,7 @@ const providersToday = computed(() => {
 });
 
 const unifiedItems = computed((): UnifiedItem[] => {
-  const entries: Income[] =
-    isDayClosed.value && frozenSnapshot.value
-      ? frozenSnapshot.value.entries
-      : budgetEntriesController.getEntries();
+  const entries: Income[] = budgetEntriesController.getEntries() || [];
 
   const selectedDateStr = String(budgetDayStore.selectedDate || '').slice(0, 10);
   const providers: Provider[] = budgetProvidersController
@@ -451,10 +435,7 @@ function getAccountRemaining(
 
   const initialBalance = Number(account.initialBalance) || 0;
 
-  const entries =
-    isDayClosed.value && frozenSnapshot.value
-      ? frozenSnapshot.value.entries
-      : budgetEntriesController.getEntries();
+  const entries = budgetEntriesController.getEntries();
 
   const entriesForAccount = entries.filter((e: Income) => {
     if (String(e.accountId) === String(accountId)) return true;

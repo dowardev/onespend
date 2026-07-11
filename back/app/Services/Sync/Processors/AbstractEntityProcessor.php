@@ -2,9 +2,11 @@
 
 namespace App\Services\Sync\Processors;
 
+use App\Repositories\SyncMetadataRepository;
+use App\Services\Sync\ConflictDetector;
+use App\Services\Sync\ForeignKeyResolver;
 use App\Services\Sync\Contracts\SyncProcessorInterface;
 use App\Services\SyncIdResolver;
-use App\Models\SyncMetadata;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Collection;
@@ -14,12 +16,23 @@ abstract class AbstractEntityProcessor implements SyncProcessorInterface
     protected const BATCH_SIZE = 500;
 
     protected SyncIdResolver $idResolver;
+    private ConflictDetector $conflictDetector;
+    protected ForeignKeyResolver $foreignKeyResolver;
+    protected SyncMetadataRepository $syncMetadataRepo;
 
     private ?array $cachedFillable = null;
 
     public function __construct()
     {
         $this->idResolver = app(SyncIdResolver::class);
+        $this->conflictDetector = app(ConflictDetector::class);
+        $this->foreignKeyResolver = app(ForeignKeyResolver::class);
+        $this->syncMetadataRepo = app(SyncMetadataRepository::class);
+    }
+
+    protected function resolveForeignKeys(array $item, int $userId): array
+    {
+        return $this->foreignKeyResolver->resolveItem($item, $this->getEntityName(), $userId);
     }
 
     abstract protected function getModel(): string;
@@ -44,7 +57,7 @@ abstract class AbstractEntityProcessor implements SyncProcessorInterface
         return array_diff($fillable, ['id', 'created_at', 'updated_at', 'deleted_at', 'user_id', 'sync_id', 'version']);
     }
 
-    protected function preprocessData(array $item, int $userId): array
+    public function preprocessData(array $item, int $userId): array
     {
         return $item;
     }
@@ -184,10 +197,8 @@ abstract class AbstractEntityProcessor implements SyncProcessorInterface
         $modelClass = $this->getModel();
         $updated = [];
         $syncIds = [];
-        $errors = [];
 
         $bulkData = [];
-        $lockConditions = [];
 
         try {
             DB::beginTransaction();
@@ -211,7 +222,7 @@ abstract class AbstractEntityProcessor implements SyncProcessorInterface
                 $data = $this->filterToFillableFromCache($preprocessed, $this->getCachedFillable());
 
                 unset($data['id'], $data['sync_id'], $data['user_id'], $data['created_at'],
-                      $data['products'], $data['_deleted'], $data['groups']);
+                      $data['products'], $data['_deleted'], $data['groups'], $data['version']);
 
                 if (isset($data['updated_at']) && is_numeric($data['updated_at'])) {
                     $data['updated_at'] = date('Y-m-d H:i:s', self::normalizeTimestamp($data['updated_at']));
@@ -219,51 +230,14 @@ abstract class AbstractEntityProcessor implements SyncProcessorInterface
                     $data['updated_at'] = now();
                 }
 
-                $existingVersion = null;
-                $existingRow = $existingMap[$syncId] ?? null;
-                if ($existingRow) {
-                    $existingVersion = $existingRow->version ?? null;
-                }
-
                 $bulkData[$syncId] = $data;
-                $lockConditions[$syncId] = $existingVersion;
                 $updated[] = ['sync_id' => $syncId, '_original' => $item];
             }
 
             if (!empty($bulkData)) {
-                $this->bulkUpdateByCaseWithVersion($modelClass, $bulkData, $lockConditions, $userId);
+                $syncIds = array_keys($bulkData);
+                $this->bulkUpdateByCase($modelClass, $bulkData, $userId);
 
-                $lockedSyncIds = array_keys(array_filter($lockConditions, fn($v) => $v !== null));
-                if (!empty($lockedSyncIds)) {
-                    $stillOld = $modelClass::whereIn('sync_id', $lockedSyncIds)
-                        ->where('user_id', $userId)
-                        ->where(function ($q) use ($lockConditions) {
-                            foreach ($lockConditions as $syncId => $version) {
-                                if ($version === null) continue;
-                                $q->orWhere(function ($sub) use ($syncId, $version) {
-                                    $sub->where('sync_id', $syncId)->where('version', $version);
-                                });
-                            }
-                        })
-                        ->pluck('sync_id')
-                        ->toArray();
-
-                    foreach ($stillOld as $conflictSyncId) {
-                        $errors[] = ['sync_id' => $conflictSyncId, 'error' => 'Optimistic lock conflict'];
-                    }
-                }
-
-                $failedSyncIds = array_column($errors, 'sync_id');
-                $bulkSyncIds = array_keys($bulkData);
-                $bulkSyncIds = array_diff($bulkSyncIds, $failedSyncIds);
-                $syncIds = array_merge($syncIds, $bulkSyncIds);
-
-                $updated = array_values(
-                    array_filter($updated, fn($u) => !in_array($u['sync_id'], $failedSyncIds))
-                );
-            }
-
-            if (!empty($syncIds)) {
                 $fieldHashes = [];
                 $baseDataMap = [];
                 foreach ($syncIds as $sid) {
@@ -280,12 +254,6 @@ abstract class AbstractEntityProcessor implements SyncProcessorInterface
 
             DB::commit();
 
-            if (!empty($errors)) {
-                Log::warning("Optimistic lock conflicts in batch update for {$this->getEntityName()}", [
-                    'conflicts' => $errors,
-                ]);
-            }
-
             return $updated;
         } catch (\Exception $e) {
             DB::rollBack();
@@ -296,10 +264,9 @@ abstract class AbstractEntityProcessor implements SyncProcessorInterface
         }
     }
 
-    private function bulkUpdateByCaseWithVersion(
+    private function bulkUpdateByCase(
         string $modelClass,
         array $bulkData,
-        array $lockConditions,
         int $userId,
     ): void {
         if (empty($bulkData)) {
@@ -326,22 +293,14 @@ abstract class AbstractEntityProcessor implements SyncProcessorInterface
 
         $setParts[] = "`version` = `version` + 1";
 
+        $placeholders = implode(', ', array_fill(0, count($allSyncIds), '?'));
+        foreach ($allSyncIds as $syncId) {
+            $bindings[] = $syncId;
+        }
         $bindings[] = $userId;
 
-        $whereParts = [];
-        foreach ($allSyncIds as $syncId) {
-            if (isset($lockConditions[$syncId]) && $lockConditions[$syncId] !== null) {
-                $whereParts[] = '(sync_id = ? AND version = ?)';
-                $bindings[] = $syncId;
-                $bindings[] = $lockConditions[$syncId];
-            } else {
-                $whereParts[] = 'sync_id = ?';
-                $bindings[] = $syncId;
-            }
-        }
-
         $sql = "UPDATE `{$table}` SET " . implode(', ', $setParts)
-             . " WHERE user_id = ? AND (" . implode(' OR ', $whereParts) . ")";
+             . " WHERE sync_id IN ({$placeholders}) AND user_id = ?";
 
         DB::update($sql, $bindings);
     }
@@ -409,177 +368,25 @@ abstract class AbstractEntityProcessor implements SyncProcessorInterface
 
     public function computeFieldHash(array $data): string
     {
-        $fillable = $this->getCachedFillable();
-        $relevantData = array_intersect_key($data, array_flip($fillable));
-        array_walk($relevantData, function (&$v) {
-            if (is_numeric($v)) {
-                $v = (string) ((float) $v);
-            } else {
-                $v = (string) $v;
-            }
-        });
-        ksort($relevantData);
-        return md5(json_encode($relevantData));
+        return $this->conflictDetector->computeFieldHash($this, $data);
     }
 
     public function detectConflicts(array $items, int $userId): array
     {
-        $conflicts = [];
-        $modelClass = $this->getModel();
-
-        $syncIds = array_map(fn($item) => $item['id'] ?? null, $items);
-        $syncIds = array_filter(array_unique($syncIds));
-
-        if (empty($syncIds)) {
-            return ['conflicts' => [], 'existingMap' => collect()];
-        }
-
-        $existing = $modelClass::whereIn('sync_id', $syncIds)
-            ->where('user_id', $userId)
-            ->get()
-            ->keyBy('sync_id');
-
-        $baseDataRecords = SyncMetadata::forUser($userId)
-            ->byEntityType($this->getEntityName())
-            ->whereIn('entity_id', $syncIds)
-            ->get()
-            ->keyBy('entity_id');
-
-        foreach ($items as $item) {
-            $syncId = $item['id'] ?? null;
-            if (!$syncId) {
-                continue;
-            }
-
-            $serverItem = $existing->get($syncId);
-            if (!$serverItem) {
-                continue;
-            }
-
-            $clientProcessed = $this->preprocessData($item, $userId);
-            $clientFiltered = $this->filterToFillableFromCache($clientProcessed, $this->getCachedFillable());
-            $clientHash = $this->computeFieldHash($clientFiltered);
-
-            $serverData = $serverItem->toArray();
-            $serverFiltered = $this->filterToFillableFromCache($serverData, $this->getCachedFillable());
-            $serverHash = $this->computeFieldHash($serverFiltered);
-
-            if ($clientHash === $serverHash) {
-                continue;
-            }
-
-            $clientTimestamp = self::normalizeTimestamp($item['updated_at'] ?? 0);
-            $serverTimestamp = $serverItem->updated_at->timestamp;
-
-            if ($clientTimestamp < $serverTimestamp) {
-                $syncMeta = $baseDataRecords->get($syncId);
-                $baseData = $syncMeta?->base_data ?? [];
-
-                $clientChangedFields = [];
-                $serverChangedFields = [];
-
-                foreach (array_keys($clientFiltered + $serverFiltered) as $field) {
-                    $clientVal = $clientFiltered[$field] ?? null;
-                    $baseVal = $baseData[$field] ?? null;
-                    $serverVal = $serverFiltered[$field] ?? null;
-
-                    $clientDifferent = $this->valuesDiffer($clientVal, $baseVal);
-                    $serverDifferent = $this->valuesDiffer($serverVal, $baseVal);
-
-                    if ($clientDifferent) {
-                        $clientChangedFields[] = $field;
-                    }
-                    if ($serverDifferent) {
-                        $serverChangedFields[] = $field;
-                    }
-                }
-
-                $overlapping = array_intersect($clientChangedFields, $serverChangedFields);
-
-                if (!empty($overlapping)) {
-                    $conflicts[] = [
-                        'sync_id' => $syncId,
-                        'server_data' => $serverData,
-                        'client_data' => $item,
-                        'server_hash' => $serverHash,
-                        'client_hash' => $clientHash,
-                        'conflict_type' => 'semantic',
-                        'overlapping_fields' => array_values($overlapping),
-                    ];
-                } else {
-                    $mergedData = $serverData;
-                    foreach ($clientChangedFields as $field) {
-                        if (isset($clientProcessed[$field])) {
-                            $mergedData[$field] = $clientProcessed[$field];
-                        }
-                    }
-                    unset($mergedData['id'], $mergedData['sync_id'], $mergedData['user_id'],
-                          $mergedData['created_at'], $mergedData['updated_at'], $mergedData['version']);
-                    $mergedData['updated_at'] = now();
-                    $modelClass::where('sync_id', $syncId)
-                        ->where('user_id', $userId)
-                        ->update($mergedData);
-
-                    $modelClass::where('sync_id', $syncId)
-                        ->where('user_id', $userId)
-                        ->increment('version');
-
-                    $newBaseData = array_merge($serverFiltered, $clientFiltered);
-                    $newHash = $this->computeFieldHash($newBaseData);
-                    $this->bulkUpdateSyncMetadata(
-                        [$syncId],
-                        'synced',
-                        $userId,
-                        [],
-                        [$syncId => $newHash],
-                        [$syncId => $newBaseData]
-                    );
-                }
-            }
-        }
-
-        return ['conflicts' => $conflicts, 'existingMap' => $existing];
-    }
-
-    private function valuesDiffer(mixed $a, mixed $b): bool
-    {
-        if (is_numeric($a) && is_numeric($b)) {
-            return (float) $a !== (float) $b;
-        }
-        return $a !== $b;
+        return $this->conflictDetector->detectConflicts($this, $items, $userId);
     }
 
     protected function bulkUpdateSyncMetadata(array $syncIds, string $status, int $userId, array $conflictDataMap = [], array $fieldHashes = [], array $baseDataMap = []): void
     {
-        if (empty($syncIds)) {
+        if ($status === 'deleted') {
+            $this->syncMetadataRepo->markSynced($this->getEntityName(), $syncIds, $userId, [], [], 'deleted');
             return;
         }
 
-        $now = now();
-        $upsertData = [];
-
-        foreach ($syncIds as $syncId) {
-            $upsertData[] = [
-                'entity_type' => $this->getEntityName(),
-                'entity_id' => $syncId,
-                'user_id' => $userId,
-                'sync_status' => $status,
-                'last_synced_at' => $now,
-                'server_updated_at' => $now,
-                'conflict_data' => $conflictDataMap[$syncId] ?? null,
-                'field_hash' => $fieldHashes[$syncId] ?? null,
-                'base_data' => isset($baseDataMap[$syncId]) ? json_encode($baseDataMap[$syncId]) : null,
-            ];
-        }
-
-        SyncMetadata::upsert(
-            $upsertData,
-            ['entity_type', 'entity_id', 'user_id'],
-            ['sync_status', 'last_synced_at', 'server_updated_at', 'conflict_data', 'field_hash', 'base_data']
-        );
+        $this->syncMetadataRepo->markSynced($this->getEntityName(), $syncIds, $userId, $fieldHashes, $baseDataMap, $status);
     }
 
-    protected function getCachedFillable(): array
+    public function getCachedFillable(): array
     {
         if ($this->cachedFillable === null) {
             $this->cachedFillable = $this->getFillableFields();
@@ -588,7 +395,7 @@ abstract class AbstractEntityProcessor implements SyncProcessorInterface
         return $this->cachedFillable;
     }
 
-    protected function filterToFillableFromCache(array $data, array $fillable): array
+    public function filterToFillableFromCache(array $data, array $fillable): array
     {
         if (empty($fillable)) {
             return $data;

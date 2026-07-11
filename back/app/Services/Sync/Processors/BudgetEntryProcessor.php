@@ -21,14 +21,9 @@ class BudgetEntryProcessor extends AbstractEntityProcessor
         return 'budget_entry';
     }
 
-    protected function preprocessData(array $item, int $userId): array
+    public function preprocessData(array $item, int $userId): array
     {
-        $resolver = $this->idResolver;
-
-        $accountId = $item['account_id'] ?? $item['accountId'] ?? null;
-        if ($accountId !== null) {
-            $item['account_id'] = $resolver->resolveToInt($accountId, 'account', $userId);
-        }
+        $item = $this->resolveForeignKeys($item, $userId);
 
         if (isset($item['paymentType'])) {
             $item['payment_type'] = $item['paymentType'];

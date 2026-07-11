@@ -6,22 +6,11 @@
     <ion-split-pane when="(min-width: 992px)" content-id="main-content">
       <MainMenu
         ref="menuRef"
-        :needs-normalize="needsNormalize"
-        :needs-entries="needsEntries"
-        :migration-dismissed="migrationDismissed"
         @navigate="handleNavigate"
-        @dismiss-migration="dismissMigrationNotice"
       />
       <ion-router-outlet id="main-content" />
 
-      <!-- toasts -->
-      <ion-toast
-        :is-open="migrationToast.open"
-        :message="migrationToast.message"
-        :buttons="migrationToast.buttons"
-        @did-dismiss="() => (migrationToast.open = false)"
-      />
-      <!-- toasts -->
+
     </ion-split-pane>
   </ion-app>
 </template>
@@ -32,7 +21,6 @@ import {
   IonApp,
   IonSplitPane,
   IonRouterOutlet,
-  IonToast,
   menuController,
   isPlatform,
 } from '@ionic/vue';
@@ -40,12 +28,6 @@ import { onMounted, ref, reactive } from 'vue';
 import { useRouter } from 'vue-router';
 import MainMenu from '@/components/MainMenu.vue';
 import DOMCleanupComponent from '@/components/DOMCleanupComponent.vue';
-import {
-  needsNormalizeCheck,
-  migrateNormalizeBackupDates,
-} from '@/migrations/normalizeBackupsDates';
-import { needsEntriesKeyCheck } from '@/migrations/addEntriesKeyToBackups';
-import { runMigration } from '@/db/migrateFromLegacy';
 // End Imports
 
 // Controllers
@@ -62,34 +44,7 @@ const appName =
   'Menú';
 const router = useRouter();
 
-const needsNormalize = ref(false);
-const needsEntries = ref(false);
-const migrationDismissed = ref(false);
 const toast = reactive({ open: false, message: '', duration: 3000 });
-const migrationToast = reactive({
-  open: false,
-  message:
-    'Actualización disponible: Se detectaron datos que requieren migración. Recomendamos crear una copia de seguridad y ejecutar la migración.',
-  buttons: [
-    {
-      side: 'end',
-      text: 'Ir a migración',
-      handler: () => {
-        if (needsEntries.value) handleNavigate({ name: 'MigrateEntries' });
-        else handleNavigate({ name: 'MigrateDates' });
-      },
-    },
-    {
-      side: 'end',
-      text: 'Descartar',
-      role: 'cancel',
-      handler: () => {
-        migrationToast.open = false;
-        dismissMigrationNotice();
-      },
-    },
-  ],
-});
 // End Vars
 
 // Functions
@@ -149,8 +104,6 @@ async function handleNavigate(params: { path?: string; name?: string }) {
         } else {
           if (params.name === 'MaintenancePage') {
             await router.push('/admin/maintenance');
-          } else if (params.name === 'MigrateDates') {
-            await router.push('/admin/maintenance/migrate-dates');
           } else {
             console.error('navigate: unknown route name and no path provided', params.name);
           }
@@ -167,38 +120,10 @@ async function handleNavigate(params: { path?: string; name?: string }) {
   }
 }
 
-function dismissMigrationNotice() {
-  migrationDismissed.value = true;
-  systemController.setMigrationNoticeDismissed({ value: true });
-}
-
-async function showMigrationToast() {
-  try {
-    toast.message = 'Simulación iniciada: revisa la pantalla de migración para ver los detalles.';
-    toast.open = true;
-    handleNavigate({ name: 'MigrateDates' });
-    try {
-      await router.push({ name: 'MigrateDates', query: { autoDryRun: '1' } });
-    } catch (e) {
-      console.error('navigate to MigrateDates failed', e);
-    }
-  } catch (e) {
-    console.error(e);
-  }
-}
 // End Functions
 
 // Life cycle
-onMounted(async () => {
-  try {
-    const result = await runMigration()
-    if (result.migrated) {
-      console.log(`[migration] Dexie migration completed:`, result.stats)
-    }
-  } catch (e) {
-    console.error('[migration] Failed:', e)
-  }
-
+  onMounted(async () => {
   setDesignMode();
   setupThemeListener();
   await applyTheme();
@@ -206,34 +131,6 @@ onMounted(async () => {
   await accountsController.loadAll();
 
   await authController.checkAuth();
-
-  migrationDismissed.value = !!systemController.getMigrationNoticeDismissed();
-
-  try {
-    const [normalizeNeeded, entriesNeeded] = await Promise.all([
-      needsNormalizeCheck(),
-      needsEntriesKeyCheck(),
-    ]);
-    needsNormalize.value = !!normalizeNeeded;
-    needsEntries.value = !!entriesNeeded;
-  } catch (e) {
-    console.error('migration checks failed', e);
-    needsNormalize.value = false;
-    needsEntries.value = false;
-  }
-
-  if ((needsEntries.value || needsNormalize.value) && !migrationDismissed.value) {
-    if ((import.meta as unknown as { env?: Record<string, string | undefined> }).env?.DEV) {
-      console.log('App.onMounted: opening migration toast', {
-        needsNormalize: needsNormalize.value,
-        needsEntries: needsEntries.value,
-      });
-    }
-    migrationToast.open = true;
-  } else {
-    if ((import.meta as unknown as { env?: Record<string, string | undefined> }).env?.DEV) {
-    }
-  }
 
   try {
     if (window && window.innerWidth >= 992) {

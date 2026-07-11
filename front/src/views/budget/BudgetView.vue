@@ -103,10 +103,6 @@
             <ion-icon slot="start" :icon="trashOutline" color="danger"></ion-icon>
             <ion-label>Vaciar día</ion-label>
           </ion-item>
-          <ion-item v-if="isDev" button @click="insertTestData">
-            <ion-icon slot="start" :icon="addOutline" color="success"></ion-icon>
-            <ion-label color="success">Insertar datos prueba</ion-label>
-          </ion-item>
         </ion-content>
       </ion-popover>
       <!-- end popovers -->
@@ -161,13 +157,12 @@ import {
   diceOutline,
   ellipsisVerticalOutline,
   trashOutline,
-  addOutline,
   timeOutline,
 } from 'ionicons/icons';
 import { computed, ref } from 'vue';
-import { format, subDays } from 'date-fns';
-import { parseLocalDate, formatLocalDate } from '@/utils/date';
+import { format, addDays } from 'date-fns';
 import { es as esLocale } from 'date-fns/locale';
+import { parseLocalDate, formatLocalDate } from '@/utils/date';
 import { faker } from '@faker-js/faker';
 // end imports
 
@@ -176,14 +171,15 @@ import systemController from '@/controllers/systemConfigController';
 import budgetEntriesController from '@/controllers/budgetEntriesController';
 import budgetProvidersController from '@/controllers/budgetProvidersController';
 import accountsController from '@/controllers/accountsController';
-import { AccountsController } from '@/controllers/accountsController';
+import { SuppliersController, type Supplier } from '@/controllers/suppliersController';
 import { recurringRecordsController, type RecurringRecord } from '@/controllers/recurringRecordsController';
 import { isDueOnDate, shouldAutoInsert } from '@/composables/useRecurrence';
-import { useBudgetDayStore } from '@/stores/budgetDayStore';
-import { useBudgetEntriesStore } from '@/stores/budgetEntriesStore';
-import { useBudgetProvidersStore } from '@/stores/budgetProvidersStore';
+import { useBudgetDay } from '@/composables/useBudgetDay';
 import attachmentService from '@/services/attachmentService';
 import pendingAttachmentsService from '@/services/pendingAttachmentsService';
+import { dataMediator } from '@/services/dataMediator';
+import { SyncController } from '@/controllers/syncController';
+const syncController = SyncController;
 // end controllers
 
 // components
@@ -217,7 +213,7 @@ const repairRan = ref(false);
 // end
 
 // computed
-const budgetDayStore = useBudgetDayStore();
+const budgetDayStore = useBudgetDay();
 const formattedSelectedDate = computed(() => {
   try {
     const d = parseLocalDate({ d: budgetDayStore.selectedDate });
@@ -232,6 +228,12 @@ const formattedSelectedDate = computed(() => {
 // onIonViewWillEnter
   onIonViewWillEnter(async () => {
     try {
+      await dataMediator.reloadAll();
+      try {
+        await syncController.pullFromServer();
+      } catch {
+        // background pull; don't block view rendering
+      }
       await accountsController.loadAll();
       await budgetDayStore.loadBudgetForDate({ date: budgetDayStore.selectedDate });
       if (!repairRan.value) {
@@ -358,7 +360,7 @@ async function deduplicateRecurringEntries(): Promise<void> {
   }
 
   if (hadDuplicates) {
-    await budgetDayStore.saveBudgetData();
+
   }
 }
 
@@ -415,7 +417,7 @@ async function processRecurringForDate() {
           await budgetProvidersController.addProvider({
             name: record.name,
             estimated: record.estimated,
-            accountId: Number(record.accountId) || 0,
+            accountId: record.accountId ? Number(record.accountId) : null,
             _fromRecurringId: syncId,
             products: record.products?.map((p) => ({
               id: p.supplierProductId ? String(p.supplierProductId) : undefined,
@@ -435,7 +437,7 @@ async function processRecurringForDate() {
         pendientes.push(record);
       }
     }
-    await budgetDayStore.saveBudgetData();
+
 
     pendingRecurringRecords.value = pendientes;
     if (pendientes.some((r) => r.autoInsert && r.time)) {
@@ -490,164 +492,60 @@ async function performClearDay() {
   // Eliminar entradas del día
   budgetEntriesController.getStore().clearEntries();
   budgetProvidersController.getStore().clearProviders();
-  budgetDayStore.isDayClosed = false;
-  await budgetDayStore.saveBudgetData();
+
   showClearConfirm.value = false;
-}
-
-async function insertTestData() {
-  const accountsCtrl = new AccountsController();
-
-  try {
-    await accountsCtrl.loadAll();
-  } catch (error) {
-    console.error(error);
-  }
-
-  let accounts = accountsCtrl.getAccounts();
-
-  if (accounts.length === 0) {
-    await accountsCtrl.addAccount({
-      account: { name: 'Caja Principal', initialBalance: 0 },
-    });
-    await accountsCtrl.addAccount({
-      account: { name: 'Banco', initialBalance: 0 },
-    });
-    accounts = accountsCtrl.getAccounts();
-  }
-
-  const accountId1 = accounts[0].id;
-  const accountId2 = accounts[1]?.id ?? accountId1;
-
-  await budgetEntriesController.addIngreso({
-    name: 'Venta mostrador 1',
-    amount: 1500,
-    paymentType: 'cash',
-    accountId: accountId1,
-  });
-  await budgetEntriesController.addIngreso({
-    name: 'Venta mostrador 2',
-    amount: 2300,
-    paymentType: 'digital',
-    accountId: accountId2,
-  });
-  await budgetEntriesController.addIngreso({
-    name: 'Venta online',
-    amount: 4500,
-    paymentType: 'cash',
-    accountId: accountId1,
-  });
-  await budgetEntriesController.addIngreso({
-    name: 'Pedido mayorista',
-    amount: 12000,
-    paymentType: 'digital',
-    accountId: accountId2,
-  });
-  await budgetEntriesController.addIngreso({
-    name: 'Venta telefónica',
-    amount: 3500,
-    paymentType: 'cash',
-    accountId: accountId1,
-  });
-
-  await budgetEntriesController.addEgreso({
-    name: 'Compra inventario',
-    amount: 8000,
-    paymentType: 'cash',
-    accountId: accountId1,
-  });
-  await budgetEntriesController.addEgreso({
-    name: 'Pago servicios',
-    amount: 2500,
-    paymentType: 'digital',
-    accountId: accountId2,
-  });
-  await budgetEntriesController.addEgreso({
-    name: 'Transporte',
-    amount: 800,
-    paymentType: 'cash',
-    accountId: accountId1,
-  });
-
-  await budgetProvidersController.addProvider({
-    name: 'Proveedor A',
-    estimated: 500,
-    accountId: Number(accountId1),
-  });
-  await budgetProvidersController.addProvider({
-    name: 'Proveedor B',
-    estimated: 800,
-    accountId: Number(accountId2),
-  });
-  await budgetProvidersController.addProvider({
-    name: 'Proveedor C',
-    estimated: 1200,
-    accountId: Number(accountId1),
-  });
-  await budgetProvidersController.addProvider({
-    name: 'Proveedor D',
-    estimated: 600,
-    accountId: Number(accountId2),
-  });
-  await budgetProvidersController.addProvider({
-    name: 'Proveedor E',
-    estimated: 950,
-    accountId: Number(accountId1),
-  });
-  await budgetProvidersController.addProvider({
-    name: 'Proveedor F',
-    estimated: 1500,
-    accountId: Number(accountId2),
-  });
-  await budgetProvidersController.addProvider({
-    name: 'Proveedor G',
-    estimated: 450,
-    accountId: Number(accountId1),
-  });
-
-  await budgetDayStore.saveBudgetData();
-  showMoreOptions.value = false;
 }
 
 async function generateRandomData() {
   const days = 30;
+  const halfRange = 15;
   const startDate = budgetDayStore.selectedDate;
   if (!startDate) return;
 
+  // 1. Ensure at least 2 accounts
   let accountIds = await getRandomAccountIds();
-  if (accountIds.length === 0) {
-    console.log('[generateRandomData] No hay cuentas, creando automáticamente...');
-    const defaultAccountNames = [
-      'Caja Principal',
-      'Banco',
-      'Tarjeta de Crédito',
-      'Efectivo',
-      'Cuenta Corriente',
-    ];
-
-    for (const name of defaultAccountNames) {
-      try {
-        await accountsController.addAccount({
-          account: { name, initialBalance: faker.number.int({ min: 0, max: 50000 }) },
-        });
-      } catch (e) {
-        console.warn('[generateRandomData] Error creando cuenta', name, e);
-      }
+  if (accountIds.length < 2) {
+    const existingNames = (await accountsController.loadAll()).map((a) => String(a.name));
+    if (!existingNames.includes('Caja Principal')) {
+      await accountsController.addAccount({ account: { name: 'Caja Principal', initialBalance: 0 } });
     }
-
+    if (!existingNames.includes('Banco')) {
+      await accountsController.addAccount({ account: { name: 'Banco', initialBalance: 0 } });
+    }
     accountIds = await getRandomAccountIds();
-    if (accountIds.length === 0) {
-      const toast = await toastController.create({
-        message: 'No se pudieron crear cuentas automáticamente',
-        duration: 3000,
-        position: 'bottom',
-        color: 'danger',
-      });
-      await toast.present();
-      return;
+    if (accountIds.length < 2) {
+      await accountsController.addAccount({ account: { name: 'Caja Principal', initialBalance: 0 } });
+      await accountsController.addAccount({ account: { name: 'Banco', initialBalance: 0 } });
+      accountIds = await getRandomAccountIds();
+      if (accountIds.length === 0) {
+        const toast = await toastController.create({
+          message: 'Error creando cuentas automáticamente',
+          duration: 3000,
+          position: 'bottom',
+          color: 'danger',
+        });
+        await toast.present();
+        return;
+      }
     }
   }
 
+  // 2. Ensure at least 3 catalog suppliers
+  const suppliersCtrl = new SuppliersController();
+  let catalogSuppliers = [...(suppliersCtrl.getSuppliers() as Supplier[])];
+  if (catalogSuppliers.length < 3) {
+    const sampleNames = ['Verdulería del Barrio', 'Carnicería Don Pepe', 'Panadería La Espiga'];
+    const toCreate = 3 - catalogSuppliers.length;
+    for (let k = 0; k < toCreate; k++) {
+      const name = sampleNames[k] || `Proveedor ${faker.company.name().split(' ')[0]}`;
+      const created = await suppliersCtrl.addSupplier({ s: { name, products: [] } });
+      if (created) catalogSuppliers.push(created);
+    }
+    // Force reload store so liveQuery catches up for subsequent reads
+    await suppliersCtrl.getStore().reload();
+  }
+
+  // 3. Toast
   const toast = await toastController.create({
     message: `Generando datos aleatorios para ${days} días...`,
     duration: 0,
@@ -678,15 +576,12 @@ async function generateRandomData() {
   let successCount = 0;
   let failCount = 0;
 
-  for (let i = 0; i < days; i++) {
+  for (let offset = -halfRange; offset < halfRange; offset++) {
     try {
-      const date = format(subDays(parseLocalDate({ d: startDate }), i), 'yyyy-MM-dd');
+      const date = format(addDays(parseLocalDate({ d: startDate }), offset), 'yyyy-MM-dd');
 
       budgetDayStore.setSelectedDate(date);
       await budgetDayStore.loadBudgetForDate({ date });
-
-      budgetEntriesController.getStore().clearEntries();
-      budgetProvidersController.getStore().clearProviders();
 
       // Generate ingresos (3-8)
       const ingresoCount = faker.number.int({ min: 3, max: 8 });
@@ -698,13 +593,7 @@ async function generateRandomData() {
         const paymentType = faker.helpers.arrayElement(paymentTypes);
         const accountId = faker.helpers.arrayElement(accountIds);
 
-        await budgetEntriesController.addIngreso({
-          name,
-          amount,
-          paymentType,
-          accountId,
-          date,
-        });
+        await budgetEntriesController.addIngreso({ name, amount, paymentType, accountId, date });
       }
 
       // Generate egresos (2-6)
@@ -717,19 +606,14 @@ async function generateRandomData() {
         const paymentType = faker.helpers.arrayElement(paymentTypes);
         const accountId = faker.helpers.arrayElement(accountIds);
 
-        await budgetEntriesController.addEgreso({
-          name,
-          amount,
-          paymentType,
-          accountId,
-          date,
-        });
+        await budgetEntriesController.addEgreso({ name, amount, paymentType, accountId, date });
       }
 
       // Generate proveedores (1-4)
       const providerCount = faker.number.int({ min: 1, max: 4 });
       for (let j = 0; j < providerCount; j++) {
-        const name = faker.company.name();
+        const supplier = faker.helpers.arrayElement(catalogSuppliers);
+        const name = supplier.name;
         const estimated = faker.number.int({ min: 200, max: 5000 });
         const accountId = Number(faker.helpers.arrayElement(accountIds));
 
@@ -738,15 +622,18 @@ async function generateRandomData() {
           estimated,
           accountId,
           date,
+          _supplierId: supplier.sync_id,
+          _supplierName: supplier.name,
+          _supplier: supplier,
         });
       }
 
-      await budgetDayStore.saveBudgetData();
+  
       successCount++;
       console.log(`[generateRandomData] Día ${date}: OK`);
     } catch (e) {
       failCount++;
-      console.error('[generateRandomData] Error en día', i, e);
+      console.error('[generateRandomData] Error en día', offset, e);
     }
   }
 
@@ -825,7 +712,6 @@ async function applySinglePendingRecord(params: { record: RecurringRecord }) {
     });
   }
 
-  await budgetDayStore.saveBudgetData();
   const idx = pendingRecurringRecords.value.findIndex((r) => r.id === record.id);
   if (idx !== -1) pendingRecurringRecords.value.splice(idx, 1);
   if (pendingRecurringRecords.value.length === 0) showPendingModal.value = false;

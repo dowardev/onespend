@@ -101,6 +101,7 @@ class SupplierProcessor extends AbstractEntityProcessor
             \Illuminate\Support\Facades\DB::beginTransaction();
 
             $productsBySyncId = [];
+            $filteredDataBySyncId = [];
 
             foreach ($items as $item) {
                 $syncId = $item['id'] ?? null;
@@ -137,9 +138,10 @@ class SupplierProcessor extends AbstractEntityProcessor
                     continue;
                 }
 
-                $result[] = ['sync_id' => $syncId];
+$result[] = ['sync_id' => $syncId];
+                $filteredDataBySyncId[$syncId] = $updateFields;
 
-            if (!empty($products)) {
+                if (!empty($products)) {
                 $productsBySyncId[$syncId] = $products;
             }
         }
@@ -152,7 +154,15 @@ class SupplierProcessor extends AbstractEntityProcessor
 
             $syncIds = array_column($result, 'sync_id');
             if (!empty($syncIds)) {
-                $this->bulkUpdateSyncMetadata($syncIds, 'synced', $userId);
+                $fieldHashes = [];
+                $baseDataMap = [];
+                foreach ($syncIds as $sid) {
+                    if (isset($filteredDataBySyncId[$sid])) {
+                        $fieldHashes[$sid] = $this->computeFieldHash($filteredDataBySyncId[$sid]);
+                        $baseDataMap[$sid] = [];
+                    }
+                }
+                $this->bulkUpdateSyncMetadata($syncIds, 'synced', $userId, [], $fieldHashes, $baseDataMap);
             }
 
             \Illuminate\Support\Facades\DB::commit();

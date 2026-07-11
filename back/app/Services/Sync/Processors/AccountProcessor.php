@@ -16,7 +16,7 @@ class AccountProcessor extends AbstractEntityProcessor
         return 'account';
     }
 
-    protected function preprocessData(array $item, int $userId): array
+    public function preprocessData(array $item, int $userId): array
     {
         if (isset($item['initialBalance'])) {
             $item['initial_balance'] = $item['initialBalance'];

@@ -60,14 +60,21 @@ class ConflictStore {
     return [...this.conflicts];
   }
 
+  async getCount(): Promise<number> {
+    await this.ensureLoaded();
+    return this.conflicts.length;
+  }
+
   async clear(): Promise<void> {
     this.conflicts = [];
     await this.persist();
   }
 
-  async getCount(): Promise<number> {
+  async remove(params: { entityType: string; sync_id: string }): Promise<void> {
     await this.ensureLoaded();
-    return this.conflicts.length;
+    const { entityType, sync_id } = params;
+    this.conflicts = this.conflicts.filter(c => !(c.entityType === entityType && c.item.sync_id === sync_id));
+    await this.persist();
   }
 }
 
@@ -98,8 +105,21 @@ export class ConflictResolutionService {
 
     for (const [entityType, items] of Object.entries(conflicts)) {
       for (const item of items) {
+        const conflictType = (item as any).conflict_type;
+        const isVersionMismatch = conflictType === 'version_mismatch';
+        const isSemanticOverlap =
+          conflictType === 'semantic' &&
+          Array.isArray((item as any).overlapping_fields) &&
+          (item as any).overlapping_fields.length > 0;
+        const isConcurrentEdit = conflictType === 'concurrent_edit';
+        const isUserResolutionRequired = isVersionMismatch || isSemanticOverlap || isConcurrentEdit;
+
+        if (isUserResolutionRequired) {
+          await conflictStore.add({ entityType, item });
+          continue;
+        }
+
         const resolution = this.resolveAuto(entityType, item);
-        await conflictStore.add({ entityType, item });
         if (resolution) {
           batchEntries.push({
             resolution,
@@ -138,6 +158,10 @@ export class ConflictResolutionService {
                 server_data: entry.server_data,
               });
             }
+            await conflictStore.remove({
+              entityType: entry.entityType,
+              sync_id: entry.sync_id,
+            });
           } catch {
             console.error('[ConflictResolutionService] Fallback resolve failed for:', entry.sync_id);
           }
@@ -152,9 +176,14 @@ export class ConflictResolutionService {
         console.warn('[ConflictResolutionService] Some conflicts failed in batch:', result.errors);
       }
 
-      if (onConflictResolved) {
-        for (const entry of batchEntries) {
-          if (!failedIds.has(entry.resolution.entity_id) && entry.resolution.resolution === 'server' && entry.server_data) {
+      for (const entry of batchEntries) {
+        if (!failedIds.has(entry.resolution.entity_id)) {
+          await conflictStore.remove({
+            entityType: entry.entityType,
+            sync_id: entry.sync_id,
+          });
+
+          if (onConflictResolved && entry.resolution.resolution === 'server' && entry.server_data) {
             await onConflictResolved({
               entityType: entry.entityType,
               sync_id: entry.sync_id,

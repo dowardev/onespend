@@ -18,19 +18,9 @@ class BudgetProviderProcessor extends AbstractEntityProcessor
         return 'budget_provider';
     }
 
-    protected function preprocessData(array $item, int $userId): array
+    public function preprocessData(array $item, int $userId): array
     {
-        $resolver = $this->idResolver;
-
-        $accountId = $item['account_id'] ?? $item['accountId'] ?? null;
-        if ($accountId !== null) {
-            $item['account_id'] = $resolver->resolveToInt($accountId, 'account', $userId);
-        }
-
-        $supplierId = $item['_supplier_id'] ?? $item['supplierId'] ?? null;
-        if ($supplierId !== null) {
-            $item['_supplier_id'] = $resolver->resolveToInt($supplierId, 'supplier', $userId);
-        }
+        $item = $this->resolveForeignKeys($item, $userId);
 
         if (isset($item['supplierName'])) {
             $item['_supplier_name'] = $item['supplierName'];
@@ -114,6 +104,7 @@ class BudgetProviderProcessor extends AbstractEntityProcessor
             \Illuminate\Support\Facades\DB::beginTransaction();
 
             $productsBySyncId = [];
+            $filteredDataBySyncId = [];
 
             foreach ($items as $item) {
                 $syncId = $item['id'] ?? null;
@@ -124,6 +115,7 @@ class BudgetProviderProcessor extends AbstractEntityProcessor
                 unset($data['id'], $data['sync_id'], $data['user_id'], $data['created_at'],
                     $data['products'], $data['_deleted']);
                 $data['updated_at'] = now();
+                $filteredDataBySyncId[$syncId] = $data;
 
                 $existingUpdatedAt = null;
                 if (isset($existingMap[$syncId])) {
@@ -171,8 +163,16 @@ class BudgetProviderProcessor extends AbstractEntityProcessor
             }
         }
 
-            if (!empty($syncIds)) {
-                $this->bulkUpdateSyncMetadata($syncIds, 'synced', $userId);
+if (!empty($syncIds)) {
+                $fieldHashes = [];
+                $baseDataMap = [];
+                foreach ($syncIds as $sid) {
+                    if (isset($filteredDataBySyncId[$sid])) {
+                        $fieldHashes[$sid] = $this->computeFieldHash($filteredDataBySyncId[$sid]);
+                        $baseDataMap[$sid] = [];
+                    }
+                }
+                $this->bulkUpdateSyncMetadata($syncIds, 'synced', $userId, [], $fieldHashes, $baseDataMap);
             }
 
             \Illuminate\Support\Facades\DB::commit();
@@ -231,7 +231,9 @@ class BudgetProviderProcessor extends AbstractEntityProcessor
                 ['sync_id', 'user_id'],
                 ['budget_provider_id', 'supplier_product_id', 'product_name', 'product_price', 'quantity', 'status', 'deleted_at', 'updated_at']
             );
-            $this->bulkUpdateSyncMetadata($productSyncIds, 'synced', $userId);
+            $fieldHashes = array_combine($productSyncIds, array_map(fn($item) => $this->computeFieldHash($item), $upsertData));
+            $baseDataMap = array_fill_keys($productSyncIds, []);
+            $this->bulkUpdateSyncMetadata($productSyncIds, 'synced', $userId, [], $fieldHashes, $baseDataMap);
         }
     }
 }

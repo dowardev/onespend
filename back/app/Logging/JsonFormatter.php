@@ -11,8 +11,8 @@ class JsonFormatter extends MonologJsonFormatter
         parent::__construct(
             batchMode: false,
             appendNewline: true,
-            dateFormat: 'Y-m-d\TH:i:s.vP',
         );
+        $this->setDateFormat('Y-m-d\TH:i:s.vP');
         $this->setJsonEncodeOptions(JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     }
 }

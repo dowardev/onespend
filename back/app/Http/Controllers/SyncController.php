@@ -40,6 +40,17 @@ class SyncController extends Controller
         'recurring_record_product' => RecurringRecordProduct::class,
     ];
 
+    public const ENTITY_REQUEST_TYPES = [
+        'account' => \App\Http\Requests\StoreAccountRequest::class,
+        'budget_provider' => \App\Http\Requests\StoreBudgetProviderRequest::class,
+        'budget_provider_product' => \App\Http\Requests\StoreBudgetProviderProductRequest::class,
+        'budget_entry' => \App\Http\Requests\StoreBudgetEntryRequest::class,
+        'supplier' => \App\Http\Requests\StoreSupplierRequest::class,
+        'supplier_product' => \App\Http\Requests\StoreSupplierProductRequest::class,
+        'recurring_record' => \App\Http\Requests\StoreRecurringRecordRequest::class,
+        'recurring_record_product' => \App\Http\Requests\StoreRecurringRecordProductRequest::class,
+    ];
+
     private SyncOrchestratorService $orchestrator;
     private SyncMetrics $metrics;
 
@@ -81,7 +92,7 @@ class SyncController extends Controller
 
         $lastSyncDateTime = $lastSync > 0
             ? date('Y-m-d H:i:s', AbstractEntityProcessor::normalizeTimestamp($lastSync))
-            : '1970-01-01 00:00:00';
+            : null; // null = trae todos los cambios sin filtro de fecha
 
         $requestedEntityTypes = array_intersect($entityTypes, array_keys(self::ENTITY_TYPES));
         $typeIndexMap = array_flip($requestedEntityTypes);
@@ -157,11 +168,13 @@ class SyncController extends Controller
             }
 
             if ($recordsExhausted) {
-                $deletedIds = SyncMetadata::forUser($userId)
+                $deletedQuery = SyncMetadata::forUser($userId)
                     ->byEntityType($entityType)
-                    ->where('sync_status', 'deleted')
-                    ->where('server_updated_at', '>', $lastSyncDateTime)
-                    ->pluck('entity_id');
+                    ->where('sync_status', 'deleted');
+                if ($lastSyncDateTime !== null) {
+                    $deletedQuery->where('server_updated_at', '>', $lastSyncDateTime);
+                }
+                $deletedIds = $deletedQuery->pluck('entity_id');
 
                 foreach ($deletedIds as $deletedId) {
                     if (!isset($finalChanges[$entityType])) {
@@ -226,7 +239,7 @@ class SyncController extends Controller
     private function fetchChangedSyncIds(
         string $entityType,
         int $userId,
-        string $lastSyncDateTime,
+        ?string $lastSyncDateTime,
         int $currentTypeIdx,
         int $startType,
         ?string $startUpdatedAt,
@@ -245,9 +258,10 @@ class SyncController extends Controller
                          ->where('sync_id', '>', $startSyncId);
                   });
             });
-        } else {
-            $query->where('updated_at', '>', $lastSyncDateTime);
+        } elseif ($lastSyncDateTime !== null) {
+            $query->where('updated_at', '>=', $lastSyncDateTime);
         }
+        // Si $lastSyncDateTime es null, no se aplica filtro de fecha (trae todos)
 
         return $query->orderBy('updated_at')->orderBy('sync_id')
             ->limit($remaining)
@@ -255,7 +269,7 @@ class SyncController extends Controller
             ->toArray();
     }
 
-    private function fetchChangedSyncIdsUnion(array $entityTypes, int $userId, string $lastSyncDateTime, int $startType, ?string $startUpdatedAt, ?string $startSyncId, int $limit): array
+    private function fetchChangedSyncIdsUnion(array $entityTypes, int $userId, ?string $lastSyncDateTime, int $startType, ?string $startUpdatedAt, ?string $startSyncId, int $limit): array
     {
         $unionParts = [];
         $params = [];
@@ -264,15 +278,27 @@ class SyncController extends Controller
             $modelClass = self::ENTITY_TYPES[$entityType];
             $table = (new $modelClass)->getTable();
 
-            $whereClause = '`user_id` = ? AND `updated_at` > ?';
-            $params[] = $userId;
-            $params[] = $lastSyncDateTime;
+            if ($lastSyncDateTime !== null) {
+                $whereClause = '`user_id` = ? AND `updated_at` >= ?';
+                $params[] = $userId;
+                $params[] = $lastSyncDateTime;
+            } else {
+                $whereClause = '`user_id` = ?';
+                $params[] = $userId;
+            }
 
             if ($typeIdx === $startType && $startUpdatedAt !== null) {
-                $whereClause = '(' . $whereClause . ') AND (`updated_at` > ? OR (`updated_at` = ? AND `sync_id` > ?))';
-                $params[] = $startUpdatedAt;
-                $params[] = $startUpdatedAt;
-                $params[] = $startSyncId;
+                if ($lastSyncDateTime !== null) {
+                    $whereClause = '(' . $whereClause . ') AND (`updated_at` > ? OR (`updated_at` = ? AND `sync_id` > ?))';
+                    $params[] = $startUpdatedAt;
+                    $params[] = $startUpdatedAt;
+                    $params[] = $startSyncId;
+                } else {
+                    $whereClause = '(' . $whereClause . ') AND (`updated_at` > ? OR (`updated_at` = ? AND `sync_id` > ?))';
+                    $params[] = $startUpdatedAt;
+                    $params[] = $startUpdatedAt;
+                    $params[] = $startSyncId;
+                }
             }
 
             $unionParts[] = "SELECT `sync_id`, `updated_at`, '" . $entityType . "' as entity_type, " . $typeIdx . " as type_idx FROM `{$table}` WHERE {$whereClause}";
@@ -474,9 +500,10 @@ class SyncController extends Controller
                             ->latest()
                             ->first();
                         if ($syncMeta && !$syncMeta->dedup_hash) {
-                            $syncMeta->update([
-                                'dedup_hash' => $this->computeDedupHash($entityType, $item),
-                            ]);
+                            app(\App\Repositories\SyncMetadataRepository::class)->updateDedupHash(
+                                $entityType, $syncId, $user->id,
+                                $this->computeDedupHash($entityType, $item),
+                            );
                         }
                     }
                     unset($item['_original']);
@@ -835,6 +862,29 @@ class SyncController extends Controller
         $this->recordSyncMetrics('fullSync', $startTime);
         return Response::stream($streamCallback, 200, $headers);
     }
+    public function getActiveConflicts(Request $request): JsonResponse
+    {
+        $startTime = microtime(true);
+        $user = $request->user();
+        $entityType = $request->input('entity_type');
+
+        $query = SyncMetadata::forUser($user->id)
+            ->conflicted()
+            ->orderBy('updated_at', 'desc');
+
+        if ($entityType) {
+            $query->byEntityType($entityType);
+        }
+
+        $conflicts = $query->limit(200)->get();
+
+        $this->recordSyncMetrics('getActiveConflicts', $startTime);
+        return response()->json([
+            'success' => true,
+            'conflicts' => $conflicts,
+        ]);
+    }
+
     public function getResolvedConflicts(Request $request): JsonResponse
     {
         $startTime = microtime(true);
@@ -861,44 +911,78 @@ class SyncController extends Controller
             ->byEntity($entityType, $entityId)
             ->first();
 
-    if (!$syncMeta) {
-        $this->recordSyncMetrics('resolveConflict', $startTime, 'not_found');
-        return response()->json([
-            'success' => false,
-            'error' => 'Conflict not found',
-        ], 404);
-    }
+        if (!$syncMeta) {
+            $this->recordSyncMetrics('resolveConflict', $startTime, 'not_found');
+            return response()->json([
+                'success' => false,
+                'error' => 'Conflict not found',
+            ], 404);
+        }
 
-    if ($syncMeta->sync_status !== 'conflict') {
-        $this->recordSyncMetrics('resolveConflict', $startTime, 'not_conflict');
-        return response()->json([
-            'success' => false,
-            'error' => 'No active conflict for this entity',
-        ], 409);
-    }
+        // Read conflict_data snapshot BEFORE CAS (CAS will overwrite it)
+        $existingPayload = is_string($syncMeta->conflict_data)
+            ? (json_decode($syncMeta->conflict_data, true) ?? [])
+            : (array) $syncMeta->conflict_data;
 
-    // Validate client_data against the entity's FormRequest
-        if ($clientData !== null) {
-            $this->validateEntityData($entityType, [$clientData]);
+        $resolutionPayload = array_merge($existingPayload, [
+            'resolution' => $resolution,
+            'resolved_at' => now()->toIso8601String(),
+        ]);
+
+        // CAS atómico: only succeeds if sync_status is still 'conflict'
+        $affected = app(\App\Repositories\SyncMetadataRepository::class)->markResolved(
+            [$entityId], $user->id, json_encode($resolutionPayload)
+        );
+
+        if ($affected === 0) {
+            $this->recordSyncMetrics('resolveConflict', $startTime, 'not_conflict');
+            return response()->json([
+                'success' => false,
+                'error' => 'No active conflict for this entity',
+            ], 409);
         }
 
         if ($resolution === 'client' && $clientData) {
-            $this->updateEntity($entityType, $entityId, $clientData, $user->id);
+            $resolved = $this->resolveEntityFkFields($entityType, $clientData, $user->id);
+            $this->validateEntityData($entityType, [$resolved]);
+            $this->updateEntity($entityType, $entityId, $resolved, $user->id);
         }
 
-        $syncMeta->update([
-            'sync_status' => 'resolved',
-            'conflict_data' => $syncMeta->conflict_data ?? json_encode([
-                'resolution' => $resolution,
-                'resolved_at' => now()->toIso8601String(),
-            ]),
-        ]);
+        $supplierProductsCache = [];
+
+        $modelClass = self::ENTITY_TYPES[$entityType];
+        $entity = $modelClass::where('sync_id', $entityId)
+            ->where('user_id', $user->id)
+            ->first();
+
+        if (!$entity) {
+            $this->recordSyncMetrics('resolveConflict', $startTime, 'entity_not_found');
+            return response()->json([
+                'success' => false,
+                'error' => 'Entity not found on server',
+            ], 404);
+        }
+
+        $entity->touch();
+
+        if ($entityType === 'budget_entry') {
+            $entity->load('groups');
+        } elseif ($entityType === 'recurring_record') {
+            $entity->load('products');
+        } elseif ($entityType === 'supplier') {
+            $entity->load('supplierProducts');
+            $supplierProductsCache[$entity->sync_id] = $entity->supplierProducts;
+        }
 
         $this->recordSyncMetrics('resolveConflict', $startTime);
-        return response()->json([
+
+        $response = [
             'success' => true,
             'message' => 'Conflict resolved',
-        ]);
+            'entity' => $this->formatItem($entityType, $entity, $supplierProductsCache),
+        ];
+
+        return response()->json($response);
     }
 
     public function resolveConflictsBatch(SyncResolveConflictsBatchRequest $request): JsonResponse
@@ -908,65 +992,77 @@ class SyncController extends Controller
         $resolutions = $request->input('resolutions');
         $errors = [];
         $processed = 0;
-
-        $resolvedEntries = [];
+        $entities = [];
 
         foreach ($resolutions as $index => $res) {
-            $entityType = $res['entity_type'];
-            $entityId = $res['entity_id'];
-            $resolution = $res['resolution'] ?? 'server';
-            $clientData = $res['client_data'] ?? null;
+            try {
+                $entityType = $res['entity_type'];
+                $entityId = $res['entity_id'];
+                $resolution = $res['resolution'] ?? 'server';
+                $clientData = $res['client_data'] ?? null;
 
-            $syncMeta = SyncMetadata::forUser($user->id)
-                ->byEntity($entityType, $entityId)
-                ->first();
+                $syncMeta = SyncMetadata::forUser($user->id)
+                    ->byEntity($entityType, $entityId)
+                    ->first();
 
-            if (!$syncMeta) {
-                $errors[] = ['index' => $index, 'entity_type' => $entityType, 'entity_id' => $entityId, 'error' => 'Conflict not found'];
-                continue;
-            }
-
-            if ($syncMeta->sync_status !== 'conflict') {
-                $errors[] = ['index' => $index, 'entity_type' => $entityType, 'entity_id' => $entityId, 'error' => 'No active conflict for this entity'];
-                continue;
-            }
-
-            if ($resolution === 'client' && $clientData) {
-                $this->validateEntityData($entityType, [$clientData]);
-            }
-
-            $resolvedEntries[] = [
-                'syncMeta' => $syncMeta,
-                'entityType' => $entityType,
-                'entityId' => $entityId,
-                'resolution' => $resolution,
-                'clientData' => $clientData,
-                'index' => $index,
-            ];
-        }
-
-        DB::beginTransaction();
-        try {
-            foreach ($resolvedEntries as $entry) {
-                if ($entry['resolution'] === 'client' && $entry['clientData']) {
-                    $this->updateEntity($entry['entityType'], $entry['entityId'], $entry['clientData'], $user->id);
+                if (!$syncMeta) {
+                    $errors[] = ['index' => $index, 'entity_type' => $entityType, 'entity_id' => $entityId, 'error' => 'Conflict not found'];
+                    continue;
                 }
 
-                $entry['syncMeta']->update([
-                    'sync_status' => 'resolved',
-                    'conflict_data' => $entry['syncMeta']->conflict_data ?? json_encode([
-                        'resolution' => $entry['resolution'],
-                        'resolved_at' => now()->toIso8601String(),
-                    ]),
+                // Read conflict_data snapshot BEFORE CAS
+                $existingPayload = is_string($syncMeta->conflict_data)
+                    ? (json_decode($syncMeta->conflict_data, true) ?? [])
+                    : (array) $syncMeta->conflict_data;
+
+                $resolutionPayload = array_merge($existingPayload, [
+                    'resolution' => $resolution,
+                    'resolved_at' => now()->toIso8601String(),
                 ]);
 
-                $processed++;
-            }
+                // CAS atómico per item
+                $affected = app(\App\Repositories\SyncMetadataRepository::class)->markResolved(
+                    [$entityId], $user->id, json_encode($resolutionPayload)
+                );
 
-            DB::commit();
-        } catch (\Exception $e) {
-            DB::rollBack();
-            $errors[] = ['index' => 'batch', 'error' => 'Transaction failed: ' . $e->getMessage()];
+                if ($affected === 0) {
+                    $errors[] = ['index' => $index, 'entity_type' => $entityType, 'entity_id' => $entityId, 'error' => 'No active conflict for this entity'];
+                    continue;
+                }
+
+                $entity = null;
+                $supplierProductsCache = [];
+
+                if ($resolution === 'client' && $clientData) {
+                    $resolved = $this->resolveEntityFkFields($entityType, $clientData, $user->id);
+                    $this->validateEntityData($entityType, [$resolved]);
+                    $this->updateEntity($entityType, $entityId, $resolved, $user->id);
+                }
+
+                $modelClass = self::ENTITY_TYPES[$entityType];
+                $entity = $modelClass::where('sync_id', $entityId)
+                    ->where('user_id', $user->id)
+                    ->first();
+
+                if ($entity) {
+                    $entity->touch();
+
+                    if ($entityType === 'budget_entry') {
+                        $entity->load('groups');
+                    } elseif ($entityType === 'recurring_record') {
+                        $entity->load('products');
+                    } elseif ($entityType === 'supplier') {
+                        $entity->load('supplierProducts');
+                        $supplierProductsCache[$entity->sync_id] = $entity->supplierProducts;
+                    }
+
+                    $entities[] = $this->formatItem($entityType, $entity, $supplierProductsCache);
+                }
+
+                $processed++;
+            } catch (\Exception $e) {
+                $errors[] = ['index' => $index, 'entity_type' => $res['entity_type'] ?? 'unknown', 'entity_id' => $res['entity_id'] ?? 'unknown', 'error' => $e->getMessage()];
+            }
         }
 
         $this->recordSyncMetrics('resolveConflictsBatch', $startTime);
@@ -974,6 +1070,7 @@ class SyncController extends Controller
             'success' => true,
             'processed' => $processed,
             'errors' => $errors,
+            'entities' => $entities,
         ]);
     }
 
@@ -998,7 +1095,7 @@ class SyncController extends Controller
         if ($entityType === 'budget_entry') {
         $data['groups'] = $item->groups->map(fn($g) => [
             'sync_id' => $g->sync_id,
-            'account_id' => $g->account?->sync_id,
+            'account_id' => $g->account_id,
             'amount' => (float)$g->amount,
         ])->toArray();
             unset($data['groups_relation']);
@@ -1034,6 +1131,11 @@ class SyncController extends Controller
         }
 
         return $data;
+    }
+
+    private function resolveEntityFkFields(string $entityType, array $data, int $userId): array
+    {
+        return app(\App\Services\Sync\ForeignKeyResolver::class)->resolveItem($data, $entityType, $userId);
     }
 
     private function filterToFillable(string $entityType, array $data, array $allowedFields = []): array
@@ -1072,32 +1174,19 @@ class SyncController extends Controller
             }
         }
 
-        $resolver = app(\App\Services\SyncIdResolver::class);
-
-        if (in_array($entityType, ['budget_entry', 'budget_provider', 'recurring_record']) && isset($updateData['account_id'])) {
-            $updateData['account_id'] = $resolver->resolveAccountId($updateData['account_id'], $userId);
-        }
-
-        if (in_array($entityType, ['budget_provider_product', 'recurring_record_product']) && isset($updateData['supplier_product_id'])) {
-            $updateData['supplier_product_id'] = $resolver->resolveSupplierProductId($updateData['supplier_product_id'], $userId);
-        }
-
-        if ($entityType === 'recurring_record_product' && isset($updateData['recurring_record_id'])) {
-            $updateData['recurring_record_id'] = $resolver->resolveRecurringRecordId($updateData['recurring_record_id'], $userId);
-            $parentRecord = RecurringRecord::where('id', $updateData['recurring_record_id'])
-                ->where('user_id', $userId)
-                ->first();
-            if (!$parentRecord) {
-                return;
-            }
-        }
-        
         if ($entityType === 'budget_entry') {
             $groups = $updateData['groups'] ?? null;
             unset($updateData['groups']);
 
-            if ($existing && !empty($groups)) {
-                $this->createBudgetEntryGroups($existing->id, $existing->user_id, $groups);
+            if ($groups !== null && !empty($groups)) {
+                if (!$existing) {
+                    $existing = $modelClass::where('sync_id', $syncId)
+                        ->where('user_id', $userId)
+                        ->first();
+                }
+                if ($existing) {
+                    $this->createBudgetEntryGroups($existing->id, $existing->user_id, $groups);
+                }
             }
         }
         
@@ -1106,9 +1195,44 @@ class SyncController extends Controller
         if ($entityType === 'recurring_record_product') {
             $modelClass::where('sync_id', $syncId)
                 ->whereHas('recurringRecord', fn($q) => $q->where('user_id', $userId))
-                ->update($updateData);
+                ->update($updateData + ['version' => DB::raw('version + 1')]);
         } else {
-            $modelClass::where('sync_id', $syncId)->where('user_id', $userId)->update($updateData);
+            $modelClass::where('sync_id', $syncId)
+                ->where('user_id', $userId)
+                ->update($updateData + ['version' => DB::raw('version + 1')]);
+        }
+
+        $normalized = $updateData;
+        array_walk($normalized, function (&$v) {
+            if (is_numeric($v)) {
+                $v = (string) ((float) $v);
+            } else {
+                $v = (string) $v;
+            }
+        });
+        ksort($normalized);
+        $fieldHash = md5(json_encode($normalized));
+
+        app(\App\Repositories\SyncMetadataRepository::class)->updateFieldHash(
+            $entityType, $syncId, $fieldHash, $updateData, now()->toDateTimeString()
+        );
+    }
+
+    private function validateEntityData(string $entityType, array $rows): void
+    {
+        $requestClass = self::ENTITY_REQUEST_TYPES[$entityType] ?? null;
+        if (!$requestClass) {
+            Log::warning("No FormRequest configured for entity type: {$entityType}");
+            return;
+        }
+
+        $rules = (new $requestClass())->rules();
+        $data = $rows[0] ?? [];
+
+        $validator = app('validator')->make($data, $rules);
+
+        if ($validator->fails()) {
+            throw new \Illuminate\Validation\ValidationException($validator);
         }
     }
 

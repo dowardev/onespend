@@ -127,7 +127,7 @@ import { addOutline, trashOutline, pauseOutline, playOutline, flaskOutline } fro
 import systemController from '@/controllers/systemConfigController';
 import { recurringRecordsController, type RecurringRecord } from '@/controllers/recurringRecordsController';
 import accountsController from '@/controllers/accountsController';
-import { useSync } from '@/composables/useSync';
+import { syncQueue } from '@/services/syncQueue';
 // End Controllers
 
 // Components
@@ -157,7 +157,7 @@ const weekDayShort = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
 const weekDayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 const ordinalNames = ['', 'Primer', 'Segundo', 'Tercer', 'Cuarto', 'Quinto', 'Sexto', 'Séptimo', 'Octavo'];
-const { syncRecurringRecord } = useSync();
+const syncRecurringRecord = syncQueue.syncRecurringRecord;
 // End Vars and const
 
 // Watch

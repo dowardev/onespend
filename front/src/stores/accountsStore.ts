@@ -1,7 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
-import { liveQuery } from 'dexie';
-import { db } from '@/db/OneSpendDB';
+import { dataMediator } from '@/services/dataMediator';
 import type { AccountRow } from '@/db/types';
 
 export type Account = {
@@ -30,25 +29,22 @@ function mapAccountRow(row: AccountRow): Account {
 }
 
 export const useAccountsStore = defineStore('accounts', () => {
-  const rawAccounts = ref<AccountRow[]>([]);
-  const loading = ref(true);
-
-  const _subscription = liveQuery(() => db.accounts.toArray()).subscribe({
-    next: (result) => {
-      rawAccounts.value = result;
-      loading.value = false;
-    },
-    error: () => {
-      loading.value = false;
-    },
-  });
+  const rawAccounts = dataMediator.refs.accounts;
+  const loading = ref(false);
 
   const accounts = computed<Account[]>(() =>
     rawAccounts.value.map(mapAccountRow),
   );
 
+  async function reload() {
+    loading.value = true
+    await dataMediator.reload('accounts')
+    loading.value = false
+  }
+
   return {
     accounts,
     loading,
+    reload,
   };
 });
