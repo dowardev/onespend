@@ -63,14 +63,15 @@ php artisan serve
 
 ### Backend (`back/`)
 - **Laravel 12** con PHP 8.2+
-- **Autenticación:** Laravel Sanctum + Breeze (registro, login, password reset, email verification)
+- **Autenticación:** SSO externo ([tu-org/sso-server](https://gitlab.com/dowardev/sso)) con JWT
+  - Middleware: `sso.auth`, `sso.user`
+  - *(Migración desde Sanctum+Breeze planificada — próximo ticket)*
 - **Dominio:** Control de gastos/presupuestos (budget/expense tracking)
 - `app/Models/` — Account, BudgetEntry, BudgetEntryGroup, BudgetProvider, BudgetProviderProduct, Income, Supplier, SupplierProduct, SyncMetadata, Template, Attachment
-- `app/Http/Controllers/` — Auth (Breeze), AttachmentController, SyncController
+- `app/Http/Controllers/` — Auth (SSO), AttachmentController, SyncController
 - `routes/api.php` — Sync API (changes, merge, full, resolve-conflict) + Attachments CRUD
-- `routes/auth.php` — Breeze auth routes
-- **Colas:** database driver para queue
-- **Sin JWT ni OAuth2** — usa Sanctum tokens
+- `routes/auth.php` — SSO auth routes
+- **Colas:** database driver (dev) / sync (producción en hosting compartido)
 
 ### Frontend (`front/`)
 - **Ionic 8** + **Vue 3** con Composition API
