@@ -62,3 +62,9 @@ back/tests/Feature/Concerns/
 
 # Playwright accessibility snapshots
 entry-edit.yaml
+
+# Test artifacts
+front/test-results/
+
+# Vite temp files
+front/vite.config.ts.timestamp-*
