@@ -31,6 +31,7 @@ import { useBudgetEntriesStore } from '@/stores/budgetEntriesStore';
 import { useBudgetProvidersStore } from '@/stores/budgetProvidersStore';
 import { useSuppliersStore } from '@/stores/suppliersStore';
 import { syncService } from '@/services/syncService';
+import authController from '@/controllers/authController';
 import budgetEntriesController from './controllers/budgetEntriesController';
 import budgetProvidersController from './controllers/budgetProvidersController';
 import { useBudgetDayStore } from './stores/budgetDayStore';
@@ -80,6 +81,11 @@ ssoClient.onAuthStateChange((state) => {
     authStore.logout();
   }
 });
+
+// Validate auth state with SSO server on startup
+await authController.checkAuth()
+// Start listening for auth expiration (401 responses)
+authController.start()
 
 try {
   // @ts-ignore
