@@ -12,6 +12,27 @@ export class AuthExpiredError extends Error {
 
 export class SyncApiService {
   private activeAbortController: AbortController | null = null;
+  private authExpiredListeners: Set<() => void> = new Set();
+
+  onAuthExpired(callback: () => void): () => void {
+    this.authExpiredListeners.add(callback);
+    return () => this.authExpiredListeners.delete(callback);
+  }
+
+  private notifyAuthExpired(): void {
+    this.authExpiredListeners.forEach(listener => listener());
+  }
+
+  private async request(params: {
+    url: string
+    options: RequestInit
+    timeoutMs: number
+    signal?: AbortSignal
+  }): Promise<Response> {
+    const response = await fetchWithTimeout(params);
+    if (response.status === 401) this.notifyAuthExpired();
+    return response;
+  }
 
   cancelActiveRequests() {
     if (this.activeAbortController) {
@@ -38,7 +59,7 @@ export class SyncApiService {
     }
     this.activeAbortController = new AbortController();
     try {
-      const response = await fetchWithTimeout({
+      return this.request({
         url: `${API_URL}/api/sync/merge`,
         options: {
           method: 'POST',
@@ -48,7 +69,6 @@ export class SyncApiService {
         timeoutMs,
         signal: this.activeAbortController.signal,
       });
-      return response;
     } finally {
       this.activeAbortController = null;
     }
@@ -57,7 +77,7 @@ export class SyncApiService {
   async resolveConflict(params: { body: Record<string, unknown>; timeoutMs?: number }): Promise<Response> {
     const { body, timeoutMs = 15000 } = params;
     const headers = await this.getAuthHeaders();
-    return fetchWithTimeout({
+    return this.request({
       url: `${API_URL}/api/sync/resolve-conflict`,
       options: {
         method: 'POST',
@@ -76,7 +96,7 @@ export class SyncApiService {
     if (types) types.forEach(t => searchParams.append('types[]', t));
     this.activeAbortController = new AbortController();
     try {
-      return await fetchWithTimeout({
+      return this.request({
         url: `${API_URL}/api/sync/changes?${searchParams}`,
         options: { method: 'GET', headers },
         timeoutMs: 30000,
@@ -104,7 +124,7 @@ export class SyncApiService {
     const url = queryString ? `${API_URL}/api/sync/full?${queryString}` : `${API_URL}/api/sync/full`;
     this.activeAbortController = new AbortController();
     try {
-      return await fetchWithTimeout({
+      return this.request({
         url,
         options: { method: 'GET', headers },
         timeoutMs: 60000,
@@ -118,7 +138,7 @@ export class SyncApiService {
   async resolveConflictsBatch(params: { resolutions: Array<{ entity_type: string; entity_id: string; resolution: string; client_data?: Record<string, unknown> }>; timeoutMs?: number }): Promise<Response> {
     const { resolutions, timeoutMs = 30000 } = params;
     const headers = await this.getAuthHeaders();
-    return fetchWithTimeout({
+    return this.request({
       url: `${API_URL}/api/sync/resolve-conflicts-batch`,
       options: {
         method: 'POST',
@@ -138,7 +158,7 @@ export class SyncApiService {
     const url = queryString
       ? `${API_URL}/api/sync/active-conflicts?${queryString}`
       : `${API_URL}/api/sync/active-conflicts`;
-    return fetchWithTimeout({
+    return this.request({
       url,
       options: { method: 'GET', headers },
       timeoutMs,
@@ -148,7 +168,7 @@ export class SyncApiService {
   async getResolvedConflicts(params: { timeoutMs?: number } = {}): Promise<Response> {
     const { timeoutMs = 15000 } = params;
     const headers = await this.getAuthHeaders();
-    return fetchWithTimeout({
+    return this.request({
       url: `${API_URL}/api/sync/conflicts`,
       options: { method: 'GET', headers },
       timeoutMs,
@@ -158,7 +178,7 @@ export class SyncApiService {
   async mergeStatus(params: { jobId: number; timeoutMs?: number }): Promise<Response> {
     const { jobId, timeoutMs = 15000 } = params;
     const headers = await this.getAuthHeaders();
-    return fetchWithTimeout({
+    return this.request({
       url: `${API_URL}/api/sync/merge-status/${jobId}`,
       options: { method: 'GET', headers },
       timeoutMs,

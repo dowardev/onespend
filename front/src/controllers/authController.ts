@@ -2,9 +2,11 @@ import { useAuthStore, type User } from '@/stores/authStore'
 import { getSSOClient } from '@/ssoClientAccessor'
 import { clearAllUserData } from '@/services/dataClearService'
 import { syncService } from '@/services/syncService'
+import { syncApiService } from '@/services/sync/SyncApiService'
 
 class AuthController {
   private _store: ReturnType<typeof useAuthStore> | null = null
+  private cleanupAuthExpiredListener: (() => void) | null = null
 
   private get store(): ReturnType<typeof useAuthStore> {
     if (!this._store) {
@@ -116,6 +118,29 @@ class AuthController {
 
   clearError(): void {
     this.store.clearError()
+  }
+
+  start(): void {
+    if (this.cleanupAuthExpiredListener) return
+
+    const DEBOUNCE_MS = 500
+    let timer: ReturnType<typeof setTimeout> | null = null
+
+    const unsubscribe = syncApiService.onAuthExpired(() => {
+      if (timer) clearTimeout(timer)
+      timer = setTimeout(() => {
+        timer = null
+        this.checkAuth()
+      }, DEBOUNCE_MS)
+    })
+
+    this.cleanupAuthExpiredListener = () => {
+      unsubscribe()
+      if (timer) {
+        clearTimeout(timer)
+        timer = null
+      }
+    }
   }
 }
 
