@@ -11,13 +11,7 @@
     "repositories": [
         {
             "type": "path",
-            "url": "/home/dowardev/Documentos/programacion/sso-client/packages/sso-server"
-        }
-    ],
-    "repositories": [
-        {
-            "type": "path",
-            "url": "/home/dowardev/Documentos/programacion/sso-client/packages/sso-server"
+            "url": "/home/dowardev/Documentos/programacion/sso/packages/sso-server"
         }
     ],
     "require": {
