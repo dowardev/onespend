@@ -74,7 +74,7 @@ class BudgetProvidersController {
       _fromRecurringId,
     };
 
-    const id = await budgetProvidersDb.add({ entry: toBudgetProviderRow(newProvider) });
+    await budgetProvidersDb.add({ entry: toBudgetProviderRow(newProvider) });
 
     syncQueue.syncBudgetProvider({ provider: newProvider as any, operation: 'create', products: products as any, supplierSyncId });
 
