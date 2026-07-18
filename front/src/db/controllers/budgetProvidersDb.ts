@@ -36,6 +36,11 @@ export const budgetProvidersDb = {
     return db.budgetProviders.where('date').equals(date).toArray()
   },
 
+  async getByDateRange(params: { from: string; to: string }) {
+    const { from, to } = params
+    return db.budgetProviders.where('date').between(from, to, true, true).toArray()
+  },
+
   async delete(params: { syncId: string }) {
     const { syncId } = params
     return db.budgetProviders.delete(syncId)

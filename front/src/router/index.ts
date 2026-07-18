@@ -4,6 +4,7 @@ import { setupNavigationCleanup, removeTemporaryElements } from '@/utils/domClea
 // Static imports (no relative paths) — match original file structure but using '@' alias
 import HomePage from '@/views/HomePage.vue';
 import BudgetView from '@/views/budget/BudgetView.vue';
+import HistorialView from '@/views/budget/agenda/HistorialView.vue';
 import SuppliersPage from '@/views/suppliers/SuppliersPage.vue';
 import AccountsPage from '@/views/suppliers/accounts/AccountsPage.vue';
 import StatisticsConfigPage from '@/views/statistics/performance/config/StatisticsConfigPage.vue';
@@ -37,6 +38,11 @@ const routes: Array<RouteRecordRaw> = [
     path: '/budget',
     name: 'BudgetView',
     component: BudgetView,
+  },
+  {
+    path: '/budget/historial',
+    name: 'BudgetHistorial',
+    component: HistorialView,
   },
   {
     path: '/budget/provider/new',
