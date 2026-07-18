@@ -60,6 +60,17 @@
           <ion-item
             button
             lines="none"
+            :class="{ 'menu-active': isHistorial }"
+            :aria-current="isHistorial ? 'page' : undefined"
+            @click="navigate({ name: 'BudgetHistorial' })"
+          >
+            <ion-icon slot="start" :icon="calendarOutline"></ion-icon>
+            <ion-label>Historial</ion-label>
+          </ion-item>
+
+          <ion-item
+            button
+            lines="none"
             :class="{ 'menu-active': isSuppliers }"
             :aria-current="isSuppliers ? 'page' : undefined"
             @click="navigate({ name: 'SuppliersPage' })"
@@ -205,6 +216,7 @@ import { ref, computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import {
   walletOutline,
+  calendarOutline,
   businessOutline,
   layersOutline,
   repeatOutline,
@@ -250,6 +262,7 @@ const appName =
 
 // Computed
 const isBudget = computed(() => route.path === '/budget');
+const isHistorial = computed(() => route.path.startsWith('/budget/historial'));
 const isSuppliers = computed(() => route.path === '/suppliers');
 const isRecurring = computed(() => route.path.startsWith('/recurring'));
 const isSuppliersAccounts = computed(() => route.path === '/suppliers/accounts');
