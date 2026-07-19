@@ -26,12 +26,15 @@ importers:
       '@capacitor/status-bar':
         specifier: 8.0.0
         version: 8.0.0(@capacitor/core@8.0.1)
+      '@ionic/core':
+        specifier: ^8.8.14
+        version: 8.8.14
       '@ionic/vue':
         specifier: ^8.0.0
-        version: 8.7.7(@stencil/core@4.38.2)(vue-router@4.6.3(vue@3.5.22(typescript@5.6.3)))(vue@3.5.22(typescript@5.6.3))
+        version: 8.7.7(@stencil/core@4.43.5)(vue-router@4.6.3(vue@3.5.22(typescript@5.6.3)))(vue@3.5.22(typescript@5.6.3))
       '@ionic/vue-router':
         specifier: ^8.0.0
-        version: 8.7.7(@stencil/core@4.38.2)(vue-router@4.6.3(vue@3.5.22(typescript@5.6.3)))(vue@3.5.22(typescript@5.6.3))
+        version: 8.7.7(@stencil/core@4.43.5)(vue-router@4.6.3(vue@3.5.22(typescript@5.6.3)))(vue@3.5.22(typescript@5.6.3))
       '@tu-org/sso-client':
         specifier: file:./packages/sso-client
         version: file:packages/sso-client
@@ -50,6 +53,9 @@ importers:
       date-fns:
         specifier: ^4.1.0
         version: 4.1.0
+      dayjs:
+        specifier: ^1.11.21
+        version: 1.11.21
       dexie:
         specifier: ^4.0.0
         version: 4.4.3
@@ -990,6 +996,10 @@ packages:
   '@ionic/core@8.7.7':
     resolution: {integrity: sha512-XMvVkiRiB9I1Jc63RqderjHzxxiyr6KM2vBDzYBQS6rk7Fb4wC/ZyUuFgnrYKk71r1mgwYTPMy/2qrCShNXgXQ==}
 
+  '@ionic/core@8.8.14':
+    resolution: {integrity: sha512-xI1y1OqPFsEjVE6nvLdUpb77Xt4uy5cQrNbDT/sRM6RN3vMs2zOFWubeRaQkBf0WslFetiJ/5uAALS/mW4d4TA==}
+    engines: {node: '>= 16'}
+
   '@ionic/utils-array@2.1.6':
     resolution: {integrity: sha512-0JZ1Zkp3wURnv8oq6Qt7fMPo5MpjbLoUoa9Bu2Q4PJuSDWM8H8gwF3dQO7VTeUj3/0o1IB1wGkFWZZYgUXZMUg==}
     engines: {node: '>=16.0.0'}
@@ -1420,6 +1430,11 @@ packages:
     cpu: [arm64]
     os: [darwin]
 
+  '@rollup/rollup-darwin-arm64@4.44.0':
+    resolution: {integrity: sha512-VGF3wy0Eq1gcEIkSCr8Ke03CWT+Pm2yveKLaDvq51pPpZza3JX/ClxXOCmTYYq3us5MvEuNRTaeyFThCKRQhOA==}
+    cpu: [arm64]
+    os: [darwin]
+
   '@rollup/rollup-darwin-arm64@4.52.5':
     resolution: {integrity: sha512-takF3CR71mCAGA+v794QUZ0b6ZSrgJkArC+gUiG6LB6TQty9T0Mqh3m2ImRBOxS2IeYBo4lKWIieSvnEk2OQWA==}
     cpu: [arm64]
@@ -1432,6 +1447,11 @@ packages:
 
   '@rollup/rollup-darwin-x64@4.34.9':
     resolution: {integrity: sha512-eOojSEAi/acnsJVYRxnMkPFqcxSMFfrw7r2iD9Q32SGkb/Q9FpUY1UlAu1DH9T7j++gZ0lHjnm4OyH2vCI7l7Q==}
+    cpu: [x64]
+    os: [darwin]
+
+  '@rollup/rollup-darwin-x64@4.44.0':
+    resolution: {integrity: sha512-fBkyrDhwquRvrTxSGH/qqt3/T0w5Rg0L7ZIDypvBPc1/gzjJle6acCpZ36blwuwcKD/u6oCE/sRWlUAcxLWQbQ==}
     cpu: [x64]
     os: [darwin]
 
@@ -1495,6 +1515,12 @@ packages:
     os: [linux]
     libc: [glibc]
 
+  '@rollup/rollup-linux-arm64-gnu@4.44.0':
+    resolution: {integrity: sha512-ZTR2mxBHb4tK4wGf9b8SYg0Y6KQPjGpR4UWwTFdnmjB4qRtoATZ5dWn3KsDwGa5Z2ZBOE7K52L36J9LueKBdOQ==}
+    cpu: [arm64]
+    os: [linux]
+    libc: [glibc]
+
   '@rollup/rollup-linux-arm64-gnu@4.52.5':
     resolution: {integrity: sha512-a+3wVnAYdQClOTlyapKmyI6BLPAFYs0JM8HRpgYZQO02rMR09ZcV9LbQB+NL6sljzG38869YqThrRnfPMCDtZg==}
     cpu: [arm64]
@@ -1509,6 +1535,12 @@ packages:
 
   '@rollup/rollup-linux-arm64-musl@4.34.9':
     resolution: {integrity: sha512-LD2fytxZJZ6xzOKnMbIpgzFOuIKlxVOpiMAXawsAZ2mHBPEYOnLRK5TTEsID6z4eM23DuO88X0Tq1mErHMVq0A==}
+    cpu: [arm64]
+    os: [linux]
+    libc: [musl]
+
+  '@rollup/rollup-linux-arm64-musl@4.44.0':
+    resolution: {integrity: sha512-GFWfAhVhWGd4r6UxmnKRTBwP1qmModHtd5gkraeW2G490BpFOZkFtem8yuX2NyafIP/mGpRJgTJ2PwohQkUY/Q==}
     cpu: [arm64]
     os: [linux]
     libc: [musl]
@@ -1603,6 +1635,12 @@ packages:
     os: [linux]
     libc: [glibc]
 
+  '@rollup/rollup-linux-x64-gnu@4.44.0':
+    resolution: {integrity: sha512-iUVJc3c0o8l9Sa/qlDL2Z9UP92UZZW1+EmQ4xfjTc1akr0iUFZNfxrXJ/R1T90h/ILm9iXEY6+iPrmYB3pXKjw==}
+    cpu: [x64]
+    os: [linux]
+    libc: [glibc]
+
   '@rollup/rollup-linux-x64-gnu@4.52.5':
     resolution: {integrity: sha512-hXGLYpdhiNElzN770+H2nlx+jRog8TyynpTVzdlc6bndktjKWyZyiCsuDAlpd+j+W+WNqfcyAWz9HxxIGfZm1Q==}
     cpu: [x64]
@@ -1617,6 +1655,12 @@ packages:
 
   '@rollup/rollup-linux-x64-musl@4.34.9':
     resolution: {integrity: sha512-cYRpV4650z2I3/s6+5/LONkjIz8MBeqrk+vPXV10ORBnshpn8S32bPqQ2Utv39jCiDcO2eJTuSlPXpnvmaIgRA==}
+    cpu: [x64]
+    os: [linux]
+    libc: [musl]
+
+  '@rollup/rollup-linux-x64-musl@4.44.0':
+    resolution: {integrity: sha512-PQUobbhLTQT5yz/SPg116VJBgz+XOtXt8D1ck+sfJJhuEsMj2jSej5yTdp8CvWBSceu+WW+ibVL6dm0ptG5fcA==}
     cpu: [x64]
     os: [linux]
     libc: [musl]
@@ -1650,6 +1694,11 @@ packages:
 
   '@rollup/rollup-win32-arm64-msvc@4.34.9':
     resolution: {integrity: sha512-z4mQK9dAN6byRA/vsSgQiPeuO63wdiDxZ9yg9iyX2QTzKuQM7T4xlBoeUP/J8uiFkqxkcWndWi+W7bXdPbt27Q==}
+    cpu: [arm64]
+    os: [win32]
+
+  '@rollup/rollup-win32-arm64-msvc@4.44.0':
+    resolution: {integrity: sha512-M0CpcHf8TWn+4oTxJfh7LQuTuaYeXGbk0eageVjQCKzYLsajWS/lFC94qlRqOlyC2KvRT90ZrfXULYmukeIy7w==}
     cpu: [arm64]
     os: [win32]
 
@@ -1688,6 +1737,11 @@ packages:
     cpu: [x64]
     os: [win32]
 
+  '@rollup/rollup-win32-x64-msvc@4.44.0':
+    resolution: {integrity: sha512-Q2Mgwt+D8hd5FIPUuPDsvPR7Bguza6yTkJxspDGkZj7tBRn2y4KSWYuIXpftFSjBra76TbKerCV7rgFPQrn+wQ==}
+    cpu: [x64]
+    os: [win32]
+
   '@rollup/rollup-win32-x64-msvc@4.52.5':
     resolution: {integrity: sha512-TAcgQh2sSkykPRWLrdyy2AiceMckNf5loITqXxFI5VuQjS5tSuw3WlwdN8qv8vzjLAUTvYaH/mVjSFpbkFbpTg==}
     cpu: [x64]
@@ -1715,6 +1769,11 @@ packages:
 
   '@stencil/core@4.38.2':
     resolution: {integrity: sha512-opyjA+DYAtaKmaSnuC8Bb/PH7nuO+1GhVn6amsN8XT+TlT9biptlcpz4YWETwYZ+XxtX+nLdxWbW0TVafrqsvQ==}
+    engines: {node: '>=16.0.0', npm: '>=7.10.0'}
+    hasBin: true
+
+  '@stencil/core@4.43.5':
+    resolution: {integrity: sha512-cgWD+GeuvJpTe1WQn40p02+BJ2j0j1YJ17GdkF2qKIQ23s2e3Zivq5yISXS3dcuV6oUJFN93jprdk+nk/sq99Q==}
     engines: {node: '>=16.0.0', npm: '>=7.10.0'}
     hasBin: true
 
@@ -2505,6 +2564,9 @@ packages:
 
   dayjs@1.11.18:
     resolution: {integrity: sha512-zFBQ7WFRvVRhKcWoUh+ZA1g2HVgUbsZm9sbddh8EC5iv93sui8DVVz1Npvz+r6meo9VKfa8NyLWBsQK1VvIKPA==}
+
+  dayjs@1.11.21:
+    resolution: {integrity: sha512-98IT+HOahAisibz/yjKbzuOBwYcjJ7BCLPzARyHiyEBmRz4fatF+KPJszEHXsGYjUG234aH/cOjW1wwTbKUZlA==}
 
   de-indent@1.0.2:
     resolution: {integrity: sha512-e/1zu3xH5MQryN2zdVaF0OrdNLUbvWxzMbi+iNA6Bky7l1RoP8a2fIbRocyHclXt/arDrrR6lL3TqFD9pMQTsg==}
@@ -5986,6 +6048,12 @@ snapshots:
       ionicons: 8.0.13
       tslib: 2.8.1
 
+  '@ionic/core@8.8.14':
+    dependencies:
+      '@stencil/core': 4.43.5
+      ionicons: 8.0.13
+      tslib: 2.8.1
+
   '@ionic/utils-array@2.1.6':
     dependencies:
       debug: 4.4.3
@@ -6054,18 +6122,18 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@ionic/vue-router@8.7.7(@stencil/core@4.38.2)(vue-router@4.6.3(vue@3.5.22(typescript@5.6.3)))(vue@3.5.22(typescript@5.6.3))':
+  '@ionic/vue-router@8.7.7(@stencil/core@4.43.5)(vue-router@4.6.3(vue@3.5.22(typescript@5.6.3)))(vue@3.5.22(typescript@5.6.3))':
     dependencies:
-      '@ionic/vue': 8.7.7(@stencil/core@4.38.2)(vue-router@4.6.3(vue@3.5.22(typescript@5.6.3)))(vue@3.5.22(typescript@5.6.3))
+      '@ionic/vue': 8.7.7(@stencil/core@4.43.5)(vue-router@4.6.3(vue@3.5.22(typescript@5.6.3)))(vue@3.5.22(typescript@5.6.3))
     transitivePeerDependencies:
       - '@stencil/core'
       - vue
       - vue-router
 
-  '@ionic/vue@8.7.7(@stencil/core@4.38.2)(vue-router@4.6.3(vue@3.5.22(typescript@5.6.3)))(vue@3.5.22(typescript@5.6.3))':
+  '@ionic/vue@8.7.7(@stencil/core@4.43.5)(vue-router@4.6.3(vue@3.5.22(typescript@5.6.3)))(vue@3.5.22(typescript@5.6.3))':
     dependencies:
       '@ionic/core': 8.7.7
-      '@stencil/vue-output-target': 0.10.7(@stencil/core@4.38.2)(vue-router@4.6.3(vue@3.5.22(typescript@5.6.3)))(vue@3.5.22(typescript@5.6.3))
+      '@stencil/vue-output-target': 0.10.7(@stencil/core@4.43.5)(vue-router@4.6.3(vue@3.5.22(typescript@5.6.3)))(vue@3.5.22(typescript@5.6.3))
       ionicons: 8.0.13
     transitivePeerDependencies:
       - '@stencil/core'
@@ -6327,6 +6395,9 @@ snapshots:
   '@rollup/rollup-darwin-arm64@4.34.9':
     optional: true
 
+  '@rollup/rollup-darwin-arm64@4.44.0':
+    optional: true
+
   '@rollup/rollup-darwin-arm64@4.52.5':
     optional: true
 
@@ -6334,6 +6405,9 @@ snapshots:
     optional: true
 
   '@rollup/rollup-darwin-x64@4.34.9':
+    optional: true
+
+  '@rollup/rollup-darwin-x64@4.44.0':
     optional: true
 
   '@rollup/rollup-darwin-x64@4.52.5':
@@ -6369,6 +6443,9 @@ snapshots:
   '@rollup/rollup-linux-arm64-gnu@4.34.9':
     optional: true
 
+  '@rollup/rollup-linux-arm64-gnu@4.44.0':
+    optional: true
+
   '@rollup/rollup-linux-arm64-gnu@4.52.5':
     optional: true
 
@@ -6376,6 +6453,9 @@ snapshots:
     optional: true
 
   '@rollup/rollup-linux-arm64-musl@4.34.9':
+    optional: true
+
+  '@rollup/rollup-linux-arm64-musl@4.44.0':
     optional: true
 
   '@rollup/rollup-linux-arm64-musl@4.52.5':
@@ -6423,6 +6503,9 @@ snapshots:
   '@rollup/rollup-linux-x64-gnu@4.34.9':
     optional: true
 
+  '@rollup/rollup-linux-x64-gnu@4.44.0':
+    optional: true
+
   '@rollup/rollup-linux-x64-gnu@4.52.5':
     optional: true
 
@@ -6430,6 +6513,9 @@ snapshots:
     optional: true
 
   '@rollup/rollup-linux-x64-musl@4.34.9':
+    optional: true
+
+  '@rollup/rollup-linux-x64-musl@4.44.0':
     optional: true
 
   '@rollup/rollup-linux-x64-musl@4.52.5':
@@ -6448,6 +6534,9 @@ snapshots:
     optional: true
 
   '@rollup/rollup-win32-arm64-msvc@4.34.9':
+    optional: true
+
+  '@rollup/rollup-win32-arm64-msvc@4.44.0':
     optional: true
 
   '@rollup/rollup-win32-arm64-msvc@4.52.5':
@@ -6469,6 +6558,9 @@ snapshots:
     optional: true
 
   '@rollup/rollup-win32-x64-msvc@4.34.9':
+    optional: true
+
+  '@rollup/rollup-win32-x64-msvc@4.44.0':
     optional: true
 
   '@rollup/rollup-win32-x64-msvc@4.52.5':
@@ -6505,11 +6597,22 @@ snapshots:
       '@rollup/rollup-win32-arm64-msvc': 4.34.9
       '@rollup/rollup-win32-x64-msvc': 4.34.9
 
-  '@stencil/vue-output-target@0.10.7(@stencil/core@4.38.2)(vue-router@4.6.3(vue@3.5.22(typescript@5.6.3)))(vue@3.5.22(typescript@5.6.3))':
+  '@stencil/core@4.43.5':
+    optionalDependencies:
+      '@rollup/rollup-darwin-arm64': 4.44.0
+      '@rollup/rollup-darwin-x64': 4.44.0
+      '@rollup/rollup-linux-arm64-gnu': 4.44.0
+      '@rollup/rollup-linux-arm64-musl': 4.44.0
+      '@rollup/rollup-linux-x64-gnu': 4.44.0
+      '@rollup/rollup-linux-x64-musl': 4.44.0
+      '@rollup/rollup-win32-arm64-msvc': 4.44.0
+      '@rollup/rollup-win32-x64-msvc': 4.44.0
+
+  '@stencil/vue-output-target@0.10.7(@stencil/core@4.43.5)(vue-router@4.6.3(vue@3.5.22(typescript@5.6.3)))(vue@3.5.22(typescript@5.6.3))':
     dependencies:
       vue: 3.5.22(typescript@5.6.3)
     optionalDependencies:
-      '@stencil/core': 4.38.2
+      '@stencil/core': 4.43.5
       vue-router: 4.6.3(vue@3.5.22(typescript@5.6.3))
 
   '@szmarczak/http-timer@4.0.6':
@@ -7488,6 +7591,8 @@ snapshots:
   date-fns@4.1.0: {}
 
   dayjs@1.11.18: {}
+
+  dayjs@1.11.21: {}
 
   de-indent@1.0.2: {}
 
