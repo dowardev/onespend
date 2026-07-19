@@ -110,7 +110,7 @@
           >
             <ion-icon slot="start" :icon="syncOutline"></ion-icon>
             <ion-label>Sincronización</ion-label>
-            <ion-badge data-cy="menu-conflict-badge" v-if="conflictCount > 0" slot="end" color="danger">{{
+            <ion-badge v-if="conflictCount > 0" slot="end" data-cy="menu-conflict-badge" color="danger">{{
               conflictCount
             }}</ion-badge>
             <ion-badge v-else-if="pendingChanges > 0" slot="end" color="secondary">{{

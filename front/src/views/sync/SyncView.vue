@@ -154,13 +154,13 @@
         </ion-card-content>
       </ion-card>
 
-      <ion-card data-cy="conflicts-card" v-if="activeConflictDiffs.length > 0">
+      <ion-card v-if="activeConflictDiffs.length > 0" data-cy="conflicts-card">
         <ion-card-header>
           <ion-card-title>Conflictos activos <ion-badge data-cy="conflict-count-badge" color="warning">{{ activeConflictDiffs.length }}</ion-badge></ion-card-title>
         </ion-card-header>
         <ion-card-content>
           <ion-list>
-            <ion-item data-cy="conflict-item" v-for="(entry, idx) in activeConflictDiffs" :key="entry.sync_id + idx">
+            <ion-item v-for="(entry, idx) in activeConflictDiffs" :key="entry.sync_id + idx" data-cy="conflict-item">
               <ion-label>
                 <h3>{{ getEntityLabel(entry.entityType) }}</h3>
                 <p v-if="entry.diffs.length > 0" class="conflict-fields">
@@ -180,8 +180,8 @@
                 </p>
               </ion-label>
               <ion-badge
-                data-cy="conflict-badge"
                 slot="end"
+                data-cy="conflict-badge"
                 :color="entry.diffs.some(d => d.changed_in === 'both') ? 'danger' : 'warning'"
                 @click="showConflictDiff(entry)"
               >
@@ -210,7 +210,7 @@
         </ion-card-content>
       </ion-card>
 
-      <ion-modal data-cy="conflict-modal" :is-open="showConflictModal" @did-dismiss="showConflictModal = false" css-class="conflict-modal-large">
+      <ion-modal data-cy="conflict-modal" :is-open="showConflictModal" css-class="conflict-modal-large" @did-dismiss="showConflictModal = false">
         <ion-header>
           <ion-toolbar>
             <ion-buttons slot="start">
@@ -237,8 +237,7 @@
                   <span class="version-card-time">{{ formatRelativeTime(clientTimestamp) }}</span>
                 </div>
                 <ion-list class="transparent">
-                  <ion-item v-for="rf in displayableFields" :key="rf.field"
-                    lines="full">
+                  <ion-item v-for="rf in displayableFields" :key="rf.field" lines="full">
                     <ion-label>
                       <h3>{{ rf.label }}</h3>
                       <p class="field-value">{{ rf.clientDisplay }}</p>
@@ -256,8 +255,7 @@
                   <span class="version-card-time">{{ formatRelativeTime(serverTimestamp) }}</span>
                 </div>
                 <ion-list class="transparent">
-                  <ion-item v-for="rf in displayableFields" :key="rf.field"
-                    lines="full">
+                  <ion-item v-for="rf in displayableFields" :key="rf.field" lines="full">
                     <ion-label>
                       <h3>{{ rf.label }}</h3>
                       <p class="field-value">{{ rf.serverDisplay }}</p>
@@ -311,7 +309,7 @@
                 fill="clear"
                 @click="closeRepairModal"
               >
-                <ion-icon :icon="closeOutline" slot="icon-only" />
+                <ion-icon slot="icon-only" :icon="closeOutline" />
               </ion-button>
             </ion-buttons>
           </ion-toolbar>
@@ -340,8 +338,8 @@
               expand="block"
               fill="solid"
               color="primary"
-              @click="closeRepairModal"
               class="ion-margin-top"
+              @click="closeRepairModal"
             >
               Cerrar
             </ion-button>

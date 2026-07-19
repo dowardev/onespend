@@ -1,5 +1,5 @@
 /// <reference types="cypress" />
-/* eslint-disable no-unused-expressions */
+ 
 
 function mergeResponse(status: 'created' | 'updated', syncId: string) {
   const bucket = status === 'created' ? 'created' : 'updated';
