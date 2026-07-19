@@ -1,3 +1,31 @@
+## [v0.74.0] - 2026-07-19
+
+### Added
+- History panel (LBDS-126)
+- Sync end-to-end testing (LBDS-103)
+- Deployment preparation and CI/CD pipeline (LBDS-117)
+
+### Fixed
+- Session expiration handling (LBDS-111)
+- Performance page data loading issues (LBDS-94)
+- Add account budget flow (LBDS-92)
+- Cash flow chart rendering (LBDS-91)
+- Theme switching stability (LBDS-90)
+
+### Changed
+- Migrate SSO client from local copy to external monorepo (`@tu-org/sso-client`)
+- Sync audit and observability layer (LBDS-31)
+- Consolidated composables and controllers (LBDS-63)
+- Improve form validation consistency (LBDS-67)
+- Add provider from selector on budget page (LBDS-58)
+- Remove deprecated templates code (LBDS-60)
+- Convert budget components to reusable patterns (LBDS-57)
+
+### Technical
+- Untrack local artifacts (brainstorm caches, __pycache__, cookies.txt)
+- Update .gitignore with local/temp artifact patterns
+- Merge origin/master into merge branch (unrelated histories resolved)
+
 ## [v0.73.0] - 2026-06-23
 
 ### Added
