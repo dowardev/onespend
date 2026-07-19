@@ -68,3 +68,9 @@ front/test-results/
 
 # Vite temp files
 front/vite.config.ts.timestamp-*
+
+# Local/temp artifacts
+.superpowers/brainstorm/
+.opencode/**/__pycache__/
+**/__pycache__/
+cookies.txt
