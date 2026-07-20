@@ -76,6 +76,14 @@ docs/superpowers/
 
 # Development artifacts
 plan.md
+task_plan.md
+progress.md
+
+# Session artifacts
+cookies.txt
+
+# Brainstorm / Superpowers caches
+.superpowers/
 
 # Cache files
 front/.eslintcache
