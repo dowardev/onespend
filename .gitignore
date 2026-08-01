@@ -102,3 +102,6 @@ front/test-results/
 
 # Vite temp files
 front/vite.config.ts.timestamp-*
+# Local AI runtime state
+.atl/
+.codegraph/
