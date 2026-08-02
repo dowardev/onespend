@@ -148,16 +148,20 @@ backend_deploy:
         --exclude='bootstrap/cache/*.php'
         --exclude='public/build/'
         -C back .
+    - tar -czf /tmp/sso-server.tar.gz -C packages sso-server
     - scp -P "$SSH_PORT" /tmp/backend.tar.gz "$SSH_USER@$SSH_HOST:/tmp/backend.tar.gz"
+    - scp -P "$SSH_PORT" /tmp/sso-server.tar.gz "$SSH_USER@$SSH_HOST:/tmp/sso-server.tar.gz"
     - ssh -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "
-        mkdir -p $DEPLOY_PATH_BACKEND &&
+        mkdir -p $DEPLOY_PATH_BACKEND/packages &&
         tar -xzf /tmp/backend.tar.gz -C $DEPLOY_PATH_BACKEND &&
+        tar -xzf /tmp/sso-server.tar.gz -C $DEPLOY_PATH_BACKEND/packages &&
         cd $DEPLOY_PATH_BACKEND &&
         composer install --no-dev --optimize-autoloader &&
         php artisan migrate --force --seed=SystemTestSeeder &&
         php artisan config:cache &&
         php artisan route:cache &&
-        rm /tmp/backend.tar.gz
+        rm /tmp/backend.tar.gz &&
+        rm /tmp/sso-server.tar.gz
       "
 
 frontend_deploy:
