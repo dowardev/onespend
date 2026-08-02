@@ -182,16 +182,30 @@ frontend_deploy:
     - frontend_test
     - frontend_lint
   before_script:
-    - !reference [.ssh_setup, before_script]
+    - apk add --no-cache openssh-client
+    - mkdir -p ~/.ssh && chmod 700 ~/.ssh
+    - echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
+    - echo "$SSH_KNOWN_HOSTS" >> ~/.ssh/known_hosts
+    - eval \$(ssh-agent -s) && ssh-add ~/.ssh/id_rsa
     - apk add --no-cache nodejs npm
   script:
     - mkdir -p /tmp/front && tar xzf front/dist.tar.gz -C /tmp/front 2>/dev/null || true
-    - if [ ! -d /tmp/front/dist ]; then echo "ERROR: front/dist artifact not found"; exit 1; fi
-    - scp -P "$SSH_PORT" /tmp/front/dist.tar.gz "$SSH_USER@$SSH_HOST:$DEPLOY_PATH_FRONTEND" 2>/dev/null || (
-        cd front && pnpm run build && tar czvf dist.tar.gz dist/ &&
+    - 'if [ ! -d /tmp/front/dist ]; then echo "ERROR: front/dist artifact not found"; exit 1; fi' 
+    - |
+      if scp -P "$SSH_PORT" /tmp/front/dist.tar.gz "$SSH_USER@$SSH_HOST:$DEPLOY_PATH_FRONTEND" 2>/dev/null; then
+        echo "Artifact deployed"
+      else
+        cd front
+        pnpm run build
+        tar czvf dist.tar.gz dist/
         scp -P "$SSH_PORT" dist.tar.gz "$SSH_USER@$SSH_HOST:$DEPLOY_PATH_FRONTEND"
-      )
-    - ssh -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "cd $DEPLOY_PATH_FRONTEND && tar xzvf dist.tar.gz && rm dist.tar.gz"
+      fi
+    - |
+      ssh -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "
+        cd $DEPLOY_PATH_FRONTEND &&
+        tar xzvf dist.tar.gz &&
+        rm dist.tar.gz
+      ""
 
 post_deploy_backend:
   stage: post-deploy
@@ -257,7 +271,11 @@ rollback_frontend:
     - .tag_rules
   when: manual
   before_script:
-    - !reference [.ssh_setup, before_script]
+    - apk add --no-cache openssh-client
+    - mkdir -p ~/.ssh && chmod 700 ~/.ssh
+    - echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
+    - echo "$SSH_KNOWN_HOSTS" >> ~/.ssh/known_hosts
+    - eval \$(ssh-agent -s) && ssh-add ~/.ssh/id_rsa
     - apk add --no-cache nodejs npm
   script:
     - PREVIOUS_TAG=$(git tag --list "v*" --sort=-version:refname | sed -n '2p')
