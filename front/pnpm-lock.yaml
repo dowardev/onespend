@@ -36,8 +36,8 @@ importers:
         specifier: ^8.0.0
         version: 8.7.7(@stencil/core@4.43.5)(vue-router@4.6.3(vue@3.5.22(typescript@5.6.3)))(vue@3.5.22(typescript@5.6.3))
       '@tu-org/sso-client':
-        specifier: file:./packages/sso-client
-        version: file:packages/sso-client
+        specifier: file:../packages/sso-client
+        version: '@dowardev/sso-client@file:../packages/sso-client'
       '@vuelidate/core':
         specifier: ^2.0.3
         version: 2.0.3(vue@3.5.22(typescript@5.6.3))
@@ -746,6 +746,9 @@ packages:
   '@develar/schema-utils@2.6.5':
     resolution: {integrity: sha512-0cp4PsWQ/9avqTVMCtZ+GirikIA36ikvjtHweU4/j8yLtgObI0+JUPhYFScgwlteveGB1rt3Cm8UhN04XayDig==}
     engines: {node: '>= 8.9.0'}
+
+  '@dowardev/sso-client@file:../packages/sso-client':
+    resolution: {directory: ../packages/sso-client, type: directory}
 
   '@electron/asar@3.4.1':
     resolution: {integrity: sha512-i4/rNPRS84t0vSRa2HorerGRXWyF4vThfHesw0dmcWHp+cspK743UanA0suA5Q5y8kzY2y6YKrvbIUn69BCAiA==}
@@ -1800,9 +1803,6 @@ packages:
   '@trickfilm400/rollup-plugin-off-main-thread@3.0.0-pre1':
     resolution: {integrity: sha512-/67zpWDBLV+oYAEL682s1ktXL0HgqX76f6gaVGkGnVZlBbm1zd0v4Bz8MFF2GGhoX9rvfq3KSQHubFHwa6w6/Q==}
     engines: {node: '>=12'}
-
-  '@tu-org/sso-client@file:packages/sso-client':
-    resolution: {directory: packages/sso-client, type: directory}
 
   '@types/cacheable-request@6.0.3':
     resolution: {integrity: sha512-IQ3EbTzGxIigb1I3qPZc1rWJnH0BmSKv5QYTalEwweFvyBDLSAe24zP0le/hyi7ecGfZVlIVAg4BZqb8WBwKqw==}
@@ -5806,6 +5806,12 @@ snapshots:
       ajv: 6.12.6
       ajv-keywords: 3.5.2(ajv@6.12.6)
 
+  '@dowardev/sso-client@file:../packages/sso-client':
+    dependencies:
+      axios: 1.13.2
+    transitivePeerDependencies:
+      - debug
+
   '@electron/asar@3.4.1':
     dependencies:
       commander: 5.1.0
@@ -6627,12 +6633,6 @@ snapshots:
       json5: 2.2.3
       magic-string: 0.30.21
       string.prototype.matchall: 4.0.12
-
-  '@tu-org/sso-client@file:packages/sso-client':
-    dependencies:
-      axios: 1.13.2
-    transitivePeerDependencies:
-      - debug
 
   '@types/cacheable-request@6.0.3':
     dependencies:
