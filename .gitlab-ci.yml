@@ -149,10 +149,10 @@ backend_deploy:
         --exclude='public/build/'
         -C back .
     - tar -czf /tmp/sso-server.tar.gz -C packages sso-server
-    - scp -P "$SSH_PORT" /tmp/backend.tar.gz "$SSH_USER@$SSH_HOST:/tmp/backend.tar.gz"
-    - scp -P "$SSH_PORT" /tmp/sso-server.tar.gz "$SSH_USER@$SSH_HOST:/tmp/sso-server.tar.gz"
+    - scp -o ConnectTimeout=60 -P "$SSH_PORT" /tmp/backend.tar.gz "$SSH_USER@$SSH_HOST:/tmp/backend.tar.gz"
+    - scp -o ConnectTimeout=60 -P "$SSH_PORT" /tmp/sso-server.tar.gz "$SSH_USER@$SSH_HOST:/tmp/sso-server.tar.gz"
     - DEPLOY_PARENT=$(dirname $DEPLOY_PATH_BACKEND)
-    - ssh -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "
+    - ssh -o ConnectTimeout=60 -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "
         mkdir -p $DEPLOY_PARENT/packages &&
         tar -xzf /tmp/backend.tar.gz -C $DEPLOY_PATH_BACKEND &&
         tar -xzf /tmp/sso-server.tar.gz -C $DEPLOY_PARENT/packages &&
@@ -186,16 +186,16 @@ frontend_deploy:
     - mkdir -p /tmp/front && tar xzf front/dist.tar.gz -C /tmp/front 2>/dev/null || true
     - 'if [ ! -d /tmp/front/dist ]; then echo "ERROR: front/dist artifact not found"; exit 1; fi' 
     - |
-      if scp -P "$SSH_PORT" /tmp/front/dist.tar.gz "$SSH_USER@$SSH_HOST:$DEPLOY_PATH_FRONTEND" 2>/dev/null; then
+      if scp -o ConnectTimeout=60 -P "$SSH_PORT" /tmp/front/dist.tar.gz "$SSH_USER@$SSH_HOST:$DEPLOY_PATH_FRONTEND" 2>/dev/null; then
         echo "Artifact deployed"
       else
         cd front
         pnpm run build
         tar czvf dist.tar.gz dist/
-        scp -P "$SSH_PORT" dist.tar.gz "$SSH_USER@$SSH_HOST:$DEPLOY_PATH_FRONTEND"
+        scp -o ConnectTimeout=60 -P "$SSH_PORT" dist.tar.gz "$SSH_USER@$SSH_HOST:$DEPLOY_PATH_FRONTEND"
       fi
     - |
-      ssh -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "
+      ssh -o ConnectTimeout=60 -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "
         cd $DEPLOY_PATH_FRONTEND &&
         tar xzvf dist.tar.gz &&
         rm dist.tar.gz
@@ -246,8 +246,8 @@ rollback_backend:
         --exclude='bootstrap/cache/*.php'
         --exclude='public/build/'
         -C back .
-    - scp -P "$SSH_PORT" /tmp/backend.tar.gz "$SSH_USER@$SSH_HOST:/tmp/backend.tar.gz"
-    - ssh -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "
+    - scp -o ConnectTimeout=60 -P "$SSH_PORT" /tmp/backend.tar.gz "$SSH_USER@$SSH_HOST:/tmp/backend.tar.gz"
+    - ssh -o ConnectTimeout=60 -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "
         mkdir -p $DEPLOY_PATH_BACKEND &&
         tar -xzf /tmp/backend.tar.gz -C $DEPLOY_PATH_BACKEND &&
         cd $DEPLOY_PATH_BACKEND &&
@@ -281,5 +281,5 @@ rollback_frontend:
     - echo "VITE_API_URL=$VITE_API_URL" >> .env.production
     - pnpm run build
     - tar czvf dist.tar.gz dist/
-    - scp -P "$SSH_PORT" dist.tar.gz "$SSH_USER@$SSH_HOST:$DEPLOY_PATH_FRONTEND"
-    - ssh -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "cd $DEPLOY_PATH_FRONTEND && tar xzvf dist.tar.gz && rm dist.tar.gz"
+    - scp -o ConnectTimeout=60 -P "$SSH_PORT" dist.tar.gz "$SSH_USER@$SSH_HOST:$DEPLOY_PATH_FRONTEND"
+    - ssh -o ConnectTimeout=60 -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "cd $DEPLOY_PATH_FRONTEND && tar xzvf dist.tar.gz && rm dist.tar.gz"
