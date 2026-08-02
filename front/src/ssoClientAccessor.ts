@@ -1,4 +1,4 @@
-import type { SSOClient } from "@tu-org/sso-client"
+import type { SSOClient } from "@dowardev/sso-client"
 
 let _ssoClient: SSOClient | undefined
 

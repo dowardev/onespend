@@ -1,4 +1,4 @@
-const SSO_TOKEN_KEY = '@tu-org/sso-client:token';
+const SSO_TOKEN_KEY = '@dowardev/sso-client:token';
 
 export async function saveToken(token: string): Promise<void> {
   localStorage.setItem(SSO_TOKEN_KEY, token);

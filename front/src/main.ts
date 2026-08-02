@@ -46,7 +46,7 @@ useBudgetProvidersStore();
 useSuppliersStore();
 
 // SSO Client
-import { SSOClient } from '@tu-org/sso-client';
+import { SSOClient } from '@dowardev/sso-client';
 const ssoClient = new SSOClient({
   ssoUrl: import.meta.env.VITE_SSO_URL,
   ssoFrontendUrl: import.meta.env.VITE_SSO_FRONTEND_URL,
