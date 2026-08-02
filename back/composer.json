@@ -10,8 +10,8 @@
     "license": "MIT",
     "repositories": [
         {
-            "type": "vcs",
-            "url": "https://gitlab.com/dowardev/sso.git"
+            "type": "path",
+            "url": "../packages/sso-server"
         }
     ],
     "require": {
