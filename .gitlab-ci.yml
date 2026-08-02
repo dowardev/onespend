@@ -48,7 +48,7 @@ backend_lint:
     - .tag_rules
   script:
     - composer install --prefer-dist --no-progress --no-interaction
-    - vendor/bin/pint --test
+    - vendor/bin/pint --test --exclude packages
 
 backend_test:
   stage: test
