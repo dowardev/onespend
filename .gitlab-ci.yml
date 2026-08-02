@@ -97,28 +97,12 @@ frontend_test:
   script:
     - pnpm run test:unit
 
-backend_assets_build:
-  stage: build
-  image: composer:2.8
-  extends:
-    - .backend_setup
-    - .tag_rules
-  script:
-    - composer install --prefer-dist --no-progress --no-interaction
-    - php artisan vite:build
-  artifacts:
-    paths:
-      - back/public/build/
-    expire_in: 1 hour
-
 backend_build:
   stage: build
   image: composer:2.8
   extends:
     - .backend_setup
     - .tag_rules
-  needs:
-    - backend_assets_build
   script:
     - composer install --prefer-dist --no-progress --no-interaction
   artifacts:
