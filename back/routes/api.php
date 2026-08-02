@@ -13,8 +13,13 @@ use App\Http\Controllers\SupplierProductController;
 use App\Http\Controllers\SyncController;
 use App\Http\Controllers\MetricsController;
 use App\Http\Controllers\HealthController;
+use App\Http\Controllers\SystemTestController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+
+// Endpoint público de healthcheck (CI/CD).
+// Lee datos sembrados por SystemTestSeeder: si devuelve 200, BD + tabla + seeder están OK.
+Route::get('/system-test', SystemTestController::class);
 
 // Rutas protegidas (autenticación via SSO OAuth2 + JWT)
 Route::middleware(['sso.auth', 'sso.user'])->group(function () {
