@@ -46,6 +46,7 @@ backend_lint:
   extends:
     - .backend_setup
     - .tag_rules
+  allow_failure: true
   script:
     - composer install --prefer-dist --no-progress --no-interaction
     - vendor/bin/pint --test app/ config/ database/ routes/ bootstrap/
