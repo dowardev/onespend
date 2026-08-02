@@ -35,7 +35,7 @@ importers:
       '@ionic/vue-router':
         specifier: ^8.0.0
         version: 8.7.7(@stencil/core@4.43.5)(vue-router@4.6.3(vue@3.5.22(typescript@5.6.3)))(vue@3.5.22(typescript@5.6.3))
-      '@tu-org/sso-client':
+      '@dowardev/sso-client':
         specifier: file:../packages/sso-client
         version: '@dowardev/sso-client@file:../packages/sso-client'
       '@vuelidate/core':
