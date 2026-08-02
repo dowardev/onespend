@@ -158,7 +158,8 @@ backend_deploy:
         tar -xzf /tmp/sso-server.tar.gz -C $DEPLOY_PARENT/packages &&
         cd $DEPLOY_PATH_BACKEND &&
         composer install --no-dev --optimize-autoloader &&
-        php artisan migrate --force --seed=SystemTestSeeder &&
+        php artisan migrate --force &&
+        php artisan db:seed --class=SystemTestSeeder --force &&
         php artisan config:cache &&
         php artisan route:cache &&
         rm /tmp/backend.tar.gz &&
