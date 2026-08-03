@@ -123,9 +123,10 @@ frontend_build:
     - .tag_rules
   script:
     - pnpm run build
+    - cd front && tar czf dist.tar.gz dist/ && mv dist.tar.gz ../
   artifacts:
     paths:
-      - front/dist/
+      - dist.tar.gz
     expire_in: 1 hour
 
 backend_deploy:
@@ -175,19 +176,17 @@ frontend_deploy:
     - frontend_build
     - frontend_test
     - frontend_lint
+  dependencies:
+    - frontend_build
   before_script:
     - !reference [.ssh_setup, before_script]
-    - apk add --no-cache nodejs npm
   script:
-    - mkdir -p /tmp/front && tar xzf front/dist.tar.gz -C /tmp/front 2>/dev/null || true
-    - 'if [ ! -d /tmp/front/dist ]; then echo "ERROR: front/dist artifact not found"; exit 1; fi' 
     - |
-      if scp -o ConnectTimeout=60 -P "$SSH_PORT" /tmp/front/dist.tar.gz "$SSH_USER@$SSH_HOST:$DEPLOY_PATH_FRONTEND" 2>/dev/null; then
+      if scp -o ConnectTimeout=60 -P "$SSH_PORT" dist.tar.gz "$SSH_USER@$SSH_HOST:$DEPLOY_PATH_FRONTEND"; then
         echo "Artifact deployed"
       else
-        cd front
-        pnpm run build
-        tar czvf dist.tar.gz dist/
+        echo "ERROR: dist.tar.gz not found, building locally..."
+        cd front && pnpm install --frozen-lockfile && pnpm run build && tar czvf dist.tar.gz dist/ && cd ..
         scp -o ConnectTimeout=60 -P "$SSH_PORT" dist.tar.gz "$SSH_USER@$SSH_HOST:$DEPLOY_PATH_FRONTEND"
       fi
     - |
