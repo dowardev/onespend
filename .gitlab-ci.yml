@@ -193,12 +193,7 @@ frontend_deploy:
         cd front && pnpm install --frozen-lockfile && pnpm run build && tar czvf dist.tar.gz dist/ && cd ..
         scp -o ConnectTimeout=60 -P "$SSH_PORT" dist.tar.gz "$SSH_USER@$SSH_HOST:$DEPLOY_PATH_FRONTEND"
       fi
-    - |
-      ssh -o ConnectTimeout=60 -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "
-        cd $DEPLOY_PATH_FRONTEND &&
-        tar xzvf dist.tar.gz &&
-        rm dist.tar.gz
-      ""
+    - ssh -o ConnectTimeout=60 -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "cd $DEPLOY_PATH_FRONTEND && tar xzvf dist.tar.gz && rm dist.tar.gz"
 
 
 
