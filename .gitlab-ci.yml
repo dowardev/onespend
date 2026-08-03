@@ -123,7 +123,11 @@ frontend_build:
     - .tag_rules
   script:
     - pnpm run build
-    - cd front && tar czf dist.tar.gz dist/ && mv dist.tar.gz ../
+    - tar czf ../dist.tar.gz dist/
+  artifacts:
+    paths:
+      - dist.tar.gz
+    expire_in: 1 hour
   artifacts:
     paths:
       - dist.tar.gz
