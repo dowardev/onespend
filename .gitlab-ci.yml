@@ -1,4 +1,4 @@
-image: alpine:latest
+image: alpine:3.20
 
 stages:
   - lint
@@ -131,7 +131,7 @@ frontend_build:
 
 backend_deploy:
   stage: deploy
-  image: alpine
+  image: alpine:3.20
   extends:
     - .ssh_setup
     - .tag_rules
@@ -167,7 +167,7 @@ backend_deploy:
 
 frontend_deploy:
   stage: deploy
-  image: alpine
+  image: alpine:3.20
   extends:
     - .ssh_setup
     - .tag_rules
@@ -187,7 +187,7 @@ frontend_deploy:
 
 rollback_backend:
   stage: rollback
-  image: alpine
+  image: alpine:3.20
   extends:
     - .ssh_setup
     - .tag_rules
@@ -219,7 +219,7 @@ rollback_backend:
 
 rollback_frontend:
   stage: rollback
-  image: alpine
+  image: alpine:3.20
   extends:
     - .tag_rules
   when: manual
