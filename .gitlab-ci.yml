@@ -128,10 +128,6 @@ frontend_build:
     paths:
       - dist.tar.gz
     expire_in: 1 hour
-  artifacts:
-    paths:
-      - dist.tar.gz
-    expire_in: 1 hour
 
 backend_deploy:
   stage: deploy
