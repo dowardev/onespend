@@ -120,7 +120,7 @@ frontend_build:
     - .tag_rules
   script:
     - pnpm run build
-    - tar czf ../dist.tar.gz dist/
+    - tar czf ../dist.tar.gz -C dist .
   artifacts:
     paths:
       - dist.tar.gz
@@ -236,6 +236,6 @@ rollback_frontend:
     - pnpm install --frozen-lockfile
     - echo "VITE_API_URL=$VITE_API_URL" >> .env.production
     - pnpm run build
-    - tar czvf dist.tar.gz dist/
+    - tar czvf dist.tar.gz -C dist .
     - scp -o ConnectTimeout=60 -P "$SSH_PORT" dist.tar.gz "$SSH_USER@$SSH_HOST:$DEPLOY_PATH_FRONTEND"
     - ssh -o ConnectTimeout=60 -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "cd $DEPLOY_PATH_FRONTEND && tar xzvf dist.tar.gz && rm dist.tar.gz"
