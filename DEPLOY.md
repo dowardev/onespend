@@ -227,8 +227,8 @@ Add this line in your hosting cron panel:
 ## 9. GitLab CI/CD
 
 See `.gitlab-ci.yml` in the project root.
-Pipeline triggers automatically on semantic tags
-`vX.Y.Z`.
+Pipeline triggers automatically on tags matching
+`vX.Y.Z`, `vX.Y.Z-alpha.N`, `vX.Y.Z-beta.N`, `vX.Y.Z-rc.N`, or `vX.Y.Z-dryrun.N`.
 
 ### Required CI/CD Variables
 
@@ -250,6 +250,26 @@ Pipeline triggers automatically on semantic tags
 git tag -a v1.0.0 -m "Release 1.0.0"
 git push origin v1.0.0
 ```
+
+### Validation deploys (dryrun)
+
+Use `dryrun` tags to validate CI/CD changes end to end (lint, test, build, deploy)
+without publishing a release.
+
+```bash
+git tag -a v0.0.0-dryrun.1 -m "dryrun: validate CI changes against server"
+git push origin v0.0.0-dryrun.1
+```
+
+Watch the pipeline in GitLab (CI/CD > Pipelines). When it finishes successfully,
+remove the tag:
+
+```bash
+git tag -d v0.0.0-dryrun.1
+git push origin :refs/tags/v0.0.0-dryrun.1
+```
+
+All other tags are ignored by the pipeline.
 
 ---
 
