@@ -69,6 +69,7 @@ backend_test:
     MARIADB_ROOT_PASSWORD: toor
     MARIADB_DATABASE: onespend_test
   script:
+    - docker-php-ext-install pdo_mysql
     - cp .env.example .env
     - composer install --prefer-dist --no-progress --no-interaction
     - php artisan test
