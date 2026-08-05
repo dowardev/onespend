@@ -14,6 +14,7 @@ class Attachment extends Model
     protected $table = 'attachments';
 
     public const ENTITY_TYPE_ENTRIES = 'entries';
+
     public const ENTITY_TYPE_PROVIDERS = 'providers';
 
     protected $fillable = [

@@ -4,20 +4,23 @@ namespace App\Services\Sync\Processors;
 
 use App\Repositories\SyncMetadataRepository;
 use App\Services\Sync\ConflictDetector;
-use App\Services\Sync\ForeignKeyResolver;
 use App\Services\Sync\Contracts\SyncProcessorInterface;
+use App\Services\Sync\ForeignKeyResolver;
 use App\Services\SyncIdResolver;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Collection;
 
 abstract class AbstractEntityProcessor implements SyncProcessorInterface
 {
     protected const BATCH_SIZE = 500;
 
     protected SyncIdResolver $idResolver;
+
     private ConflictDetector $conflictDetector;
+
     protected ForeignKeyResolver $foreignKeyResolver;
+
     protected SyncMetadataRepository $syncMetadataRepo;
 
     private ?array $cachedFillable = null;
@@ -52,8 +55,9 @@ abstract class AbstractEntityProcessor implements SyncProcessorInterface
     protected function getFillableFields(): array
     {
         $modelClass = $this->getModel();
-        $model = new $modelClass();
+        $model = new $modelClass;
         $fillable = $model->getFillable();
+
         return array_diff($fillable, ['id', 'created_at', 'updated_at', 'deleted_at', 'user_id', 'sync_id', 'version']);
     }
 
@@ -106,16 +110,17 @@ abstract class AbstractEntityProcessor implements SyncProcessorInterface
 
         foreach ($items as $item) {
             $syncId = $item['id'] ?? null;
-            if (!$syncId) {
+            if (! $syncId) {
                 continue;
             }
 
             $validation = $this->validate($item);
-            if (!$validation['valid']) {
+            if (! $validation['valid']) {
                 Log::warning("Invalid item in batch create for {$this->getEntityName()}", [
                     'sync_id' => $syncId,
                     'errors' => $validation['errors'],
                 ]);
+
                 continue;
             }
 
@@ -205,16 +210,17 @@ abstract class AbstractEntityProcessor implements SyncProcessorInterface
 
             foreach ($items as $item) {
                 $syncId = $item['id'] ?? ($item['sync_id'] ?? null);
-                if (!$syncId) {
+                if (! $syncId) {
                     continue;
                 }
 
                 $validation = $this->validate($item, true);
-                if (!$validation['valid']) {
+                if (! $validation['valid']) {
                     Log::warning("Invalid item in batch update for {$this->getEntityName()}", [
                         'sync_id' => $syncId,
                         'errors' => $validation['errors'],
                     ]);
+
                     continue;
                 }
 
@@ -222,7 +228,7 @@ abstract class AbstractEntityProcessor implements SyncProcessorInterface
                 $data = $this->filterToFillableFromCache($preprocessed, $this->getCachedFillable());
 
                 unset($data['id'], $data['sync_id'], $data['user_id'], $data['created_at'],
-                      $data['products'], $data['_deleted'], $data['groups'], $data['version']);
+                    $data['products'], $data['_deleted'], $data['groups'], $data['version']);
 
                 if (isset($data['updated_at']) && is_numeric($data['updated_at'])) {
                     $data['updated_at'] = date('Y-m-d H:i:s', self::normalizeTimestamp($data['updated_at']));
@@ -234,7 +240,7 @@ abstract class AbstractEntityProcessor implements SyncProcessorInterface
                 $updated[] = ['sync_id' => $syncId, '_original' => $item];
             }
 
-            if (!empty($bulkData)) {
+            if (! empty($bulkData)) {
                 $syncIds = array_keys($bulkData);
                 $this->bulkUpdateByCase($modelClass, $bulkData, $userId);
 
@@ -288,10 +294,10 @@ abstract class AbstractEntityProcessor implements SyncProcessorInterface
                 $bindings[] = $syncId;
                 $bindings[] = $bulkData[$syncId][$col] ?? null;
             }
-            $setParts[] = "`{$col}` = CASE `sync_id` " . implode(' ', $whenClauses) . " ELSE `{$col}` END";
+            $setParts[] = "`{$col}` = CASE `sync_id` ".implode(' ', $whenClauses)." ELSE `{$col}` END";
         }
 
-        $setParts[] = "`version` = `version` + 1";
+        $setParts[] = '`version` = `version` + 1';
 
         $placeholders = implode(', ', array_fill(0, count($allSyncIds), '?'));
         foreach ($allSyncIds as $syncId) {
@@ -299,8 +305,8 @@ abstract class AbstractEntityProcessor implements SyncProcessorInterface
         }
         $bindings[] = $userId;
 
-        $sql = "UPDATE `{$table}` SET " . implode(', ', $setParts)
-             . " WHERE sync_id IN ({$placeholders}) AND user_id = ?";
+        $sql = "UPDATE `{$table}` SET ".implode(', ', $setParts)
+             ." WHERE sync_id IN ({$placeholders}) AND user_id = ?";
 
         DB::update($sql, $bindings);
     }
@@ -321,9 +327,9 @@ abstract class AbstractEntityProcessor implements SyncProcessorInterface
                 ->pluck('sync_id')
                 ->toArray();
 
-            if (!empty($existing)) {
+            if (! empty($existing)) {
                 $deleteData = ['deleted_at' => now()];
-                $modelInstance = new $modelClass();
+                $modelInstance = new $modelClass;
                 if (in_array('status', $modelInstance->getFillable())) {
                     $deleteData['status'] = 'deleted';
                 }
@@ -380,6 +386,7 @@ abstract class AbstractEntityProcessor implements SyncProcessorInterface
     {
         if ($status === 'deleted') {
             $this->syncMetadataRepo->markSynced($this->getEntityName(), $syncIds, $userId, [], [], 'deleted');
+
             return;
         }
 
@@ -413,13 +420,14 @@ abstract class AbstractEntityProcessor implements SyncProcessorInterface
 
     public static function normalizeTimestamp(mixed $timestamp): int
     {
-        if (!is_numeric($timestamp)) {
+        if (! is_numeric($timestamp)) {
             return 0;
         }
         $ts = (int) $timestamp;
         if ($ts > 10000000000) {
             $ts = (int) ($ts / 1000);
         }
+
         return $ts;
     }
 }

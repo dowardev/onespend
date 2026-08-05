@@ -77,7 +77,7 @@ describe('Create entry then edit immediately', () => {
       if (win.__devDb) {
         const entries = await win.__devDb.getBudgetEntries();
         const target = entries.find((e: { name: string }) => e.name === editedName);
-        expect(target, `entry "${editedName}" should exist in Dexie`).to.not.be.undefined;
+        expect(target, `entry "${editedName}" should exist in Dexie`).to.not.equal(undefined);
         expect(target?.version, 'version should be > 0 after sync').to.be.greaterThan(0);
       }
     });

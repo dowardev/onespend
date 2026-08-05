@@ -5,14 +5,16 @@ namespace App\Services\Sync;
 use App\Repositories\SyncMetadataRepository;
 use App\Services\Sync\Contracts\SyncProcessorInterface;
 use App\Services\SyncIdResolver;
-use App\Services\Sync\ForeignKeyResolver;
 use Illuminate\Support\Facades\Log;
 
 class SyncOrchestratorService
 {
     private array $processors = [];
+
     private SyncIdResolver $idResolver;
+
     private ForeignKeyResolver $foreignKeyResolver;
+
     private SyncMetadataRepository $syncMetadataRepo;
 
     public function __construct(SyncIdResolver $idResolver, ForeignKeyResolver $foreignKeyResolver)
@@ -57,7 +59,7 @@ class SyncOrchestratorService
         $processed = [];
 
         foreach ($entityOrder as $entityType) {
-            if (!isset($data[$entityType])) {
+            if (! isset($data[$entityType])) {
                 continue;
             }
 
@@ -68,28 +70,29 @@ class SyncOrchestratorService
 
             $processor = $this->processors[$entityType] ?? null;
 
-            if (!$processor) {
+            if (! $processor) {
                 Log::warning("SyncOrchestrator: No processor registered for {$entityType}");
                 $results['skipped'][$entityType] = count($items);
+
                 continue;
             }
 
             try {
                 $entityResult = $this->processEntityType($entityType, $items, $processor, $userId);
 
-                if (!empty($entityResult['created'])) {
+                if (! empty($entityResult['created'])) {
                     $results['created'][$entityType] = $entityResult['created'];
                 }
-                if (!empty($entityResult['updated'])) {
+                if (! empty($entityResult['updated'])) {
                     $results['updated'][$entityType] = $entityResult['updated'];
                 }
-                if (!empty($entityResult['deleted'])) {
+                if (! empty($entityResult['deleted'])) {
                     $results['deleted'][$entityType] = $entityResult['deleted'];
                 }
-                if (!empty($entityResult['conflicts'])) {
+                if (! empty($entityResult['conflicts'])) {
                     $results['conflicts'][$entityType] = $entityResult['conflicts'];
                 }
-                if (!empty($entityResult['errors'])) {
+                if (! empty($entityResult['errors'])) {
                     $results['errors'][$entityType] = $entityResult['errors'];
                 }
             } catch (\Exception $e) {
@@ -107,8 +110,9 @@ class SyncOrchestratorService
                 continue;
             }
 
-            if (!isset($this->processors[$entityType])) {
+            if (! isset($this->processors[$entityType])) {
                 Log::warning("SyncOrchestrator: Unknown entityType {$entityType}");
+
                 continue;
             }
 
@@ -119,16 +123,16 @@ class SyncOrchestratorService
             try {
                 $entityResult = $this->processEntityType($entityType, $items, $processor, $userId);
 
-                if (!empty($entityResult['created'])) {
+                if (! empty($entityResult['created'])) {
                     $results['created'][$entityType] = $entityResult['created'];
                 }
-                if (!empty($entityResult['updated'])) {
+                if (! empty($entityResult['updated'])) {
                     $results['updated'][$entityType] = $entityResult['updated'];
                 }
-                if (!empty($entityResult['deleted'])) {
+                if (! empty($entityResult['deleted'])) {
                     $results['deleted'][$entityType] = $entityResult['deleted'];
                 }
-                if (!empty($entityResult['conflicts'])) {
+                if (! empty($entityResult['conflicts'])) {
                     $results['conflicts'][$entityType] = $entityResult['conflicts'];
                 }
             } catch (\Exception $e) {
@@ -155,11 +159,11 @@ class SyncOrchestratorService
         $conflicts = $result['conflicts'];
         $existingMap = $result['existingMap'];
 
-        $conflictSyncIds = array_map(fn($c) => $c['sync_id'], $conflicts);
+        $conflictSyncIds = array_map(fn ($c) => $c['sync_id'], $conflicts);
 
         foreach ($items as $item) {
             $syncId = $item['id'] ?? null;
-            if (!$syncId) {
+            if (! $syncId) {
                 continue;
             }
 
@@ -176,6 +180,7 @@ class SyncOrchestratorService
                     }
                 }
                 $this->saveConflictMetadata($entityType, $syncId, $userId, $clientData, $conflictInfo);
+
                 continue;
             }
 
@@ -200,17 +205,17 @@ class SyncOrchestratorService
             'conflicts' => $conflicts,
             'errors' => [],
         ];
+
         return $result;
     }
 
     private function saveConflictMetadata(string $entityType, string $syncId, int $userId, array $clientData, array $conflictInfo = []): void
     {
         $conflictData = $clientData;
-        if (!empty($conflictInfo)) {
+        if (! empty($conflictInfo)) {
             $conflictData = array_merge($clientData, $conflictInfo);
         }
 
         $this->syncMetadataRepo->markConflict($entityType, $syncId, $userId, $conflictData);
     }
-
 }

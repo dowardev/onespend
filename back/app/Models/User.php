@@ -49,11 +49,11 @@ class User extends Authenticatable
 
     public function suppliers()
     {
-        return $this->hasMany(\App\Models\Supplier::class);
+        return $this->hasMany(Supplier::class);
     }
 
     public function accounts()
     {
-        return $this->hasMany(\App\Models\Account::class);
+        return $this->hasMany(Account::class);
     }
 }

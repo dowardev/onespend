@@ -45,10 +45,9 @@ backend_lint:
   extends:
     - .backend_setup
     - .tag_rules
-  allow_failure: true
   script:
     - composer install --prefer-dist --no-progress --no-interaction
-    - vendor/bin/pint --test app/ config/ database/ routes/ bootstrap/
+    - vendor/bin/pint --test app/ config/ database/ routes/ bootstrap/app.php bootstrap/providers.php
 
 backend_test:
   stage: test
@@ -59,7 +58,6 @@ backend_test:
   extends:
     - .backend_setup
     - .tag_rules
-  allow_failure: true
   variables:
     APP_KEY: $APP_KEY
     DB_CONNECTION: mariadb
@@ -81,7 +79,6 @@ frontend_lint:
   extends:
     - .frontend_setup
     - .tag_rules
-  allow_failure: true
   script:
     - pnpm run typecheck
     - pnpm run lint
@@ -92,7 +89,6 @@ frontend_test:
   extends:
     - .frontend_setup
     - .tag_rules
-  allow_failure: true
   script:
     - pnpm run test:unit
 

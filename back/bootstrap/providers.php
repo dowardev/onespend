@@ -1,6 +1,9 @@
 <?php
 
+use App\Providers\AppServiceProvider;
+use App\Providers\SyncServiceProvider;
+
 return [
-    App\Providers\AppServiceProvider::class,
-    App\Providers\SyncServiceProvider::class,
+    AppServiceProvider::class,
+    SyncServiceProvider::class,
 ];

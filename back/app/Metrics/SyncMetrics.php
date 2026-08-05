@@ -5,7 +5,9 @@ namespace App\Metrics;
 class SyncMetrics
 {
     private array $counters = [];
+
     private array $histograms = [];
+
     private array $gauges = [];
 
     public function increment(string $name, array $labels = [], int $by = 1): void
@@ -22,7 +24,7 @@ class SyncMetrics
     public function recordHistogram(string $name, float $value, array $labels = []): void
     {
         $key = $this->key($name, $labels);
-        if (!isset($this->histograms[$key])) {
+        if (! isset($this->histograms[$key])) {
             $this->histograms[$key] = ['count' => 0, 'sum' => 0.0, 'values' => []];
         }
         $this->histograms[$key]['count']++;
@@ -67,7 +69,7 @@ class SyncMetrics
             $lines[] = "# HELP {$name} Sync metric histogram";
             $lines[] = "# TYPE {$name} histogram";
             $lines[] = "{$name}_count{$labelStr} {$data['count']}";
-            $lines[] = "{$name}_sum{$labelStr} " . number_format($data['sum'], 2, '.', '');
+            $lines[] = "{$name}_sum{$labelStr} ".number_format($data['sum'], 2, '.', '');
             $lines[] = "{$name}_bucket{$labelStr} {$data['count']}";
         }
 
@@ -78,18 +80,21 @@ class SyncMetrics
             $lines[] = "{$name}{$labelStr} {$value}";
         }
 
-        return implode("\n", $lines) . "\n";
+        return implode("\n", $lines)."\n";
     }
 
     private function key(string $name, array $labels = []): string
     {
-        if (empty($labels)) return $name;
+        if (empty($labels)) {
+            return $name;
+        }
         ksort($labels);
         $parts = [];
         foreach ($labels as $k => $v) {
             $parts[] = "{$k}=\"{$v}\"";
         }
-        return $name . '{' . implode(',', $parts) . '}';
+
+        return $name.'{'.implode(',', $parts).'}';
     }
 
     private function parseKey(string $key): array
@@ -98,6 +103,7 @@ class SyncMetrics
         if ($pos === false) {
             return [$key, ''];
         }
+
         return [substr($key, 0, $pos), substr($key, $pos)];
     }
 }

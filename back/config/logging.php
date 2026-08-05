@@ -1,10 +1,10 @@
 <?php
 
+use App\Logging\JsonFormatter;
 use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SyslogUdpHandler;
 use Monolog\Processor\PsrLogMessageProcessor;
-use App\Logging\JsonFormatter;
 
 return [
 

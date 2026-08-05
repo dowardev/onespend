@@ -10,9 +10,9 @@ return new class extends Migration
     {
         Schema::table('budget_provider_products', function (Blueprint $table) {
             $table->foreign('supplier_product_id')
-                  ->references('id')
-                  ->on('supplier_products')
-                  ->onDelete('set null');
+                ->references('id')
+                ->on('supplier_products')
+                ->onDelete('set null');
         });
     }
 

@@ -88,9 +88,7 @@ await authController.checkAuth()
 authController.start()
 
 try {
-  // @ts-ignore
   (window as any).budgetEntriesController = budgetEntriesController;
-  // @ts-ignore
   (window as any).budgetProvidersController = budgetProvidersController;
 } catch (e) {
   void e;
@@ -137,9 +135,9 @@ router.isReady().then(async () => {
   };
 
   try {
-    // @ts-ignore
+    // @ts-expect-error expose for debugging
     window.budgetEntriesController = budgetEntriesController;
-    // @ts-ignore
+    // @ts-expect-error expose for debugging
     window.budgetProvidersController = budgetProvidersController;
   } catch (e) {
     void e;

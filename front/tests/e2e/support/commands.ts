@@ -9,6 +9,7 @@ Cypress.Commands.add('login', (token?: string) => {
 });
 
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace -- required Cypress type augmentation
   namespace Cypress {
     interface Chainable {
       login(token?: string): Chainable<void>

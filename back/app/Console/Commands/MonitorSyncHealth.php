@@ -17,8 +17,9 @@ class MonitorSyncHealth extends Command
 
     public function handle(): int
     {
-        if (!Schema::hasTable('sync_metadata')) {
+        if (! Schema::hasTable('sync_metadata')) {
             $this->warn('Sync metadata table not found, skipping.');
+
             return 0;
         }
 

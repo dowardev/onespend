@@ -1,5 +1,6 @@
 <template>
   <!-- This component is invisible and handles DOM cleanup -->
+  <div class="dom-cleanup-component" aria-hidden="true" />
 </template>
 
 <script setup lang="ts">
@@ -7,7 +8,7 @@ import { onMounted, onUnmounted } from 'vue';
 import { domCleanup, removeTemporaryElements } from '@/utils/domCleanup';
 
 // Cleanup interval to periodically check for orphaned elements
-let cleanupInterval: NodeJS.Timeout;
+let cleanupInterval: ReturnType<typeof setInterval>;
 
 onMounted(() => {
   // Initial cleanup

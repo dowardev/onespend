@@ -149,7 +149,7 @@ const memoryStatus = ref({
 });
 
 // Update memory status periodically
-let memoryInterval: NodeJS.Timeout;
+let memoryInterval: ReturnType<typeof setInterval>;
 // Use DOM cleanup utility
 const { registerTask, unregisterCleanup: unregisterTask } = useDOMCleanup();
 

@@ -15,6 +15,7 @@ class SsoAuthForTests
             $request->merge([
                 'sso_user_id' => Auth::guard('sanctum')->id(),
             ]);
+
             return $next($request);
         }
 
@@ -22,6 +23,7 @@ class SsoAuthForTests
             $request->merge([
                 'sso_user_id' => Auth::guard('web')->id(),
             ]);
+
             return $next($request);
         }
 

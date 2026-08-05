@@ -4,9 +4,9 @@ namespace App\Http\Middleware;
 
 use App\Models\User;
 use Closure;
+use Dowardev\SsoServer\Client\SsoServerClient;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
-use TuOrg\SsoServer\Client\SsoServerClient;
 
 class ResolveSsoUser
 {
@@ -18,13 +18,13 @@ class ResolveSsoUser
     {
         $ssoUserId = $request->get('sso_user_id');
 
-        if (!$ssoUserId) {
+        if (! $ssoUserId) {
             return response()->json(['message' => 'No autenticado'], 401);
         }
 
         $user = User::find($ssoUserId);
 
-        if (!$user) {
+        if (! $user) {
             $ssoUser = $this->ssoClient->getUser();
 
             if ($ssoUser) {
@@ -40,7 +40,7 @@ class ResolveSsoUser
             }
         }
 
-        if (!$user) {
+        if (! $user) {
             return response()->json(['message' => 'Usuario no encontrado'], 404);
         }
 

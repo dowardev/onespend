@@ -5,16 +5,16 @@ namespace App\Providers;
 use App\Repositories\SyncMetadataRepository;
 use App\Services\Sync\ConflictDetector;
 use App\Services\Sync\ForeignKeyResolver;
-use App\Services\Sync\SyncOrchestratorService;
-use App\Services\SyncIdResolver;
 use App\Services\Sync\Processors\AccountProcessor;
 use App\Services\Sync\Processors\BudgetEntryProcessor;
 use App\Services\Sync\Processors\BudgetProviderProcessor;
 use App\Services\Sync\Processors\BudgetProviderProductProcessor;
-use App\Services\Sync\Processors\SupplierProcessor;
-use App\Services\Sync\Processors\SupplierProductProcessor;
 use App\Services\Sync\Processors\RecurringRecordProcessor;
 use App\Services\Sync\Processors\RecurringRecordProductProcessor;
+use App\Services\Sync\Processors\SupplierProcessor;
+use App\Services\Sync\Processors\SupplierProductProcessor;
+use App\Services\Sync\SyncOrchestratorService;
+use App\Services\SyncIdResolver;
 use Illuminate\Support\ServiceProvider;
 
 class SyncServiceProvider extends ServiceProvider

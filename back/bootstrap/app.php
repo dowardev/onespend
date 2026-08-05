@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Middleware\EnsureEmailIsVerified;
+use App\Http\Middleware\ResolveSsoUser;
+use App\Http\Middleware\SyncProtocolVersion;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -13,9 +16,9 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-            'verified' => \App\Http\Middleware\EnsureEmailIsVerified::class,
-            'sync.version' => \App\Http\Middleware\SyncProtocolVersion::class,
-            'sso.user' => \App\Http\Middleware\ResolveSsoUser::class,
+            'verified' => EnsureEmailIsVerified::class,
+            'sync.version' => SyncProtocolVersion::class,
+            'sso.user' => ResolveSsoUser::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

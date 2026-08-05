@@ -65,18 +65,18 @@ class SupplierProductController extends Controller
             ->where('user_id', $request->user()->id)
             ->firstOrFail();
 
-        if (!$product->image_base64) {
+        if (! $product->image_base64) {
             abort(404);
         }
 
         $base64 = $product->image_base64;
 
         $allowedTypes = ['jpeg', 'png', 'gif', 'webp'];
-        if (!preg_match('/^data:image\/(\w+);base64,/', $base64, $matches) || !in_array($matches[1], $allowedTypes)) {
+        if (! preg_match('/^data:image\/(\w+);base64,/', $base64, $matches) || ! in_array($matches[1], $allowedTypes)) {
             abort(404);
         }
 
-        $contentType = 'image/' . $matches[1];
+        $contentType = 'image/'.$matches[1];
         $base64 = substr($base64, strpos($base64, ',') + 1);
 
         $imageData = base64_decode($base64, true);

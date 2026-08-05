@@ -16,7 +16,7 @@ class SyncResolveConflictsBatchRequest extends FormRequest
     {
         return [
             'resolutions' => 'required|array|min:1|max:50',
-            'resolutions.*.entity_type' => ['required', 'string', 'in:' . implode(',', array_keys(SyncController::ENTITY_TYPES))],
+            'resolutions.*.entity_type' => ['required', 'string', 'in:'.implode(',', array_keys(SyncController::ENTITY_TYPES))],
             'resolutions.*.entity_id' => 'required|string|max:100',
             'resolutions.*.resolution' => 'required|in:server,client',
             'resolutions.*.client_data' => 'array',

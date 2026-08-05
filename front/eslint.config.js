@@ -10,6 +10,7 @@ export default [
       "**/node_modules/**",
       "**/dist/**",
       "**/build/**",
+      "**/android/**",
       "**/.output/**",
       "**/.nuxt/**",
       "**/coverage/**",
@@ -47,6 +48,7 @@ export default [
       "no-console": "off",
       "no-debugger": "off",
       "vue/no-deprecated-slot-attribute": "off",
+      "no-empty": ["error", { "allowEmptyCatch": true }],
       "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/no-unused-vars": [
         "warn",

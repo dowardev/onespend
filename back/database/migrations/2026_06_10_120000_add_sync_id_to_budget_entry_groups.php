@@ -2,8 +2,8 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -13,7 +13,7 @@ return new class extends Migration
             $table->string('sync_id')->nullable()->after('id');
         });
 
-        DB::statement("UPDATE budget_entry_groups SET sync_id = UUID() WHERE sync_id IS NULL");
+        DB::statement('UPDATE budget_entry_groups SET sync_id = UUID() WHERE sync_id IS NULL');
 
         Schema::table('budget_entry_groups', function (Blueprint $table) {
             $table->string('sync_id')->nullable(false)->change();

@@ -2,8 +2,8 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -14,7 +14,7 @@ return new class extends Migration
             $table->index('budget_provider_sync_id', 'idx_attachments_provider_sync_id');
         });
 
-        DB::statement("ALTER TABLE attachments MODIFY COLUMN budget_entry_sync_id VARCHAR(100) NULL");
+        DB::statement('ALTER TABLE attachments MODIFY COLUMN budget_entry_sync_id VARCHAR(100) NULL');
 
         DB::statement("ALTER TABLE attachments MODIFY COLUMN entity_type ENUM('entries', 'providers') NOT NULL DEFAULT 'entries'");
     }
@@ -27,7 +27,7 @@ return new class extends Migration
 
         DB::statement("UPDATE attachments SET budget_entry_sync_id = '' WHERE budget_entry_sync_id IS NULL");
 
-        DB::statement("ALTER TABLE attachments MODIFY COLUMN budget_entry_sync_id VARCHAR(100) NOT NULL");
+        DB::statement('ALTER TABLE attachments MODIFY COLUMN budget_entry_sync_id VARCHAR(100) NOT NULL');
 
         Schema::table('attachments', function (Blueprint $table) {
             $table->dropIndex('idx_attachments_provider_sync_id');

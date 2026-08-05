@@ -5,6 +5,8 @@ namespace App\Services\Sync\Processors;
 use App\Models\BudgetProvider;
 use App\Models\BudgetProviderProduct;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class BudgetProviderProcessor extends AbstractEntityProcessor
 {
@@ -46,7 +48,9 @@ class BudgetProviderProcessor extends AbstractEntityProcessor
 
         foreach ($items as $item) {
             $syncId = $item['id'] ?? null;
-            if (!$syncId) continue;
+            if (! $syncId) {
+                continue;
+            }
 
             $products = $item['products'] ?? [];
             $preprocessed = $this->preprocessData($item, $userId);
@@ -58,15 +62,17 @@ class BudgetProviderProcessor extends AbstractEntityProcessor
 
             $insertData[] = $data;
 
-            if (!empty($products)) {
+            if (! empty($products)) {
                 $productsToCreate[$syncId] = $products;
             }
         }
 
-        if (empty($insertData)) return [];
+        if (empty($insertData)) {
+            return [];
+        }
 
         try {
-            \Illuminate\Support\Facades\DB::beginTransaction();
+            DB::beginTransaction();
 
             $modelClass::insert($insertData);
             $syncIds = array_column($insertData, 'sync_id');
@@ -82,9 +88,9 @@ class BudgetProviderProcessor extends AbstractEntityProcessor
             }
 
             $this->bulkUpdateSyncMetadata($syncIds, 'synced', $userId);
-            \Illuminate\Support\Facades\DB::commit();
+            DB::commit();
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\DB::rollBack();
+            DB::rollBack();
             throw $e;
         }
 
@@ -93,7 +99,9 @@ class BudgetProviderProcessor extends AbstractEntityProcessor
 
     public function update(array $items, int $userId, array|Collection $existingMap = []): array
     {
-        if (empty($items)) return [];
+        if (empty($items)) {
+            return [];
+        }
 
         $modelClass = $this->getModel();
         $updated = [];
@@ -101,17 +109,19 @@ class BudgetProviderProcessor extends AbstractEntityProcessor
         $errors = [];
 
         try {
-            \Illuminate\Support\Facades\DB::beginTransaction();
+            DB::beginTransaction();
 
             $productsBySyncId = [];
             $filteredDataBySyncId = [];
 
             foreach ($items as $item) {
                 $syncId = $item['id'] ?? null;
-                if (!$syncId) continue;
+                if (! $syncId) {
+                    continue;
+                }
 
                 $preprocessed = $this->preprocessData($item, $userId);
-            $data = $this->filterToFillableFromCache($preprocessed, $this->getCachedFillable());
+                $data = $this->filterToFillableFromCache($preprocessed, $this->getCachedFillable());
                 unset($data['id'], $data['sync_id'], $data['user_id'], $data['created_at'],
                     $data['products'], $data['_deleted']);
                 $data['updated_at'] = now();
@@ -131,39 +141,40 @@ class BudgetProviderProcessor extends AbstractEntityProcessor
 
                 if ($affected === 0 && $existingUpdatedAt !== null) {
                     $errors[] = ['sync_id' => $syncId, 'error' => 'Optimistic lock conflict'];
+
                     continue;
                 }
 
-            $products = $item['products'] ?? [];
-            if (!empty($products)) {
-                $incomingSyncIds = array_filter(array_map(fn($p) => $p['sync_id'] ?? $p['id'] ?? null, $products));
-                BudgetProviderProduct::where('budget_provider_id', $syncId)
-                    ->where('user_id', $userId)
-                    ->when(!empty($incomingSyncIds), fn($q) => $q->whereNotIn('sync_id', $incomingSyncIds))
-                    ->update(['deleted_at' => now(), 'status' => 'deleted']);
+                $products = $item['products'] ?? [];
+                if (! empty($products)) {
+                    $incomingSyncIds = array_filter(array_map(fn ($p) => $p['sync_id'] ?? $p['id'] ?? null, $products));
+                    BudgetProviderProduct::where('budget_provider_id', $syncId)
+                        ->where('user_id', $userId)
+                        ->when(! empty($incomingSyncIds), fn ($q) => $q->whereNotIn('sync_id', $incomingSyncIds))
+                        ->update(['deleted_at' => now(), 'status' => 'deleted']);
 
-                $productsBySyncId[$syncId] = $products;
+                    $productsBySyncId[$syncId] = $products;
+                }
+
+                $syncIds[] = $syncId;
+                $updated[] = ['sync_id' => $syncId];
             }
 
-            $syncIds[] = $syncId;
-            $updated[] = ['sync_id' => $syncId];
-        }
+            if (! empty($productsBySyncId)) {
+                $providerSyncIds = array_keys($productsBySyncId);
+                $providers = $modelClass::whereIn('sync_id', $providerSyncIds)
+                    ->where('user_id', $userId)
+                    ->get(['id', 'sync_id'])
+                    ->keyBy('sync_id');
 
-        if (!empty($productsBySyncId)) {
-            $providerSyncIds = array_keys($productsBySyncId);
-            $providers = $modelClass::whereIn('sync_id', $providerSyncIds)
-                ->where('user_id', $userId)
-                ->get(['id', 'sync_id'])
-                ->keyBy('sync_id');
-
-            foreach ($productsBySyncId as $syncId => $products) {
-                if (isset($providers[$syncId])) {
-                    $this->upsertProviderProducts($syncId, $providers[$syncId]->id, $products, $userId);
+                foreach ($productsBySyncId as $syncId => $products) {
+                    if (isset($providers[$syncId])) {
+                        $this->upsertProviderProducts($syncId, $providers[$syncId]->id, $products, $userId);
+                    }
                 }
             }
-        }
 
-if (!empty($syncIds)) {
+            if (! empty($syncIds)) {
                 $fieldHashes = [];
                 $baseDataMap = [];
                 foreach ($syncIds as $sid) {
@@ -175,14 +186,14 @@ if (!empty($syncIds)) {
                 $this->bulkUpdateSyncMetadata($syncIds, 'synced', $userId, [], $fieldHashes, $baseDataMap);
             }
 
-            \Illuminate\Support\Facades\DB::commit();
+            DB::commit();
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\DB::rollBack();
+            DB::rollBack();
             throw $e;
         }
 
-        if (!empty($errors)) {
-            \Illuminate\Support\Facades\Log::warning("Optimistic lock conflicts in batch update for {$this->getEntityName()}", [
+        if (! empty($errors)) {
+            Log::warning("Optimistic lock conflicts in batch update for {$this->getEntityName()}", [
                 'conflicts' => $errors,
             ]);
         }
@@ -194,8 +205,8 @@ if (!empty($syncIds)) {
     {
         $now = now();
 
-        $spSyncIds = array_filter(array_map(fn($p) => $p['supplier_product_id'] ?? $p['supplierProductId'] ?? null, $products));
-        $spIdMap = !empty($spSyncIds) ? $this->idResolver->resolveBatch('supplier_product', $spSyncIds, $userId) : [];
+        $spSyncIds = array_filter(array_map(fn ($p) => $p['supplier_product_id'] ?? $p['supplierProductId'] ?? null, $products));
+        $spIdMap = ! empty($spSyncIds) ? $this->idResolver->resolveBatch('supplier_product', $spSyncIds, $userId) : [];
 
         $upsertData = [];
         $productSyncIds = [];
@@ -225,13 +236,13 @@ if (!empty($syncIds)) {
             $productSyncIds[] = $productSyncId;
         }
 
-        if (!empty($upsertData)) {
+        if (! empty($upsertData)) {
             BudgetProviderProduct::upsert(
                 $upsertData,
                 ['sync_id', 'user_id'],
                 ['budget_provider_id', 'supplier_product_id', 'product_name', 'product_price', 'quantity', 'status', 'deleted_at', 'updated_at']
             );
-            $fieldHashes = array_combine($productSyncIds, array_map(fn($item) => $this->computeFieldHash($item), $upsertData));
+            $fieldHashes = array_combine($productSyncIds, array_map(fn ($item) => $this->computeFieldHash($item), $upsertData));
             $baseDataMap = array_fill_keys($productSyncIds, []);
             $this->bulkUpdateSyncMetadata($productSyncIds, 'synced', $userId, [], $fieldHashes, $baseDataMap);
         }

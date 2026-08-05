@@ -33,7 +33,7 @@ return new class extends Migration
     public function down(): void
     {
         foreach ($this->tables as $table) {
-            if (!Schema::hasColumn($table, 'version')) {
+            if (! Schema::hasColumn($table, 'version')) {
                 continue;
             }
             Schema::table($table, function (Blueprint $t) {

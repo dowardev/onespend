@@ -19,6 +19,7 @@ class ConflictDetector
             }
         });
         ksort($relevantData);
+
         return md5(json_encode($relevantData));
     }
 
@@ -27,6 +28,7 @@ class ConflictDetector
         if (is_numeric($timestamp) && strlen((string) $timestamp) >= 10) {
             return (int) $timestamp;
         }
+
         return 0;
     }
 
@@ -41,6 +43,7 @@ class ConflictDetector
         if (is_numeric($a) && is_numeric($b)) {
             return abs((float) $a - (float) $b) > 0.0001;
         }
+
         return json_encode($a) !== json_encode($b);
     }
 
@@ -52,7 +55,7 @@ class ConflictDetector
         $conflicts = [];
         $modelClass = $processor->getModelClass();
 
-        $syncIds = array_map(fn($item) => $item['id'] ?? null, $items);
+        $syncIds = array_map(fn ($item) => $item['id'] ?? null, $items);
         $syncIds = array_filter(array_unique($syncIds));
 
         if (empty($syncIds)) {
@@ -73,12 +76,12 @@ class ConflictDetector
 
         foreach ($items as $item) {
             $syncId = $item['id'] ?? null;
-            if (!$syncId) {
+            if (! $syncId) {
                 continue;
             }
 
             $serverItem = $existing->get($syncId);
-            if (!$serverItem) {
+            if (! $serverItem) {
                 continue;
             }
 
@@ -104,7 +107,7 @@ class ConflictDetector
 
             if ($clientTimestamp < $serverTimestamp) {
                 $shouldReportConflict = true;
-            } elseif (!empty($baseData)) {
+            } elseif (! empty($baseData)) {
                 $shouldReportConflict = true;
             }
 
@@ -161,7 +164,7 @@ class ConflictDetector
 
         $overlapping = array_intersect($clientChangedFields, $serverChangedFields);
 
-        if (!empty($overlapping)) {
+        if (! empty($overlapping)) {
             return [
                 'sync_id' => $syncId,
                 'server_data' => $serverData,
@@ -173,7 +176,7 @@ class ConflictDetector
             ];
         }
 
-        if (!empty($clientChangedFields)) {
+        if (! empty($clientChangedFields)) {
             return [
                 'sync_id' => $syncId,
                 'server_data' => $serverData,

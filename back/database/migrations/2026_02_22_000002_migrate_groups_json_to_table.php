@@ -15,12 +15,12 @@ return new class extends Migration
 
         foreach ($entries as $entry) {
             $groups = json_decode($entry->groups, true);
-            if (is_array($groups) && !empty($groups)) {
+            if (is_array($groups) && ! empty($groups)) {
                 foreach ($groups as $group) {
                     $accountId = null;
                     if (isset($group['accountId'])) {
-                        $accountId = is_numeric($group['accountId']) 
-                            ? (int)$group['accountId'] 
+                        $accountId = is_numeric($group['accountId'])
+                            ? (int) $group['accountId']
                             : null;
                     }
 

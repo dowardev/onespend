@@ -51,7 +51,7 @@ class SyncMetadataRepository
         int $userId,
         array $conflictData
     ): void {
-        $meta = new SyncMetadata();
+        $meta = new SyncMetadata;
         $meta->conflict_data = $conflictData;
         $serialized = $meta->getAttributes()['conflict_data'];
 
@@ -100,7 +100,7 @@ class SyncMetadataRepository
             ->where('user_id', $userId)
             ->firstOrNew();
 
-        if (!$meta->exists) {
+        if (! $meta->exists) {
             $meta->fill([
                 'entity_type' => $entityType,
                 'entity_id' => $entityId,
@@ -166,6 +166,7 @@ class SyncMetadataRepository
     public function getResolvedSince(int $userId, int $timestamp): Collection
     {
         $date = date('Y-m-d H:i:s', $timestamp);
+
         return SyncMetadata::forUser($userId)
             ->where('sync_status', 'resolved')
             ->where('updated_at', '>=', $date)

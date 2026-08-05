@@ -3,10 +3,10 @@
 namespace App\Services;
 
 use App\Models\Account;
-use App\Models\SupplierProduct;
 use App\Models\BudgetProvider;
 use App\Models\RecurringRecord;
 use App\Models\Supplier;
+use App\Models\SupplierProduct;
 
 class SyncIdResolver
 {
@@ -18,7 +18,7 @@ class SyncIdResolver
             return null;
         }
 
-        $cacheKey = "{$entityType}:{$syncId}:" . ($userId ?? 'global');
+        $cacheKey = "{$entityType}:{$syncId}:".($userId ?? 'global');
 
         if (array_key_exists($cacheKey, $this->cache)) {
             return $this->cache[$cacheKey];
@@ -37,7 +37,7 @@ class SyncIdResolver
             $query->where('user_id', $userId);
         }
 
-    $id = $query->value('id');
+        $id = $query->value('id');
 
         $this->cache[$cacheKey] = $id ? (int) $id : null;
 
@@ -87,7 +87,7 @@ class SyncIdResolver
         $uncachedIds = [];
 
         foreach ($syncIds as $syncId) {
-            $cacheKey = "{$entityType}:{$syncId}:" . ($userId ?? 'global');
+            $cacheKey = "{$entityType}:{$syncId}:".($userId ?? 'global');
             if (array_key_exists($cacheKey, $this->cache)) {
                 if ($this->cache[$cacheKey] !== null) {
                     $results[$syncId] = $this->cache[$cacheKey];
@@ -97,7 +97,7 @@ class SyncIdResolver
             }
         }
 
-        if (!empty($uncachedIds)) {
+        if (! empty($uncachedIds)) {
             $query = match ($entityType) {
                 'account' => Account::whereIn('sync_id', $uncachedIds),
                 'supplier_product' => SupplierProduct::whereIn('sync_id', $uncachedIds),
@@ -113,14 +113,14 @@ class SyncIdResolver
 
             $rows = $query->get(['id', 'sync_id']);
             foreach ($rows as $row) {
-                $cacheKey = "{$entityType}:{$row->sync_id}:" . ($userId ?? 'global');
+                $cacheKey = "{$entityType}:{$row->sync_id}:".($userId ?? 'global');
                 $this->cache[$cacheKey] = (int) $row->id;
                 $results[$row->sync_id] = (int) $row->id;
             }
 
             foreach ($uncachedIds as $uncachedId) {
-                $cacheKey = "{$entityType}:{$uncachedId}:" . ($userId ?? 'global');
-                if (!array_key_exists($cacheKey, $this->cache)) {
+                $cacheKey = "{$entityType}:{$uncachedId}:".($userId ?? 'global');
+                if (! array_key_exists($cacheKey, $this->cache)) {
                     $this->cache[$cacheKey] = null;
                 }
             }

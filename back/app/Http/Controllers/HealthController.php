@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\SyncMetadata;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class HealthController extends Controller
@@ -22,7 +22,7 @@ class HealthController extends Controller
                 ->max('server_updated_at');
             $lastSuccessfulSync = $lastSync ? $lastSync : null;
         } catch (\Exception $e) {
-            $databaseConnection = 'disconnected: ' . $e->getMessage();
+            $databaseConnection = 'disconnected: '.$e->getMessage();
         }
 
         return response()->json([

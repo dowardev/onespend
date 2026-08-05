@@ -360,7 +360,7 @@ async function deduplicateRecurringEntries(): Promise<void> {
   }
 
   if (hadDuplicates) {
-
+    // Duplicates were removed above (logged per entry); nothing else to do here yet.
   }
 }
 

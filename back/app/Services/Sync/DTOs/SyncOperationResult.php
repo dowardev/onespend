@@ -31,6 +31,6 @@ class SyncOperationResult
 
     public function hasConflicts(): bool
     {
-        return !empty($this->conflicts);
+        return ! empty($this->conflicts);
     }
 }

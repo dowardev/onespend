@@ -5,6 +5,8 @@ namespace App\Services\Sync\Processors;
 use App\Models\RecurringRecord;
 use App\Models\RecurringRecordProduct;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class RecurringRecordProcessor extends AbstractEntityProcessor
 {
@@ -57,7 +59,9 @@ class RecurringRecordProcessor extends AbstractEntityProcessor
 
     public function create(array $items, int $userId): array
     {
-        if (empty($items)) return [];
+        if (empty($items)) {
+            return [];
+        }
 
         $modelClass = $this->getModel();
         $now = now();
@@ -67,7 +71,9 @@ class RecurringRecordProcessor extends AbstractEntityProcessor
 
         foreach ($items as $item) {
             $syncId = $item['id'] ?? null;
-            if (!$syncId) continue;
+            if (! $syncId) {
+                continue;
+            }
 
             $products = $item['products'] ?? [];
             $preprocessed = $this->preprocessData($item, $userId);
@@ -79,15 +85,17 @@ class RecurringRecordProcessor extends AbstractEntityProcessor
 
             $insertData[] = $data;
 
-            if (!empty($products)) {
+            if (! empty($products)) {
                 $productsToCreate[$syncId] = $products;
             }
         }
 
-        if (empty($insertData)) return [];
+        if (empty($insertData)) {
+            return [];
+        }
 
         try {
-            \Illuminate\Support\Facades\DB::beginTransaction();
+            DB::beginTransaction();
 
             $modelClass::insert($insertData);
             $syncIds = array_column($insertData, 'sync_id');
@@ -110,9 +118,9 @@ class RecurringRecordProcessor extends AbstractEntityProcessor
             }
 
             $this->bulkUpdateSyncMetadata($syncIds, 'synced', $userId, [], $fieldHashes, $baseDataMap);
-            \Illuminate\Support\Facades\DB::commit();
+            DB::commit();
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\DB::rollBack();
+            DB::rollBack();
             throw $e;
         }
 
@@ -121,7 +129,9 @@ class RecurringRecordProcessor extends AbstractEntityProcessor
 
     public function update(array $items, int $userId, array|Collection $existingMap = []): array
     {
-        if (empty($items)) return [];
+        if (empty($items)) {
+            return [];
+        }
 
         $modelClass = $this->getModel();
         $updated = [];
@@ -129,17 +139,19 @@ class RecurringRecordProcessor extends AbstractEntityProcessor
         $errors = [];
 
         try {
-            \Illuminate\Support\Facades\DB::beginTransaction();
+            DB::beginTransaction();
 
             $productsBySyncId = [];
             $filteredDataBySyncId = [];
 
             foreach ($items as $item) {
                 $syncId = $item['id'] ?? null;
-                if (!$syncId) continue;
+                if (! $syncId) {
+                    continue;
+                }
 
                 $preprocessed = $this->preprocessData($item, $userId);
-            $data = $this->filterToFillableFromCache($preprocessed, $this->getCachedFillable());
+                $data = $this->filterToFillableFromCache($preprocessed, $this->getCachedFillable());
                 $filteredDataBySyncId[$syncId] = $data;
                 unset($data['id'], $data['sync_id'], $data['user_id'], $data['created_at'],
                     $data['products'], $data['_deleted']);
@@ -159,50 +171,53 @@ class RecurringRecordProcessor extends AbstractEntityProcessor
 
                 if ($affected === 0 && $existingUpdatedAt !== null) {
                     $errors[] = ['sync_id' => $syncId, 'error' => 'Optimistic lock conflict'];
+
                     continue;
                 }
 
-            $products = $item['products'] ?? [];
-            if (!empty($products)) {
-                $productsBySyncId[$syncId] = $products;
+                $products = $item['products'] ?? [];
+                if (! empty($products)) {
+                    $productsBySyncId[$syncId] = $products;
+                }
+
+                $syncIds[] = $syncId;
+                $updated[] = ['sync_id' => $syncId];
             }
 
-            $syncIds[] = $syncId;
-            $updated[] = ['sync_id' => $syncId];
-        }
+            if (! empty($productsBySyncId)) {
+                $recordSyncIds = array_keys($productsBySyncId);
+                $records = $modelClass::whereIn('sync_id', $recordSyncIds)
+                    ->where('user_id', $userId)
+                    ->get(['id', 'sync_id'])
+                    ->keyBy('sync_id');
 
-        if (!empty($productsBySyncId)) {
-            $recordSyncIds = array_keys($productsBySyncId);
-            $records = $modelClass::whereIn('sync_id', $recordSyncIds)
-                ->where('user_id', $userId)
-                ->get(['id', 'sync_id'])
-                ->keyBy('sync_id');
+                foreach ($productsBySyncId as $syncId => $products) {
+                    if (! isset($records[$syncId])) {
+                        continue;
+                    }
+                    $recordId = $records[$syncId]->id;
 
-            foreach ($productsBySyncId as $syncId => $products) {
-                if (!isset($records[$syncId])) continue;
-                $recordId = $records[$syncId]->id;
+                    $incomingSyncIds = array_filter(array_map(fn ($p) => $p['sync_id'] ?? $p['id'] ?? null, $products));
+                    RecurringRecordProduct::where('recurring_record_id', $recordId)
+                        ->when(! empty($incomingSyncIds), fn ($q) => $q->whereNotIn('sync_id', $incomingSyncIds))
+                        ->update(['deleted_at' => now(), 'status' => 'deleted']);
 
-                $incomingSyncIds = array_filter(array_map(fn($p) => $p['sync_id'] ?? $p['id'] ?? null, $products));
-                RecurringRecordProduct::where('recurring_record_id', $recordId)
-                    ->when(!empty($incomingSyncIds), fn($q) => $q->whereNotIn('sync_id', $incomingSyncIds))
-                    ->update(['deleted_at' => now(), 'status' => 'deleted']);
-
-                $this->upsertRecordProducts($recordId, $products, $userId);
+                    $this->upsertRecordProducts($recordId, $products, $userId);
+                }
             }
-        }
 
-            if (!empty($syncIds)) {
+            if (! empty($syncIds)) {
                 $this->bulkUpdateSyncMetadata($syncIds, 'synced', $userId);
             }
 
-            \Illuminate\Support\Facades\DB::commit();
+            DB::commit();
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\DB::rollBack();
+            DB::rollBack();
             throw $e;
         }
 
-        if (!empty($errors)) {
-            \Illuminate\Support\Facades\Log::warning("Optimistic lock conflicts in batch update for {$this->getEntityName()}", [
+        if (! empty($errors)) {
+            Log::warning("Optimistic lock conflicts in batch update for {$this->getEntityName()}", [
                 'conflicts' => $errors,
             ]);
         }
@@ -214,8 +229,8 @@ class RecurringRecordProcessor extends AbstractEntityProcessor
     {
         $now = now();
 
-        $spSyncIds = array_filter(array_map(fn($p) => $p['supplier_product_id'] ?? $p['supplierProductId'] ?? null, $products));
-        $spIdMap = !empty($spSyncIds) ? $this->idResolver->resolveBatch('supplier_product', $spSyncIds, $userId) : [];
+        $spSyncIds = array_filter(array_map(fn ($p) => $p['supplier_product_id'] ?? $p['supplierProductId'] ?? null, $products));
+        $spIdMap = ! empty($spSyncIds) ? $this->idResolver->resolveBatch('supplier_product', $spSyncIds, $userId) : [];
 
         $upsertData = [];
         $productSyncIds = [];
@@ -245,7 +260,7 @@ class RecurringRecordProcessor extends AbstractEntityProcessor
             $productSyncIds[] = $productSyncId;
         }
 
-        if (!empty($upsertData)) {
+        if (! empty($upsertData)) {
             RecurringRecordProduct::upsert(
                 $upsertData,
                 ['sync_id', 'user_id'],

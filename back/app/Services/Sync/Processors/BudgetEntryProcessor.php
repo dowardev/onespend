@@ -39,7 +39,7 @@ class BudgetEntryProcessor extends AbstractEntityProcessor
         }
 
         unset($item['paymentType'], $item['entryType'], $item['supplierName'],
-              $item['supplierId'], $item['accountId']);
+            $item['supplierId'], $item['accountId']);
 
         return $item;
     }
@@ -49,7 +49,7 @@ class BudgetEntryProcessor extends AbstractEntityProcessor
         $resultWithOriginals = [];
         foreach ($created as $entry) {
             $original = collect($this->pendingCreateItems)
-                ->first(fn($item) => ($item['id'] ?? null) === $entry['sync_id']);
+                ->first(fn ($item) => ($item['id'] ?? null) === $entry['sync_id']);
             $entry['_original'] = $original;
             $resultWithOriginals[] = $entry;
         }
@@ -66,6 +66,7 @@ class BudgetEntryProcessor extends AbstractEntityProcessor
         $this->pendingCreateItems = $items;
         $result = parent::create($items, $userId);
         $this->pendingCreateItems = [];
+
         return $result;
     }
 
@@ -73,18 +74,24 @@ class BudgetEntryProcessor extends AbstractEntityProcessor
     {
         foreach ($entries as $entry) {
             $syncId = $entry['sync_id'] ?? null;
-            if (!$syncId) continue;
+            if (! $syncId) {
+                continue;
+            }
 
             $item = $entry['_original'] ?? null;
             $groups = $item['groups'] ?? null;
 
-            if (empty($groups)) continue;
+            if (empty($groups)) {
+                continue;
+            }
 
             $entryModel = BudgetEntry::where('sync_id', $syncId)
                 ->where('user_id', $userId)
                 ->first();
 
-            if (!$entryModel) continue;
+            if (! $entryModel) {
+                continue;
+            }
 
             $incomingSyncIds = [];
 

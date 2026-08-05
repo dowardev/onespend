@@ -35,14 +35,14 @@ class RecurringRecordProductProcessor extends AbstractEntityProcessor
 
             foreach ($items as $item) {
                 $syncId = $item['id'] ?? ($item['sync_id'] ?? null);
-                if (!$syncId) {
+                if (! $syncId) {
                     continue;
                 }
 
                 $preprocessed = $this->preprocessData($item, $userId);
                 $data = $this->filterToFillableFromCache($preprocessed, $this->getCachedFillable());
                 unset($data['id'], $data['sync_id'], $data['user_id'], $data['created_at'],
-                      $data['products'], $data['_deleted'], $data['groups']);
+                    $data['products'], $data['_deleted'], $data['groups']);
 
                 if (isset($data['updated_at']) && is_numeric($data['updated_at'])) {
                     $data['updated_at'] = date('Y-m-d H:i:s', self::normalizeTimestamp($data['updated_at']));
@@ -56,7 +56,7 @@ class RecurringRecordProductProcessor extends AbstractEntityProcessor
                 }
 
                 $query = $modelClass::where('sync_id', $syncId)
-                    ->whereHas('recurringRecord', fn($q) => $q->where('user_id', $userId));
+                    ->whereHas('recurringRecord', fn ($q) => $q->where('user_id', $userId));
 
                 if ($existingUpdatedAt !== null) {
                     $query->where('updated_at', $existingUpdatedAt);
@@ -66,6 +66,7 @@ class RecurringRecordProductProcessor extends AbstractEntityProcessor
 
                 if ($affected === 0 && $existingUpdatedAt !== null) {
                     $errors[] = ['sync_id' => $syncId, 'error' => 'Optimistic lock conflict'];
+
                     continue;
                 }
 
@@ -73,7 +74,7 @@ class RecurringRecordProductProcessor extends AbstractEntityProcessor
                 $updated[] = ['sync_id' => $syncId, '_original' => $item];
             }
 
-            if (!empty($syncIds)) {
+            if (! empty($syncIds)) {
                 $this->bulkUpdateSyncMetadata($syncIds, 'synced', $userId);
             }
 
@@ -81,7 +82,7 @@ class RecurringRecordProductProcessor extends AbstractEntityProcessor
 
             DB::commit();
 
-            if (!empty($errors)) {
+            if (! empty($errors)) {
                 Log::warning("Optimistic lock conflicts in batch update for {$this->getEntityName()}", [
                     'conflicts' => $errors,
                 ]);

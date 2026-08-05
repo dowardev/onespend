@@ -5,6 +5,8 @@ namespace App\Services\Sync\Processors;
 use App\Models\Supplier;
 use App\Models\SupplierProduct;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class SupplierProcessor extends AbstractEntityProcessor
 {
@@ -20,7 +22,9 @@ class SupplierProcessor extends AbstractEntityProcessor
 
     public function create(array $items, int $userId): array
     {
-        if (empty($items)) return [];
+        if (empty($items)) {
+            return [];
+        }
 
         $result = [];
         $insertData = [];
@@ -32,14 +36,16 @@ class SupplierProcessor extends AbstractEntityProcessor
 
         foreach ($items as $item) {
             $syncId = $item['id'] ?? null;
-            if (!$syncId) {
+            if (! $syncId) {
                 $errors[] = ['sync_id' => null, 'error' => 'Missing id'];
+
                 continue;
             }
 
             $products = $item['products'] ?? [];
             if (empty($products)) {
                 $errors[] = ['sync_id' => $syncId, 'error' => 'At least one product is required'];
+
                 continue;
             }
 
@@ -56,14 +62,14 @@ class SupplierProcessor extends AbstractEntityProcessor
 
             $insertData[] = $data;
 
-            if (!empty($products)) {
+            if (! empty($products)) {
                 $productsToCreate[$syncId] = $products;
             }
         }
 
-        if (!empty($insertData)) {
+        if (! empty($insertData)) {
             try {
-                \Illuminate\Support\Facades\DB::beginTransaction();
+                DB::beginTransaction();
                 Supplier::insert($insertData);
 
                 $syncIds = array_column($insertData, 'sync_id');
@@ -79,9 +85,9 @@ class SupplierProcessor extends AbstractEntityProcessor
                 }
 
                 $this->bulkUpdateSyncMetadata($syncIds, 'synced', $userId);
-                \Illuminate\Support\Facades\DB::commit();
+                DB::commit();
             } catch (\Exception $e) {
-                \Illuminate\Support\Facades\DB::rollBack();
+                DB::rollBack();
                 throw $e;
             }
         }
@@ -91,25 +97,30 @@ class SupplierProcessor extends AbstractEntityProcessor
 
     public function update(array $items, int $userId, array|Collection $existingMap = []): array
     {
-        if (empty($items)) return [];
+        if (empty($items)) {
+            return [];
+        }
 
         $result = [];
         $errors = [];
         $validFields = array_diff($this->getCachedFillable(), ['user_id', 'sync_id', 'created_at']);
 
         try {
-            \Illuminate\Support\Facades\DB::beginTransaction();
+            DB::beginTransaction();
 
             $productsBySyncId = [];
             $filteredDataBySyncId = [];
 
             foreach ($items as $item) {
                 $syncId = $item['id'] ?? null;
-                if (!$syncId) continue;
+                if (! $syncId) {
+                    continue;
+                }
 
                 $products = $item['products'] ?? [];
                 if (empty($products)) {
                     $errors[] = ['sync_id' => $syncId, 'error' => 'At least one product is required'];
+
                     continue;
                 }
 
@@ -135,25 +146,26 @@ class SupplierProcessor extends AbstractEntityProcessor
 
                 if ($affected === 0 && $existingUpdatedAt !== null) {
                     $errors[] = ['sync_id' => $syncId, 'error' => 'Optimistic lock conflict'];
+
                     continue;
                 }
 
-$result[] = ['sync_id' => $syncId];
+                $result[] = ['sync_id' => $syncId];
                 $filteredDataBySyncId[$syncId] = $updateFields;
 
-                if (!empty($products)) {
-                $productsBySyncId[$syncId] = $products;
+                if (! empty($products)) {
+                    $productsBySyncId[$syncId] = $products;
+                }
             }
-        }
 
-        if (!empty($productsBySyncId)) {
-            foreach ($productsBySyncId as $syncId => $products) {
-                $this->updateSupplierProducts($syncId, 0, $products, $userId);
+            if (! empty($productsBySyncId)) {
+                foreach ($productsBySyncId as $syncId => $products) {
+                    $this->updateSupplierProducts($syncId, 0, $products, $userId);
+                }
             }
-        }
 
             $syncIds = array_column($result, 'sync_id');
-            if (!empty($syncIds)) {
+            if (! empty($syncIds)) {
                 $fieldHashes = [];
                 $baseDataMap = [];
                 foreach ($syncIds as $sid) {
@@ -165,15 +177,15 @@ $result[] = ['sync_id' => $syncId];
                 $this->bulkUpdateSyncMetadata($syncIds, 'synced', $userId, [], $fieldHashes, $baseDataMap);
             }
 
-            \Illuminate\Support\Facades\DB::commit();
+            DB::commit();
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\DB::rollBack();
+            DB::rollBack();
             throw $e;
         }
 
-        $lockConflicts = array_filter($errors, fn($e) => $e['error'] === 'Optimistic lock conflict');
-        if (!empty($lockConflicts)) {
-            \Illuminate\Support\Facades\Log::warning("Optimistic lock conflicts in batch update for {$this->getEntityName()}", [
+        $lockConflicts = array_filter($errors, fn ($e) => $e['error'] === 'Optimistic lock conflict');
+        if (! empty($lockConflicts)) {
+            Log::warning("Optimistic lock conflicts in batch update for {$this->getEntityName()}", [
                 'conflicts' => $lockConflicts,
             ]);
         }
@@ -202,7 +214,7 @@ $result[] = ['sync_id' => $syncId];
             ];
         }
 
-        if (!empty($insertData)) {
+        if (! empty($insertData)) {
             SupplierProduct::insert($insertData);
         }
     }
@@ -215,7 +227,9 @@ $result[] = ['sync_id' => $syncId];
 
         foreach ($products as $product) {
             $productSyncId = $product['sync_id'] ?? $product['id'] ?? null;
-            if (!$productSyncId) continue;
+            if (! $productSyncId) {
+                continue;
+            }
             $productSyncIds[] = $productSyncId;
             $productsBySyncId[$productSyncId] = $product;
         }
@@ -253,12 +267,12 @@ $result[] = ['sync_id' => $syncId];
             }
         }
 
-        if (!empty($insertData)) {
+        if (! empty($insertData)) {
             SupplierProduct::insert($insertData);
         }
 
         $incomingSyncIds = array_filter($productSyncIds);
-        if (!empty($incomingSyncIds)) {
+        if (! empty($incomingSyncIds)) {
             SupplierProduct::where('supplier_id', $supplierSyncId)
                 ->where('user_id', $userId)
                 ->whereNotIn('sync_id', $incomingSyncIds)

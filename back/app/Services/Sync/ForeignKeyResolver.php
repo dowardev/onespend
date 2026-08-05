@@ -66,7 +66,7 @@ class ForeignKeyResolver
                 $values = $this->extractValues($item, $field);
 
                 foreach ($values as $value) {
-                    if (is_string($value) && !is_numeric($value)) {
+                    if (is_string($value) && ! is_numeric($value)) {
                         $idsByTarget[$target][] = $value;
                     }
                 }
@@ -75,7 +75,7 @@ class ForeignKeyResolver
 
         foreach ($idsByTarget as $targetEntity => $ids) {
             $ids = array_values(array_unique(array_filter($ids)));
-            if (!empty($ids)) {
+            if (! empty($ids)) {
                 $this->idResolver->resolveBatch($targetEntity, $ids, $userId);
             }
         }
@@ -90,7 +90,7 @@ class ForeignKeyResolver
             $resolved = $this->idResolver->resolveToInt($value, $targetEntity, $userId);
             if ($resolved !== null) {
                 $item[$snakeField] = $resolved;
-            } elseif (is_string($value) && !is_numeric($value)) {
+            } elseif (is_string($value) && ! is_numeric($value)) {
                 $item[$snakeField] = null;
             }
             unset($item[$camelField]);
@@ -108,7 +108,7 @@ class ForeignKeyResolver
         $camelArrayField = Str::camel($arrayField);
         $arrayKey = isset($item[$arrayField]) ? $arrayField : (isset($item[$camelArrayField]) ? $camelArrayField : null);
 
-        if ($arrayKey === null || !is_array($item[$arrayKey])) {
+        if ($arrayKey === null || ! is_array($item[$arrayKey])) {
             return $item;
         }
 
@@ -137,7 +137,7 @@ class ForeignKeyResolver
 
             $camelArrayField = Str::camel($arrayField);
             $arr = $item[$arrayField] ?? $item[$camelArrayField] ?? [];
-            if (!is_array($arr)) {
+            if (! is_array($arr)) {
                 return [];
             }
 
@@ -149,11 +149,13 @@ class ForeignKeyResolver
                     $values[] = $v;
                 }
             }
+
             return $values;
         }
 
         $camelField = Str::camel($fieldPattern);
         $value = $item[$fieldPattern] ?? $item[$camelField] ?? null;
+
         return $value !== null ? [$value] : [];
     }
 }

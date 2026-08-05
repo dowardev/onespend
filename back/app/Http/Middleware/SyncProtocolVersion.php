@@ -16,7 +16,7 @@ class SyncProtocolVersion
     {
         $clientVersion = $request->header('X-Sync-Protocol-Version', '1');
 
-        if (!in_array($clientVersion, self::SUPPORTED_VERSIONS, true)) {
+        if (! in_array($clientVersion, self::SUPPORTED_VERSIONS, true)) {
             return response()->json([
                 'error' => 'Unsupported sync protocol version',
                 'supported_versions' => self::SUPPORTED_VERSIONS,

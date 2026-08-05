@@ -14,7 +14,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(SyncMetrics::class, function () {
-            return new SyncMetrics();
+            return new SyncMetrics;
         });
     }
 

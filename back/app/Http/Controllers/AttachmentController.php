@@ -5,11 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\Attachment;
 use App\Models\BudgetEntry;
 use App\Models\BudgetProvider;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Log;
 
 class AttachmentController extends Controller
 {
@@ -21,7 +21,7 @@ class AttachmentController extends Controller
             ->where('sync_id', $entryId)
             ->first();
 
-        if (!$entry) {
+        if (! $entry) {
             return response()->json(['error' => 'Entry not found'], 404);
         }
 
@@ -38,7 +38,7 @@ class AttachmentController extends Controller
             ->where('sync_id', $entryId)
             ->first();
 
-        if (!$entry) {
+        if (! $entry) {
             return response()->json(['error' => 'Entry not found'], 404);
         }
 
@@ -53,7 +53,7 @@ class AttachmentController extends Controller
             ->where('sync_id', $providerId)
             ->first();
 
-        if (!$provider) {
+        if (! $provider) {
             return response()->json(['error' => 'Provider not found'], 404);
         }
 
@@ -70,7 +70,7 @@ class AttachmentController extends Controller
             ->where('sync_id', $providerId)
             ->first();
 
-        if (!$provider) {
+        if (! $provider) {
             return response()->json(['error' => 'Provider not found'], 404);
         }
 
@@ -85,11 +85,11 @@ class AttachmentController extends Controller
             ->where('id', $attachmentId)
             ->first();
 
-        if (!$attachment) {
+        if (! $attachment) {
             return response()->json(['error' => 'Attachment not found'], 404);
         }
 
-        if (!Storage::disk('local')->exists($attachment->path)) {
+        if (! Storage::disk('local')->exists($attachment->path)) {
             return response()->json(['error' => 'File not found'], 404);
         }
 
@@ -107,7 +107,7 @@ class AttachmentController extends Controller
             ->where('id', $attachmentId)
             ->first();
 
-        if (!$attachment) {
+        if (! $attachment) {
             return response()->json(['error' => 'Attachment not found'], 404);
         }
 
@@ -148,7 +148,7 @@ class AttachmentController extends Controller
     {
         $attachments = $query->orderBy('created_at', 'desc')
             ->get()
-            ->map(fn($a) => [
+            ->map(fn ($a) => [
                 'id' => $a->id,
                 'sync_id' => $a->sync_id,
                 'name' => $a->name,
@@ -176,7 +176,7 @@ class AttachmentController extends Controller
             $errors = [];
 
             $files = $request->file('files');
-            if (!is_array($files)) {
+            if (! is_array($files)) {
                 $files = [$files];
             }
 
@@ -188,8 +188,8 @@ class AttachmentController extends Controller
                 try {
                     $extension = $file->getClientOriginalExtension();
                     $attachmentId = Str::uuid()->toString();
-                    $filename = $attachmentId . '.' . $extension;
-                    $path = 'attachments/' . $userId . '/' . $entityType . '/' . $filename;
+                    $filename = $attachmentId.'.'.$extension;
+                    $path = 'attachments/'.$userId.'/'.$entityType.'/'.$filename;
 
                     Storage::disk('local')->put($path, file_get_contents($file->getRealPath()));
 
@@ -242,6 +242,7 @@ class AttachmentController extends Controller
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
+
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }

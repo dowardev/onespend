@@ -15,7 +15,7 @@ class SyncResolveConflictRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'entity_type' => ['required', 'string', 'in:' . implode(',', array_keys(SyncController::ENTITY_TYPES))],
+            'entity_type' => ['required', 'string', 'in:'.implode(',', array_keys(SyncController::ENTITY_TYPES))],
             'entity_id' => 'required|string|max:100',
             'resolution' => 'required|in:server,client',
             'client_data' => 'required_if:resolution,client|array',

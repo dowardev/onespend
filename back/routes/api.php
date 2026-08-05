@@ -6,13 +6,13 @@ use App\Http\Controllers\BudgetEntryController;
 use App\Http\Controllers\BudgetEntryGroupController;
 use App\Http\Controllers\BudgetProviderController;
 use App\Http\Controllers\BudgetProviderProductController;
+use App\Http\Controllers\HealthController;
+use App\Http\Controllers\MetricsController;
 use App\Http\Controllers\RecurringRecordController;
 use App\Http\Controllers\RecurringRecordProductController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\SupplierProductController;
 use App\Http\Controllers\SyncController;
-use App\Http\Controllers\MetricsController;
-use App\Http\Controllers\HealthController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -21,7 +21,7 @@ Route::middleware(['sso.auth', 'sso.user'])->group(function () {
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
-    
+
     Route::middleware(['throttle:30,1', 'sync.version'])->group(function () {
         Route::get('/sync/changes', [SyncController::class, 'getChanges']);
         Route::post('/sync/merge', [SyncController::class, 'merge']);
