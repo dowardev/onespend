@@ -113,6 +113,8 @@ class ChunkedFullSyncTest extends TestCase
         
         $serverTime1 = time();
         
+        sleep(1); // Ensure additional records get updated_at strictly after serverTime1 (second precision)
+
         // Add more records
         $this->createAdditionalRecords(1000);
 

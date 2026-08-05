@@ -59,7 +59,6 @@ backend_test:
     - .backend_setup
     - .tag_rules
   variables:
-    APP_KEY: $APP_KEY
     DB_CONNECTION: mariadb
     DB_HOST: mariadb
     DB_PORT: "3306"
@@ -72,6 +71,7 @@ backend_test:
     - docker-php-ext-install pdo_mysql
     - cp .env.example .env
     - composer install --prefer-dist --no-progress --no-interaction
+    - php artisan key:generate
     - php artisan test
 
 frontend_lint:
