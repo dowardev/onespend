@@ -275,8 +275,136 @@ All other tags are ignored by the pipeline.
 
 ## 10. Domain Summary
 
-| Service     | Development (default)     | Production                  |
-| ----------- | ------------------------- | --------------------------- |
-| Frontend    | `http://localhost:8102`   | `https://app.yourdomain.com` |
-| Backend API | `http://localhost:8000`   | `https://api.yourdomain.com` |
-| SSO Server  | `http://localhost:8001`   | `https://sso.yourdomain.com` |
+| Service                 | Development (default)     | Production                  |
+| ----------------------- | ------------------------- | --------------------------- |
+| Frontend                | `http://localhost:8102`   | `https://app.yourdomain.com` |
+| Backend API             | `http://localhost:8000`   | `https://api.yourdomain.com` |
+| SSO Server (API)        | `http://localhost:8001`   | `https://sso.yourdomain.com` |
+| SSO Frontend (UI login) | `http://localhost:8101`   | `https://sso.yourdomain.com` |
+
+> In development the SSO runs as two separate processes: a Laravel API on
+> `8001` and a Vue/Vite frontend on `8101`. In production a reverse proxy
+> typically serves both under the same domain, so `VITE_SSO_URL` ends with
+> `/api` (the API) while `VITE_SSO_FRONTEND_URL` points to the bare domain
+> (the login UI). Confusing the two produces a `404` on `/auth/login`.
+
+---
+
+## 11. Setup Script (`setup.sh`)
+
+The repo ships `setup.sh`, a deploy/bootstrap helper that walks through
+backend + frontend configuration step by step. It is optional — every step it
+performs can also be done manually as described in sections 3 and 4 — but it
+removes a lot of friction on a fresh machine or after a DB reset.
+
+### Usage
+
+```bash
+./setup.sh [OPTIONS]
+```
+
+<!-- markdownlint-disable MD013 -->
+| Option               | Effect                                                                |
+| -------------------- | --------------------------------------------------------------------- |
+| `--dev`              | Use `.env.development.example` (default: `.env.production.example`)   |
+| `--non-interactive`  | Do not prompt; read `ONESPEND_*` env vars instead                      |
+| `--no-backup`        | Skip `.env` backups                                                   |
+| `--skip-front-build` | Skip the frontend `pnpm run build` step                               |
+| `--advanced`         | Re-prompt all frontend vars (see "Frontend vars: default vs advanced")|
+| `--help`             | Show help and exit                                                    |
+<!-- markdownlint-enable MD013 -->
+
+### What the script does
+
+1. Verify prerequisites (PHP, Composer, Node, pnpm, MariaDB client)
+2. `composer install` in `back/`
+3. Configure `back/.env` (DB, mail, SSO, `APP_URL`, `FRONTEND_URL`)
+4. Generate `APP_KEY` (injects the line if missing)
+5. Configure SSO credentials (`SSO_URL`, `SSO_CLIENT_ID`, `SSO_CLIENT_SECRET`)
+6. Run migrations (with optional DB reset + re-seed via `migrate:fresh --seed`)
+7. Configure `front/.env.development` or `front/.env.production`
+8. Build the frontend (`pnpm run build`), unless `--skip-front-build` or shared hosting
+9. Healthcheck (DB connection, writable storage, APP_KEY set, routes cached, etc.)
+
+### Frontend vars: default vs `--advanced`
+
+Three frontend vars hold **the same value** as a backend var, just with the
+`VITE_` prefix that Vite requires to expose them to the browser:
+
+<!-- markdownlint-disable MD013 -->
+| Frontend var           | Copied from backend     | Same value as                |
+| --------------------- | ----------------------- | ---------------------------- |
+| `VITE_API_URL`        | `back/.env:APP_URL`     | `http://localhost:8002`      |
+| `VITE_SSO_URL`        | `back/.env:SSO_URL`     | `http://localhost:8001/api` |
+| `VITE_SSO_CLIENT_ID`  | `back/.env:SSO_CLIENT_ID` | `onespend-app`             |
+<!-- markdownlint-enable MD013 -->
+
+By default the script copies these three silently from `back/.env` and only
+prompts for `VITE_SSO_FRONTEND_URL`, which is **frontend-only** (the backend
+never calls the SSO login UI, so there is no `SSO_FRONTEND_URL` counterpart
+to copy from).
+
+```text
+[..]  Copying shared vars from back/.env:
+[..]    VITE_API_URL       = http://localhost:8002
+[..]    VITE_SSO_URL       = http://localhost:8001/api
+[..]    VITE_SSO_CLIENT_ID = onespend-app
+VITE_SSO_FRONTEND_URL (SSO UI login, e.g. http://localhost:8101) [http://localhost:8101]:
+```
+
+Use `--advanced` if backend and frontend legitimately need different values
+(e.g. the backend runs on `https://api.prod.com` but the Vite client should
+point to a CDN or a different proxy):
+
+```bash
+./setup.sh --dev --advanced
+```
+
+In `--advanced` mode the script re-prompts all four frontend vars, each with
+the value from `back/.env` as the default.
+
+### `VITE_SSO_FRONTEND_URL` scheme validation
+
+The script rejects an empty `VITE_SSO_FRONTEND_URL` and auto-prepends
+`http://` if the entered value lacks a scheme. This guards against the
+`Uncaught (in promise) TypeError: URL constructor: /auth/login is not a valid
+URL` runtime crash, which happens when `new URL(path, base)` in the SSO client
+gets a base without `http://`/`https://` and produces a path-only URL.
+
+### Non-interactive mode
+
+`--non-interactive` skips all prompts and requires these env vars instead:
+
+<!-- markdownlint-disable MD013 -->
+| Variable                       | Maps to                     |
+| ------------------------------ | --------------------------- |
+| `ONESPEND_DB_HOST`             | `DB_HOST`                   |
+| `ONESPEND_DB_PORT`             | `DB_PORT`                   |
+| `ONESPEND_DB_DATABASE`         | `DB_DATABASE`               |
+| `ONESPEND_DB_USERNAME`         | `DB_USERNAME`               |
+| `ONESPEND_DB_PASSWORD`          | `DB_PASSWORD`               |
+| `ONESPEND_APP_URL`             | `APP_URL`                   |
+| `ONESPEND_FRONTEND_URL`        | `FRONTEND_URL`              |
+| `ONESPEND_SSO_URL`             | `SSO_URL`                   |
+| `ONESPEND_SSO_CLIENT_ID`       | `SSO_CLIENT_ID`             |
+| `ONESPEND_SSO_CLIENT_SECRET`   | `SSO_CLIENT_SECRET`         |
+| `ONESPEND_VITE_SSO_FRONTEND_URL` | `VITE_SSO_FRONTEND_URL`   |
+<!-- markdownlint-enable MD013 -->
+
+Example:
+
+```bash
+ONESPEND_DB_HOST=127.0.0.1 \
+ONESPEND_DB_PORT=3306 \
+ONESPEND_DB_DATABASE=onespend \
+ONESPEND_DB_USERNAME=root \
+ONESPEND_DB_PASSWORD=toor \
+ONESPEND_APP_URL=http://localhost:8002 \
+ONESPEND_FRONTEND_URL=http://localhost:8102 \
+ONESPEND_SSO_URL=http://localhost:8001/api \
+ONESPEND_SSO_CLIENT_ID=onespend-app \
+ONESPEND_SSO_CLIENT_SECRET=KzpL2Hg0UGd3bj8XSW9dBvetspMpjT8tqz34qsfS \
+ONESPEND_VITE_SSO_FRONTEND_URL=http://localhost:8101 \
+./setup.sh --dev --non-interactive --skip-front-build
+```
+

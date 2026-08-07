@@ -1,0 +1,1055 @@
+#!/usr/bin/env bash
+set -euo pipefail
+shopt -s nullglob
+
+# sed -i portability: GNU sed needs `sed -i`, BSD sed (macOS) needs `sed -i ''`.
+# Detected at startup so sed_set works on both Linux and macOS out of the box.
+if [ "$(uname)" = "Darwin" ]; then
+    SEDI=(-i '')
+else
+    SEDI=(-i)
+fi
+
+# =============================================================================
+# oneSpend - Setup Script
+# Helps configure the backend (.env, composer, migrations, seeders, SSO)
+# and the Ionic/Vue frontend (.env, pnpm, build) during deployment.
+#
+# Adapted from sso/setup.sh (SSO Server) for oneSpend:
+#   - MariaDB instead of MySQL
+#   - External SSO instead of local JWT
+#   - DatabaseSeeder instead of RoleSeeder/SettingSeeder
+#   - Electron/Capacitor-aware frontend build
+# =============================================================================
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BACK_DIR="$SCRIPT_DIR/back"
+FRONT_DIR="$SCRIPT_DIR/front"
+BACKUP_KEEP=5
+CURRENT_STEP=0
+
+DEV_MODE=false
+NON_INTERACTIVE=false
+NO_BACKUP=false
+HAS_NODE=false
+HAS_PNPM=false
+HOSTING_ENV=""
+SKIP_FRONT_BUILD=false
+# --advanced: re-prompt all frontend vars even when they can be copied from the
+# backend .env. Default (advanced off) copies VITE_API_URL, VITE_SSO_URL and
+# VITE_SSO_CLIENT_ID from back/.env and only prompts for VITE_SSO_FRONTEND_URL
+# (frontend-only, has no backend counterpart).
+ADVANCED_MODE=false
+HEALTH_OK=true
+HEALTH_RESULTS=()
+
+# -----------------------------------------------------------------------------
+# Helpers: logging, prompts, backup, sed
+# -----------------------------------------------------------------------------
+
+color() { printf '\033[3%sm%s\033[0m' "$1" "$2"; }
+log_ok()   { echo "  $(color 2 "[OK]")   $1"; }
+log_info() { echo "  $(color 6 "[..]")  $1"; }
+log_warn() { echo "  $(color 3 "[!]")   $1"; }
+log_error(){ echo "  $(color 1 "[ER]")  $1"; }
+
+confirm() {
+    local prompt="$1" default="${2:-N}"
+    if [ "$NON_INTERACTIVE" = true ]; then
+        [[ "$default" =~ ^[Yy]$ ]]
+        return $?
+    fi
+    local yn
+    if [[ "$default" =~ ^[Yy]$ ]]; then
+        printf "%s [Y/n]: " "$prompt" >&2
+        read -r yn || true
+        yn="${yn:-Y}"
+    else
+        printf "%s [y/N]: " "$prompt" >&2
+        read -r yn || true
+        yn="${yn:-N}"
+    fi
+    [[ "$yn" =~ ^[Yy]$ ]]
+}
+
+ask() {
+    local prompt="$1" default="$2"
+    if [ "$NON_INTERACTIVE" = true ]; then
+        echo "$default"
+        return 0
+    fi
+    local val
+    printf "%s [%s]: " "$prompt" "$default" >&2
+    read -r val || true
+    echo "${val:-$default}"
+}
+
+ask_secret() {
+    local prompt="$1" default="$2"
+    if [ "$NON_INTERACTIVE" = true ]; then
+        echo "$default"
+        return 0
+    fi
+    local val
+    printf "%s: " "$prompt" >&2
+    read -s -r val || true
+    echo >&2
+    echo "${val:-$default}"
+}
+
+get_env_default() {
+    local key="$1" file="$2"
+    grep -E "^${key}=" "$file" | cut -d= -f2- || true
+}
+
+require_cmd() {
+    local bin="$1" hint="${2:-}"
+    if ! command -v "$bin" >/dev/null 2>&1; then
+        log_error "Required command not found: $bin"
+        [ -n "$hint" ] && log_error "Hint: $hint"
+        exit 2
+    fi
+}
+
+backup_file() {
+    local path="$1"
+    [ "$NO_BACKUP" = true ] && return 0
+    [ ! -f "$path" ] && return 0
+    local ts
+    ts="$(date +%Y%m%d_%H%M%S)"
+    cp "$path" "${path}.bak.${ts}"
+    local backups=()
+    for f in "${path}.bak".*; do
+        [ -f "$f" ] && backups+=("$f")
+    done
+    local count=${#backups[@]}
+    if [ "$count" -gt "$BACKUP_KEEP" ]; then
+        local remove_count=$((count - BACKUP_KEEP))
+        for f in $(printf '%s\n' "${backups[@]}" | sort | head -n "$remove_count"); do
+            rm -f "$f"
+        done
+    fi
+}
+
+sed_set() {
+    local file="$1" key="$2" val="$3"
+    local escaped_val="$val"
+    local needs_quoting=false
+    if [[ "$val" =~ [[:space:]#\"\'] ]] || [ -z "$val" ]; then
+        needs_quoting=true
+        escaped_val="${escaped_val//\"/\\\"}"
+    fi
+    escaped_val="${escaped_val//\\/\\\\}"
+    escaped_val="${escaped_val//&/\\&}"
+    escaped_val="${escaped_val//|/\\|}"
+    if [ "$needs_quoting" = true ]; then
+        escaped_val="\"${escaped_val}\""
+    fi
+    if grep -qE "^\s*${key}=" "$file" 2>/dev/null; then
+        sed "${SEDI[@]}" "s|^[[:space:]]*${key}=.*|${key}=${escaped_val}|" "$file"
+    else
+        echo "${key}=${escaped_val}" >> "$file"
+    fi
+}
+
+# Trim whitespace and ensure http(s):// scheme. Optional frontends (where empty
+# is acceptable) get just a warning; required URLs return 1 so callers can loop
+# until the user supplies one. Used for both backend (APP_URL/FRONTEND_URL)
+# and frontend (VITE_*) variables.
+normalize_url() {
+    local value="$1" required="${2:-true}"
+    value="${value#"${value%%[![:space:]]*}"}"
+    value="${value%"${value##*[![:space:]]}"}"
+    if [ -z "$value" ]; then
+        if [ "$required" = true ]; then
+            return 1
+        fi
+        echo ""
+        return 0
+    fi
+    if [[ ! "$value" =~ ^https?:// ]]; then
+        log_warn "'$value' lacks http:// or https:// scheme — prepending http://"
+        value="http://$value"
+    fi
+    echo "$value"
+}
+
+detect_hosting() {
+    if [ -d "/usr/local/cpanel" ] || [ -n "${CPANEL:-}" ]; then
+        echo "shared"
+    elif command -v sudo >/dev/null 2>&1 || command -v apt >/dev/null 2>&1 || command -v yum >/dev/null 2>&1; then
+        echo "vps"
+    else
+        echo "shared"
+    fi
+}
+
+# -----------------------------------------------------------------------------
+# CLI options
+# -----------------------------------------------------------------------------
+
+usage() {
+    cat <<EOF
+Usage: $0 [OPTIONS]
+
+oneSpend setup script for Laravel backend and Ionic/Vue frontend.
+
+Options:
+  --dev               Development mode (.env.development.example)
+  --non-interactive   Non-interactive mode (requires ONESPEND_* env vars)
+  --no-backup         Skip backups of existing files
+  --skip-front-build  Skip the frontend build step
+  --advanced          Re-prompt all frontend vars (default copies shared ones
+                      from back/.env and only asks VITE_SSO_FRONTEND_URL)
+  --help              Show this help message and exit
+
+Exit codes:
+  0   Success
+  2   Missing prerequisite
+  3   Missing required environment variable
+  4   No TTY available (use --non-interactive) / DB connection error
+  5   Database migration or seeding failed
+  6   Write permission error
+EOF
+    exit 0
+}
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --dev) DEV_MODE=true; shift ;;
+        --non-interactive) NON_INTERACTIVE=true; shift ;;
+        --no-backup) NO_BACKUP=true; shift ;;
+        --skip-front-build) SKIP_FRONT_BUILD=true; shift ;;
+        --advanced) ADVANCED_MODE=true; shift ;;
+        --help) usage ;;
+        *) log_error "Unknown option: $1"; usage; exit 2 ;;
+    esac
+done
+
+error_handler() {
+    local exit_code=$?
+    log_error "Error on line $1 (exit code: $exit_code)"
+    exit "$exit_code"
+}
+trap 'error_handler $LINENO' ERR
+
+# -----------------------------------------------------------------------------
+# Banner & prerequisites
+# -----------------------------------------------------------------------------
+
+banner() {
+    echo ""
+    echo "  +------------------------------------------+"
+    echo "  |   oneSpend - Setup Script                |"
+    echo "  +------------------------------------------+"
+    echo ""
+}
+
+check_prereqs() {
+    CURRENT_STEP=$((CURRENT_STEP + 1))
+    log_info "Step $CURRENT_STEP: Checking prerequisites..."
+
+    require_cmd php "Install PHP 8.2+ (e.g., apt install php8.2-cli php8.2-mbstring php8.2-xml php8.2-curl)"
+    require_cmd composer "Install Composer (https://getcomposer.org)"
+
+    local php_ver
+    php_ver="$(php -v | head -1 | sed -E 's/^PHP[[:space:]]+//; s/[[:space:]].*//')"
+    if ! echo "$php_ver" | grep -qE '^[0-9]+\.[0-9]+'; then
+        log_warn "Could not determine PHP version, assuming compatible"
+    else
+        local min_ver="8.2.0"
+        if ! printf '%s\n' "$php_ver" "$min_ver" | sort -V | head -1 | grep -qF "$min_ver"; then
+            log_error "PHP 8.2+ required, found $php_ver"
+            exit 2
+        fi
+        log_ok "PHP $php_ver"
+    fi
+
+    # PHP extensions required by Laravel + MariaDB
+    local missing_ext=()
+    for ext in pdo pdo_mysql mbstring xml curl fileinfo; do
+        if ! php -m 2>/dev/null | grep -qi "^$ext$"; then
+            missing_ext+=("$ext")
+        fi
+    done
+    if [ ${#missing_ext[@]} -gt 0 ]; then
+        log_warn "Missing PHP extensions: ${missing_ext[*]}"
+        log_warn "Install them (e.g., apt install php8.2-mysql php8.2-mbstring php8.2-xml php8.2-curl)"
+    else
+        log_ok "Required PHP extensions present"
+    fi
+
+    if command -v node >/dev/null 2>&1; then
+        HAS_NODE=true
+        log_ok "Node.js found"
+    else
+        HAS_NODE=false
+        log_warn "Node.js not found - frontend build will be skipped"
+    fi
+
+    if command -v pnpm >/dev/null 2>&1; then
+        HAS_PNPM=true
+        log_ok "pnpm found"
+    else
+        HAS_PNPM=false
+        log_warn "pnpm not found - frontend build will be skipped (install: npm i -g pnpm)"
+    fi
+
+    HOSTING_ENV="$(detect_hosting)"
+    log_info "Hosting environment detected: $HOSTING_ENV"
+
+    log_ok "Prerequisites met"
+}
+
+# -----------------------------------------------------------------------------
+# Backend configuration
+# -----------------------------------------------------------------------------
+
+configure_backend() {
+    CURRENT_STEP=$((CURRENT_STEP + 1))
+    log_info "Step $CURRENT_STEP: Configuring backend..."
+
+    cd "$BACK_DIR"
+
+    local example_file
+    if [ "$DEV_MODE" = true ]; then
+        example_file=".env.development.example"
+    else
+        example_file=".env.production.example"
+    fi
+
+    if [ ! -f "$example_file" ]; then
+        log_error "Example file not found: $example_file"
+        exit 6
+    fi
+
+    backup_file ".env"
+    cp "$example_file" ".env"
+
+    local app_name app_url frontend_url
+    local db_host db_port db_database db_username db_password db_connection
+    local mail_mailer mail_host mail_port mail_username mail_password mail_from_address mail_encryption
+    local sso_url sso_jwt_issuer sso_client_id sso_client_secret
+
+    if [ "$NON_INTERACTIVE" = true ]; then
+        local missing=false
+        for var in ONESPEND_DB_HOST ONESPEND_DB_PORT ONESPEND_DB_DATABASE ONESPEND_DB_USERNAME ONESPEND_SSO_URL ONESPEND_SSO_CLIENT_ID ONESPEND_SSO_CLIENT_SECRET; do
+            if [ -z "${!var:-}" ]; then
+                log_error "Missing required env var: $var"
+                missing=true
+            fi
+        done
+        if [ "$missing" = true ]; then
+            exit 3
+        fi
+
+        app_url="$(normalize_url "${ONESPEND_APP_URL:-$(get_env_default APP_URL "$example_file")}")"
+        frontend_url="$(normalize_url "${ONESPEND_FRONTEND_URL:-$(get_env_default FRONTEND_URL "$example_file")}")"
+        app_name="${ONESPEND_APP_NAME:-$(get_env_default APP_NAME "$example_file" | tr -d '"')}"
+        db_connection="${ONESPEND_DB_CONNECTION:-$(get_env_default DB_CONNECTION "$example_file")}"
+        db_host="${ONESPEND_DB_HOST:-}"
+        db_port="${ONESPEND_DB_PORT:-}"
+        db_database="${ONESPEND_DB_DATABASE:-}"
+        db_username="${ONESPEND_DB_USERNAME:-}"
+        db_password="${ONESPEND_DB_PASSWORD:-}"
+        mail_mailer="${ONESPEND_MAIL_MAILER:-$(get_env_default MAIL_MAILER "$example_file")}"
+        mail_host="${ONESPEND_MAIL_HOST:-}"
+        mail_port="${ONESPEND_MAIL_PORT:-$(get_env_default MAIL_PORT "$example_file")}"
+        mail_username="${ONESPEND_MAIL_USERNAME:-}"
+        mail_password="${ONESPEND_MAIL_PASSWORD:-}"
+        mail_encryption="${ONESPEND_MAIL_ENCRYPTION:-$(get_env_default MAIL_ENCRYPTION "$example_file")}"
+        sso_url="${ONESPEND_SSO_URL:-}"
+        sso_jwt_issuer="${ONESPEND_SSO_JWT_ISSUER:-${sso_url%/api}}"
+        sso_client_id="${ONESPEND_SSO_CLIENT_ID:-}"
+        sso_client_secret="${ONESPEND_SSO_CLIENT_SECRET:-}"
+    else
+        local default_app_name default_app_url default_frontend_url
+        default_app_name="$(grep -E "^APP_NAME=" "$example_file" | cut -d= -f2- | tr -d '"' || echo "OneSpend")"
+        default_app_url="$(grep -E "^APP_URL=" "$example_file" | cut -d= -f2- || echo "http://localhost")"
+        default_frontend_url="$(grep -E "^FRONTEND_URL=" "$example_file" | cut -d= -f2- || echo "http://localhost:8102")"
+
+        app_name="$(ask "App name" "$default_app_name")"
+        while :; do
+            app_url="$(ask "App URL (backend)" "$default_app_url")"
+            app_url="$(normalize_url "$app_url")" && break
+            log_error "URL cannot be empty. Enter something like http://localhost or https://yourdomain.com"
+        done
+        while :; do
+            frontend_url="$(ask "Frontend URL" "$default_frontend_url")"
+            frontend_url="$(normalize_url "$frontend_url")" && break
+            log_error "URL cannot be empty. Enter something like http://localhost:8102"
+        done
+
+        db_connection="$(get_env_default DB_CONNECTION "$example_file")"
+        db_host="$(ask "DB host" "${DB_HOST:-127.0.0.1}")"
+        db_port="$(ask "DB port" "${DB_PORT:-3306}")"
+        db_database="$(ask "DB database" "${DB_DATABASE:-onespend}")"
+        db_username="$(ask "DB username" "${DB_USERNAME:-root}")"
+        db_password="$(ask_secret "DB password" "${DB_PASSWORD:-}")"
+
+        mail_mailer="$(get_env_default MAIL_MAILER "$example_file")"
+        mail_port="$(get_env_default MAIL_PORT "$example_file")"
+        local default_mail_host default_mail_username default_mail_password default_mail_encryption
+        default_mail_host="${MAIL_HOST:-$(get_env_default MAIL_HOST "$example_file")}"
+        default_mail_username="${MAIL_USERNAME:-$(get_env_default MAIL_USERNAME "$example_file")}"
+        default_mail_password="${MAIL_PASSWORD:-$(get_env_default MAIL_PASSWORD "$example_file")}"
+        default_mail_encryption="${MAIL_ENCRYPTION:-$(get_env_default MAIL_ENCRYPTION "$example_file")}"
+
+        if [ "$mail_mailer" = "smtp" ]; then
+            mail_host="$(ask "Mail host" "$default_mail_host")"
+            mail_username="$(ask "Mail username" "$default_mail_username")"
+            mail_password="$(ask_secret "Mail password" "$default_mail_password")"
+            mail_encryption="$(ask "Mail encryption" "$default_mail_encryption")"
+        else
+            mail_host="$default_mail_host"
+            mail_username="$default_mail_username"
+            mail_password="$default_mail_password"
+            mail_encryption="$default_mail_encryption"
+        fi
+
+        # SSO (external authentication server)
+        local default_sso_url default_sso_jwt default_sso_client_id
+        default_sso_url="$(get_env_default SSO_URL "$example_file")"
+        default_sso_jwt="$(get_env_default SSO_JWT_ISSUER "$example_file")"
+        default_sso_client_id="$(get_env_default SSO_CLIENT_ID "$example_file")"
+
+        sso_url="$(ask "SSO Server URL (API)" "$default_sso_url")"
+        sso_jwt_issuer="$(ask "SSO JWT issuer" "$default_sso_jwt")"
+        sso_client_id="$(ask "SSO client ID" "$default_sso_client_id")"
+        sso_client_secret="$(ask_secret "SSO client secret" "")"
+    fi
+
+    local app_url_host
+    app_url_host="$(echo "$app_url" | sed -E 's|^https?://([^/]+).*|\1|')"
+    mail_from_address="${mail_from_address:-noreply@${app_url_host}}"
+
+    if [ "$DEV_MODE" = true ]; then
+        mail_mailer="log"
+    fi
+
+    sed_set ".env" "APP_NAME" "$app_name"
+    sed_set ".env" "APP_URL" "$app_url"
+    sed_set ".env" "FRONTEND_URL" "$frontend_url"
+    sed_set ".env" "DB_CONNECTION" "$db_connection"
+    sed_set ".env" "DB_HOST" "$db_host"
+    sed_set ".env" "DB_PORT" "$db_port"
+    sed_set ".env" "DB_DATABASE" "$db_database"
+    sed_set ".env" "DB_USERNAME" "$db_username"
+    sed_set ".env" "DB_PASSWORD" "$db_password"
+    sed_set ".env" "MAIL_MAILER" "$mail_mailer"
+    sed_set ".env" "MAIL_HOST" "$mail_host"
+    sed_set ".env" "MAIL_PORT" "$mail_port"
+    sed_set ".env" "MAIL_USERNAME" "$mail_username"
+    sed_set ".env" "MAIL_PASSWORD" "$mail_password"
+    sed_set ".env" "MAIL_ENCRYPTION" "$mail_encryption"
+    sed_set ".env" "MAIL_FROM_ADDRESS" "$mail_from_address"
+    sed_set ".env" "SSO_URL" "$sso_url"
+    sed_set ".env" "SSO_JWT_ISSUER" "$sso_jwt_issuer"
+    sed_set ".env" "SSO_CLIENT_ID" "$sso_client_id"
+    sed_set ".env" "SSO_CLIENT_SECRET" "$sso_client_secret"
+
+    # Production deploys target shared hosting without a queue worker
+    # daemon. SyncMergeJob::dispatch() (SyncController.php:489) would queue
+    # jobs to the `jobs` table and never process them. Force QUEUE_CONNECTION
+    # to `sync` in non-dev mode; keep `database` in dev so developers can
+    # observe queued jobs with `php artisan queue:listen`.
+    if [ "$DEV_MODE" = false ]; then
+        sed_set ".env" "QUEUE_CONNECTION" "sync"
+    else
+        sed_set ".env" "QUEUE_CONNECTION" "database"
+    fi
+
+    # Verify DB connection (supports mysql + mariadb drivers)
+    local db_check
+    db_check="$(php -r '
+        $env = file_get_contents(".env");
+        $lines = explode("\n", $env);
+        $vars = [];
+        foreach ($lines as $line) {
+            if (preg_match("/^([A-Z_]+)=\"?([^\"]*)\"?/", $line, $m)) {
+                $vars[$m[1]] = $m[2];
+            }
+        }
+        $driver = $vars["DB_CONNECTION"] ?? "mariadb";
+        if (!in_array($driver, ["mysql", "mariadb"], true)) {
+            echo "FAIL:Driver " . $driver . " no soportado. Solo mysql/mariadb.";
+            return;
+        }
+        $dsn = "mysql:host={$vars["DB_HOST"]};port={$vars["DB_PORT"]};dbname={$vars["DB_DATABASE"]}";
+        try {
+            new PDO($dsn, $vars["DB_USERNAME"] ?? "", $vars["DB_PASSWORD"] ?? "");
+            echo "OK";
+        } catch (\PDOException $e) {
+            echo "FAIL:" . $e->getMessage();
+        }
+    ' 2>/dev/null || echo "FAIL:Could not run PHP check")"
+    local db_check_msg="${db_check#FAIL:}"
+    case "$db_check" in
+        "OK"*)
+            log_ok "DB connection verified"
+            ;;
+        "FAIL:")
+            log_error "Could not verify DB connection"
+            exit 4
+            ;;
+        *"Access denied"*)
+            log_error "DB access denied - wrong DB_USERNAME or DB_PASSWORD"
+            exit 4
+            ;;
+        *"Connection refused"*|*"not reachable"*|*"No such file"*)
+            log_error "DB host $db_host:$db_port not reachable - is MariaDB running?"
+            exit 4
+            ;;
+        *"Unknown database"*)
+            log_error "DB database '$db_database' does not exist. Create it first:"
+            log_error "  sudo mariadb -e \"CREATE DATABASE $db_database;\""
+            log_error "  sudo mariadb -e \"GRANT ALL ON ${db_database}.* TO '${db_username}'@'localhost' IDENTIFIED BY 'password';\""
+            exit 4
+            ;;
+        *"Driver"*)
+            log_error "$db_check_msg"
+            log_error "This script supports mysql/mariadb. Set DB_CONNECTION=mariadb in .env"
+            exit 4
+            ;;
+        *)
+            log_error "DB connection failed: $db_check_msg"
+            exit 4
+            ;;
+    esac
+
+    log_ok "Backend configured"
+    cd "$SCRIPT_DIR"
+}
+
+# -----------------------------------------------------------------------------
+# APP_KEY, migrations, seeders
+# -----------------------------------------------------------------------------
+
+generate_app_key() {
+    CURRENT_STEP=$((CURRENT_STEP + 1))
+    log_info "Step $CURRENT_STEP: Generating app key..."
+
+    cd "$BACK_DIR"
+
+    # oneSpend .env.*.example files do NOT include an APP_KEY= line (unlike SSO).
+    # Laravel's key:generate refuses to write the key unless the line exists,
+    # so ensure it is present (empty) before invoking the command.
+    if ! grep -qE "^APP_KEY=" ".env" 2>/dev/null; then
+        echo "APP_KEY=" >> ".env"
+        log_info "Added empty APP_KEY= line to .env"
+    fi
+
+    if grep -qE "^APP_KEY=.+" ".env" 2>/dev/null; then
+        log_ok "APP_KEY already set, skipping"
+    else
+        php artisan key:generate --force 2>&1 || true
+        if grep -qE "^APP_KEY=base64:" ".env" 2>/dev/null; then
+            log_ok "APP_KEY generated"
+        else
+            log_error "APP_KEY generation failed (no key in .env)"
+            exit 5
+        fi
+    fi
+    cd "$SCRIPT_DIR"
+}
+
+migrate_db() {
+    CURRENT_STEP=$((CURRENT_STEP + 1))
+    log_info "Step $CURRENT_STEP: Running database migrations..."
+
+    cd "$BACK_DIR"
+    php artisan migrate --force || { log_error "Migration failed"; exit 5; }
+    log_ok "Database migrated"
+    cd "$SCRIPT_DIR"
+}
+
+configure_sso() {
+    CURRENT_STEP=$((CURRENT_STEP + 1))
+    log_info "Step $CURRENT_STEP: Verifying SSO configuration..."
+
+    cd "$BACK_DIR"
+    local sso_url_val sso_secret_val
+    sso_url_val="$(grep -E "^SSO_URL=" ".env" 2>/dev/null | cut -d= -f2- | tr -d '"' || echo "")"
+    sso_secret_val="$(grep -E "^SSO_CLIENT_SECRET=" ".env" 2>/dev/null | cut -d= -f2- | tr -d '"' || echo "")"
+
+    if [ -z "$sso_url_val" ]; then
+        log_error "SSO_URL is empty - external auth server is required"
+        exit 4
+    fi
+    if [ -z "$sso_secret_val" ]; then
+        log_warn "SSO_CLIENT_SECRET is empty - set it if the SSO server requires it"
+    fi
+
+    # Best-effort reachability check (non-fatal)
+    if command -v curl >/dev/null 2>&1; then
+        if curl -sf -o /dev/null --max-time 5 "${sso_url_val%/api}/.well-known/jwks" 2>/dev/null; then
+            log_ok "SSO JWKS endpoint reachable"
+        else
+            log_warn "SSO JWKS endpoint unreachable at ${sso_url_val%/api}/.well-known/jwks"
+            log_warn "The SSO server may be down, behind a firewall, or the URL is wrong."
+        fi
+    else
+        log_info "curl not available, skipping SSO reachability check"
+    fi
+
+    log_ok "SSO configuration verified"
+    cd "$SCRIPT_DIR"
+}
+
+seed_db() {
+    CURRENT_STEP=$((CURRENT_STEP + 1))
+    log_info "Step $CURRENT_STEP: Seeding database..."
+
+    cd "$BACK_DIR"
+
+    # oneSpend only has DatabaseSeeder (no RoleSeeder/SettingSeeder like SSO).
+    # We check whether any rows exist to avoid duplicating seed data.
+    # Use numeric-only regex instead of a textual sentinel so we don't get
+    # fooled by tinker warnings/stack traces mixing into stdout.
+    local user_count=0
+    local count_unknown=false
+    local tinker_out
+    tinker_out="$(php artisan tinker --execute="echo App\\Models\\User::count();" 2>/dev/null || true)"
+    tinker_out="${tinker_out##*$'\n'}"   # take last line (tinker sometimes prints banners)
+    if [[ "$tinker_out" =~ ^[0-9]+$ ]]; then
+        user_count="$tinker_out"
+    else
+        log_warn "Could not determine user count (tinker output: '${tinker_out:-<empty>}')"
+        count_unknown=true
+        user_count="0"
+    fi
+
+    if [ "$user_count" -gt 0 ]; then
+        log_info "Found $user_count existing user(s) - database already seeded"
+        if confirm "Re-seed database anyway?" "N"; then
+            # DatabaseSeeder creates rows with fixed values (test@example.com),
+            # so a plain `db:seed` would violate the users_email_unique index.
+            # `migrate:fresh --seed` drops all tables, re-runs migrations,
+            # then seeds - guaranteeing a consistent state on re-seed.
+            # WARNING: this destroys all application data, not just seed data.
+            if [ "$NON_INTERACTIVE" = true ]; then
+                if [ "${ONESPEND_ALLOW_FRESH_SEED:-}" != "true" ]; then
+                    log_error "Non-interactive re-seed requires ONESPEND_ALLOW_FRESH_SEED=true (destructive op)"
+                    log_error "Set ONESPEND_ALLOW_FRESH_SEED=true explicitly to authorize migrate:fresh --seed"
+                    exit 5
+                fi
+                php artisan migrate:fresh --seed --force || { log_error "migrate:fresh --seed failed"; exit 5; }
+            else
+                log_warn "This will DROP and recreate ALL tables - all data will be lost."
+                if confirm "Proceed with migrate:fresh --seed?" "N"; then
+                    php artisan migrate:fresh --seed --force || { log_error "migrate:fresh --seed failed"; exit 5; }
+                else
+                    log_info "Re-seed cancelled, existing data preserved"
+                    cd "$SCRIPT_DIR"
+                    return
+                fi
+            fi
+            log_ok "Database re-seeded (migrate:fresh --seed)"
+        else
+            log_info "Seeding skipped"
+        fi
+    else
+        if [ "$NON_INTERACTIVE" = true ]; then
+            if [ "$count_unknown" = true ]; then
+                log_error "Cannot determine DB state in non-interactive mode (tinker failed)"
+                log_error "Run interactively, or fix the tinker error first, then rerun setup"
+                exit 5
+            fi
+            php artisan db:seed --force || { log_error "db:seed failed"; exit 5; }
+            log_ok "Database seeded"
+        elif confirm "Seed database with sample data?" "Y"; then
+            php artisan db:seed --force || { log_error "db:seed failed"; exit 5; }
+            log_ok "Database seeded"
+        else
+            log_info "Seeding skipped"
+        fi
+    fi
+
+    cd "$SCRIPT_DIR"
+}
+
+# -----------------------------------------------------------------------------
+# Frontend configuration & build
+# -----------------------------------------------------------------------------
+
+configure_frontend() {
+    CURRENT_STEP=$((CURRENT_STEP + 1))
+    log_info "Step $CURRENT_STEP: Configuring frontend..."
+
+    cd "$FRONT_DIR"
+
+    local example_file target_file
+    if [ "$DEV_MODE" = true ]; then
+        example_file=".env.development.example"
+        target_file=".env.development"
+    else
+        example_file=".env.production.example"
+        target_file=".env.production"
+    fi
+
+    if [ ! -f "$example_file" ]; then
+        log_warn "Frontend example file not found: $example_file, trying .env.example"
+        if [ -f ".env.example" ]; then
+            example_file=".env.example"
+        else
+            log_error "No frontend .env example found"
+            cd "$SCRIPT_DIR"
+            return
+        fi
+    fi
+
+    backup_file "$target_file"
+
+    # Capture existing frontend .env values BEFORE overwriting with the example.
+    # VITE_SSO_FRONTEND_URL cannot be derived from SSO_URL (backend port !=
+    # SSO frontend Vite port); the only safe default is a previously-correct
+    # value already in the user's .env, or the example file.
+    local prev_sso_fe_url=""
+    if [ -f "$target_file" ]; then
+        prev_sso_fe_url="$(grep -E "^VITE_SSO_FRONTEND_URL=" "$target_file" 2>/dev/null | cut -d= -f2- | tr -d '"' || echo "")"
+    fi
+
+    cp "$example_file" "$target_file"
+
+    local backend_url default_api_url
+    backend_url="$(grep -E "^APP_URL=" "$BACK_DIR/.env" 2>/dev/null | cut -d= -f2- | tr -d '"' || echo "http://localhost")"
+    default_api_url="${backend_url}"
+
+    # Shared values copied from back/.env (same value, just VITE_ prefix for Vite).
+    local default_sso_url default_sso_client_id default_sso_fe
+    default_sso_url="$(grep -E "^SSO_URL=" "$BACK_DIR/.env" 2>/dev/null | cut -d= -f2- | tr -d '"' || echo "")"
+    default_sso_client_id="$(grep -E "^SSO_CLIENT_ID=" "$BACK_DIR/.env" 2>/dev/null | cut -d= -f2- | tr -d '"' || echo "onespend-app")"
+
+    # Prefer preserved value from the previous .env; fall back to example file;
+    # in --non-interactive mode honor ONESPEND_VITE_SSO_FRONTEND_URL override.
+    default_sso_fe="${ONESPEND_VITE_SSO_FRONTEND_URL:-}"
+    if [ -z "$default_sso_fe" ]; then
+        default_sso_fe="$prev_sso_fe_url"
+    fi
+    if [ -z "$default_sso_fe" ]; then
+        default_sso_fe="$(grep -E "^VITE_SSO_FRONTEND_URL=" "$example_file" 2>/dev/null | cut -d= -f2- | tr -d '"' || echo "")"
+    fi
+
+    local api_url sso_url_fe sso_frontend_url sso_client_id_fe
+
+    if [ "$ADVANCED_MODE" = true ]; then
+        # Advanced: prompt all frontend vars (lets the user pick values that
+        # differ from the backend, e.g. CDN/proxy scenarios).
+        log_info "Advanced mode: prompting all frontend vars"
+        api_url="$(ask "VITE_API_URL" "$default_api_url")"
+        api_url="$(normalize_url "$api_url" false)"
+        sso_url_fe="$(ask "VITE_SSO_URL (API)" "$default_sso_url")"
+        sso_url_fe="$(normalize_url "$sso_url_fe" false)"
+        sso_client_id_fe="$(ask "VITE_SSO_CLIENT_ID" "$default_sso_client_id")"
+    else
+        # Simplified: copy the 3 vars shared with the backend silently.
+        # Only VITE_SSO_FRONTEND_URL is frontend-only and needs prompting.
+        log_info "Copying shared vars from back/.env:"
+        log_info "  VITE_API_URL       = $default_api_url"
+        log_info "  VITE_SSO_URL      = $default_sso_url"
+        log_info "  VITE_SSO_CLIENT_ID= $default_sso_client_id"
+        api_url="$default_api_url"
+        sso_url_fe="$default_sso_url"
+        sso_client_id_fe="$default_sso_client_id"
+    fi
+
+    sso_frontend_url="$(ask "VITE_SSO_FRONTEND_URL (SSO UI login, e.g. http://localhost:8101)" "$default_sso_fe")"
+    if [ -z "$sso_frontend_url" ]; then
+        log_warn "VITE_SSO_FRONTEND_URL is required (cannot be derived from SSO_URL)"
+        while [ -z "$sso_frontend_url" ]; do
+            if [ "$NON_INTERACTIVE" = true ]; then
+                log_error "VITE_SSO_FRONTEND_URL is required in non-interactive mode"
+                log_error "Set ONESPEND_VITE_SSO_FRONTEND_URL in the environment or run without --non-interactive"
+                exit 3
+            fi
+            sso_frontend_url="$(ask "VITE_SSO_FRONTEND_URL (SSO UI login, e.g. http://localhost:8101)" "")"
+        done
+    fi
+    # Scheme validation: must start with http:// or https:// to avoid URL constructor errors.
+    # VITE_SSO_FRONTEND_URL is required (the while loop above already enforces
+    # non-empty in interactive mode and aborts in non-interactive mode).
+    sso_frontend_url="$(normalize_url "$sso_frontend_url" false)"
+
+    sed_set "$target_file" "VITE_API_URL" "$api_url"
+    sed_set "$target_file" "VITE_SSO_URL" "$sso_url_fe"
+    sed_set "$target_file" "VITE_SSO_FRONTEND_URL" "$sso_frontend_url"
+    sed_set "$target_file" "VITE_SSO_CLIENT_ID" "$sso_client_id_fe"
+
+    log_ok "Frontend configured"
+    cd "$SCRIPT_DIR"
+}
+
+build_frontend() {
+    CURRENT_STEP=$((CURRENT_STEP + 1))
+    log_info "Step $CURRENT_STEP: Building frontend..."
+
+    if [ "$HOSTING_ENV" = "shared" ]; then
+        SKIP_FRONT_BUILD=true
+        cat <<EOF
+
+  !!! Frontend build skipped: shared hosting detected.
+
+  Build the frontend on a development machine and upload the dist/ directory:
+
+      cd front
+      pnpm install
+      pnpm run build          # web
+      # Optional desktop builds:
+      pnpm run build:linux | build:win | build:mac
+EOF
+        log_info "Frontend build skipped (shared hosting)"
+        return
+    fi
+
+    if [ "$HAS_NODE" = false ] || [ "$HAS_PNPM" = false ]; then
+        SKIP_FRONT_BUILD=true
+        cat <<EOF
+
+  !!! Frontend build skipped: Node.js/pnpm not available.
+
+  To build the frontend manually on a development machine:
+
+      cd front
+      pnpm install
+      pnpm run build
+
+  Optional desktop builds (Electron):
+      pnpm run build:linux | build:win | build:mac
+
+  Then upload the dist/ directory to your server.
+EOF
+        log_info "Frontend build skipped (no Node.js/pnpm)"
+        return
+    fi
+
+    cd "$FRONT_DIR"
+    if [ ! -d "node_modules" ]; then
+        log_info "Installing frontend dependencies..."
+        pnpm install || { log_warn "pnpm install failed"; SKIP_FRONT_BUILD=true; cd "$SCRIPT_DIR"; return; }
+    fi
+
+    log_info "Building frontend..."
+    if pnpm run build; then
+        log_ok "Frontend built successfully"
+    else
+        SKIP_FRONT_BUILD=true
+        log_warn "Frontend build failed"
+    fi
+    cd "$SCRIPT_DIR"
+}
+
+# -----------------------------------------------------------------------------
+# Health checks
+# -----------------------------------------------------------------------------
+
+healthcheck() {
+    CURRENT_STEP=$((CURRENT_STEP + 1))
+    log_info "Step $CURRENT_STEP: Running health checks..."
+
+    cd "$BACK_DIR"
+
+    local all_ok=true
+    HEALTH_RESULTS=()
+
+    # DB connection
+    local check_result=""
+    check_result="$(php -r '
+        $env = file_get_contents(".env");
+        $lines = explode("\n", $env);
+        $vars = [];
+        foreach ($lines as $line) {
+            if (preg_match("/^([A-Z_]+)=\"?([^\"]*)\"?/", $line, $m)) {
+                $vars[$m[1]] = $m[2];
+            }
+        }
+        $driver = $vars["DB_CONNECTION"] ?? "mariadb";
+        if (!in_array($driver, ["mysql", "mariadb"], true)) {
+            echo "FAIL:Driver " . $driver . " no soportado.";
+            return;
+        }
+        $dsn = "mysql:host={$vars["DB_HOST"]};port={$vars["DB_PORT"]};dbname={$vars["DB_DATABASE"]}";
+        try {
+            new PDO($dsn, $vars["DB_USERNAME"] ?? "", $vars["DB_PASSWORD"] ?? "");
+            echo "OK";
+        } catch (\PDOException $e) {
+            echo "FAIL: " . $e->getMessage();
+        }
+    ' 2>/dev/null || echo "FAIL: Exception")"
+    if echo "$check_result" | grep -q "^OK"; then
+        HEALTH_RESULTS+=("PASS|DB connection")
+    else
+        HEALTH_RESULTS+=("FAIL|DB connection: $check_result")
+        all_ok=false
+    fi
+
+    # APP_KEY present
+    if grep -qE "^APP_KEY=base64:" ".env" 2>/dev/null; then
+        HEALTH_RESULTS+=("PASS|APP_KEY set")
+    else
+        HEALTH_RESULTS+=("FAIL|APP_KEY missing")
+        all_ok=false
+    fi
+
+    # SSO_URL set
+    if grep -qE "^SSO_URL=.+" ".env" 2>/dev/null; then
+        HEALTH_RESULTS+=("PASS|SSO_URL configured")
+    else
+        HEALTH_RESULTS+=("FAIL|SSO_URL missing")
+        all_ok=false
+    fi
+
+    # SSO_CLIENT_SECRET set (warning only - some SSO configs may not need it)
+    if grep -qE "^SSO_CLIENT_SECRET=.+" ".env" 2>/dev/null; then
+        HEALTH_RESULTS+=("PASS|SSO_CLIENT_SECRET set")
+    else
+        HEALTH_RESULTS+=("WARN|SSO_CLIENT_SECRET empty (check if your SSO server requires it)")
+    fi
+
+    # Pending migrations
+    if { php artisan migrate:status --no-ansi 2>&1 || true; } | grep -q "Pending"; then
+        HEALTH_RESULTS+=("FAIL|Pending migrations detected")
+        all_ok=false
+    else
+        HEALTH_RESULTS+=("PASS|All migrations applied")
+    fi
+
+    # Storage permissions (writable by web server)
+    local storage_ok=true
+    for d in storage storage/framework storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache; do
+        if [ -d "$d" ] && [ ! -w "$d" ]; then
+            storage_ok=false
+            HEALTH_RESULTS+=("FAIL|$d not writable")
+        fi
+    done
+    if [ "$storage_ok" = true ]; then
+        HEALTH_RESULTS+=("PASS|Storage directories writable")
+    else
+        all_ok=false
+    fi
+
+    # Config cache (informational)
+    if php artisan config:clear 2>&1 >/dev/null; then
+        HEALTH_RESULTS+=("PASS|Config cache cleared")
+    else
+        HEALTH_RESULTS+=("WARN|Config cache could not be cleared")
+    fi
+
+    HEALTH_OK=$all_ok
+    cd "$SCRIPT_DIR"
+}
+
+# -----------------------------------------------------------------------------
+# Summary
+# -----------------------------------------------------------------------------
+
+print_summary() {
+    echo ""
+    echo "  +------------------------------------------+"
+    echo "  |   oneSpend - Setup Complete              |"
+    echo "  +------------------------------------------+"
+    echo ""
+
+    echo "  Configuration"
+    echo "    APP_URL:      $(grep -E "^APP_URL=" "$BACK_DIR/.env" 2>/dev/null | cut -d= -f2- | tr -d '"' || echo "N/A")"
+    echo "    FRONTEND_URL: $(grep -E "^FRONTEND_URL=" "$BACK_DIR/.env" 2>/dev/null | cut -d= -f2- | tr -d '"' || echo "N/A")"
+    echo "    SSO_URL:      $(grep -E "^SSO_URL=" "$BACK_DIR/.env" 2>/dev/null | cut -d= -f2- | tr -d '"' || echo "N/A")"
+    echo "    DB:           $(grep -E "^DB_CONNECTION=" "$BACK_DIR/.env" 2>/dev/null | cut -d= -f2- || echo "N/A") @ $(grep -E "^DB_HOST=" "$BACK_DIR/.env" 2>/dev/null | cut -d= -f2- || echo "N/A"):$(grep -E "^DB_PORT=" "$BACK_DIR/.env" 2>/dev/null | cut -d= -f2- || echo "N/A")/$(grep -E "^DB_DATABASE=" "$BACK_DIR/.env" 2>/dev/null | cut -d= -f2- || echo "N/A")"
+    echo "    Hosting:      $HOSTING_ENV"
+    echo ""
+
+    echo "  Health Checks"
+    for result in "${HEALTH_RESULTS[@]}"; do
+        local status="${result%%|*}"
+        local label="${result#*|}"
+        if [ "$status" = "PASS" ]; then
+            printf "    \033[32m[PASS]\033[0m %s\n" "$label"
+        elif [ "$status" = "WARN" ]; then
+            printf "    \033[33m[WARN]\033[0m %s\n" "$label"
+        else
+            printf "    \033[31m[FAIL]\033[0m %s\n" "$label"
+        fi
+    done
+    echo ""
+
+    echo "  Next Steps"
+    if [ "$HOSTING_ENV" = "shared" ]; then
+        echo "    1. Schedule cron in your hosting panel (cPanel/Plesk):"
+        echo "       * * * * * cd $BACK_DIR && php artisan schedule:run >> /dev/null 2>&1"
+        echo "    2. Point your web server's document root to $BACK_DIR/public"
+        echo "    3. Configure SSL/TLS for your domain"
+    else
+        echo "    1. Set up cron:"
+        echo "       * * * * * cd $BACK_DIR && php artisan schedule:run >> /dev/null 2>&1"
+        echo "    2. Configure your web server (Nginx/Apache) document root to $BACK_DIR/public"
+        if [ "$DEV_MODE" = false ]; then
+            echo "    3. Configure SSL/TLS for your domain"
+            echo "    4. Run the backend queue worker (optional, for async jobs):"
+            echo "       php $BACK_DIR/artisan queue:work --tries=1"
+        else
+            echo "    3. Run the dev server: cd $BACK_DIR && composer dev"
+        fi
+    fi
+    echo ""
+}
+
+# -----------------------------------------------------------------------------
+# Main
+# -----------------------------------------------------------------------------
+
+main() {
+    if [ ! -t 0 ] && [ "$NON_INTERACTIVE" != true ]; then
+        log_error "No TTY available. Use --non-interactive for unattended setup."
+        exit 4
+    fi
+
+    banner
+
+    if [ "$NON_INTERACTIVE" != true ]; then
+        if ! confirm "This script will configure oneSpend (backend + frontend). Continue?" "Y"; then
+            log_info "Setup cancelled by user"
+            exit 0
+        fi
+    fi
+
+    if [ ! -d "$BACK_DIR" ]; then
+        log_error "Backend directory not found: $BACK_DIR"
+        exit 6
+    fi
+    if [ ! -d "$FRONT_DIR" ]; then
+        log_error "Frontend directory not found: $FRONT_DIR"
+        exit 6
+    fi
+
+    check_prereqs
+
+    cd "$BACK_DIR"
+    if [ ! -d "vendor" ]; then
+        log_info "Installing Composer dependencies..."
+        composer install --no-interaction --prefer-dist
+    else
+        log_info "Composer dependencies already installed"
+    fi
+    cd "$SCRIPT_DIR"
+
+    configure_backend
+    generate_app_key
+    configure_sso
+    migrate_db
+    seed_db
+    configure_frontend
+
+    if [ "$SKIP_FRONT_BUILD" != true ]; then
+        build_frontend
+    fi
+
+    healthcheck
+    print_summary
+
+    if [ "$HEALTH_OK" = true ]; then
+        log_ok "oneSpend setup complete"
+    else
+        log_warn "oneSpend setup complete with warnings - review the health checks above"
+    fi
+}
+
+main "$@"
