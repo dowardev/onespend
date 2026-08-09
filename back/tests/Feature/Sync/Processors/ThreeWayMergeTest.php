@@ -2,12 +2,12 @@
 
 namespace Tests\Feature\Sync\Processors;
 
-use App\Models\User;
 use App\Models\Account;
 use App\Models\Supplier;
+use App\Models\SyncMetadata;
+use App\Models\User;
 use App\Services\Sync\Processors\AccountProcessor;
 use App\Services\Sync\Processors\SupplierProcessor;
-use App\Models\SyncMetadata;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -16,7 +16,9 @@ class ThreeWayMergeTest extends TestCase
     use RefreshDatabase;
 
     private User $user;
+
     private AccountProcessor $accountProcessor;
+
     private SupplierProcessor $supplierProcessor;
 
     protected function setUp(): void
@@ -28,7 +30,7 @@ class ThreeWayMergeTest extends TestCase
     }
 
     /** @test */
-    public function computeFieldHash_produces_same_hash_for_identical_data(): void
+    public function compute_field_hash_produces_same_hash_for_identical_data(): void
     {
         $data1 = ['name' => 'Test Account', 'type' => 'checking', 'currency' => 'USD', 'status' => 'active'];
         $data2 = ['name' => 'Test Account', 'type' => 'checking', 'currency' => 'USD', 'status' => 'active'];
@@ -40,7 +42,7 @@ class ThreeWayMergeTest extends TestCase
     }
 
     /** @test */
-    public function computeFieldHash_differs_for_different_data(): void
+    public function compute_field_hash_differs_for_different_data(): void
     {
         $hash1 = $this->accountProcessor->computeFieldHash(['name' => 'Account A']);
         $hash2 = $this->accountProcessor->computeFieldHash(['name' => 'Account B']);
@@ -49,7 +51,7 @@ class ThreeWayMergeTest extends TestCase
     }
 
     /** @test */
-    public function computeFieldHash_normalizes_numeric_values(): void
+    public function compute_field_hash_normalizes_numeric_values(): void
     {
         $hash1 = $this->accountProcessor->computeFieldHash(['initial_balance' => '100.50']);
         $hash2 = $this->accountProcessor->computeFieldHash(['initial_balance' => 100.50]);
@@ -60,7 +62,7 @@ class ThreeWayMergeTest extends TestCase
     }
 
     /** @test */
-    public function computeFieldHash_ignores_non_fillable_fields(): void
+    public function compute_field_hash_ignores_non_fillable_fields(): void
     {
         $hash1 = $this->accountProcessor->computeFieldHash(['name' => 'Test', 'id' => 1, 'sync_id' => 'abc', 'user_id' => 5, 'version' => 2]);
         $hash2 = $this->accountProcessor->computeFieldHash(['name' => 'Test']);
@@ -69,7 +71,7 @@ class ThreeWayMergeTest extends TestCase
     }
 
     /** @test */
-    public function detectConflicts_returns_empty_when_client_hash_matches_server(): void
+    public function detect_conflicts_returns_empty_when_client_hash_matches_server(): void
     {
         $account = Account::create([
             'user_id' => $this->user->id,
@@ -107,7 +109,7 @@ class ThreeWayMergeTest extends TestCase
     }
 
     /** @test */
-    public function detectConflicts_auto_merges_non_overlapping_fields(): void
+    public function detect_conflicts_auto_merges_non_overlapping_fields(): void
     {
         $account = Account::create([
             'user_id' => $this->user->id,
@@ -148,7 +150,7 @@ class ThreeWayMergeTest extends TestCase
     }
 
     /** @test */
-    public function detectConflicts_creates_semantic_conflict_when_both_changed_same_field(): void
+    public function detect_conflicts_creates_semantic_conflict_when_both_changed_same_field(): void
     {
         // Server has a DIFFERENT value than base (server changed the name)
         $account = Account::create([
@@ -189,7 +191,7 @@ class ThreeWayMergeTest extends TestCase
     }
 
     /** @test */
-    public function detectConflicts_no_conflict_when_client_stale_server_changed(): void
+    public function detect_conflicts_no_conflict_when_client_stale_server_changed(): void
     {
         // Server has updated the name (different from base)
         $account = Account::create([
@@ -227,7 +229,7 @@ class ThreeWayMergeTest extends TestCase
     }
 
     /** @test */
-    public function detectConflicts_with_supplier_auto_merges_products(): void
+    public function detect_conflicts_with_supplier_auto_merges_products(): void
     {
         $supplier = Supplier::create([
             'user_id' => $this->user->id,
@@ -264,7 +266,7 @@ class ThreeWayMergeTest extends TestCase
     }
 
     /** @test */
-    public function detectConflicts_handles_deleted_base_data_gracefully(): void
+    public function detect_conflicts_handles_deleted_base_data_gracefully(): void
     {
         $account = Account::create([
             'user_id' => $this->user->id,

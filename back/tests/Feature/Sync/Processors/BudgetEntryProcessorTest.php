@@ -2,10 +2,10 @@
 
 namespace Tests\Feature\Sync\Processors;
 
-use App\Models\User;
 use App\Models\Account;
 use App\Models\BudgetEntry;
 use App\Models\BudgetEntryGroup;
+use App\Models\User;
 use App\Services\Sync\Processors\BudgetEntryProcessor;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -15,7 +15,9 @@ class BudgetEntryProcessorTest extends TestCase
     use RefreshDatabase;
 
     private BudgetEntryProcessor $processor;
+
     private User $user;
+
     private Account $account;
 
     protected function setUp(): void

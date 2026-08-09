@@ -2,10 +2,10 @@
 
 namespace Tests\Feature\Sync\Processors;
 
-use App\Models\User;
 use App\Models\Account;
 use App\Models\BudgetEntry;
 use App\Models\SyncMetadata;
+use App\Models\User;
 use App\Services\Sync\Processors\BudgetEntryProcessor;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -16,7 +16,9 @@ class BudgetEntryVersionConflictTest extends TestCase
     use RefreshDatabase;
 
     private BudgetEntryProcessor $processor;
+
     private User $user;
+
     private Account $account;
 
     protected function setUp(): void
@@ -51,7 +53,7 @@ class BudgetEntryVersionConflictTest extends TestCase
             'payment_type' => 'cash',
             'status' => 'active',
         ]);
-        
+
         DB::table('budget_entries')->where('sync_id', $syncId)->update(['version' => 1]);
 
         DB::table('budget_entries')->where('sync_id', $syncId)->update([
@@ -68,7 +70,7 @@ class BudgetEntryVersionConflictTest extends TestCase
                 'date' => '2026-06-01',
                 'entry_type' => 'egreso',
                 'payment_type' => 'cash',
-                'account_id' => (string)$this->account->sync_id,
+                'account_id' => (string) $this->account->sync_id,
                 'version' => 1, // Client's stale version — ignored (server authority)
                 'status' => 'active',
             ],
@@ -116,7 +118,7 @@ class BudgetEntryVersionConflictTest extends TestCase
                 'date' => '2026-06-01',
                 'entry_type' => 'egreso',
                 'payment_type' => 'cash',
-                'account_id' => (string)$this->account->sync_id,
+                'account_id' => (string) $this->account->sync_id,
                 'version' => 1,
                 'status' => 'active',
             ],
@@ -157,7 +159,7 @@ class BudgetEntryVersionConflictTest extends TestCase
         ]);
         DB::table('budget_entries')->where('sync_id', $syncId)->update(['version' => 1]);
 
-        // Create initial SyncMetadata with base_data so detectConflicts can compute 
+        // Create initial SyncMetadata with base_data so detectConflicts can compute
         // which fields changed by client vs server vs the original (base) state.
         SyncMetadata::create([
             'entity_type' => 'budget_entry',
@@ -194,7 +196,7 @@ class BudgetEntryVersionConflictTest extends TestCase
                 'date' => '2026-06-01',
                 'entry_type' => 'egreso',
                 'payment_type' => 'cash',
-                'account_id' => (string)$this->account->sync_id,
+                'account_id' => (string) $this->account->sync_id,
                 'version' => 2, // Match server version to bypass version_mismatch and trigger semantic check
                 'updated_at' => $clientUpdateTime,
                 'status' => 'active',

@@ -2,9 +2,8 @@
 
 namespace Tests\Feature\Sync\Processors;
 
-use App\Models\User;
 use App\Models\Supplier;
-use App\Models\SupplierProduct;
+use App\Models\User;
 use App\Services\Sync\Processors\SupplierProcessor;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -14,6 +13,7 @@ class SupplierProcessorTest extends TestCase
     use RefreshDatabase;
 
     private SupplierProcessor $processor;
+
     private User $user;
 
     protected function setUp(): void

@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\Sync;
 
-use App\Models\User;
 use App\Models\Account;
 use App\Models\BudgetEntry;
 use App\Models\BudgetProvider;
@@ -12,6 +11,7 @@ use App\Models\RecurringRecordProduct;
 use App\Models\Supplier;
 use App\Models\SupplierProduct;
 use App\Models\SyncMetadata;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -28,7 +28,7 @@ class ChunkedFullSyncTest extends TestCase
     }
 
     /** @test */
-    public function fullSync_chunks_large_dataset_without_oom(): void
+    public function full_sync_chunks_large_dataset_without_oom(): void
     {
         // Create 10k records across multiple entity types
         $this->createLargeDataset(10000);
@@ -53,8 +53,8 @@ class ChunkedFullSyncTest extends TestCase
         $this->assertArrayHasKey('supplier', $data['data']);
 
         // Memory should be well under 100MB
-        $this->assertLessThan(100 * 1024 * 1024, $memoryUsed, 
-            "Memory used: " . round($memoryUsed / 1024 / 1024, 2) . "MB (limit: 100MB)");
+        $this->assertLessThan(100 * 1024 * 1024, $memoryUsed,
+            'Memory used: '.round($memoryUsed / 1024 / 1024, 2).'MB (limit: 100MB)');
 
         // Verify record counts
         $totalRecords = 0;
@@ -65,7 +65,7 @@ class ChunkedFullSyncTest extends TestCase
     }
 
     /** @test */
-    public function fullSync_streaming_response_is_valid_json(): void
+    public function full_sync_streaming_response_is_valid_json(): void
     {
         $this->createLargeDataset(5000);
 
@@ -78,7 +78,7 @@ class ChunkedFullSyncTest extends TestCase
         // The response should be valid JSON (streamed but complete)
         $content = $response->getContent();
         $data = json_decode($content, true);
-        
+
         $this->assertNotNull($data);
         $this->assertTrue($data['success']);
         $this->assertArrayHasKey('data', $data);
@@ -86,7 +86,7 @@ class ChunkedFullSyncTest extends TestCase
     }
 
     /** @test */
-    public function fullSync_etag_304_when_no_changes(): void
+    public function full_sync_etag_304_when_no_changes(): void
     {
         $this->createLargeDataset(1000);
 
@@ -104,55 +104,55 @@ class ChunkedFullSyncTest extends TestCase
     }
 
     /** @test */
-    public function fullSync_with_since_parameter_returns_only_new_changes(): void
+    public function full_sync_with_since_parameter_returns_only_new_changes(): void
     {
         // Create initial dataset
         $this->createLargeDataset(5000);
-        
+
         sleep(1); // Ensure timestamp difference
-        
+
         $serverTime1 = time();
-        
+
         sleep(1); // Ensure additional records get updated_at strictly after serverTime1 (second precision)
 
         // Add more records
         $this->createAdditionalRecords(1000);
 
-        $query = http_build_query(['since' => (string)$serverTime1]);
+        $query = http_build_query(['since' => (string) $serverTime1]);
         $response = $this->actingAs($this->user, 'sanctum')
-            ->get('/api/sync/full?' . $query);
+            ->get('/api/sync/full?'.$query);
 
         $this->assertEquals(200, $response->getStatusCode());
-        
+
         $data = json_decode($response->getContent(), true);
-        
+
         // Should only contain the new records (approximately 1000)
         $totalNewRecords = 0;
         foreach ($data['data'] as $entityType => $items) {
             $totalNewRecords += count($items);
         }
-        
+
         // Allow margin for timestamp precision and FK records
         $this->assertGreaterThanOrEqual(1000, $totalNewRecords);
         $this->assertLessThanOrEqual(2200, $totalNewRecords);
     }
 
     /** @test */
-    public function fullSync_with_types_parameter_filters_entities(): void
+    public function full_sync_with_types_parameter_filters_entities(): void
     {
         $this->createLargeDataset(100);
 
         $params = ['types' => ['account', 'supplier']];
         $query = http_build_query($params);
-        
+
         $response = $this->actingAs($this->user, 'sanctum')
-            ->get('/api/sync/full?' . $query);
+            ->get('/api/sync/full?'.$query);
 
         $this->assertEquals(200, $response->getStatusCode());
-        
+
         $content = $response->getContent();
         $data = json_decode($content, true);
-        
+
         // Should only have requested entity types
         $this->assertArrayHasKey('account', $data['data']);
         $this->assertArrayHasKey('supplier', $data['data']);
@@ -161,7 +161,7 @@ class ChunkedFullSyncTest extends TestCase
     }
 
     /** @test */
-    public function fullSync_includes_deleted_records_when_since_provided(): void
+    public function full_sync_includes_deleted_records_when_since_provided(): void
     {
         $this->createLargeDataset(1000);
         $serverTime = time();
@@ -172,14 +172,14 @@ class ChunkedFullSyncTest extends TestCase
         $syncId = $account->sync_id;
         $account->delete();
 
-        $query = http_build_query(['since' => (string)$serverTime]);
+        $query = http_build_query(['since' => (string) $serverTime]);
         $response = $this->actingAs($this->user, 'sanctum')
-            ->get('/api/sync/full?' . $query);
+            ->get('/api/sync/full?'.$query);
 
         $this->assertEquals(200, $response->getStatusCode());
-        
+
         $data = json_decode($response->getContent(), true);
-        
+
         // Should include deleted marker
         $foundDeleted = false;
         foreach ($data['data']['account'] ?? [] as $item) {
@@ -188,12 +188,12 @@ class ChunkedFullSyncTest extends TestCase
                 break;
             }
         }
-        
+
         $this->assertTrue($foundDeleted, 'Deleted record should be included with _deleted flag');
     }
 
     /** @test */
-    public function fullSync_memory_does_not_grow_linearly_with_records(): void
+    public function full_sync_memory_does_not_grow_linearly_with_records(): void
     {
         // Test with increasing dataset sizes
         $sizes = [1000, 5000, 10000];
@@ -202,7 +202,7 @@ class ChunkedFullSyncTest extends TestCase
         foreach ($sizes as $size) {
             // Fresh user for each iteration (simulated by clearing)
             $user = User::factory()->create();
-            
+
             // Create data for this user
             $this->createDataForUser($user, $size);
 
@@ -213,11 +213,11 @@ class ChunkedFullSyncTest extends TestCase
 
             $memoryAfter = memory_get_peak_usage(true);
             $memoryUsed = $memoryAfter - $memoryBefore;
-            
+
             $memories[] = $memoryUsed;
 
             $this->assertEquals(200, $response->getStatusCode());
-            
+
             // Clean up for next iteration
             SyncMetadata::where('user_id', $user->id)->delete();
             Account::where('user_id', $user->id)->delete();
@@ -230,22 +230,22 @@ class ChunkedFullSyncTest extends TestCase
         // Memory should not grow linearly - streaming should keep it relatively flat
         // Allow some growth but not linear scaling
         $this->assertLessThan(100 * 1024 * 1024, max($memories));
-        
+
         // Memory for 10k should not be more than 5x memory for 1k
         if (count($memories) >= 3 && $memories[0] > 0) {
             $ratio = $memories[2] / $memories[0];
             $this->assertLessThan(5, $ratio, "Memory grew too much: ratio = $ratio");
         } elseif (count($memories) >= 3) {
             // If memory for 1k is 0 or negative, just check that 10k usage is reasonable
-            $this->assertLessThan(100 * 1024 * 1024, $memories[2], 
-                "Memory for 10k records should be less than 100MB");
+            $this->assertLessThan(100 * 1024 * 1024, $memories[2],
+                'Memory for 10k records should be less than 100MB');
         }
     }
 
     private function createLargeDataset(int $totalRecords): void
     {
-        $recordsPerType = (int)($totalRecords / 4);
-        
+        $recordsPerType = (int) ($totalRecords / 4);
+
         // Create a default account for FK references
         $account = Account::create([
             'user_id' => $this->user->id,
@@ -304,11 +304,11 @@ class ChunkedFullSyncTest extends TestCase
 
     private function createAdditionalRecords(int $count): void
     {
-        $recordsPerType = (int)($count / 4);
-        
+        $recordsPerType = (int) ($count / 4);
+
         // Get the default account for FK references
         $account = Account::where('user_id', $this->user->id)->where('sync_id', 'default-acc')->first();
-        if (!$account) {
+        if (! $account) {
             $account = Account::create([
                 'user_id' => $this->user->id,
                 'sync_id' => 'default-acc',
@@ -320,7 +320,7 @@ class ChunkedFullSyncTest extends TestCase
 
         // Get a default supplier for FK references
         $supplier = Supplier::where('user_id', $this->user->id)->where('sync_id', 'default-sup')->first();
-        if (!$supplier) {
+        if (! $supplier) {
             $supplier = Supplier::create([
                 'user_id' => $this->user->id,
                 'sync_id' => 'default-sup',
@@ -331,7 +331,7 @@ class ChunkedFullSyncTest extends TestCase
 
         // Get a default budget provider for FK references
         $budgetProvider = BudgetProvider::where('user_id', $this->user->id)->where('sync_id', 'default-bp')->first();
-        if (!$budgetProvider) {
+        if (! $budgetProvider) {
             $budgetProvider = BudgetProvider::create([
                 'user_id' => $this->user->id,
                 'sync_id' => 'default-bp',
@@ -346,7 +346,7 @@ class ChunkedFullSyncTest extends TestCase
 
         // Get a default supplier product for FK references
         $supplierProduct = SupplierProduct::where('user_id', $this->user->id)->where('sync_id', 'default-sp')->first();
-        if (!$supplierProduct) {
+        if (! $supplierProduct) {
             $supplierProduct = SupplierProduct::create([
                 'user_id' => $this->user->id,
                 'supplier_id' => $supplier->id,
@@ -466,11 +466,11 @@ class ChunkedFullSyncTest extends TestCase
 
     private function createDataForUser(User $user, int $size): void
     {
-        $recordsPerType = (int)($size / 4);
-        
+        $recordsPerType = (int) ($size / 4);
+
         $account = Account::create([
             'user_id' => $user->id,
-            'sync_id' => "mem-default-acc",
+            'sync_id' => 'mem-default-acc',
             'name' => 'Default Account',
             'initial_balance' => 0,
             'status' => 'active',

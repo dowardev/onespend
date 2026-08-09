@@ -2,12 +2,12 @@
 
 namespace Tests\Feature\Sync\Processors;
 
-use App\Models\User;
 use App\Models\Account;
-use App\Models\Supplier;
-use App\Models\SupplierProduct;
 use App\Models\BudgetProvider;
 use App\Models\BudgetProviderProduct;
+use App\Models\Supplier;
+use App\Models\SupplierProduct;
+use App\Models\User;
 use App\Services\Sync\Processors\BudgetProviderProductProcessor;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -17,8 +17,11 @@ class BudgetProviderProductProcessorTest extends TestCase
     use RefreshDatabase;
 
     private BudgetProviderProductProcessor $processor;
+
     private User $user;
+
     private string $budgetProviderSyncId;
+
     private int $supplierProductId;
 
     protected function setUp(): void

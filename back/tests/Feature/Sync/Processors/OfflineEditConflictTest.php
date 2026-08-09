@@ -2,10 +2,10 @@
 
 namespace Tests\Feature\Sync\Processors;
 
-use App\Models\User;
 use App\Models\Account;
 use App\Models\BudgetEntry;
 use App\Models\SyncMetadata;
+use App\Models\User;
 use App\Services\Sync\Processors\BudgetEntryProcessor;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -16,7 +16,9 @@ class OfflineEditConflictTest extends TestCase
     use RefreshDatabase;
 
     private BudgetEntryProcessor $processor;
+
     private User $user;
+
     private Account $account;
 
     protected function setUp(): void
@@ -90,7 +92,7 @@ class OfflineEditConflictTest extends TestCase
                 'date' => '2026-06-01',
                 'entry_type' => 'egreso',
                 'payment_type' => 'cash',
-                'account_id' => (string)$this->account->sync_id,
+                'account_id' => (string) $this->account->sync_id,
                 'updated_at' => $clientTimestamp,
                 'status' => 'active',
             ],
@@ -163,7 +165,7 @@ class OfflineEditConflictTest extends TestCase
                 'date' => '2026-06-01',
                 'entry_type' => 'egreso',
                 'payment_type' => 'cash',
-                'account_id' => (string)$this->account->sync_id,
+                'account_id' => (string) $this->account->sync_id,
                 'updated_at' => $serverUpdateTime->timestamp + 5,
                 'status' => 'active',
             ],
@@ -228,7 +230,7 @@ class OfflineEditConflictTest extends TestCase
                 'date' => '2026-06-01',
                 'entry_type' => 'egreso',
                 'payment_type' => 'cash',
-                'account_id' => (string)$this->account->syncId,
+                'account_id' => (string) $this->account->syncId,
                 'updated_at' => $serverUpdateTime->timestamp + 1,
                 'status' => 'active',
             ],

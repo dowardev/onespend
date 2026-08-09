@@ -2,9 +2,8 @@
 
 namespace Tests\Feature\Sync\Processors;
 
-use App\Models\User;
 use App\Models\Account;
-use App\Models\SyncMetadata;
+use App\Models\User;
 use App\Services\Sync\Processors\AccountProcessor;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -14,6 +13,7 @@ class AccountProcessorTest extends TestCase
     use RefreshDatabase;
 
     private AccountProcessor $processor;
+
     private User $user;
 
     protected function setUp(): void

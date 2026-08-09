@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\Sync;
 
-use App\Models\User;
 use App\Models\Account;
 use App\Models\BudgetEntry;
 use App\Models\BudgetEntryGroup;
@@ -11,6 +10,7 @@ use App\Models\BudgetProviderProduct;
 use App\Models\RecurringRecord;
 use App\Models\RecurringRecordProduct;
 use App\Models\SyncMetadata;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 

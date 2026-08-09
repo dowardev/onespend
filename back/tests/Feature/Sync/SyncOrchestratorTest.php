@@ -2,14 +2,13 @@
 
 namespace Tests\Feature\Sync;
 
-use App\Models\User;
 use App\Models\Account;
-use App\Models\Supplier;
-use App\Models\SupplierProduct;
 use App\Models\BudgetEntry;
 use App\Models\BudgetProvider;
 use App\Models\RecurringRecord;
-use App\Models\RecurringRecordProduct;
+use App\Models\Supplier;
+use App\Models\SupplierProduct;
+use App\Models\User;
 use App\Services\Sync\SyncOrchestratorService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -19,6 +18,7 @@ class SyncOrchestratorTest extends TestCase
     use RefreshDatabase;
 
     private SyncOrchestratorService $orchestrator;
+
     private User $user;
 
     protected function setUp(): void

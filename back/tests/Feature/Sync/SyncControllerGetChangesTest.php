@@ -2,10 +2,9 @@
 
 namespace Tests\Feature\Sync;
 
-use App\Models\User;
 use App\Models\Account;
 use App\Models\Supplier;
-use App\Models\SupplierProduct;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -32,7 +31,7 @@ class SyncControllerGetChangesTest extends TestCase
         }
 
         $response = $this->actingAs($this->user, 'sanctum')
-            ->get('/api/sync/changes?' . http_build_query($params));
+            ->get('/api/sync/changes?'.http_build_query($params));
 
         $this->assertEquals(200, $response->getStatusCode());
         $content = $response->getContent();

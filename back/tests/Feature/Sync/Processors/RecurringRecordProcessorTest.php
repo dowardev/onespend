@@ -2,12 +2,11 @@
 
 namespace Tests\Feature\Sync\Processors;
 
-use App\Models\User;
 use App\Models\Account;
+use App\Models\RecurringRecord;
 use App\Models\Supplier;
 use App\Models\SupplierProduct;
-use App\Models\RecurringRecord;
-use App\Models\RecurringRecordProduct;
+use App\Models\User;
 use App\Services\Sync\Processors\RecurringRecordProcessor;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -17,8 +16,11 @@ class RecurringRecordProcessorTest extends TestCase
     use RefreshDatabase;
 
     private RecurringRecordProcessor $processor;
+
     private User $user;
+
     private Account $account;
+
     private string $supplierProductSyncId;
 
     protected function setUp(): void

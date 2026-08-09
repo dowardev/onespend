@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\Console;
 
-use App\Models\User;
 use Tests\TestCase;
 
 class SyncHealthTest extends TestCase

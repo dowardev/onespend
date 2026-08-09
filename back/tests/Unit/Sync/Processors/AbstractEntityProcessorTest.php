@@ -13,7 +13,7 @@ class AbstractEntityProcessorTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->processor = new TestableEntityProcessor();
+        $this->processor = new TestableEntityProcessor;
     }
 
     public function test_get_cached_fillable_returns_fillable_fields(): void

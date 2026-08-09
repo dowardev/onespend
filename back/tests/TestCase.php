@@ -2,6 +2,7 @@
 
 namespace Tests;
 
+use App\Http\Middleware\SsoAuthForTests;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 
 abstract class TestCase extends BaseTestCase
@@ -12,7 +13,7 @@ abstract class TestCase extends BaseTestCase
 
         $this->app['router']->aliasMiddleware(
             'sso.auth',
-            \App\Http\Middleware\SsoAuthForTests::class,
+            SsoAuthForTests::class,
         );
     }
 }

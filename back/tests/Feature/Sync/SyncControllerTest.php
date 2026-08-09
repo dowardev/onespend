@@ -2,14 +2,12 @@
 
 namespace Tests\Feature\Sync;
 
-use App\Models\User;
 use App\Models\Account;
+use App\Models\MergeJob;
 use App\Models\Supplier;
 use App\Models\SupplierProduct;
-use App\Models\BudgetEntry;
-use App\Models\BudgetProvider;
-use App\Models\RecurringRecord;
 use App\Models\SyncMetadata;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -40,7 +38,7 @@ class SyncControllerTest extends TestCase
         return $data;
     }
 
-    public function test_fullSync_returns_all_active_records(): void
+    public function test_full_sync_returns_all_active_records(): void
     {
         Account::create([
             'user_id' => $this->user->id,
@@ -58,7 +56,7 @@ class SyncControllerTest extends TestCase
         $this->assertCount(1, $data['data']['account']);
     }
 
-    public function test_fullSync_returns_only_active_and_own_records(): void
+    public function test_full_sync_returns_only_active_and_own_records(): void
     {
         $otherUser = User::factory()->create();
 
@@ -92,7 +90,7 @@ class SyncControllerTest extends TestCase
         $this->assertNotContains('acc-own-deleted', $ids);
     }
 
-    public function test_fullSync_returns_server_time_as_integer(): void
+    public function test_full_sync_returns_server_time_as_integer(): void
     {
         Account::create([
             'user_id' => $this->user->id,
@@ -107,7 +105,7 @@ class SyncControllerTest extends TestCase
         $this->assertGreaterThan(1700000000, $data['serverTime']);
     }
 
-    public function test_fullSync_returns_all_entity_types_even_when_empty(): void
+    public function test_full_sync_returns_all_entity_types_even_when_empty(): void
     {
         $data = $this->getFullSync();
 
@@ -120,7 +118,7 @@ class SyncControllerTest extends TestCase
         $this->assertArrayHasKey('recurring_record', $data['data']);
     }
 
-    public function test_fullSync_formats_items_correctly(): void
+    public function test_full_sync_formats_items_correctly(): void
     {
         Account::create([
             'user_id' => $this->user->id,
@@ -140,13 +138,13 @@ class SyncControllerTest extends TestCase
         $this->assertIsInt($account['updated_at']);
     }
 
-    public function test_fullSync_requires_authentication(): void
+    public function test_full_sync_requires_authentication(): void
     {
         $response = $this->get('/api/sync/full');
         $this->assertContains($response->getStatusCode(), [401, 302]);
     }
 
-    public function test_fullSync_includes_supplier_products(): void
+    public function test_full_sync_includes_supplier_products(): void
     {
         $supplier = Supplier::create([
             'user_id' => $this->user->id,
@@ -171,7 +169,7 @@ class SyncControllerTest extends TestCase
         $this->assertEquals('Product 1', $supplierData['products'][0]['name']);
     }
 
-    public function test_fullSync_with_many_records_returns_correctly(): void
+    public function test_full_sync_with_many_records_returns_correctly(): void
     {
         for ($i = 0; $i < 100; $i++) {
             Account::create([
@@ -187,7 +185,7 @@ class SyncControllerTest extends TestCase
         $this->assertCount(100, $data['data']['account']);
     }
 
-    public function test_fullSync_does_not_include_soft_deleted_records(): void
+    public function test_full_sync_does_not_include_soft_deleted_records(): void
     {
         Account::create([
             'user_id' => $this->user->id,
@@ -210,7 +208,7 @@ class SyncControllerTest extends TestCase
         $this->assertContains('acc-live-1', $ids);
     }
 
-    public function test_fullSync_with_types_returns_only_requested_entities(): void
+    public function test_full_sync_with_types_returns_only_requested_entities(): void
     {
         Account::create([
             'user_id' => $this->user->id,
@@ -237,7 +235,7 @@ class SyncControllerTest extends TestCase
         $this->assertArrayNotHasKey('budget_entry', $data['data']);
     }
 
-    public function test_fullSync_with_since_returns_only_records_updated_after(): void
+    public function test_full_sync_with_since_returns_only_records_updated_after(): void
     {
         Account::create([
             'user_id' => $this->user->id,
@@ -266,7 +264,7 @@ class SyncControllerTest extends TestCase
         $this->assertEquals('acc-new-1', $data['data']['account'][0]['id']);
     }
 
-    public function test_fullSync_with_since_includes_deleted_records(): void
+    public function test_full_sync_with_since_includes_deleted_records(): void
     {
         Account::create([
             'user_id' => $this->user->id,
@@ -296,7 +294,7 @@ class SyncControllerTest extends TestCase
         $this->assertContains('acc-delsync-1', $deletedIds);
     }
 
-    public function test_fullSync_returns_etag_header(): void
+    public function test_full_sync_returns_etag_header(): void
     {
         Account::create([
             'user_id' => $this->user->id,
@@ -313,7 +311,7 @@ class SyncControllerTest extends TestCase
         $this->assertStringStartsWith('"', $response->headers->get('ETag'));
     }
 
-    public function test_fullSync_returns_304_when_etag_matches(): void
+    public function test_full_sync_returns_304_when_etag_matches(): void
     {
         Account::create([
             'user_id' => $this->user->id,
@@ -333,7 +331,7 @@ class SyncControllerTest extends TestCase
         $this->assertEquals(304, $response2->getStatusCode());
     }
 
-    public function test_fullSync_returns_200_when_etag_does_not_match(): void
+    public function test_full_sync_returns_200_when_etag_does_not_match(): void
     {
         $response = $this->actingAs($this->user, 'sanctum')
             ->get('/api/sync/full', ['If-None-Match' => '"invalid-etag"']);
@@ -472,7 +470,7 @@ class SyncControllerTest extends TestCase
 
     public function test_merge_status_returns_job_status(): void
     {
-        $mergeJob = \App\Models\MergeJob::create([
+        $mergeJob = MergeJob::create([
             'user_id' => $this->user->id,
             'status' => 'queued',
             'data' => ['account' => []],
@@ -490,8 +488,8 @@ class SyncControllerTest extends TestCase
 
     public function test_merge_status_returns_404_for_other_users_job(): void
     {
-        $otherUser = \App\Models\User::factory()->create();
-        $mergeJob = \App\Models\MergeJob::create([
+        $otherUser = User::factory()->create();
+        $mergeJob = MergeJob::create([
             'user_id' => $otherUser->id,
             'status' => 'queued',
             'data' => ['account' => []],
@@ -503,4 +501,3 @@ class SyncControllerTest extends TestCase
         $response->assertNotFound();
     }
 }
-

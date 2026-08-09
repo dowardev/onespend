@@ -3,9 +3,9 @@
 namespace Tests\Unit;
 
 use App\Models\Account;
-use App\Models\SupplierProduct;
 use App\Models\RecurringRecord;
 use App\Models\Supplier;
+use App\Models\SupplierProduct;
 use App\Services\SyncIdResolver;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -14,13 +14,14 @@ use Tests\TestCase;
 class SyncIdResolverTest extends TestCase
 {
     use RefreshDatabase;
+
     private SyncIdResolver $resolver;
 
     protected function setUp(): void
     {
         parent::setUp();
         DB::statement('SET FOREIGN_KEY_CHECKS=0');
-        $this->resolver = new SyncIdResolver();
+        $this->resolver = new SyncIdResolver;
     }
 
     protected function tearDown(): void
@@ -121,5 +122,4 @@ class SyncIdResolverTest extends TestCase
 
         $this->assertCount(1, $result);
     }
-
 }
