@@ -11,7 +11,10 @@
     "repositories": [
         {
             "type": "path",
-            "url": "../packages/sso-server"
+            "url": "../packages/sso-server",
+            "options": {
+                "symlink": false
+            }
         }
     ],
     "require": {

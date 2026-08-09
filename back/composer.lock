@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "3938cd3cf9216730deddbed85a8d9170",
+    "content-hash": "56737f82e717d0cf6d0f9bbd05867c18",
     "packages": [
         {
             "name": "brick/math",
@@ -383,7 +383,7 @@
             "dist": {
                 "type": "path",
                 "url": "../packages/sso-server",
-                "reference": "226c4cc8a4e7c6be17b51486dbe81374686ed2f4"
+                "reference": "0993184bbcaac20096e26f3acfdbfd236594e2b5"
             },
             "require": {
                 "laravel/framework": "^11.0 || ^12.0 || ^13.0",
@@ -427,6 +427,7 @@
             ],
             "description": "Server-side SSO authentication library for Laravel with DPoP verification",
             "transport-options": {
+                "symlink": false,
                 "relative": true
             }
         },

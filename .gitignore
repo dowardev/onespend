@@ -105,3 +105,7 @@ front/vite.config.ts.timestamp-*
 # Local AI runtime state
 .atl/
 .codegraph/
+scripts/deploy.conf
+.env
+scripts/deploy.conf
+scripts/deploy/.env
