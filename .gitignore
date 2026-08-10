@@ -109,3 +109,5 @@ scripts/deploy.conf
 .env
 scripts/deploy.conf
 scripts/deploy/.env
+*.bak
+.php-cs-fixer.cache
