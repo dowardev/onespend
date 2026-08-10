@@ -1,5 +1,18 @@
 # Changelog
 
+## [v0.76.0] - 2026-08-10
+
+### Added
+- SPA `.htaccess` in `front/public/` so history-mode routing works on page reload
+- CI: `frontend_build` and `rollback_frontend` copy the `FRONTEND_ENV_FILE` File variable into `.env.production` before building, so the pipeline compiles the frontend with the configured production URLs
+
+### Changed
+- Setup script verifies the frontend env file (`.env.development` in dev, `.env.production` otherwise) is configured before building; warns and continues in dev, aborts in production
+
+### Fixed
+- Deploy script glob expansion disabled while building tarball excludes, preventing local `.env` files from reaching the server
+- Remote deploy creates `storage/framework/{views,cache/data,sessions}` before `artisan`, fixing "Please provide a valid cache path"
+
 ## [v0.75.0] - 2026-08-09
 
 ### Added
