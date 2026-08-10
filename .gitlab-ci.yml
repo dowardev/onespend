@@ -119,6 +119,7 @@ frontend_build:
     - .frontend_setup
     - .tag_rules
   script:
+    - cp "$FRONTEND_ENV_FILE" .env.production
     - pnpm run build
     - tar czf ../dist.tar.gz -C dist .
   artifacts:
@@ -234,7 +235,7 @@ rollback_frontend:
     - cd front
     - corepack enable
     - pnpm install --frozen-lockfile
-    - echo "VITE_API_URL=$VITE_API_URL" >> .env.production
+    - cp "$FRONTEND_ENV_FILE" .env.production
     - pnpm run build
     - tar czvf dist.tar.gz -C dist .
     - scp -o ConnectTimeout=60 -P "$SSH_PORT" dist.tar.gz "$SSH_USER@$SSH_HOST:$DEPLOY_PATH_FRONTEND"
