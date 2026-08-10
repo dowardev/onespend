@@ -1,5 +1,16 @@
 # Changelog
 
+## [v0.75.0] - 2026-08-09
+
+### Added
+- Unified hardened deploy script with npm/composer version checks, dry-run, and optional setup script upload (`SETUP_SCRIPT`)
+
+### Changed
+- Setup script preserves existing `.env` values on re-run: no-clobber copy, previous values as defaults, per-question persistence, and `unquote_env_val` to avoid double-escaping secrets
+
+### Technical
+- Ignore backup and planning artifacts
+
 ## [v0.74.0] - 2026-07-19
 
 ### Added
