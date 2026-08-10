@@ -102,6 +102,17 @@ get_env_default() {
     grep -E "^${key}=" "$file" | cut -d= -f2- || true
 }
 
+# Remove .env quoting from a captured value: strip wrapping double quotes
+# and unescape inner \" and \\ so re-running sed_set doesn't double-escape.
+unquote_env_val() {
+    local val="$1"
+    if [[ "$val" == \"*\" ]] && [ "${#val}" -ge 2 ]; then
+        val="${val:1:${#val}-2}"
+        val="$(printf '%s' "$val" | sed 's/\\\\/\\/g; s/\\"/"/g')"
+    fi
+    printf '%s' "$val"
+}
+
 require_cmd() {
     local bin="$1" hint="${2:-}"
     if ! command -v "$bin" >/dev/null 2>&1; then
@@ -323,8 +334,36 @@ configure_backend() {
         exit 6
     fi
 
+    # Preserve existing values so a re-run after a mid-way failure doesn't
+    # force the user to re-enter everything: previous values become defaults.
+    local prev_app_name prev_app_url prev_frontend_url
+    local prev_db_host prev_db_port prev_db_database prev_db_username prev_db_password
+    local prev_mail_host prev_mail_username prev_mail_password prev_mail_encryption prev_mail_from_address
+    local prev_sso_url prev_sso_jwt_issuer prev_sso_client_id prev_sso_client_secret
+    if [ -f ".env" ]; then
+        prev_app_name="$(unquote_env_val "$(get_env_default APP_NAME ".env")")"
+        prev_app_url="$(unquote_env_val "$(get_env_default APP_URL ".env")")"
+        prev_frontend_url="$(unquote_env_val "$(get_env_default FRONTEND_URL ".env")")"
+        prev_db_host="$(unquote_env_val "$(get_env_default DB_HOST ".env")")"
+        prev_db_port="$(unquote_env_val "$(get_env_default DB_PORT ".env")")"
+        prev_db_database="$(unquote_env_val "$(get_env_default DB_DATABASE ".env")")"
+        prev_db_username="$(unquote_env_val "$(get_env_default DB_USERNAME ".env")")"
+        prev_db_password="$(unquote_env_val "$(get_env_default DB_PASSWORD ".env")")"
+        prev_mail_host="$(unquote_env_val "$(get_env_default MAIL_HOST ".env")")"
+        prev_mail_username="$(unquote_env_val "$(get_env_default MAIL_USERNAME ".env")")"
+        prev_mail_password="$(unquote_env_val "$(get_env_default MAIL_PASSWORD ".env")")"
+        prev_mail_encryption="$(unquote_env_val "$(get_env_default MAIL_ENCRYPTION ".env")")"
+        prev_mail_from_address="$(unquote_env_val "$(get_env_default MAIL_FROM_ADDRESS ".env")")"
+        prev_sso_url="$(unquote_env_val "$(get_env_default SSO_URL ".env")")"
+        prev_sso_jwt_issuer="$(unquote_env_val "$(get_env_default SSO_JWT_ISSUER ".env")")"
+        prev_sso_client_id="$(unquote_env_val "$(get_env_default SSO_CLIENT_ID ".env")")"
+        prev_sso_client_secret="$(unquote_env_val "$(get_env_default SSO_CLIENT_SECRET ".env")")"
+    fi
+
     backup_file ".env"
-    cp "$example_file" ".env"
+    if [ ! -f ".env" ]; then
+        cp "$example_file" ".env"
+    fi
 
     local app_name app_url frontend_url
     local db_host db_port db_database db_username db_password db_connection
@@ -343,63 +382,76 @@ configure_backend() {
             exit 3
         fi
 
-        app_url="$(normalize_url "${ONESPEND_APP_URL:-$(get_env_default APP_URL "$example_file")}")"
-        frontend_url="$(normalize_url "${ONESPEND_FRONTEND_URL:-$(get_env_default FRONTEND_URL "$example_file")}")"
-        app_name="${ONESPEND_APP_NAME:-$(get_env_default APP_NAME "$example_file" | tr -d '"')}"
+        app_url="$(normalize_url "${ONESPEND_APP_URL:-${prev_app_url:-$(get_env_default APP_URL "$example_file")}}")"
+        frontend_url="$(normalize_url "${ONESPEND_FRONTEND_URL:-${prev_frontend_url:-$(get_env_default FRONTEND_URL "$example_file")}}")"
+        app_name="${ONESPEND_APP_NAME:-${prev_app_name:-$(get_env_default APP_NAME "$example_file" | tr -d '"')}}"
         db_connection="${ONESPEND_DB_CONNECTION:-$(get_env_default DB_CONNECTION "$example_file")}"
-        db_host="${ONESPEND_DB_HOST:-}"
-        db_port="${ONESPEND_DB_PORT:-}"
-        db_database="${ONESPEND_DB_DATABASE:-}"
-        db_username="${ONESPEND_DB_USERNAME:-}"
-        db_password="${ONESPEND_DB_PASSWORD:-}"
+        db_host="${ONESPEND_DB_HOST:-$prev_db_host}"
+        db_port="${ONESPEND_DB_PORT:-$prev_db_port}"
+        db_database="${ONESPEND_DB_DATABASE:-$prev_db_database}"
+        db_username="${ONESPEND_DB_USERNAME:-$prev_db_username}"
+        db_password="${ONESPEND_DB_PASSWORD:-$prev_db_password}"
         mail_mailer="${ONESPEND_MAIL_MAILER:-$(get_env_default MAIL_MAILER "$example_file")}"
-        mail_host="${ONESPEND_MAIL_HOST:-}"
+        mail_host="${ONESPEND_MAIL_HOST:-$prev_mail_host}"
         mail_port="${ONESPEND_MAIL_PORT:-$(get_env_default MAIL_PORT "$example_file")}"
-        mail_username="${ONESPEND_MAIL_USERNAME:-}"
-        mail_password="${ONESPEND_MAIL_PASSWORD:-}"
+        mail_username="${ONESPEND_MAIL_USERNAME:-$prev_mail_username}"
+        mail_password="${ONESPEND_MAIL_PASSWORD:-$prev_mail_password}"
         mail_encryption="${ONESPEND_MAIL_ENCRYPTION:-$(get_env_default MAIL_ENCRYPTION "$example_file")}"
-        sso_url="${ONESPEND_SSO_URL:-}"
-        sso_jwt_issuer="${ONESPEND_SSO_JWT_ISSUER:-${sso_url%/api}}"
-        sso_client_id="${ONESPEND_SSO_CLIENT_ID:-}"
-        sso_client_secret="${ONESPEND_SSO_CLIENT_SECRET:-}"
+        sso_url="${ONESPEND_SSO_URL:-$prev_sso_url}"
+        sso_jwt_issuer="${ONESPEND_SSO_JWT_ISSUER:-${prev_sso_jwt_issuer:-${sso_url%/api}}}"
+        sso_client_id="${ONESPEND_SSO_CLIENT_ID:-$prev_sso_client_id}"
+        sso_client_secret="${ONESPEND_SSO_CLIENT_SECRET:-$prev_sso_client_secret}"
     else
         local default_app_name default_app_url default_frontend_url
-        default_app_name="$(grep -E "^APP_NAME=" "$example_file" | cut -d= -f2- | tr -d '"' || echo "OneSpend")"
-        default_app_url="$(grep -E "^APP_URL=" "$example_file" | cut -d= -f2- || echo "http://localhost")"
-        default_frontend_url="$(grep -E "^FRONTEND_URL=" "$example_file" | cut -d= -f2- || echo "http://localhost:8102")"
+        default_app_name="${prev_app_name:-$(grep -E "^APP_NAME=" "$example_file" | cut -d= -f2- | tr -d '"' || echo "OneSpend")}"
+        default_app_url="${prev_app_url:-$(grep -E "^APP_URL=" "$example_file" | cut -d= -f2- || echo "http://localhost")}"
+        default_frontend_url="${prev_frontend_url:-$(grep -E "^FRONTEND_URL=" "$example_file" | cut -d= -f2- || echo "http://localhost:8102")}"
 
         app_name="$(ask "App name" "$default_app_name")"
+        # Persist immediately so a cancelled/failed run keeps answered values.
+        sed_set ".env" "APP_NAME" "$app_name"
         while :; do
             app_url="$(ask "App URL (backend)" "$default_app_url")"
             app_url="$(normalize_url "$app_url")" && break
             log_error "URL cannot be empty. Enter something like http://localhost or https://yourdomain.com"
         done
+        sed_set ".env" "APP_URL" "$app_url"
         while :; do
             frontend_url="$(ask "Frontend URL" "$default_frontend_url")"
             frontend_url="$(normalize_url "$frontend_url")" && break
             log_error "URL cannot be empty. Enter something like http://localhost:8102"
         done
+        sed_set ".env" "FRONTEND_URL" "$frontend_url"
 
         db_connection="$(get_env_default DB_CONNECTION "$example_file")"
-        db_host="$(ask "DB host" "${DB_HOST:-127.0.0.1}")"
-        db_port="$(ask "DB port" "${DB_PORT:-3306}")"
-        db_database="$(ask "DB database" "${DB_DATABASE:-onespend}")"
-        db_username="$(ask "DB username" "${DB_USERNAME:-root}")"
-        db_password="$(ask_secret "DB password" "${DB_PASSWORD:-}")"
+        db_host="$(ask "DB host" "${prev_db_host:-${DB_HOST:-127.0.0.1}}")"
+        sed_set ".env" "DB_HOST" "$db_host"
+        db_port="$(ask "DB port" "${prev_db_port:-${DB_PORT:-3306}}")"
+        sed_set ".env" "DB_PORT" "$db_port"
+        db_database="$(ask "DB database" "${prev_db_database:-${DB_DATABASE:-onespend}}")"
+        sed_set ".env" "DB_DATABASE" "$db_database"
+        db_username="$(ask "DB username" "${prev_db_username:-${DB_USERNAME:-root}}")"
+        sed_set ".env" "DB_USERNAME" "$db_username"
+        db_password="$(ask_secret "DB password" "${prev_db_password:-${DB_PASSWORD:-}}")"
+        sed_set ".env" "DB_PASSWORD" "$db_password"
 
         mail_mailer="$(get_env_default MAIL_MAILER "$example_file")"
         mail_port="$(get_env_default MAIL_PORT "$example_file")"
         local default_mail_host default_mail_username default_mail_password default_mail_encryption
-        default_mail_host="${MAIL_HOST:-$(get_env_default MAIL_HOST "$example_file")}"
-        default_mail_username="${MAIL_USERNAME:-$(get_env_default MAIL_USERNAME "$example_file")}"
-        default_mail_password="${MAIL_PASSWORD:-$(get_env_default MAIL_PASSWORD "$example_file")}"
-        default_mail_encryption="${MAIL_ENCRYPTION:-$(get_env_default MAIL_ENCRYPTION "$example_file")}"
+        default_mail_host="${prev_mail_host:-${MAIL_HOST:-$(get_env_default MAIL_HOST "$example_file")}}"
+        default_mail_username="${prev_mail_username:-${MAIL_USERNAME:-$(get_env_default MAIL_USERNAME "$example_file")}}"
+        default_mail_password="${prev_mail_password:-${MAIL_PASSWORD:-$(get_env_default MAIL_PASSWORD "$example_file")}}"
+        default_mail_encryption="${prev_mail_encryption:-${MAIL_ENCRYPTION:-$(get_env_default MAIL_ENCRYPTION "$example_file")}}"
 
         if [ "$mail_mailer" = "smtp" ]; then
             mail_host="$(ask "Mail host" "$default_mail_host")"
+            sed_set ".env" "MAIL_HOST" "$mail_host"
             mail_username="$(ask "Mail username" "$default_mail_username")"
+            sed_set ".env" "MAIL_USERNAME" "$mail_username"
             mail_password="$(ask_secret "Mail password" "$default_mail_password")"
+            sed_set ".env" "MAIL_PASSWORD" "$mail_password"
             mail_encryption="$(ask "Mail encryption" "$default_mail_encryption")"
+            sed_set ".env" "MAIL_ENCRYPTION" "$mail_encryption"
         else
             mail_host="$default_mail_host"
             mail_username="$default_mail_username"
@@ -407,21 +459,33 @@ configure_backend() {
             mail_encryption="$default_mail_encryption"
         fi
 
+        # Persist immediately so a cancelled/failed run keeps answered values.
+        sed_set ".env" "MAIL_MAILER" "$mail_mailer"
+        sed_set ".env" "MAIL_HOST" "$mail_host"
+        sed_set ".env" "MAIL_PORT" "$mail_port"
+        sed_set ".env" "MAIL_USERNAME" "$mail_username"
+        sed_set ".env" "MAIL_PASSWORD" "$mail_password"
+        sed_set ".env" "MAIL_ENCRYPTION" "$mail_encryption"
+
         # SSO (external authentication server)
         local default_sso_url default_sso_jwt default_sso_client_id
-        default_sso_url="$(get_env_default SSO_URL "$example_file")"
-        default_sso_jwt="$(get_env_default SSO_JWT_ISSUER "$example_file")"
-        default_sso_client_id="$(get_env_default SSO_CLIENT_ID "$example_file")"
+        default_sso_url="${prev_sso_url:-$(get_env_default SSO_URL "$example_file")}"
+        default_sso_jwt="${prev_sso_jwt_issuer:-$(get_env_default SSO_JWT_ISSUER "$example_file")}"
+        default_sso_client_id="${prev_sso_client_id:-$(get_env_default SSO_CLIENT_ID "$example_file")}"
 
         sso_url="$(ask "SSO Server URL (API)" "$default_sso_url")"
+        sed_set ".env" "SSO_URL" "$sso_url"
         sso_jwt_issuer="$(ask "SSO JWT issuer" "$default_sso_jwt")"
+        sed_set ".env" "SSO_JWT_ISSUER" "$sso_jwt_issuer"
         sso_client_id="$(ask "SSO client ID" "$default_sso_client_id")"
-        sso_client_secret="$(ask_secret "SSO client secret" "")"
+        sed_set ".env" "SSO_CLIENT_ID" "$sso_client_id"
+        sso_client_secret="$(ask_secret "SSO client secret" "$prev_sso_client_secret")"
+        sed_set ".env" "SSO_CLIENT_SECRET" "$sso_client_secret"
     fi
 
     local app_url_host
     app_url_host="$(echo "$app_url" | sed -E 's|^https?://([^/]+).*|\1|')"
-    mail_from_address="${mail_from_address:-noreply@${app_url_host}}"
+    mail_from_address="${mail_from_address:-${prev_mail_from_address:-noreply@${app_url_host}}}"
 
     if [ "$DEV_MODE" = true ]; then
         mail_mailer="log"
@@ -709,7 +773,9 @@ configure_frontend() {
         prev_sso_fe_url="$(grep -E "^VITE_SSO_FRONTEND_URL=" "$target_file" 2>/dev/null | cut -d= -f2- | tr -d '"' || echo "")"
     fi
 
-    cp "$example_file" "$target_file"
+    if [ ! -f "$target_file" ]; then
+        cp "$example_file" "$target_file"
+    fi
 
     local backend_url default_api_url
     backend_url="$(grep -E "^APP_URL=" "$BACK_DIR/.env" 2>/dev/null | cut -d= -f2- | tr -d '"' || echo "http://localhost")"
@@ -753,6 +819,11 @@ configure_frontend() {
         sso_client_id_fe="$default_sso_client_id"
     fi
 
+    # Persist immediately so a cancelled/failed run keeps answered values.
+    sed_set "$target_file" "VITE_API_URL" "$api_url"
+    sed_set "$target_file" "VITE_SSO_URL" "$sso_url_fe"
+    sed_set "$target_file" "VITE_SSO_CLIENT_ID" "$sso_client_id_fe"
+
     sso_frontend_url="$(ask "VITE_SSO_FRONTEND_URL (SSO UI login, e.g. http://localhost:8101)" "$default_sso_fe")"
     if [ -z "$sso_frontend_url" ]; then
         log_warn "VITE_SSO_FRONTEND_URL is required (cannot be derived from SSO_URL)"
@@ -769,6 +840,9 @@ configure_frontend() {
     # VITE_SSO_FRONTEND_URL is required (the while loop above already enforces
     # non-empty in interactive mode and aborts in non-interactive mode).
     sso_frontend_url="$(normalize_url "$sso_frontend_url" false)"
+
+    # Persist immediately so a cancelled/failed run keeps answered values.
+    sed_set "$target_file" "VITE_SSO_FRONTEND_URL" "$sso_frontend_url"
 
     sed_set "$target_file" "VITE_API_URL" "$api_url"
     sed_set "$target_file" "VITE_SSO_URL" "$sso_url_fe"
