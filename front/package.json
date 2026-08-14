@@ -23,11 +23,11 @@
     "electron:attach-ionic": "wait-on tcp:8100 && ELECTRON_START_URL=http://localhost:8100 electron ./electron/main.mjs",
     "electron:dev-ionic": "concurrently -k -n IONIC,ELECTRON -c blue,green \"ionic s\" \"pnpm run electron:attach-ionic\"",
     "icons": "node scripts/generate-icons.mjs",
-    "electron:build": "pnpm run icons && pnpm run build && pnpm exec electron-builder",
-    "build:linux": "pnpm run icons && pnpm run build && pnpm exec electron-builder --linux --x64 --publish never",
-    "build:win": "pnpm run icons && pnpm run build && pnpm exec electron-builder --win --x64 --publish never",
-    "build:mac": "pnpm run icons && pnpm run build && pnpm exec electron-builder --mac --x64 --publish never",
-    "build:all": "pnpm run icons && pnpm run build && pnpm exec electron-builder --linux --win --mac --x64 --publish never",
+    "electron:build": "pnpm run icons && DESKTOP_BUILD=true pnpm run build && pnpm exec electron-builder",
+    "build:linux": "pnpm run icons && DESKTOP_BUILD=true pnpm run build && pnpm exec electron-builder --linux --x64 --publish never",
+    "build:win": "pnpm run icons && DESKTOP_BUILD=true pnpm run build && pnpm exec electron-builder --win --x64 --publish never",
+    "build:mac": "pnpm run icons && DESKTOP_BUILD=true pnpm run build && pnpm exec electron-builder --mac --x64 --publish never",
+    "build:all": "pnpm run icons && DESKTOP_BUILD=true pnpm run build && pnpm exec electron-builder --linux --win --mac --x64 --publish never",
     "electron:build-rpm": "node electron/build-rpm.mjs"
   },
   "dependencies": {

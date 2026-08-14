@@ -1,21 +1,15 @@
 {
-  "name": "@tu-org/sso-client",
-  "version": "0.0.2",
+  "name": "@dowardev/sso-client",
+  "version": "0.0.3",
   "description": "Client library for SSO authentication with DPoP support",
-  "main": "dist/index.umd.cjs",
+  "main": "dist/index.js",
   "module": "dist/index.umd.cjs",
   "types": "dist/index.d.ts",
   "type": "module",
   "license": "MIT",
   "author": "dowardev",
   "repository": "https://gitlab.com/dowardev/sso",
-  "keywords": [
-    "sso",
-    "oauth2",
-    "pkce",
-    "dpop",
-    "authentication"
-  ],
+  "keywords": ["sso", "oauth2", "pkce", "dpop", "authentication"],
   "readme": "README.md",
   "exports": {
     ".": {
