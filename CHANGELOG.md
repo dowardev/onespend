@@ -1,5 +1,18 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+
+- `front/vite.config.ts`: web builds now use an absolute base (`/`) so assets resolve correctly from any subroute (e.g. the SSO callback `/auth/callback` served by the SPA fallback). Previously the relative base (`./`) made the browser request `/auth/assets/...`, which the SPA fallback answered with `index.html` (text/html), breaking the service worker registration and asset loading
+- `scripts/deploy/deploy.sh`: `deploy_setup` now uploads the `.env.*.example` templates into the deployed backend/frontend directories alongside `setup.sh`. The deploy tarballs exclude every `.env*` file (secrets policy), which also stripped the non-secret example templates, so `setup.sh` would abort on a fresh server with "example file not found" before it could create the real `.env` files
+- `setup.sh`: `configure_backend` falls back to `.env.example` when the specific example file is missing, aborting only when no example exists. `configure_frontend` is now skipped when the frontend is built on a dev machine (shared hosting, no Node.js/pnpm, or `--skip-front-build`), since Vite bakes `VITE_*` values at compile time and the uploaded `dist/` never reads `.env.production` on the server — previously setup blocked on a file it never used
+
+### Changed
+
+- `front/package.json`: desktop/Electron build scripts (`electron:build`, `build:linux`, `build:win`, `build:mac`, `build:all`) now set `DESKTOP_BUILD=true` so `vite.config.ts` keeps the relative base for `file://`-loaded builds while web builds use the absolute base
+- `packages/sso-client` 0.0.2 → 0.0.3: renamed package scope to `@dowardev/sso-client`, switched main entry to ESM (`dist/index.js`), and added constructor URL validation
+
 ## [v0.76.0] - 2026-08-10
 
 ### Added

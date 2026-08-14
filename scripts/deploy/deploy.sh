@@ -616,6 +616,22 @@ EOF
     run_cmd "Frontend: pnpm install --frozen-lockfile" \
       "cd $FRONTEND_DIR && ensure_pnpm && pnpm install --frozen-lockfile"
 
+    # Fail fast: Vite bakes VITE_* values into the bundle at build time. A
+    # missing/empty VITE_SSO_FRONTEND_URL previously shipped a broken bundle
+    # that crashed at login (URL constructor TypeError in the SSO client), so
+    # abort before building rather than publishing another broken bundle.
+    local missing_env=0
+    for var in VITE_API_URL VITE_SSO_URL VITE_SSO_FRONTEND_URL VITE_SSO_CLIENT_ID; do
+      if ! grep -qE "^${var}=.+" "$FRONTEND_DIR/.env.production" 2>/dev/null; then
+        log_err "Frontend: $FRONTEND_DIR/.env.production is missing ${var} (empty or file absent)"
+        missing_env=1
+      fi
+    done
+    if [[ "$missing_env" != "0" ]]; then
+      log_err "Frontend: aborting deploy. Copy front/.env.production.example to front/.env.production and set the real URLs before building."
+      exit 1
+    fi
+
     run_cmd "Frontend: vite build" \
       "cd $FRONTEND_DIR && pnpm exec vite build"
 
@@ -741,6 +757,51 @@ deploy_setup() {
   run_cmd "Setup: upload $base" \
     "scp ${SCP_OPTS[*]} '$local_path' '$SSH_USER@$SSH_HOST:$SETUP_REMOTE_DIR/$base'"
   run_remote "Setup: chmod +x $base" "chmod +x '$SETUP_REMOTE_DIR/$base'"
+
+  # The setup script creates the real .env files from the .env.*.example
+  # templates. The deploy tarballs exclude every .env* file (secrets
+  # policy), which also strips the non-secret example templates — so on a
+  # fresh server setup.sh would abort with "example file not found" before
+  # it could create .env. Upload the example templates into the deployed
+  # directories so the setup script can find them on first run.
+  local env_pairs=()
+  case "$PROJECT_TYPE" in
+    fullstack)
+      env_pairs=(
+        "$BACKEND_DIR/.env.example:$DEPLOY_PATH_BACKEND"
+        "$BACKEND_DIR/.env.development.example:$DEPLOY_PATH_BACKEND"
+        "$BACKEND_DIR/.env.production.example:$DEPLOY_PATH_BACKEND"
+        "$FRONTEND_DIR/.env.example:$DEPLOY_PATH_FRONTEND"
+        "$FRONTEND_DIR/.env.development.example:$DEPLOY_PATH_FRONTEND"
+        "$FRONTEND_DIR/.env.production.example:$DEPLOY_PATH_FRONTEND"
+      )
+      ;;
+    single|docs)
+      env_pairs=(
+        ".env.example:$DEPLOY_PATH"
+        ".env.development.example:$DEPLOY_PATH"
+        ".env.production.example:$DEPLOY_PATH"
+      )
+      ;;
+  esac
+
+  local pair src_file remote_dir env_example_count=0
+  for pair in "${env_pairs[@]:-}"; do
+    src_file="${pair%%:*}"
+    remote_dir="${pair#*:}"
+    if [[ -f "$REPO_ROOT/$src_file" ]]; then
+      run_remote "Setup: ensure env dir for $(basename "$remote_dir")" "mkdir -p '$remote_dir'"
+      run_cmd "Setup: upload $(basename "$src_file") → $remote_dir/" \
+        "scp ${SCP_OPTS[*]} '$REPO_ROOT/$src_file' '$SSH_USER@$SSH_HOST:$remote_dir/'"
+      env_example_count=$((env_example_count + 1))
+    fi
+  done
+
+  if [[ "$env_example_count" -gt 0 ]]; then
+    log_info "Uploaded $env_example_count .env.*.example templates for setup.sh"
+  else
+    log_warn "No .env.*.example templates found to upload for setup.sh"
+  fi
 
   SETUP_DEPLOYED=true
 }

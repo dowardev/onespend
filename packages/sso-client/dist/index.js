@@ -1,6 +1,6 @@
-var S = Object.defineProperty;
-var w = (c, e, t) => e in c ? S(c, e, { enumerable: !0, configurable: !0, writable: !0, value: t }) : c[e] = t;
-var o = (c, e, t) => w(c, typeof e != "symbol" ? e + "" : e, t);
+var w = Object.defineProperty;
+var m = (c, e, t) => e in c ? w(c, e, { enumerable: !0, configurable: !0, writable: !0, value: t }) : c[e] = t;
+var o = (c, e, t) => m(c, typeof e != "symbol" ? e + "" : e, t);
 import d from "axios";
 class R {
   constructor(e) {
@@ -24,7 +24,7 @@ class R {
     };
   }
 }
-class m {
+class U {
   constructor() {
     o(this, "privateKey", null);
     o(this, "publicKeyJwk", null);
@@ -66,7 +66,7 @@ class m {
       throw new Error("DPoP key pair not initialized");
     if (!e || !t)
       throw new Error("htm and htu are required for DPoP proof");
-    const r = Math.floor(Date.now() / 1e3), n = crypto.randomUUID(), i = new TextEncoder(), a = {
+    const r = Math.floor(Date.now() / 1e3), i = crypto.randomUUID(), n = new TextEncoder(), a = {
       typ: "dpop+jwt",
       alg: "RS256",
       jwk: {
@@ -78,27 +78,27 @@ class m {
       htm: e,
       htu: t,
       iat: r,
-      jti: n
+      jti: i
     };
     if (s) {
       const y = await crypto.subtle.digest(
         "SHA-256",
-        i.encode(s)
+        n.encode(s)
       );
       h.ath = this.base64UrlEncode(new Uint8Array(y));
     }
     const l = this.base64UrlEncode(
-      i.encode(JSON.stringify(a))
+      n.encode(JSON.stringify(a))
     ), u = this.base64UrlEncode(
-      i.encode(JSON.stringify(h))
-    ), p = `${l}.${u}`, f = await crypto.subtle.sign(
+      n.encode(JSON.stringify(h))
+    ), g = `${l}.${u}`, k = await crypto.subtle.sign(
       "RSASSA-PKCS1-v1_5",
       this.privateKey,
-      i.encode(p)
-    ), k = this.base64UrlEncode(
-      new Uint8Array(f)
+      n.encode(g)
+    ), S = this.base64UrlEncode(
+      new Uint8Array(k)
     );
-    return `${p}.${k}`;
+    return `${g}.${S}`;
   }
   async clearKeys() {
     this.privateKey = null, this.publicKeyJwk = null, this.jkt = null, await this.deleteFromIndexedDB();
@@ -129,14 +129,14 @@ class m {
       jkt: this.jkt
     };
     return new Promise((s, r) => {
-      const n = indexedDB.open("dpop_keys", 1);
-      n.onupgradeneeded = () => {
-        const i = n.result;
-        i.objectStoreNames.contains("keys") || i.createObjectStore("keys");
-      }, n.onsuccess = () => {
-        const a = n.result.transaction("keys", "readwrite");
+      const i = indexedDB.open("dpop_keys", 1);
+      i.onupgradeneeded = () => {
+        const n = i.result;
+        n.objectStoreNames.contains("keys") || n.createObjectStore("keys");
+      }, i.onsuccess = () => {
+        const a = i.result.transaction("keys", "readwrite");
         a.objectStore("keys").put(t, "dpop"), a.oncomplete = () => s(), a.onerror = () => r(a.error);
-      }, n.onerror = () => r(n.error);
+      }, i.onerror = () => r(i.error);
     });
   }
   async loadFromIndexedDB() {
@@ -151,9 +151,9 @@ class m {
           e(null);
           return;
         }
-        const i = s.transaction("keys", "readonly").objectStore("keys").get("dpop");
-        i.onsuccess = async () => {
-          const a = i.result;
+        const n = s.transaction("keys", "readonly").objectStore("keys").get("dpop");
+        n.onsuccess = async () => {
+          const a = n.result;
           if (!a) {
             e(null);
             return;
@@ -174,7 +174,7 @@ class m {
           } catch {
             e(null);
           }
-        }, i.onerror = () => e(null);
+        }, n.onerror = () => e(null);
       }, t.onerror = () => e(null);
     });
   }
@@ -195,14 +195,14 @@ class b {
     this.dpopService = e;
   }
   async login(e) {
-    const { email: t, password: s, rememberMe: r } = e, n = this.ssoClient.getClientId(), i = {
+    const { email: t, password: s, rememberMe: r } = e, i = this.ssoClient.getClientId(), n = {
       email: t,
       password: s,
-      client_id: n
+      client_id: i
     };
-    return r && (i.remember_me = !0), await this.ssoClient.post({
+    return r && (n.remember_me = !0), await this.ssoClient.post({
       url: "login",
-      data: i
+      data: n
     });
   }
   async register(e) {
@@ -265,7 +265,7 @@ class b {
     return this.ssoClient.getClientId() || null;
   }
 }
-class U {
+class v {
   constructor() {
     o(this, "TOKEN_KEY", "@dowardev/sso-client:token");
     o(this, "REFRESH_KEY", "@dowardev/sso-client:refresh-token");
@@ -310,7 +310,7 @@ class U {
     }
   }
 }
-class v {
+class P {
   constructor(e, t, s) {
     o(this, "tokenStorage");
     o(this, "dpopService");
@@ -325,20 +325,20 @@ class v {
     if (s._retry || (s._retry = !0, !await this.tokenStorage.getRefreshToken()))
       return Promise.reject(e);
     if (this.isRefreshing)
-      return new Promise((n, i) => {
+      return new Promise((i, n) => {
         this.pendingRequests.push({
           resolve: (a) => {
-            t(s, a).then(n).catch(i);
+            t(s, a).then(i).catch(n);
           },
-          reject: i
+          reject: n
         });
       });
     this.isRefreshing = !0;
     try {
-      const n = await this.refreshToken();
-      return this.processPendingRequests(n), await t(s, n);
-    } catch (n) {
-      return this.rejectPendingRequests(n), this.ssoRequester.onRefreshFailed(), Promise.reject(n);
+      const i = await this.refreshToken();
+      return this.processPendingRequests(i), await t(s, i);
+    } catch (i) {
+      return this.rejectPendingRequests(i), this.ssoRequester.onRefreshFailed(), Promise.reject(i);
     } finally {
       this.isRefreshing = !1;
     }
@@ -347,13 +347,13 @@ class v {
     const e = await this.tokenStorage.getRefreshToken();
     if (!e)
       throw new Error("No refresh token available");
-    const t = this.ssoRequester.getSsoUrl(), s = this.ssoRequester.getClientId(), r = `${t.replace(/\/$/, "")}/refresh-token`, n = await this.tokenStorage.getToken(), i = (n == null ? void 0 : n.replace(/^Bearer\s+/i, "")) || "", a = i ? await this.dpopService.createDpopProof("POST", r, i) : void 0, h = await d.request({
+    const t = this.ssoRequester.getSsoUrl(), s = this.ssoRequester.getClientId(), r = `${t.replace(/\/$/, "")}/refresh-token`, i = await this.tokenStorage.getToken(), n = (i == null ? void 0 : i.replace(/^Bearer\s+/i, "")) || "", a = n ? await this.dpopService.createDpopProof("POST", r, n) : void 0, h = await d.request({
       url: r,
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
-        ...i ? { Authorization: `Bearer ${i}` } : {},
+        ...n ? { Authorization: `Bearer ${n}` } : {},
         ...a ? { DPoP: a } : {}
       },
       data: {
@@ -387,7 +387,7 @@ class v {
     this.autoRefreshTimer !== null && (clearInterval(this.autoRefreshTimer), this.autoRefreshTimer = null);
   }
 }
-class P {
+class T {
   constructor(e) {
     o(this, "axiosInstance");
     o(this, "tokenStorage");
@@ -420,14 +420,14 @@ class P {
         if (!s) return e;
         const r = s.replace(/^Bearer\s+/i, "");
         e.headers.set("Authorization", `Bearer ${r}`);
-        const n = this.buildFullUrl(e.baseURL, e.url);
+        const i = this.buildFullUrl(e.baseURL, e.url);
         try {
-          const i = await this.dpopService.createDpopProof(
+          const n = await this.dpopService.createDpopProof(
             (e.method || "GET").toUpperCase(),
-            n,
+            i,
             r
           );
-          e.headers.set("DPoP", i);
+          e.headers.set("DPoP", n);
         } catch {
         }
         return e;
@@ -440,9 +440,9 @@ class P {
           const s = e.config;
           return s.skipAuth || s._retry ? Promise.reject(e) : this.tokenRefreshManager.handle401Error(
             e,
-            async (r, n) => {
-              const i = n.replace(/^Bearer\s+/i, "");
-              r.headers.set("Authorization", `Bearer ${i}`);
+            async (r, i) => {
+              const n = i.replace(/^Bearer\s+/i, "");
+              r.headers.set("Authorization", `Bearer ${n}`);
               const a = this.buildFullUrl(
                 r.baseURL,
                 r.url
@@ -451,7 +451,7 @@ class P {
                 const h = await this.dpopService.createDpopProof(
                   (r.method || "GET").toUpperCase(),
                   a,
-                  i
+                  n
                 );
                 r.headers.set("DPoP", h);
               } catch {
@@ -468,22 +468,22 @@ class P {
     return t ? t.startsWith("http") ? t : `${(e || "").replace(/\/$/, "")}/${t.replace(/^\//, "")}` : e || "";
   }
 }
-function T() {
+function A() {
   const c = new Uint8Array(32);
-  return crypto.getRandomValues(c), g(c);
+  return crypto.getRandomValues(c), f(c);
 }
-async function A(c) {
+async function E(c) {
   const t = new TextEncoder().encode(c), s = await crypto.subtle.digest("SHA-256", t);
-  return g(new Uint8Array(s));
+  return f(new Uint8Array(s));
 }
-function g(c) {
+function f(c) {
   const e = c instanceof ArrayBuffer ? new Uint8Array(c) : c;
   let t = "";
   for (let s = 0; s < e.length; s++)
     t += String.fromCharCode(e[s]);
   return btoa(t).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
-class _ {
+class C {
   constructor(e) {
     o(this, "configService");
     o(this, "baseUrl", "");
@@ -498,6 +498,20 @@ class _ {
     o(this, "_isAuthenticated", !1);
     o(this, "AUTO_REFRESH_INTERVAL", 3e6);
     o(this, "http");
+    if (!e.ssoUrl || !p(e.ssoUrl))
+      throw new Error(
+        "SSOClient: ssoUrl is required and must be a valid URL (e.g., https://auth.example.com/api/)"
+      );
+    if (!e.ssoFrontendUrl || !p(e.ssoFrontendUrl))
+      throw new Error(
+        "SSOClient: ssoFrontendUrl is required and must be a valid URL (e.g., https://auth.example.com)"
+      );
+    if (!e.apiBaseUrl || !p(e.apiBaseUrl))
+      throw new Error(
+        "SSOClient: apiBaseUrl is required and must be a valid URL (e.g., https://api.example.com/api/)"
+      );
+    if (!e.clientId)
+      throw new Error("SSOClient: clientId is required");
     this.configService = new R({
       baseUrl: e.ssoUrl,
       ssoFrontendUrl: e.ssoFrontendUrl,
@@ -505,9 +519,9 @@ class _ {
       clientId: e.clientId
     });
     const t = this.configService.getConfig();
-    this.baseUrl = t.baseUrl, this.ssoFrontendUrl = t.ssoFrontendUrl, this.clientId = t.clientId, this.dpopService = new m(), this.tokenStorage = new U(), this.authService = new b(
-      new E(this.configService, this.dpopService)
-    ), this.authService.setDpopService(this.dpopService), this.tokenRefreshManager = new v(
+    this.baseUrl = t.baseUrl, this.ssoFrontendUrl = t.ssoFrontendUrl, this.clientId = t.clientId, this.dpopService = new U(), this.tokenStorage = new v(), this.authService = new b(
+      new I(this.configService, this.dpopService)
+    ), this.authService.setDpopService(this.dpopService), this.tokenRefreshManager = new P(
       this.tokenStorage,
       this.dpopService,
       {
@@ -516,7 +530,7 @@ class _ {
         getClientId: () => this.clientId,
         onRefreshFailed: () => this.handleRefreshFailed()
       }
-    ), this.http = new P({
+    ), this.http = new T({
       apiBaseUrl: t.apiBaseUrl,
       tokenStorage: this.tokenStorage,
       dpopService: this.dpopService,
@@ -555,29 +569,29 @@ class _ {
     return await this.tokenStorage.setRememberMe(s), s && this.startAutoRefresh(), t;
   }
   async loginWithRedirect(e) {
-    const t = (e == null ? void 0 : e.redirectUri) || `${window.location.origin}/auth/callback`, s = T(), r = await A(s), n = crypto.randomUUID();
-    await this.tokenStorage.setPkceVerifier(n, s);
-    const i = new URL(
+    const t = (e == null ? void 0 : e.redirectUri) || `${window.location.origin}/auth/callback`, s = A(), r = await E(s), i = crypto.randomUUID();
+    await this.tokenStorage.setPkceVerifier(i, s);
+    const n = new URL(
       (e == null ? void 0 : e.screenHint) === "register" ? "/auth/register" : "/auth/login",
       this.ssoFrontendUrl
     );
-    i.searchParams.set("client_id", this.clientId), i.searchParams.set("redirect_uri", t), i.searchParams.set("response_type", "code"), i.searchParams.set("state", n), i.searchParams.set("code_challenge", r), i.searchParams.set("code_challenge_method", "S256"), window.location.href = i.toString();
+    n.searchParams.set("client_id", this.clientId), n.searchParams.set("redirect_uri", t), n.searchParams.set("response_type", "code"), n.searchParams.set("state", i), n.searchParams.set("code_challenge", r), n.searchParams.set("code_challenge_method", "S256"), window.location.href = n.toString();
   }
   async handleCallback(e) {
-    const s = new URL(e).searchParams, r = s.get("code"), n = s.get("state");
+    const s = new URL(e).searchParams, r = s.get("code"), i = s.get("state");
     if (!r)
       throw new Error("No authorization code provided in callback");
-    const i = n ? await this.tokenStorage.getPkceVerifier(n) : null, a = {
+    const n = i ? await this.tokenStorage.getPkceVerifier(i) : null, a = {
       grant_type: "authorization_code",
       code: r,
       client_id: this.clientId,
       redirect_uri: `${window.location.origin}/auth/callback`
     };
-    i && (a.code_verifier = i);
+    n && (a.code_verifier = n);
     const h = this.dpopService.getPublicKeyJwk();
     h && (a.dpop_public_key = JSON.stringify(h));
     const l = await this.internalPost("oauth/token", a);
-    return n && await this.tokenStorage.removePkceVerifier(n), await this.handleAuthResponse({
+    return i && await this.tokenStorage.removePkceVerifier(i), await this.handleAuthResponse({
       token: l.token,
       refreshToken: l.refreshToken,
       user: l.user
@@ -668,20 +682,27 @@ class _ {
     return `${this.baseUrl.endsWith("/") ? this.baseUrl.slice(0, -1) : this.baseUrl}/${e}`;
   }
   async internalPost(e, t) {
-    const s = this.configService.getConfig().accessToken, r = s.replace(/^Bearer\s+/i, ""), n = s ? await this.dpopService.createDpopProof("POST", this.getFullUrl(e), r) : void 0;
+    const s = this.configService.getConfig().accessToken, r = s.replace(/^Bearer\s+/i, ""), i = s ? await this.dpopService.createDpopProof("POST", this.getFullUrl(e), r) : void 0;
     return (await d.request({
       url: this.getFullUrl(e),
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         ...s ? { Authorization: `Bearer ${r}` } : {},
-        ...n ? { DPoP: n } : {}
+        ...i ? { DPoP: i } : {}
       },
       data: t
     })).data;
   }
 }
-class E {
+function p(c) {
+  try {
+    return new URL(c), !0;
+  } catch {
+    return !1;
+  }
+}
+class I {
   constructor(e, t) {
     o(this, "configService");
     o(this, "dpopService");
@@ -697,18 +718,18 @@ class E {
     return this.request("POST", e.url, e.data);
   }
   async request(e, t, s) {
-    const r = this.configService.getConfig().accessToken, n = r.replace(/^Bearer\s+/i, ""), i = this.getFullUrl(t), a = r ? await this.dpopService.createDpopProof(
+    const r = this.configService.getConfig().accessToken, i = r.replace(/^Bearer\s+/i, ""), n = this.getFullUrl(t), a = r ? await this.dpopService.createDpopProof(
       e.toUpperCase(),
-      i,
-      n
+      n,
+      i
     ) : void 0;
     return (await d.request({
-      url: i,
+      url: n,
       method: e,
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
-        ...r ? { Authorization: `Bearer ${n}` } : {},
+        ...r ? { Authorization: `Bearer ${i}` } : {},
         ...a ? { DPoP: a } : {}
       },
       ...s ? { data: s } : {},
@@ -719,10 +740,10 @@ class E {
     return `${this.configService.getConfig().baseUrl.replace(/\/$/, "")}/${e}`;
   }
 }
-function C(c, e = {}) {
+function F(c, e = {}) {
   const { publicRoutes: t = [], loginRedirect: s = !0, redirectUri: r } = e;
-  return async (n, i, a) => {
-    const h = n.name ? String(n.name) : null;
+  return async (i, n, a) => {
+    const h = i.name ? String(i.name) : null;
     if (t.includes(h || "") || c.isAuthenticated)
       return a();
     if (s) {
@@ -733,7 +754,7 @@ function C(c, e = {}) {
   };
 }
 export {
-  P as HttpClient,
-  _ as SSOClient,
-  C as createAuthGuard
+  T as HttpClient,
+  C as SSOClient,
+  F as createAuthGuard
 };
