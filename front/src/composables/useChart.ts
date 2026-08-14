@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 DowarDev
+//
+// SPDX-License-Identifier: AGPL-3.0-only
+
 import { ref } from 'vue';
 import type { Chart as ChartJS } from 'chart.js';
 

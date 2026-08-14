@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 DowarDev
+//
+// SPDX-License-Identifier: AGPL-3.0-only
+
 import dixieController, { DixieController } from './dixie';
 import { formatLocalDate } from '@/utils/date';
 

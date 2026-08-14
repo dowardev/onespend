@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 DowarDev
+//
+// SPDX-License-Identifier: AGPL-3.0-only
+
 export function isNumericValue(params: { value: unknown }): boolean {
   const { value } = params;
   if (value === null || value === undefined || value === '') return true;

@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 DowarDev
+//
+// SPDX-License-Identifier: AGPL-3.0-only
+
 import { syncApiService } from './SyncApiService';
 import type { SyncConflictItem, SyncConflictResolution, SyncItemData } from '../syncService';
 import db from '@/db/OneSpendDB';

@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 DowarDev
+//
+// SPDX-License-Identifier: AGPL-3.0-only
+
 const SSO_TOKEN_KEY = '@dowardev/sso-client:token';
 
 export async function saveToken(token: string): Promise<void> {

@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2026 DowarDev
+
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
 <template>
   <div class="ion-padding-start ion-padding-end period-snapshots">
     <ion-item class="panel border-rounded" lines="none">

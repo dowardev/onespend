@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2026 DowarDev
+
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
 # Budget Add Popover + Providers en Inicio - Design
 
 ## Resumen del cambio

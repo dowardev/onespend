@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2026 DowarDev
+
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
 <template>
   <ion-menu ref="menuRef" content-id="main-content" type="overlay" menu-id="main-menu">
     <ion-header mode="ios" class="ion-no-border">

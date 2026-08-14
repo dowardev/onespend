@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 DowarDev
+//
+// SPDX-License-Identifier: AGPL-3.0-only
+
 import { syncService } from '@/services/syncService';
 import { generateSyncId } from '@/utils/UuidGenerator';
 import { toApiFormat } from '@/services/sync/entityMappers';

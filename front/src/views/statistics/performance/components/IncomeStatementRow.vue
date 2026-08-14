@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2026 DowarDev
+
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
 <template>
   <ion-item lines="full" class="ion-padding-vertical">
     <ion-grid class="ion-no-padding">

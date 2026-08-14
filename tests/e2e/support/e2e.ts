@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 DowarDev
+//
+// SPDX-License-Identifier: AGPL-3.0-only
+
 // ***********************************************************
 // This example support/e2e.ts is processed and
 // loaded automatically before your test files.

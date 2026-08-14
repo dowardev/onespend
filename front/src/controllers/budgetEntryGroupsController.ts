@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 DowarDev
+//
+// SPDX-License-Identifier: AGPL-3.0-only
+
 import { budgetEntryGroupsDb } from '@/db/controllers/budgetEntryGroupsDb'
 import { budgetEntriesDb } from '@/db/controllers/budgetEntriesDb'
 import { syncQueue } from '@/services/syncQueue';

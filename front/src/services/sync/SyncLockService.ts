@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 DowarDev
+//
+// SPDX-License-Identifier: AGPL-3.0-only
+
 const SYNC_LOCK_KEY = 'onespend-sync-lock';
 const HEARTBEAT_INTERVAL = 10000;
 const LOCK_TIMEOUT = 30000;

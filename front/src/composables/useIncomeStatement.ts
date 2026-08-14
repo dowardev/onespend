@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 DowarDev
+//
+// SPDX-License-Identifier: AGPL-3.0-only
+
 import { computed, type Ref } from 'vue'
 import type { Income } from '@/stores/budgetEntriesStore'
 

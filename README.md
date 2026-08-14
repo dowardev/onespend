@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2026 DowarDev
+
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
 # OneSpend
 
 Multi-platform personal expense management app.
@@ -81,3 +87,13 @@ pnpm run electron:build   # Electron production build
 ## Deployment
 
 See [deploy.md](deploy.md) for shared hosting deployment instructions.
+
+## License
+
+OneSpend is free software: you can redistribute it and/or modify it under the
+terms of the GNU Affero General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option) any
+later version. See the [LICENSE](LICENSE) file for the full text.
+
+The `@dowardev/sso-client` package (`packages/sso-client/`) is distributed
+under the MIT license (permissive).

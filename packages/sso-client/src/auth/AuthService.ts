@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DowarDev
+//
 // SPDX-License-Identifier: MIT
 import { DpopService } from "../dpop/DpopService";
 import {

@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2026 DowarDev
+
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
 <template>
   <div class="sync-status" :class="{ 'has-pending': pendingChanges > 0, 'is-offline': !isOnline }">
     <ion-icon :icon="syncIcon" :class="{ spinning: isSyncing }"></ion-icon>

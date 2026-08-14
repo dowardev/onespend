@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 DowarDev
+//
+// SPDX-License-Identifier: AGPL-3.0-only
+
 import { useAuthStore, type User } from '@/stores/authStore'
 import { getSSOClient } from '@/ssoClientAccessor'
 import { clearAllUserData } from '@/services/dataClearService'

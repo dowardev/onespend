@@ -1,5 +1,9 @@
 <?php
 
+// SPDX-FileCopyrightText: 2026 DowarDev
+//
+// SPDX-License-Identifier: AGPL-3.0-only
+
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\BudgetEntryController;
