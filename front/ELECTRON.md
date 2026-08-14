@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2026 DowarDev
+
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
 Electron usage and build instructions
 
 This document explains how to run the Electron app in development and how to create production builds using the Electron configuration that was added to package.json.

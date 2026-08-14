@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 DowarDev
+//
+// SPDX-License-Identifier: AGPL-3.0-only
+
 // Generate Linux icon set from a base PNG using nearest-neighbor scaling
 // Input: public/PuntoClick.png
 // Output: build/icons/{16,32,48,64,128,256,512}x{size}.png

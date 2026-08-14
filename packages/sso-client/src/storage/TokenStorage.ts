@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DowarDev
+//
 // SPDX-License-Identifier: MIT
 export class TokenStorage {
   private readonly TOKEN_KEY = "@dowardev/sso-client:token";

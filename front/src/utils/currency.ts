@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 DowarDev
+//
+// SPDX-License-Identifier: AGPL-3.0-only
+
 export function formatCurrency(params: { value: number | string | null | undefined }): string {
   const { value } = params
   return new Intl.NumberFormat('es-MX', {

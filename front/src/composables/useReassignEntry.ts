@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 DowarDev
+//
+// SPDX-License-Identifier: AGPL-3.0-only
+
 import budgetEntriesController from '@/controllers/budgetEntriesController';
 
 function toShortDate(d: string | number | Date | undefined | null): string {

@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DowarDev
+//
 // SPDX-License-Identifier: MIT
 export function generateCodeVerifier(): string {
   const array = new Uint8Array(32);

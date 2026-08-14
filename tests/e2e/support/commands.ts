@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 DowarDev
+//
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /// <reference types="cypress" />
 // ***********************************************
 // This example commands.ts shows you how to

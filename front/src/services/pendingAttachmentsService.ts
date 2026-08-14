@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 DowarDev
+//
+// SPDX-License-Identifier: AGPL-3.0-only
+
 import { db } from '@/db/OneSpendDB'
 
 const PENDING_ATTACHMENTS_KEY = 'pending_attachments'

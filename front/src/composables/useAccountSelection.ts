@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 DowarDev
+//
+// SPDX-License-Identifier: AGPL-3.0-only
+
 import { computed, ref, type Ref } from 'vue';
 import accountsController from '@/controllers/accountsController';
 import type { Account } from '@/controllers/accountsController';

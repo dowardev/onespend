@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 DowarDev
+//
+// SPDX-License-Identifier: AGPL-3.0-only
+
 import { reactive } from 'vue'
 import { useBudgetDayStore } from '@/stores/budgetDayStore'
 import { storeToRefs } from 'pinia'

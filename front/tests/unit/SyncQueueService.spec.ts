@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 DowarDev
+//
+// SPDX-License-Identifier: AGPL-3.0-only
+
 import { describe, expect, test, vi, beforeEach } from 'vitest';
 import { SyncQueueService } from '@/services/sync/SyncQueueService';
 import { AuthExpiredError } from '@/services/sync/SyncApiService';

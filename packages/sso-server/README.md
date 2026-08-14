@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2026 DowarDev
+
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
 # dowardev/sso-server
 
 Server-side library for SSO authentication in Laravel with **DPoP** (Demonstrating Proof-of-Possession) verification and JWT validation via JWKS.

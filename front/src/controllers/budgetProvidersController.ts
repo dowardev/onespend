@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 DowarDev
+//
+// SPDX-License-Identifier: AGPL-3.0-only
+
 import { toBudgetProviderRow } from '@/db/mappers'
 import { useBudgetProvidersStore } from '@/stores/budgetProvidersStore';
 import { useBudgetDayStore } from '@/stores/budgetDayStore';

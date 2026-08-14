@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 DowarDev
+//
+// SPDX-License-Identifier: AGPL-3.0-only
+
 import { mount } from '@vue/test-utils';
 import HomePage from '@/views/HomePage.vue';
 import { describe, expect, test } from 'vitest';

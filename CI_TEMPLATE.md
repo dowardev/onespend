@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2026 DowarDev
+
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
 # Plantilla CI/CD — `.gitlab-ci.yml` estandarizado
 
 Plantilla canónica para los pipelines GitLab CI de los proyectos de `dowardev`.

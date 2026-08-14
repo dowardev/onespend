@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 DowarDev
+//
+// SPDX-License-Identifier: AGPL-3.0-only
+
 import { ref, type Ref } from 'vue'
 import { liveQuery } from 'dexie'
 import { db } from '@/db/OneSpendDB'

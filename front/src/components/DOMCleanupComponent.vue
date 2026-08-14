@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2026 DowarDev
+
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
 <template>
   <!-- This component is invisible and handles DOM cleanup -->
   <div class="dom-cleanup-component" aria-hidden="true" />

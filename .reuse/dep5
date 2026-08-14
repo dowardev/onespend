@@ -1,0 +1,67 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: OneSpend
+Upstream-Contact: DowarDev <gonzalo@dowar.xyz>
+Source: https://gitlab.com/dowardev/onespend
+
+# Generated Capacitor/Android project (sources, resources, binaries and
+# Gradle wrapper). AGPL-3.0-only as part of the OneSpend project.
+Files: front/android/*
+Copyright: 2026 DowarDev
+License: AGPL-3.0-only
+
+# OpenCode agent skills (third-party skill "ui-ux-pro-max": SKILL.md,
+# Python scripts and CSV data) plus project planning docs under .opencode/.
+Files: .opencode/*
+Copyright: 2026 DowarDev
+License: AGPL-3.0-only
+
+# Playwright CLI session artifacts (generated, throwaway).
+Files: front/.playwright-cli/*
+Copyright: 2026 DowarDev
+License: AGPL-3.0-only
+
+# Tracked environment templates and deployment config (no inline-header
+# format). The root .env is tracked in git; do not treat it as ignored.
+Files: .env
+       back/.env*
+       front/.env*
+       scripts/deploy/deploy.conf
+       scripts/deploy/deploy.conf.example
+Copyright: 2026 DowarDev
+License: AGPL-3.0-only
+
+# JSON/lockfile/tooling configs that cannot hold SPDX comment headers.
+Files: *.json
+       *.lock
+       *.toml
+       *.cjs
+       *.yaml
+       *.map
+       *.properties
+       *.csv
+       *.ico
+       *.htaccess
+       *.desktop
+       *.gitignore
+       *.npmrc
+       *.prettierignore
+       *.browserslistrc
+       *.gitkeep
+       *.editorconfig
+       *.gitattributes
+       back/artisan
+       back/public/robots.txt
+Copyright: 2026 DowarDev
+License: AGPL-3.0-only
+
+# Binary images (icons, splash, app logos).
+Files: *.png
+Copyright: 2026 DowarDev
+License: AGPL-3.0-only
+
+# sso-client package (MIT). This block MUST stay last: reuse/dep5 semantics
+# give precedence to the last matching paragraph, so it overrides any generic
+# AGPL glob above for package.json, tsconfig.json and dist/ artifacts.
+Files: packages/sso-client/*
+Copyright: 2026 DowarDev
+License: MIT

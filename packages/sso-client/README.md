@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2026 DowarDev
+
+SPDX-License-Identifier: MIT
+-->
+
 # @dowardev/sso-client
 
 TypeScript SDK for SSO authentication in the browser (Vue, React, Vanilla TS, etc.) with **OAuth2 PKCE** + **DPoP** (Demonstrating Proof-of-Possession) support over axios.

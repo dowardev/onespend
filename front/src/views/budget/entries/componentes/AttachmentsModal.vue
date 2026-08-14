@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2026 DowarDev
+
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
 <template>
   <ion-modal :is-open="isOpen" @did-dismiss="handleDismiss">
     <ion-header class="ion-no-border" mode="ios">

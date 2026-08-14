@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 DowarDev
+//
+// SPDX-License-Identifier: AGPL-3.0-only
+
 // Request caching utilities for API optimization
 interface CacheEntry<T> {
   data: T;

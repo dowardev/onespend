@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 DowarDev
+//
+// SPDX-License-Identifier: AGPL-3.0-only
+
 import type { RecurringRecord } from '@/controllers/recurringRecordsController';
 import { format, getDate, getDaysInMonth } from 'date-fns';
 import { parseLocalDate } from '@/utils/date';

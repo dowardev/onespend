@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 DowarDev
+//
+// SPDX-License-Identifier: AGPL-3.0-only
+
 import { suppliersDb } from '@/db/controllers/suppliersDb';
 import { useSuppliersStore } from '../stores/suppliersStore';
 import { syncService } from '@/services/syncService';

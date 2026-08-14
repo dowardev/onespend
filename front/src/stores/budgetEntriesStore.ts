@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 DowarDev
+//
+// SPDX-License-Identifier: AGPL-3.0-only
+
 import { defineStore } from 'pinia';
 import { computed } from 'vue';
 import type { BudgetEntryRow } from '@/db/types';

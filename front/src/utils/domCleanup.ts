@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 DowarDev
+//
+// SPDX-License-Identifier: AGPL-3.0-only
+
 // DOM Cleanup utilities to prevent memory leaks and contamination
 import { onUnmounted } from 'vue';
 

@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 DowarDev
+//
+// SPDX-License-Identifier: AGPL-3.0-only
+
 import { supplierProductsDb } from '@/db/controllers/supplierProductsDb';
 import { syncQueue } from '@/services/syncQueue';
 import { generateSyncId } from '@/utils/generateSyncId';

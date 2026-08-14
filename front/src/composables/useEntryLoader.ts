@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 DowarDev
+//
+// SPDX-License-Identifier: AGPL-3.0-only
+
 import { useBudgetEntriesStore, mapEntryRow } from '@/stores/budgetEntriesStore';
 import { budgetEntriesDb } from '@/db/controllers/budgetEntriesDb';
 import { dataMediator } from '@/services/dataMediator';

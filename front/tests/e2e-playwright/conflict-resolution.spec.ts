@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 DowarDev
+//
+// SPDX-License-Identifier: AGPL-3.0-only
+
 import { test, expect, type Page, type BrowserContext } from '@playwright/test'
 
 const CONFLICT_SYNC_ID = 'test-conflict-001'
