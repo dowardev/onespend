@@ -58,7 +58,7 @@ class ChaosNetworkTest extends TestCase
         // simulated internal service failures
 
         // Attempt sync - should handle gracefully
-        $response = $this->actingAs($this->user, 'sanctum')
+        $response = $this->actingAs($this->user, 'web')
             ->get('/api/sync/full');
 
         // Should not crash with unhandled exception
@@ -80,7 +80,7 @@ class ChaosNetworkTest extends TestCase
 
         // Simulate network timeout
         // Attempt getChanges - should handle gracefully
-        $response = $this->actingAs($this->user, 'sanctum')
+        $response = $this->actingAs($this->user, 'web')
             ->get('/api/sync/changes?last_sync=0');
 
         // Should not crash with unhandled exception
@@ -103,7 +103,7 @@ class ChaosNetworkTest extends TestCase
         // A more sophisticated test would actually simulate and then restore network
 
         // Normal sync should work
-        $response = $this->actingAs($this->user, 'sanctum')
+        $response = $this->actingAs($this->user, 'web')
             ->get('/api/sync/full');
 
         $this->assertEquals(200, $response->getStatusCode());

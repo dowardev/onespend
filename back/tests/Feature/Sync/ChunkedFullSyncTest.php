@@ -39,7 +39,7 @@ class ChunkedFullSyncTest extends TestCase
 
         $memoryBefore = memory_get_peak_usage(true);
 
-        $response = $this->actingAs($this->user, 'sanctum')
+        $response = $this->actingAs($this->user, 'web')
             ->get('/api/sync/full');
 
         $memoryAfter = memory_get_peak_usage(true);
@@ -73,7 +73,7 @@ class ChunkedFullSyncTest extends TestCase
     {
         $this->createLargeDataset(5000);
 
-        $response = $this->actingAs($this->user, 'sanctum')
+        $response = $this->actingAs($this->user, 'web')
             ->get('/api/sync/full');
 
         $this->assertEquals(200, $response->getStatusCode());
@@ -94,13 +94,13 @@ class ChunkedFullSyncTest extends TestCase
     {
         $this->createLargeDataset(1000);
 
-        $response1 = $this->actingAs($this->user, 'sanctum')
+        $response1 = $this->actingAs($this->user, 'web')
             ->get('/api/sync/full');
 
         $this->assertEquals(200, $response1->getStatusCode());
         $etag = $response1->headers->get('ETag');
 
-        $response2 = $this->actingAs($this->user, 'sanctum')
+        $response2 = $this->actingAs($this->user, 'web')
             ->get('/api/sync/full', ['If-None-Match' => $etag]);
 
         $this->assertEquals(304, $response2->getStatusCode());
@@ -123,7 +123,7 @@ class ChunkedFullSyncTest extends TestCase
         $this->createAdditionalRecords(1000);
 
         $query = http_build_query(['since' => (string) $serverTime1]);
-        $response = $this->actingAs($this->user, 'sanctum')
+        $response = $this->actingAs($this->user, 'web')
             ->get('/api/sync/full?'.$query);
 
         $this->assertEquals(200, $response->getStatusCode());
@@ -149,7 +149,7 @@ class ChunkedFullSyncTest extends TestCase
         $params = ['types' => ['account', 'supplier']];
         $query = http_build_query($params);
 
-        $response = $this->actingAs($this->user, 'sanctum')
+        $response = $this->actingAs($this->user, 'web')
             ->get('/api/sync/full?'.$query);
 
         $this->assertEquals(200, $response->getStatusCode());
@@ -177,7 +177,7 @@ class ChunkedFullSyncTest extends TestCase
         $account->delete();
 
         $query = http_build_query(['since' => (string) $serverTime]);
-        $response = $this->actingAs($this->user, 'sanctum')
+        $response = $this->actingAs($this->user, 'web')
             ->get('/api/sync/full?'.$query);
 
         $this->assertEquals(200, $response->getStatusCode());
@@ -212,7 +212,7 @@ class ChunkedFullSyncTest extends TestCase
 
             $memoryBefore = memory_get_peak_usage(true);
 
-            $response = $this->actingAs($user, 'sanctum')
+            $response = $this->actingAs($user, 'web')
                 ->get('/api/sync/full');
 
             $memoryAfter = memory_get_peak_usage(true);

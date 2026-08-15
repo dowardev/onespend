@@ -44,10 +44,10 @@ onespend/
 │   ├── app/
 │   │   ├── Models/         # Account, BudgetEntry, Income, etc.
 │   │   └── Http/
-│   │       └── Controllers/# Auth (Breeze), Attachment, Sync
+│   │       └── Controllers/# Auth (SSO), Attachment, Sync
 │   ├── routes/
 │   │   ├── api.php         # Sync + Attachments
-│   │   └── auth.php        # Breeze auth routes
+│   │   └── auth.php        # SSO auth routes
 │   └── ...
 ├── front/          # Ionic 8 + Vue 3
 │   ├── src/

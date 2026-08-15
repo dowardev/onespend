@@ -29,7 +29,7 @@ class SyncControllerTest extends TestCase
 
     private function getFullSync(): array
     {
-        $response = $this->actingAs($this->user, 'sanctum')
+        $response = $this->actingAs($this->user, 'web')
             ->get('/api/sync/full');
 
         $this->assertEquals(200, $response->getStatusCode());
@@ -227,7 +227,7 @@ class SyncControllerTest extends TestCase
             'status' => 'active',
         ]);
 
-        $response = $this->actingAs($this->user, 'sanctum')
+        $response = $this->actingAs($this->user, 'web')
             ->get('/api/sync/full?types[]=account');
 
         $this->assertEquals(200, $response->getStatusCode());
@@ -258,7 +258,7 @@ class SyncControllerTest extends TestCase
             'status' => 'active',
         ]);
 
-        $response = $this->actingAs($this->user, 'sanctum')
+        $response = $this->actingAs($this->user, 'web')
             ->get("/api/sync/full?since={$since}");
 
         $this->assertEquals(200, $response->getStatusCode());
@@ -288,7 +288,7 @@ class SyncControllerTest extends TestCase
 
         $since = strtotime('2024-03-01 00:00:00');
 
-        $response = $this->actingAs($this->user, 'sanctum')
+        $response = $this->actingAs($this->user, 'web')
             ->get("/api/sync/full?since={$since}");
 
         $this->assertEquals(200, $response->getStatusCode());
@@ -307,7 +307,7 @@ class SyncControllerTest extends TestCase
             'status' => 'active',
         ]);
 
-        $response = $this->actingAs($this->user, 'sanctum')
+        $response = $this->actingAs($this->user, 'web')
             ->get('/api/sync/full');
 
         $this->assertEquals(200, $response->getStatusCode());
@@ -324,12 +324,12 @@ class SyncControllerTest extends TestCase
             'status' => 'active',
         ]);
 
-        $response = $this->actingAs($this->user, 'sanctum')
+        $response = $this->actingAs($this->user, 'web')
             ->get('/api/sync/full');
 
         $etag = $response->headers->get('ETag');
 
-        $response2 = $this->actingAs($this->user, 'sanctum')
+        $response2 = $this->actingAs($this->user, 'web')
             ->get('/api/sync/full', ['If-None-Match' => $etag]);
 
         $this->assertEquals(304, $response2->getStatusCode());
@@ -337,7 +337,7 @@ class SyncControllerTest extends TestCase
 
     public function test_full_sync_returns_200_when_etag_does_not_match(): void
     {
-        $response = $this->actingAs($this->user, 'sanctum')
+        $response = $this->actingAs($this->user, 'web')
             ->get('/api/sync/full', ['If-None-Match' => '"invalid-etag"']);
 
         $this->assertEquals(200, $response->getStatusCode());
@@ -345,7 +345,7 @@ class SyncControllerTest extends TestCase
 
     public function test_metrics_endpoint_returns_ok_with_correct_content_type(): void
     {
-        $response = $this->actingAs($this->user, 'sanctum')
+        $response = $this->actingAs($this->user, 'web')
             ->get('/api/metrics');
 
         $response->assertOk();
@@ -354,7 +354,7 @@ class SyncControllerTest extends TestCase
 
     public function test_sync_health_endpoint_returns_ok(): void
     {
-        $response = $this->actingAs($this->user, 'sanctum')
+        $response = $this->actingAs($this->user, 'web')
             ->get('/api/sync/health');
 
         $response->assertOk();
@@ -366,7 +366,7 @@ class SyncControllerTest extends TestCase
 
     public function test_sync_protocol_version_returns_headers(): void
     {
-        $response = $this->actingAs($this->user, 'sanctum')
+        $response = $this->actingAs($this->user, 'web')
             ->get('/api/sync/full', ['X-Sync-Protocol-Version' => '2']);
 
         $response->assertOk();
@@ -377,7 +377,7 @@ class SyncControllerTest extends TestCase
 
     public function test_sync_protocol_version_defaults_to_v1(): void
     {
-        $response = $this->actingAs($this->user, 'sanctum')
+        $response = $this->actingAs($this->user, 'web')
             ->get('/api/sync/full');
 
         $response->assertOk();
@@ -386,7 +386,7 @@ class SyncControllerTest extends TestCase
 
     public function test_sync_protocol_version_rejects_unsupported(): void
     {
-        $response = $this->actingAs($this->user, 'sanctum')
+        $response = $this->actingAs($this->user, 'web')
             ->get('/api/sync/full', ['X-Sync-Protocol-Version' => '999']);
 
         $response->assertStatus(400);
@@ -397,7 +397,7 @@ class SyncControllerTest extends TestCase
 
     public function test_sync_protocol_version_works_on_health_endpoint(): void
     {
-        $response = $this->actingAs($this->user, 'sanctum')
+        $response = $this->actingAs($this->user, 'web')
             ->get('/api/sync/health', ['X-Sync-Protocol-Version' => '1']);
 
         $response->assertOk();
@@ -406,7 +406,7 @@ class SyncControllerTest extends TestCase
 
     public function test_metrics_endpoint_has_protocol_headers(): void
     {
-        $response = $this->actingAs($this->user, 'sanctum')
+        $response = $this->actingAs($this->user, 'web')
             ->get('/api/metrics', ['X-Sync-Protocol-Version' => '2']);
 
         $response->assertOk();
@@ -427,13 +427,13 @@ class SyncControllerTest extends TestCase
             ],
         ];
 
-        $response1 = $this->actingAs($this->user, 'sanctum')
+        $response1 = $this->actingAs($this->user, 'web')
             ->postJson('/api/sync/merge', ['data' => $data]);
 
         $response1->assertOk();
         $response1->assertJson(['success' => true]);
 
-        $response2 = $this->actingAs($this->user, 'sanctum')
+        $response2 = $this->actingAs($this->user, 'web')
             ->postJson('/api/sync/merge', ['data' => $data]);
 
         $response2->assertOk();
@@ -454,7 +454,7 @@ class SyncControllerTest extends TestCase
             ],
         ];
 
-        $response = $this->actingAs($this->user, 'sanctum')
+        $response = $this->actingAs($this->user, 'web')
             ->postJson('/api/sync/merge', ['data' => $data], ['X-Async-Merge' => 'true']);
 
         $response->assertOk();
@@ -480,7 +480,7 @@ class SyncControllerTest extends TestCase
             'data' => ['account' => []],
         ]);
 
-        $response = $this->actingAs($this->user, 'sanctum')
+        $response = $this->actingAs($this->user, 'web')
             ->get("/api/sync/merge-status/{$mergeJob->id}");
 
         $response->assertOk();
@@ -499,7 +499,7 @@ class SyncControllerTest extends TestCase
             'data' => ['account' => []],
         ]);
 
-        $response = $this->actingAs($this->user, 'sanctum')
+        $response = $this->actingAs($this->user, 'web')
             ->get("/api/sync/merge-status/{$mergeJob->id}");
 
         $response->assertNotFound();
