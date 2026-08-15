@@ -15,14 +15,6 @@ class SsoAuthForTests
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if (Auth::guard('sanctum')->check()) {
-            $request->merge([
-                'sso_user_id' => Auth::guard('sanctum')->id(),
-            ]);
-
-            return $next($request);
-        }
-
         if (Auth::guard('web')->check()) {
             $request->merge([
                 'sso_user_id' => Auth::guard('web')->id(),

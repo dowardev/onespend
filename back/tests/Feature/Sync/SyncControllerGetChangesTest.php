@@ -34,7 +34,7 @@ class SyncControllerGetChangesTest extends TestCase
             $params['types'] = $types;
         }
 
-        $response = $this->actingAs($this->user, 'sanctum')
+        $response = $this->actingAs($this->user, 'web')
             ->get('/api/sync/changes?'.http_build_query($params));
 
         $this->assertEquals(200, $response->getStatusCode());
@@ -104,7 +104,7 @@ class SyncControllerGetChangesTest extends TestCase
 
     public function test_invalid_cursor_returns_error(): void
     {
-        $response = $this->actingAs($this->user, 'sanctum')
+        $response = $this->actingAs($this->user, 'web')
             ->get('/api/sync/changes?last_sync=0&cursor=invalid');
 
         $this->assertEquals(400, $response->getStatusCode());

@@ -50,7 +50,7 @@ class ChaosServiceTest extends TestCase
         $this->app->instance(SyncOrchestratorService::class, $mockOrchestrator);
 
         // Attempt sync - should handle service failure gracefully
-        $response = $this->actingAs($this->user, 'sanctum')
+        $response = $this->actingAs($this->user, 'web')
             ->get('/api/sync/full');
 
         // Should not crash with unhandled exception (500)
@@ -94,7 +94,7 @@ class ChaosServiceTest extends TestCase
         $this->app->instance(SyncOrchestratorService::class, $mockOrchestrator);
 
         // Attempt merge - should handle service failure gracefully
-        $response = $this->actingAs($this->user, 'sanctum')
+        $response = $this->actingAs($this->user, 'web')
             ->postJson('/api/sync/merge', ['data' => $mergeData]);
 
         // Should not crash with unhandled exception (500)
@@ -113,7 +113,7 @@ class ChaosServiceTest extends TestCase
         ]);
 
         // Attempt sync - should work normally (logging failures should not break sync)
-        $response = $this->actingAs($this->user, 'sanctum')
+        $response = $this->actingAs($this->user, 'web')
             ->get('/api/sync/full');
 
         // Should not crash with unhandled exception

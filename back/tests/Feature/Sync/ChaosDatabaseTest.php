@@ -40,7 +40,7 @@ class ChaosDatabaseTest extends TestCase
         $this->mockDatabaseConnectionFailure();
 
         // Attempt sync - should handle exceptions gracefully (not crash with 500)
-        $response = $this->actingAs($this->user, 'sanctum')
+        $response = $this->actingAs($this->user, 'web')
             ->get('/api/sync/full');
 
         // Should not crash with unhandled exception
@@ -67,7 +67,7 @@ class ChaosDatabaseTest extends TestCase
         $this->mockDatabaseConnectionFailure();
 
         // Attempt getChanges - should handle exceptions gracefully
-        $response = $this->actingAs($this->user, 'sanctum')
+        $response = $this->actingAs($this->user, 'web')
             ->get('/api/sync/changes?last_sync=0');
 
         // Should not crash with unhandled exception
@@ -103,7 +103,7 @@ class ChaosDatabaseTest extends TestCase
         $this->mockDatabaseConnectionFailure();
 
         // Attempt merge - should handle exceptions gracefully
-        $response = $this->actingAs($this->user, 'sanctum')
+        $response = $this->actingAs($this->user, 'web')
             ->postJson('/api/sync/merge', ['data' => $mergeData]);
 
         // Should not crash with unhandled exception

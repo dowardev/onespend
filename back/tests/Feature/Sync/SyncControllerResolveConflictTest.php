@@ -58,7 +58,7 @@ class SyncControllerResolveConflictTest extends TestCase
     {
         $this->createConflict();
 
-        $response = $this->actingAs($this->user, 'sanctum')
+        $response = $this->actingAs($this->user, 'web')
             ->postJson('/api/sync/resolve-conflict', [
                 'entity_type' => 'account',
                 'entity_id' => 'acc-conflict-1',
@@ -81,7 +81,7 @@ class SyncControllerResolveConflictTest extends TestCase
     {
         $this->createConflict();
 
-        $response = $this->actingAs($this->user, 'sanctum')
+        $response = $this->actingAs($this->user, 'web')
             ->postJson('/api/sync/resolve-conflict', [
                 'entity_type' => 'account',
                 'entity_id' => 'acc-conflict-1',
@@ -105,7 +105,7 @@ class SyncControllerResolveConflictTest extends TestCase
     {
         $this->createConflict();
 
-        $response = $this->actingAs($this->user, 'sanctum')
+        $response = $this->actingAs($this->user, 'web')
             ->postJson('/api/sync/resolve-conflict', [
                 'entity_type' => 'account',
                 'entity_id' => 'acc-conflict-1',
@@ -121,7 +121,7 @@ class SyncControllerResolveConflictTest extends TestCase
 
     public function test_returns_404_when_conflict_not_found(): void
     {
-        $response = $this->actingAs($this->user, 'sanctum')
+        $response = $this->actingAs($this->user, 'web')
             ->postJson('/api/sync/resolve-conflict', [
                 'entity_type' => 'account',
                 'entity_id' => 'nonexistent',
@@ -140,7 +140,7 @@ class SyncControllerResolveConflictTest extends TestCase
             ->byEntity('account', 'acc-conflict-1')
             ->update(['sync_status' => 'resolved']);
 
-        $response = $this->actingAs($this->user, 'sanctum')
+        $response = $this->actingAs($this->user, 'web')
             ->postJson('/api/sync/resolve-conflict', [
                 'entity_type' => 'account',
                 'entity_id' => 'acc-conflict-1',
@@ -163,7 +163,7 @@ class SyncControllerResolveConflictTest extends TestCase
             'conflict_data' => ['resolution' => 'server', 'resolved_at' => now()->toIso8601String()],
         ]);
 
-        $response = $this->actingAs($this->user, 'sanctum')
+        $response = $this->actingAs($this->user, 'web')
             ->getJson('/api/sync/active-conflicts');
 
         $response->assertStatus(200);
@@ -185,7 +185,7 @@ class SyncControllerResolveConflictTest extends TestCase
             'conflict_data' => [],
         ]);
 
-        $response = $this->actingAs($this->user, 'sanctum')
+        $response = $this->actingAs($this->user, 'web')
             ->getJson('/api/sync/active-conflicts?entity_type=account');
 
         $response->assertStatus(200);
@@ -199,7 +199,7 @@ class SyncControllerResolveConflictTest extends TestCase
     {
         $this->createConflict();
 
-        $response = $this->actingAs($this->user, 'sanctum')
+        $response = $this->actingAs($this->user, 'web')
             ->postJson('/api/sync/resolve-conflict', [
                 'entity_type' => 'account',
                 'entity_id' => 'acc-conflict-1',
@@ -220,7 +220,7 @@ class SyncControllerResolveConflictTest extends TestCase
     {
         $this->createConflict();
 
-        $this->actingAs($this->user, 'sanctum')
+        $this->actingAs($this->user, 'web')
             ->postJson('/api/sync/resolve-conflict', [
                 'entity_type' => 'account',
                 'entity_id' => 'acc-conflict-1',
@@ -243,7 +243,7 @@ class SyncControllerResolveConflictTest extends TestCase
     {
         $this->createConflict();
 
-        $this->actingAs($this->user, 'sanctum')
+        $this->actingAs($this->user, 'web')
             ->postJson('/api/sync/resolve-conflict', [
                 'entity_type' => 'account',
                 'entity_id' => 'acc-conflict-1',
@@ -263,7 +263,7 @@ class SyncControllerResolveConflictTest extends TestCase
         $account = Account::where('sync_id', 'acc-conflict-1')->first();
         $versionBefore = $account->version;
 
-        $this->actingAs($this->user, 'sanctum')
+        $this->actingAs($this->user, 'web')
             ->postJson('/api/sync/resolve-conflict', [
                 'entity_type' => 'account',
                 'entity_id' => 'acc-conflict-1',
@@ -283,7 +283,7 @@ class SyncControllerResolveConflictTest extends TestCase
     {
         $this->createConflict();
 
-        $this->actingAs($this->user, 'sanctum')
+        $this->actingAs($this->user, 'web')
             ->postJson('/api/sync/resolve-conflict', [
                 'entity_type' => 'account',
                 'entity_id' => 'acc-conflict-1',
@@ -339,7 +339,7 @@ class SyncControllerResolveConflictTest extends TestCase
             'base_data' => ['product_name' => 'Original', 'product_price' => 55.00, 'quantity' => 1],
         ]);
 
-        $response = $this->actingAs($this->user, 'sanctum')
+        $response = $this->actingAs($this->user, 'web')
             ->postJson('/api/sync/resolve-conflict', [
                 'entity_type' => 'recurring_record_product',
                 'entity_id' => 'rrp-conflict-1',
@@ -371,7 +371,7 @@ class SyncControllerResolveConflictTest extends TestCase
             'conflict_data' => [],
         ]);
 
-        $response = $this->actingAs($this->user, 'sanctum')
+        $response = $this->actingAs($this->user, 'web')
             ->postJson('/api/sync/resolve-conflict', [
                 'entity_type' => 'account',
                 'entity_id' => 'acc-orphan',
@@ -418,7 +418,7 @@ class SyncControllerResolveConflictTest extends TestCase
             'base_data' => ['amount' => 100.00, 'account_id' => $account->id],
         ]);
 
-        $response = $this->actingAs($this->user, 'sanctum')
+        $response = $this->actingAs($this->user, 'web')
             ->postJson('/api/sync/resolve-conflict', [
                 'entity_type' => 'budget_entry',
                 'entity_id' => 'be-uuid-1',
@@ -480,7 +480,7 @@ class SyncControllerResolveConflictTest extends TestCase
             ],
         ]);
 
-        $response = $this->actingAs($this->user, 'sanctum')
+        $response = $this->actingAs($this->user, 'web')
             ->postJson('/api/sync/resolve-conflict', [
                 'entity_type' => 'budget_entry',
                 'entity_id' => 'be-grp-1',
@@ -527,7 +527,7 @@ class SyncControllerResolveConflictTest extends TestCase
             ],
         ]);
 
-        $response = $this->actingAs($this->user, 'sanctum')
+        $response = $this->actingAs($this->user, 'web')
             ->postJson('/api/sync/resolve-conflict', [
                 'entity_type' => 'budget_entry',
                 'entity_id' => 'be-bad-uuid',
@@ -586,7 +586,7 @@ class SyncControllerResolveConflictTest extends TestCase
             ],
         ]);
 
-        $response = $this->actingAs($this->user, 'sanctum')
+        $response = $this->actingAs($this->user, 'web')
             ->postJson('/api/sync/resolve-conflict', [
                 'entity_type' => 'budget_provider_product',
                 'entity_id' => 'bpp-uuid-1',
@@ -644,7 +644,7 @@ class SyncControllerResolveConflictTest extends TestCase
             'base_data' => ['amount' => 50.00],
         ]);
 
-        $response = $this->actingAs($this->user, 'sanctum')
+        $response = $this->actingAs($this->user, 'web')
             ->postJson('/api/sync/resolve-conflict', [
                 'entity_type' => 'budget_entry',
                 'entity_id' => 'be-entity-1',
@@ -708,7 +708,7 @@ class SyncControllerResolveConflictTest extends TestCase
             ],
         ]);
 
-        $response = $this->actingAs($this->user, 'sanctum')
+        $response = $this->actingAs($this->user, 'web')
             ->postJson('/api/sync/resolve-conflict', [
                 'entity_type' => 'budget_entry',
                 'entity_id' => 'be-grp-keep',
@@ -783,7 +783,7 @@ class SyncControllerResolveConflictTest extends TestCase
             ],
         ]);
 
-        $response = $this->actingAs($this->user, 'sanctum')
+        $response = $this->actingAs($this->user, 'web')
             ->postJson('/api/sync/resolve-conflict', [
                 'entity_type' => 'budget_entry',
                 'entity_id' => 'be-grp-upd',
@@ -848,7 +848,7 @@ class SyncControllerResolveConflictTest extends TestCase
             ],
         ]);
 
-        $response = $this->actingAs($this->user, 'sanctum')
+        $response = $this->actingAs($this->user, 'web')
             ->postJson('/api/sync/resolve-conflict', [
                 'entity_type' => 'recurring_record',
                 'entity_id' => 'rr-uuid-1',

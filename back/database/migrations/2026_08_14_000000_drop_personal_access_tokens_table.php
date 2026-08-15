@@ -11,9 +11,18 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /**
-     * Run the migrations.
+     * Drop the personal access tokens table, no longer needed since
+     * authentication is handled entirely by the external SSO server.
      */
     public function up(): void
+    {
+        Schema::dropIfExists('personal_access_tokens');
+    }
+
+    /**
+     * Reverse the migration by recreating the original table structure.
+     */
+    public function down(): void
     {
         Schema::create('personal_access_tokens', function (Blueprint $table) {
             $table->id();
@@ -25,13 +34,5 @@ return new class extends Migration
             $table->timestamp('expires_at')->nullable()->index();
             $table->timestamps();
         });
-    }
-
-    /**
-     * Reverse the migrations.
-     */
-    public function down(): void
-    {
-        Schema::dropIfExists('personal_access_tokens');
     }
 };

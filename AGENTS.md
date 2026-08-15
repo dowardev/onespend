@@ -71,7 +71,7 @@ php artisan serve
 - **Laravel 12** con PHP 8.2+
 - **Autenticación:** SSO externo ([tu-org/sso-server](https://gitlab.com/dowardev/sso)) con JWT
   - Middleware: `sso.auth`, `sso.user`
-  - *(Migración desde Sanctum+Breeze planificada — próximo ticket)*
+  - *(Legacy Sanctum+Breeze removido — LBDS-119)*
 - **Dominio:** Control de gastos/presupuestos (budget/expense tracking)
 - `app/Models/` — Account, BudgetEntry, BudgetEntryGroup, BudgetProvider, BudgetProviderProduct, Income, Supplier, SupplierProduct, SyncMetadata, Template, Attachment
 - `app/Http/Controllers/` — Auth (SSO), AttachmentController, SyncController
