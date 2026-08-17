@@ -1,4 +1,4 @@
-package com.dowardev.abogaz;
+package com.dowardev.onespend;
 
 import com.getcapacitor.BridgeActivity;
 

@@ -83,7 +83,7 @@ php artisan serve
 - **Ionic 8** + **Vue 3** con Composition API
 - **Multi-plataforma:**
   - Web (Vite 5)
-  - Android (Capacitor 8, app ID: com.dowardev.abogaz)
+  - Android (Capacitor 8, app ID: com.dowardev.onespend)
   - Desktop (Electron 33 con cross-platform builds: Linux, Windows, Mac, RPM)
 - **Pinia** para estado
 - **Chart.js** + vue-chartjs para gráficos

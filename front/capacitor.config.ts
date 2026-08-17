@@ -4,14 +4,15 @@
 
 import type { CapacitorConfig } from '@capacitor/cli';
 
+const liveReloadUrl = process.env.CAPACITOR_LIVE_RELOAD_URL;
+
 const config: CapacitorConfig = {
-  appId: 'com.dowardev.abogaz',
+  appId: 'com.dowardev.onespend',
   appName: 'OneSpend',
   webDir: 'dist',
-  server: {
-    url: 'http://10.58.84.29:8100',
-    cleartext: true
-  }
+  ...(liveReloadUrl
+    ? { server: { url: liveReloadUrl, cleartext: true } }
+    : {})
 };
 
 export default config;
