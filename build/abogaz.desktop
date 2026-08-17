@@ -1,9 +1,0 @@
-[Desktop Entry]
-Name=AbOgaz
-Exec=/opt/AbOgaz/abogaz
-TryExec=/opt/AbOgaz/abogaz
-Terminal=false
-StartupNotify=false
-Type=Application
-Categories=Utility;
-Icon=abogaz

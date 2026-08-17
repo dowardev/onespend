@@ -1,9 +1,0 @@
-[Desktop Entry]
-Name=OneSpend
-Exec=/opt/OneSpend/onespend
-TryExec=/opt/OneSpend/onespend
-Terminal=false
-StartupNotify=false
-Type=Application
-Categories=Utility;
-Icon=abogaz

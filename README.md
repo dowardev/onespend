@@ -84,6 +84,11 @@ pnpm run electron:dev     # Desktop (Electron)
 pnpm run electron:build   # Electron production build
 ```
 
+### Android
+
+See [front/ANDROID.md](front/ANDROID.md) for device installs and production
+builds (APK/AAB) from the terminal — no Android Studio required.
+
 ## Deployment
 
 See [deploy.md](deploy.md) for shared hosting deployment instructions.

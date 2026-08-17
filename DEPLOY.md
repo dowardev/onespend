@@ -163,6 +163,12 @@ Upload `front/dist/` to the hosting public directory:
 
 - `/home/[user]/public_html/`
 
+### Mobile (Android)
+
+Android APK/AAB builds are documented in [front/ANDROID.md](front/ANDROID.md).
+They are produced from the terminal with Gradle and Capacitor — no Android
+Studio required.
+
 ---
 
 ## 5. Apache Configuration

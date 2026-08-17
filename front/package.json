@@ -102,9 +102,9 @@
   "description": "An Ionic project",
   "main": "electron/main.mjs",
   "build": {
-    "appId": "com.dowardev.abogaz",
+    "appId": "com.dowardev.onespend",
     "productName": "OneSpend",
-    "executableName": "abogaz",
+    "executableName": "onespend",
     "artifactName": "${name}-${version}-${arch}.${ext}",
     "directories": {
       "output": "release",
