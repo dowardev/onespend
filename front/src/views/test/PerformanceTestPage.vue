@@ -8,6 +8,9 @@ SPDX-License-Identifier: AGPL-3.0-only
   <ion-page>
     <ion-header>
       <ion-toolbar>
+        <ion-buttons slot="start">
+          <ion-menu-button :mode="designMode"></ion-menu-button>
+        </ion-buttons>
         <ion-title>Performance Test Suite</ion-title>
       </ion-toolbar>
     </ion-header>
@@ -115,13 +118,15 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import {
   IonPage,
   IonHeader,
   IonToolbar,
   IonTitle,
   IonContent,
+  IonButtons,
+  IonMenuButton,
   IonCard,
   IonCardHeader,
   IonCardTitle,
@@ -134,6 +139,9 @@ import {
 } from '@ionic/vue';
 import { usePerformanceMonitoring } from '@/utils/performanceMonitor';
 import { registerCleanup, removeTemporaryElements, useDOMCleanup } from '@/utils/domCleanup';
+import systemController from '@/controllers/systemConfigController';
+
+const designMode = computed(() => systemController.getDesignMode());
 
 const {
   startTimer,

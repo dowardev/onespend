@@ -23,53 +23,69 @@ SPDX-License-Identifier: AGPL-3.0-only
     </ion-header>
 
     <ion-content>
-      <ion-card class="shadow1 main-card-content">
-        <ion-list style="height: 100%" class="ion-margin-top transparent">
-          <ion-list-header>
-            <ion-label>Lista de proveedores</ion-label>
-          </ion-list-header>
+      <ion-grid class="suppliers__grid">
+        <ion-row class="ion-justify-content-center">
+          <ion-col size-xs="12" size-md="10" size-lg="8" size-xl="6" class="suppliers__col">
+            <ion-list class="transparent">
+              <ion-list-header>
+                <ion-label>Lista de proveedores</ion-label>
 
-          <!-- search providers -->
-          <ion-searchbar
-            v-model="searchTerm"
-            mode="ios"
-            placeholder="Buscar proveedores"
-            show-clear-button="focus"
-          ></ion-searchbar>
+                <ion-button v-if="!showSearch" @click="showSearch = true">
+                  <ion-icon :icon="searchOutline"></ion-icon>
+                </ion-button>
+              </ion-list-header>
 
-          <div class="list-content suppliers__content">
-            <template v-for="group in groupedSuppliers" :key="group.letter">
-              <ion-item-group>
-                <ion-item-divider sticky>
-                  <ion-label>{{ group.letter }}</ion-label>
-                </ion-item-divider>
+              <!-- search providers -->
+              <div class="search-row" :class="{ 'search-row--open': showSearch }">
+                <div class="search-row__inner">
+                  <ion-item lines="none">
+                    <ion-searchbar
+                      v-model="searchTerm"
+                      mode="ios"
+                      placeholder="Buscar proveedores"
+                      show-clear-button="focus"
+                    ></ion-searchbar>
 
-                <ion-item
-                  v-for="s in group.items"
-                  :key="s.id"
-                  button
-                  class="transparent"
-                  @click="edit({ supplier: s })"
-                >
-                  <ion-label>
-                    <h3>{{ s.name }}</h3>
-                  </ion-label>
+                    <ion-button fill="clear" @click="showSearch = false">Cancelar</ion-button>
+                  </ion-item>
+                </div>
+              </div>
 
-                  <ion-buttons slot="end" class="supplier-actions">
-                    <ion-button
-                      color="danger"
-                      fill="clear"
-                      @click.stop="confirmRemoveSupplier({ id: s.id, name: s.name })"
+              <div class="list-content suppliers__content">
+                <template v-for="group in groupedSuppliers" :key="group.letter">
+                  <ion-item-group>
+                    <ion-item-divider sticky>
+                      <ion-label>{{ group.letter }}</ion-label>
+                    </ion-item-divider>
+
+                    <ion-item
+                      v-for="s in group.items"
+                      :key="s.id"
+                      button
+                      class="transparent"
+                      @click="edit({ supplier: s })"
                     >
-                      <ion-icon :icon="trashOutline" color="danger"></ion-icon>
-                    </ion-button>
-                  </ion-buttons>
-                </ion-item>
-              </ion-item-group>
-            </template>
-          </div>
-        </ion-list>
-      </ion-card>
+                      <ion-label>
+                        <h3>{{ s.name }}</h3>
+                      </ion-label>
+
+                      <ion-buttons slot="end" class="supplier-actions">
+                        <ion-button
+                          color="danger"
+                          fill="clear"
+                          @click.stop="confirmRemoveSupplier({ id: s.id, name: s.name })"
+                        >
+                          <ion-icon :icon="trashOutline" color="danger"></ion-icon>
+                        </ion-button>
+                      </ion-buttons>
+                    </ion-item>
+                  </ion-item-group>
+                </template>
+              </div>
+            </ion-list>
+          </ion-col>
+        </ion-row>
+      </ion-grid>
 
       <!-- modals -->
       <ion-modal
@@ -118,11 +134,10 @@ import {
   IonAlert,
   IonButtons,
   IonIcon,
-  IonCard,
   IonMenuButton,
   IonSearchbar,
 } from '@ionic/vue';
-import { addOutline, trashOutline } from 'ionicons/icons';
+import { addOutline, searchOutline, trashOutline } from 'ionicons/icons';
 // End Imports
 
 // Components
@@ -145,6 +160,7 @@ import type { Supplier } from '@/controllers/suppliersController';
 const showModal = ref(false);
 const modalSupplier = ref<Supplier | null>(null);
 const searchTerm = ref('');
+const showSearch = ref(false);
 const deleteConfirmSupplier = reactive({
   open: false,
   supplierId: null as string | number | null,
@@ -302,9 +318,55 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+/* cadena de altura: grid/row/col ocupan todo el alto del content */
+.suppliers__grid {
+  height: 100%;
+}
+
+.suppliers__grid .ion-row,
+.suppliers__grid ion-row {
+  height: 100%;
+}
+
+.suppliers__col {
+  height: 100%;
+}
+
+/* el list ocupa todo el alto disponible del content */
+ion-list.transparent {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* scroll interno: el div se adapta al espacio restante (searchbar abierto/cerrado) */
+/* y activa su scroll solo cuando el contenido choca con el borde */
 .suppliers__content {
-  height: calc(100% - 117px);
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
+}
+
+/* searchbar show/hide animation */
+.search-row {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 300ms ease;
+}
+
+.search-row--open {
+  grid-template-rows: 1fr;
+}
+
+.search-row__inner {
+  min-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+
+.search-row--open .search-row__inner {
+  opacity: 1;
 }
 
 .supplier-actions {
@@ -335,20 +397,6 @@ ion-item:focus-within .supplier-actions {
     opacity: 1;
     pointer-events: auto;
   }
-}
-
-/* Large phones / small tablets (portrait) */
-@media (min-width: 426px) and (max-width: 768px) {
-  /* .suppliers__modal { */
-  /*   --height: 60dvh; */
-  /* } */
-}
-
-/* Tablets / small desktop */
-@media (min-width: 769px) and (max-width: 1024px) {
-  /* .suppliers__modal { */
-  /*   --height: 60dvh; */
-  /* } */
 }
 
 /* Desktop */

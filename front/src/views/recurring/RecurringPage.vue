@@ -29,62 +29,87 @@ SPDX-License-Identifier: AGPL-3.0-only
 
     <!-- content -->
     <ion-content>
-      <ion-card class="shadow1 main-card-content">
-        <ion-list class="transparent">
-          <ion-list-header>
-            <ion-label>Cargos Recurrentes</ion-label>
-          </ion-list-header>
+      <ion-grid class="recurring__grid">
+        <ion-row class="ion-justify-content-center">
+          <ion-col size-xs="12" size-md="10" size-lg="8" size-xl="6" class="recurring__col">
+            <ion-list class="transparent">
+              <ion-list-header>
+                <ion-label>Cargos Recurrentes</ion-label>
 
-          <ion-searchbar
-            v-model="searchTerm"
-            mode="ios"
-            placeholder="Buscar"
-            show-clear-button="focus"
-          />
+                <ion-button v-if="!showSearch" @click="showSearch = true">
+                  <ion-icon :icon="searchOutline"></ion-icon>
+                </ion-button>
+              </ion-list-header>
 
-          <template v-for="group in groupedRecords" :key="group.letter">
-            <ion-item-group>
-              <ion-item-divider sticky>
-                <ion-label>{{ group.letter }}</ion-label>
-              </ion-item-divider>
+              <!-- search recurring -->
+              <div class="search-row" :class="{ 'search-row--open': showSearch }">
+                <div class="search-row__inner">
+                  <ion-item lines="none">
+                    <ion-searchbar
+                      v-model="searchTerm"
+                      mode="ios"
+                      placeholder="Buscar"
+                      show-clear-button="focus"
+                    ></ion-searchbar>
 
-              <ion-item
-                v-for="record in group.items"
-                :key="record.id"
-                button
-                class="transparent"
-                @click="editRecord({ record })"
-              >
-                <ion-label>
-                  <h3>{{ record.name }}</h3>
-                  <p>{{ frequencyDescription({ record }) }}</p>
-                </ion-label>
+                    <ion-button fill="clear" @click="showSearch = false">Cancelar</ion-button>
+                  </ion-item>
+                </div>
+              </div>
 
-                <ion-badge
-                  slot="end"
-                  :color="record.status === 'active' ? 'success' : 'warning'"
-                  style="margin-right: 8px;"
-                >
-                  {{ record.status === 'active' ? 'Activo' : 'Pausado' }}
-                </ion-badge>
+              <div class="list-content recurring__content">
+                <template v-for="group in groupedRecords" :key="group.letter">
+                  <ion-item-group>
+                    <ion-item-divider sticky>
+                      <ion-label>{{ group.letter }}</ion-label>
+                    </ion-item-divider>
 
-                <ion-buttons slot="end" class="record-actions">
-                  <ion-button fill="clear" @click.stop="toggleRecord({ record })">
-                    <ion-icon :icon="record.status === 'active' ? pauseOutline : playOutline" />
-                  </ion-button>
-                  <ion-button fill="clear" color="danger" @click.stop="confirmRemove({ record })">
-                    <ion-icon :icon="trashOutline" color="danger" />
-                  </ion-button>
-                </ion-buttons>
-              </ion-item>
-            </ion-item-group>
-          </template>
+                    <ion-item
+                      v-for="record in group.items"
+                      :key="record.id"
+                      button
+                      class="transparent"
+                      @click="editRecord({ record })"
+                    >
+                      <ion-label>
+                        <h3>{{ record.name }}</h3>
+                        <p>{{ frequencyDescription({ record }) }}</p>
+                      </ion-label>
 
-          <ion-item v-if="filteredRecords.length === 0" class="transparent">
-            <ion-label class="ion-text-center">No hay cargos recurrentes</ion-label>
-          </ion-item>
-        </ion-list>
-      </ion-card>
+                      <ion-buttons slot="end" class="record-actions">
+                        <ion-button fill="clear" @click.stop="toggleRecord({ record })">
+                          <ion-icon
+                            :icon="record.status === 'active' ? pauseOutline : playOutline"
+                          />
+                        </ion-button>
+                        <ion-button
+                          fill="clear"
+                          color="danger"
+                          @click.stop="confirmRemove({ record })"
+                        >
+                          <ion-icon :icon="trashOutline" color="danger" />
+                        </ion-button>
+                      </ion-buttons>
+
+                      <ion-badge
+                        slot="end"
+                        :color="record.status === 'active' ? 'success' : 'warning'"
+                        style="margin-right: 8px"
+                      >
+                        {{ record.status === 'active' ? 'Activo' : 'Pausado' }}
+                      </ion-badge>
+                    </ion-item>
+                  </ion-item-group>
+                </template>
+
+                <ion-item v-if="filteredRecords.length === 0" class="transparent">
+                  <ion-label class="ion-text-center">No hay cargos recurrentes</ion-label>
+                </ion-item>
+              </div>
+            </ion-list>
+          </ion-col>
+        </ion-row>
+      </ion-grid>
     </ion-content>
     <!-- end content -->
 
@@ -120,18 +145,27 @@ import {
   IonAlert,
   IonButtons,
   IonIcon,
-  IonCard,
   IonMenuButton,
   IonSearchbar,
   IonBadge,
   toastController,
 } from '@ionic/vue';
-import { addOutline, trashOutline, pauseOutline, playOutline, flaskOutline } from 'ionicons/icons';
+import {
+  addOutline,
+  trashOutline,
+  pauseOutline,
+  playOutline,
+  flaskOutline,
+  searchOutline,
+} from 'ionicons/icons';
 // End Imports
 
 // Controllers
 import systemController from '@/controllers/systemConfigController';
-import { recurringRecordsController, type RecurringRecord } from '@/controllers/recurringRecordsController';
+import {
+  recurringRecordsController,
+  type RecurringRecord,
+} from '@/controllers/recurringRecordsController';
 import accountsController from '@/controllers/accountsController';
 import { syncQueue } from '@/services/syncQueue';
 // End Controllers
@@ -150,6 +184,7 @@ const router = useRouter();
 
 // Vars and const
 const searchTerm = ref('');
+const showSearch = ref(false);
 const records = ref<RecurringRecord[]>([]);
 const deleteConfirm = reactive({
   open: false,
@@ -161,8 +196,31 @@ const isDev = import.meta.env.DEV;
 
 const weekDayShort = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
 const weekDayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-const ordinalNames = ['', 'Primer', 'Segundo', 'Tercer', 'Cuarto', 'Quinto', 'Sexto', 'Séptimo', 'Octavo'];
+const monthNames = [
+  'Enero',
+  'Febrero',
+  'Marzo',
+  'Abril',
+  'Mayo',
+  'Junio',
+  'Julio',
+  'Agosto',
+  'Septiembre',
+  'Octubre',
+  'Noviembre',
+  'Diciembre',
+];
+const ordinalNames = [
+  '',
+  'Primer',
+  'Segundo',
+  'Tercer',
+  'Cuarto',
+  'Quinto',
+  'Sexto',
+  'Séptimo',
+  'Octavo',
+];
 const syncRecurringRecord = syncQueue.syncRecurringRecord;
 // End Vars and const
 
@@ -250,7 +308,7 @@ function frequencyDescription(params: { record: RecurringRecord }) {
     case 'month':
       if (record.repeatMonthWeekdayMode) {
         const ordinalIdx = record.repeatMonthWeekdayOrdinal ?? 1;
-        const ordinal = ordinalIdx === -1 ? 'Último' : (ordinalNames[ordinalIdx] || 'Primer');
+        const ordinal = ordinalIdx === -1 ? 'Último' : ordinalNames[ordinalIdx] || 'Primer';
         const weekday = weekDayNames[record.repeatMonthWeekday ?? 0] || '';
         return `Cada mes - ${ordinal} ${weekday}`;
       }
@@ -289,7 +347,9 @@ async function toggleRecord(params: { record: RecurringRecord }) {
   const { record } = params;
   if (record.id == null) return;
   await recurringRecordsController.toggleActive({ id: record.id });
-  await syncRecurringRecord({ record: { ...record, status: record.status === 'active' ? 'paused' : 'active' as const } });
+  await syncRecurringRecord({
+    record: { ...record, status: record.status === 'active' ? 'paused' : ('active' as const) },
+  });
   await loadRecords();
 }
 
@@ -323,48 +383,87 @@ async function removeConfirmed() {
 async function seedTestData() {
   const today = format(new Date(), 'yyyy-MM-dd');
   const accounts = accountsController.getAccounts();
-  const accountId = accounts.length > 0 ? accounts[0].id ?? null : null;
+  const accountId = accounts.length > 0 ? (accounts[0].id ?? null) : null;
 
   const seeds: Array<Omit<RecurringRecord, 'id' | 'sync_id' | 'createdAt'>> = [
     {
-      type: 'cargo', entryType: 'egreso', name: 'Alquiler', amount: 15000,
-      accountId, repeatFrequency: 'month', repeatInterval: 1,
-      repeatMonthDay: 1, time: '09:00', autoInsert: true,
+      type: 'cargo',
+      entryType: 'egreso',
+      name: 'Alquiler',
+      amount: 15000,
+      accountId,
+      repeatFrequency: 'month',
+      repeatInterval: 1,
+      repeatMonthDay: 1,
+      time: '09:00',
+      autoInsert: true,
       startDate: today,
       status: 'active',
     },
     {
-      type: 'cargo', entryType: 'egreso', name: 'Netflix', amount: 250,
-      accountId, repeatFrequency: 'month', repeatInterval: 1,
-      repeatMonthDay: 15, time: '10:00', autoInsert: true,
+      type: 'cargo',
+      entryType: 'egreso',
+      name: 'Netflix',
+      amount: 250,
+      accountId,
+      repeatFrequency: 'month',
+      repeatInterval: 1,
+      repeatMonthDay: 15,
+      time: '10:00',
+      autoInsert: true,
       startDate: today,
       status: 'active',
     },
     {
-      type: 'cargo', entryType: 'ingreso', name: 'Salario', amount: 50000,
-      accountId, repeatFrequency: 'month', repeatInterval: 1,
-      repeatMonthDay: 28, time: '08:00', autoInsert: true,
+      type: 'cargo',
+      entryType: 'ingreso',
+      name: 'Salario',
+      amount: 50000,
+      accountId,
+      repeatFrequency: 'month',
+      repeatInterval: 1,
+      repeatMonthDay: 28,
+      time: '08:00',
+      autoInsert: true,
       startDate: today,
       status: 'active',
     },
     {
-      type: 'cargo', entryType: 'egreso', name: 'Limpieza', amount: 500,
-      accountId, repeatFrequency: 'week', repeatInterval: 1,
-      repeatDays: [1], autoInsert: false,
+      type: 'cargo',
+      entryType: 'egreso',
+      name: 'Limpieza',
+      amount: 500,
+      accountId,
+      repeatFrequency: 'week',
+      repeatInterval: 1,
+      repeatDays: [1],
+      autoInsert: false,
       startDate: today,
       status: 'active',
     },
     {
-      type: 'cargo', entryType: 'egreso', name: 'Seguro auto', amount: 8000,
-      accountId, repeatFrequency: 'year', repeatInterval: 1,
-      repeatYearMonth: 1, repeatYearDay: 1, autoInsert: false,
+      type: 'cargo',
+      entryType: 'egreso',
+      name: 'Seguro auto',
+      amount: 8000,
+      accountId,
+      repeatFrequency: 'year',
+      repeatInterval: 1,
+      repeatYearMonth: 1,
+      repeatYearDay: 1,
+      autoInsert: false,
       startDate: today,
       status: 'active',
     },
     {
-      type: 'provedor', entryType: 'egreso', name: 'Supermercado',
-      accountId, repeatFrequency: 'week', repeatInterval: 1,
-      repeatDays: [2, 5], autoInsert: false,
+      type: 'provedor',
+      entryType: 'egreso',
+      name: 'Supermercado',
+      accountId,
+      repeatFrequency: 'week',
+      repeatInterval: 1,
+      repeatDays: [2, 5],
+      autoInsert: false,
       items: [{ amount: 2000, accountId }],
       products: [
         { productName: 'Leche', productPrice: 60, quantity: 2 },
@@ -374,17 +473,32 @@ async function seedTestData() {
       status: 'active',
     },
     {
-      type: 'cargo', entryType: 'egreso', name: 'Gimnasio', amount: 1200,
-      accountId, repeatFrequency: 'month', repeatInterval: 1,
-      repeatMonthDay: 30, time: '07:00', autoInsert: true,
+      type: 'cargo',
+      entryType: 'egreso',
+      name: 'Gimnasio',
+      amount: 1200,
+      accountId,
+      repeatFrequency: 'month',
+      repeatInterval: 1,
+      repeatMonthDay: 30,
+      time: '07:00',
+      autoInsert: true,
       startDate: today,
       status: 'active',
     },
     {
-      type: 'cargo', entryType: 'egreso', name: 'Internet', amount: 900,
-      accountId, repeatFrequency: 'month', repeatInterval: 1,
-      repeatMonthWeekdayMode: true, repeatMonthWeekday: 4,
-      repeatMonthWeekdayOrdinal: 2, time: '11:00', autoInsert: true,
+      type: 'cargo',
+      entryType: 'egreso',
+      name: 'Internet',
+      amount: 900,
+      accountId,
+      repeatFrequency: 'month',
+      repeatInterval: 1,
+      repeatMonthWeekdayMode: true,
+      repeatMonthWeekday: 4,
+      repeatMonthWeekdayOrdinal: 2,
+      time: '11:00',
+      autoInsert: true,
       startDate: today,
       status: 'active',
     },
@@ -417,6 +531,56 @@ async function loadRecords() {
 </script>
 
 <style scoped>
+/* cadena de altura: grid/row/col ocupan todo el alto del content */
+.recurring__grid {
+  height: 100%;
+}
+
+.recurring__grid ion-row {
+  height: 100%;
+}
+
+.recurring__col {
+  height: 100%;
+}
+
+/* el list ocupa todo el alto disponible del content */
+ion-list.transparent {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* scroll interno: el div se adapta al espacio restante (searchbar abierto/cerrado) */
+/* y activa su scroll solo cuando el contenido choca con el borde */
+.recurring__content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* searchbar show/hide animation */
+.search-row {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 300ms ease;
+}
+
+.search-row--open {
+  grid-template-rows: 1fr;
+}
+
+.search-row__inner {
+  min-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+
+.search-row--open .search-row__inner {
+  opacity: 1;
+}
+
 .record-actions {
   opacity: 0;
   pointer-events: none;

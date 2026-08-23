@@ -8,6 +8,9 @@ SPDX-License-Identifier: AGPL-3.0-only
   <ion-page>
     <ion-header class="ion-no-border" mode="ios">
       <ion-toolbar>
+        <ion-buttons slot="start">
+          <ion-menu-button :mode="designMode"></ion-menu-button>
+        </ion-buttons>
         <ion-title>Mis Finanzas</ion-title>
         <ion-buttons slot="end">
           <ion-button :disabled="isExporting" aria-label="Exportar a Excel" @click="exportToExcel">
@@ -78,21 +81,25 @@ import {
   IonSegment,
   IonSegmentButton,
   IonButtons,
+  IonMenuButton,
   IonButton,
   IonIcon,
   IonModal,
   IonLoading,
   IonPopover,
 } from '@ionic/vue';
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { downloadOutline, settingsOutline, helpCircleOutline } from 'ionicons/icons';
 import { StatisticsController } from '@/controllers/statisticsController';
+import systemController from '@/controllers/systemConfigController';
 import type { IncomeStatementResult } from '@/composables/useIncomeStatement';
 
 import PerformanceComponent from '@/views/statistics/performance/components/PerformanceComponent.vue';
 import PersonalFinanceConfigModal from '@/views/statistics/performance/components/PersonalFinanceConfigModal.vue';
 
 const statisticsController = new StatisticsController();
+
+const designMode = computed(() => systemController.getDesignMode());
 
 const mainSegment = ref('day' as 'day' | 'week' | 'month' | 'year');
 const isConfigModalOpen = ref(false);

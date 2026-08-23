@@ -9,7 +9,7 @@ SPDX-License-Identifier: AGPL-3.0-only
   :is-open="popoverState.open"
   :event="popoverState.event"
   keep-contents-mounted
-  style="--width: 350px"
+  style="--width: 350px; --max-width: calc(100vw - 32px)"
   @did-dismiss="$emit('didDismiss')"
 >
     <ion-content class="ion-padding">

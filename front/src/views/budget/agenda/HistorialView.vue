@@ -9,7 +9,7 @@ SPDX-License-Identifier: AGPL-3.0-only
     <ion-header class="ion-no-border" mode="ios">
       <ion-toolbar>
         <ion-buttons slot="start">
-          <ion-back-button default-href="/budget"></ion-back-button>
+          <ion-menu-button :mode="designMode"></ion-menu-button>
         </ion-buttons>
         <ion-title>Historial</ion-title>
       </ion-toolbar>
@@ -37,7 +37,8 @@ SPDX-License-Identifier: AGPL-3.0-only
                           v-if="block.dateKey === todayDate"
                           color="tertiary"
                           class="today-badge"
-                        >Hoy</ion-badge>
+                          >Hoy</ion-badge
+                        >
                       </ion-label>
 
                       <ion-label
@@ -82,11 +83,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                           </p>
                         </ion-label>
 
-                        <ion-label
-                          slot="end"
-                          class="ion-text-end"
-                          :style="{ color: item.color }"
-                        >
+                        <ion-label slot="end" class="ion-text-end" :style="{ color: item.color }">
                           {{ formatCurrency({ value: item.amount }) }}
                           <p v-if="item.accountName">
                             {{ item.accountName }} |
@@ -103,14 +100,10 @@ SPDX-License-Identifier: AGPL-3.0-only
                   <section class="ion-padding ion-text-center">
                     <ion-icon :icon="calendarOutline" color="medium" size="large"></ion-icon>
                     <p>
-                      <ion-label color="medium">
-                        No hay registros en el historial
-                      </ion-label>
+                      <ion-label color="medium"> No hay registros en el historial </ion-label>
                     </p>
                     <p>
-                      <ion-label color="medium">
-                        Agrega un registro desde Presupuesto
-                      </ion-label>
+                      <ion-label color="medium"> Agrega un registro desde Presupuesto </ion-label>
                     </p>
                     <ion-button fill="outline" @click="router.push('/budget')">
                       Ir a Presupuesto
@@ -133,7 +126,7 @@ import {
   IonHeader,
   IonToolbar,
   IonButtons,
-  IonBackButton,
+  IonMenuButton,
   IonTitle,
   IonContent,
   IonGrid,
@@ -153,6 +146,7 @@ import { es } from 'date-fns/locale';
 
 // 2. Controllers / Composables
 import accountsController from '@/controllers/accountsController';
+import systemController from '@/controllers/systemConfigController';
 import { dataMediator } from '@/services/dataMediator';
 import { mapEntryRow, type Income } from '@/stores/budgetEntriesStore';
 import { formatCurrency, calcProviderProductsTotal } from '@/utils/currency';
@@ -197,6 +191,8 @@ interface DayBlock {
 // 7. Watch
 
 // 8. Computed
+const designMode = computed(() => systemController.getDesignMode());
+
 const accountsList = computed(() => {
   const list = accountsController.getAccounts();
   if (!list || !Array.isArray(list)) return [];
@@ -261,11 +257,12 @@ const dayBlocks = computed<DayBlock[]>(() => {
     const sorted = [...accItems].sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
     let balance = Number(account.initialBalance) || 0;
     for (const item of sorted) {
-      const effect = item.type === 'provider'
-        ? -item.amount
-        : item.entryType === 'ingreso'
-          ? item.amount
-          : -item.amount;
+      const effect =
+        item.type === 'provider'
+          ? -item.amount
+          : item.entryType === 'ingreso'
+            ? item.amount
+            : -item.amount;
       balance += effect;
       runningBalanceByItemId.set(item.id, balance);
     }
@@ -274,9 +271,10 @@ const dayBlocks = computed<DayBlock[]>(() => {
   // Precompute colors
   const colorByItemId = new Map<string | number, string>();
   for (const item of allItems) {
-    const color = item.type === 'provider' || item.entryType === 'egreso'
-      ? 'var(--ion-color-danger)'
-      : 'var(--ion-color-success)';
+    const color =
+      item.type === 'provider' || item.entryType === 'egreso'
+        ? 'var(--ion-color-danger)'
+        : 'var(--ion-color-success)';
     colorByItemId.set(item.id, color);
   }
 
@@ -304,7 +302,9 @@ const dayBlocks = computed<DayBlock[]>(() => {
       if (!isNaN(d.getTime())) {
         label = format(d, 'EEE, d MMM yyyy', { locale: es });
       }
-    } catch (e) { console.warn('failed to parse date', dateKey, e); }
+    } catch (e) {
+      console.warn('failed to parse date', dateKey, e);
+    }
 
     const itemsWithBalance: AgendaItemDisplay[] = items.map((item) => ({
       ...item,

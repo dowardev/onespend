@@ -7,7 +7,45 @@ SPDX-License-Identifier: AGPL-3.0-only
 <template>
   <ion-grid>
     <ion-row>
-      <ion-col size="6">
+      <!-- Summary column (mobile: first, desktop: second) -->
+      <ion-col size="12" size-lg="6" class="summary-col">
+        <!-- Date navigation -->
+        <ion-item lines="none" class="transparent">
+          <ion-buttons slot="end">
+            <ion-button title="Retroceder" @click="goBack">
+              <ion-icon :icon="chevronBackOutline"></ion-icon>
+            </ion-button>
+
+            <ion-button
+              title="Seleccionar fecha"
+              @click="openDatePicker({ event: $event })"
+            >
+              {{ formattedSelectedDate }}
+            </ion-button>
+
+            <ion-button title="Avanzar" @click="goForward">
+              <ion-icon :icon="chevronForwardOutline"></ion-icon>
+            </ion-button>
+          </ion-buttons>
+        </ion-item>
+
+        <!-- Accounts (mobile: accordion with summary inside; desktop: list + summary card) -->
+        <div class="accounts-block">
+          <AccountCards
+            :accounts="accountsWithBalance"
+            :accordion="isMobile"
+            :summary="{
+              label: totalDifferenceLabel,
+              color: totalDifferenceColor,
+              ingresos: totalIngresos,
+              egresos: totalEgresos,
+            }"
+          />
+        </div>
+      </ion-col>
+
+      <!-- Registro column (mobile: last, desktop: first) -->
+      <ion-col size="12" size-lg="6" class="registro-col">
         <ion-list class="transparent">
           <ion-list-header>
             <ion-label>Registro</ion-label>
@@ -57,9 +95,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
                       <p v-if="block.item.type === 'entry'">
                         {{ getUnifiedEntryInfo(block.item).name }}:
-                        {{
-                          formatCurrency({ value: getUnifiedAccountRemaining(block.item) })
-                        }}
+                        {{ formatCurrency({ value: getUnifiedAccountRemaining(block.item) }) }}
                       </p>
                       <p v-else>Egreso</p>
                     </ion-label>
@@ -75,40 +111,6 @@ SPDX-License-Identifier: AGPL-3.0-only
             </div>
           </div>
         </ion-list>
-      </ion-col>
-
-      <ion-col size="6">
-        <AccountCards :accounts="accountsWithBalance" />
-
-        <!-- Resultado Total Card -->
-        <ion-card class="shadow1">
-          <div
-            class="ion-padding-start ion-padding-top"
-            style="display: flex; justify-content: space-between; align-items: center"
-          >
-            <div style="display: flex; align-items: center">
-              <ion-card-title :color="totalDifferenceColor">{{
-                totalDifferenceLabel
-              }}</ion-card-title>
-            </div>
-
-            <ion-button fill="clear">
-              <ion-icon :icon="informationCircleOutline"></ion-icon>
-            </ion-button>
-          </div>
-
-          <ion-card-content>
-            <p>
-              <span style="color: var(--ion-color-success)"
-                >Ingresos: {{ formatCurrency({ value: totalIngresos }) }}</span
-              >
-              <br />
-              <span style="color: var(--ion-color-danger)"
-                >Gastos: {{ formatCurrency({ value: totalEgresos }) }}</span
-              >
-            </p>
-          </ion-card-content>
-        </ion-card>
       </ion-col>
     </ion-row>
   </ion-grid>
@@ -148,21 +150,23 @@ import {
   IonButton,
   IonIcon,
   IonItem,
-  IonCard,
-  IonCardTitle,
-  IonCardContent,
   IonPopover,
   IonContent,
 } from '@ionic/vue';
 import {
   addOutline,
-  informationCircleOutline,
+  chevronBackOutline,
+  chevronForwardOutline,
   documentTextOutline,
   peopleOutline,
 } from 'ionicons/icons';
 import { computed } from 'vue';
+import { format } from 'date-fns';
+import { es as esLocale } from 'date-fns/locale';
 import { useRouter } from 'vue-router';
 import AccountCards from '../components/AccountCards.vue';
+import { useMediaQuery } from '@/composables/useMediaQuery';
+import { parseLocalDate, formatLocalDate } from '@/utils/date';
 import budgetEntriesController from '@/controllers/budgetEntriesController';
 import budgetProvidersController from '@/controllers/budgetProvidersController';
 import accountsController from '@/controllers/accountsController';
@@ -190,13 +194,30 @@ interface UnifiedItem {
 const router = useRouter();
 // end router
 
+// emits
+const emit = defineEmits<{
+  'open-date-picker': [event: Event];
+}>();
+// end emits
+
 // Components
 
 // Vars
+const isMobile = useMediaQuery('(max-width: 767px)');
 // End Vars
 
 // Computed
 const budgetDayStore = useBudgetDay();
+
+const formattedSelectedDate = computed(() => {
+  try {
+    const d = parseLocalDate({ d: budgetDayStore.selectedDate });
+    if (isNaN(d.getTime())) return budgetDayStore.selectedDate;
+    return format(d, "d 'de' MMMM 'de' yyyy", { locale: esLocale });
+  } catch {
+    return budgetDayStore.selectedDate;
+  }
+});
 
 const accountsList = computed(() => {
   const list = accountsController.getAccounts();
@@ -251,7 +272,7 @@ const accountsWithBalance = computed(() => {
 });
 
 const totalIngresos = computed(() => {
-    const entries = budgetEntriesController.getEntries();
+  const entries = budgetEntriesController.getEntries();
   return entries
     .filter((e: Income) => e.entryType === 'ingreso')
     .reduce((sum: number, e: Income) => sum + Number(e.amount || 0), 0);
@@ -343,6 +364,28 @@ const renderedEntries = computed(() => {
 function getDefaultAccountId() {
   const accounts = accountsList.value;
   return accounts.length > 0 ? accounts[0].id : null;
+}
+
+async function goBack() {
+  const current = budgetDayStore.selectedDate;
+  const d = parseLocalDate({ d: current });
+  d.setDate(d.getDate() - 1);
+  const dateStr = formatLocalDate({ d });
+  budgetDayStore.setSelectedDate(dateStr);
+  await budgetDayStore.loadBudgetForDate({ date: dateStr });
+}
+
+async function goForward() {
+  const current = budgetDayStore.selectedDate;
+  const d = parseLocalDate({ d: current });
+  d.setDate(d.getDate() + 1);
+  const dateStr = formatLocalDate({ d });
+  budgetDayStore.setSelectedDate(dateStr);
+  await budgetDayStore.loadBudgetForDate({ date: dateStr });
+}
+
+function openDatePicker(params: { event: Event }) {
+  emit('open-date-picker', params.event);
 }
 
 function formatTimeLocal(ms?: number) {
@@ -513,12 +556,12 @@ function getAccountRemaining(
 }
 
 .list-content {
-  max-height: calc(100vh - 210px);
+  max-height: calc(100dvh - 210px);
 }
 
 .scroll-content {
   overflow-y: auto;
-  max-height: calc(100vh - 245px);
+  max-height: calc(100dvh - 245px);
 }
 
 .legend-item {
@@ -539,5 +582,81 @@ function getAccountRemaining(
 
 .legend-color.danger {
   background-color: var(--ion-color-danger);
+}
+
+/* Summary col is flex column so CSS order can swap its children. */
+.summary-col {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Mobile/tablet-first: summary on top, registro below (hasta 991px). */
+@media (max-width: 991px) {
+  /* Único grid de la página — conserva su padding por defecto (16px)
+     para dar spacing consistente al contenido, igual que SuppliersPage. */
+  ion-grid {
+    height: 100%;
+  }
+
+  ion-row {
+    height: 100%;
+    flex-direction: column;
+    flex-wrap: nowrap;
+  }
+
+  .summary-col {
+    order: 1;
+    flex: 0 0 auto !important;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .registro-col {
+    order: 2;
+    flex: 1 1 auto !important;
+    min-height: 0;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  /* Inside summary: el card de resumen se inyecta via slot (total-summary)
+     y las cuentas van después — el orden lo controla AccountCards. */
+  .accounts-block {
+    order: 1;
+  }
+
+  /* Registro: el list ocupa todo el alto disponible y scrollea internamente */
+  .registro-col ion-list.transparent {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .registro-col .list-content {
+    flex: 1;
+    min-height: 0;
+    max-height: none;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .registro-col .scroll-content {
+    flex: 1;
+    min-height: 0;
+    max-height: none;
+  }
+}
+
+/* Desktop: registro on the left, summary on the right.
+   Inside summary, the summary card slot renders first (before the accounts list). */
+@media (min-width: 992px) {
+  .registro-col {
+    order: -1;
+  }
+
+  .accounts-block {
+    order: 1;
+  }
 }
 </style>
