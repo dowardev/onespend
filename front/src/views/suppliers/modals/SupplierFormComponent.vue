@@ -174,7 +174,7 @@ import {
   IonNote,
   toastController,
 } from '@ionic/vue';
-import { reactive, ref, computed, watch, onBeforeUnmount } from 'vue';
+import { reactive, ref, computed, watch, onBeforeUnmount, toRaw } from 'vue';
 import { addOutline, closeOutline, saveOutline, searchOutline, trashOutline } from 'ionicons/icons';
 import { useVuelidate } from '@vuelidate/core';
 import { required, maxLength } from '@vuelidate/validators';
@@ -349,9 +349,7 @@ watch(
     if (s) {
       form.name = s.name || '';
       form.products = s.products
-        ? structuredClone
-          ? structuredClone(s.products)
-          : JSON.parse(JSON.stringify(s.products))
+        ? structuredClone(toRaw(s.products))
         : [];
       loadProductImages(form.products);
       showNewProductFields.value = !form.products || form.products.length === 0;

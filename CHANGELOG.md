@@ -10,6 +10,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 ### Fixed
 
+- `front/src/views/suppliers/modals/SupplierFormComponent.vue`: editing a supplier with products no longer throws "Proxy object could not be cloned" by unwrapping the reactive Proxy with `toRaw()` before cloning (LBDS-178)
 - `front/vite.config.ts`: web builds now use an absolute base (`/`) so assets resolve correctly from any subroute (e.g. the SSO callback `/auth/callback` served by the SPA fallback). Previously the relative base (`./`) made the browser request `/auth/assets/...`, which the SPA fallback answered with `index.html` (text/html), breaking the service worker registration and asset loading
 - `scripts/deploy/deploy.sh`: `deploy_setup` now uploads the `.env.*.example` templates into the deployed backend/frontend directories alongside `setup.sh`. The deploy tarballs exclude every `.env*` file (secrets policy), which also stripped the non-secret example templates, so `setup.sh` would abort on a fresh server with "example file not found" before it could create the real `.env` files
 - `setup.sh`: `configure_backend` falls back to `.env.example` when the specific example file is missing, aborting only when no example exists. `configure_frontend` is now skipped when the frontend is built on a dev machine (shared hosting, no Node.js/pnpm, or `--skip-front-build`), since Vite bakes `VITE_*` values at compile time and the uploaded `dist/` never reads `.env.production` on the server — previously setup blocked on a file it never used
