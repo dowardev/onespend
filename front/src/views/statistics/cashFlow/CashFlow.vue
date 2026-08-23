@@ -8,6 +8,9 @@ SPDX-License-Identifier: AGPL-3.0-only
   <ion-page>
     <ion-header class="ion-no-border" mode="ios">
       <ion-toolbar>
+        <ion-buttons slot="start">
+          <ion-menu-button :mode="designMode"></ion-menu-button>
+        </ion-buttons>
         <ion-title>Flujo de Caja</ion-title>
       </ion-toolbar>
     </ion-header>
@@ -18,23 +21,35 @@ SPDX-License-Identifier: AGPL-3.0-only
           <ion-col size="12" size-md="10" size-lg="8">
             <ion-row>
               <ion-col size="12">
-                <ion-segment :value="cf.rangeDays.value" @ion-change="onRangeChange">
-                  <ion-segment-button value="30">
+                <div class="range-chips">
+                  <ion-chip
+                    :color="cf.rangeDays.value === 30 ? 'primary' : undefined"
+                    :outline="cf.rangeDays.value !== 30"
+                    @click="cf.setRange({ days: 30 })"
+                  >
                     <ion-label>30 días</ion-label>
-                  </ion-segment-button>
-                  <ion-segment-button value="90">
+                  </ion-chip>
+                  <ion-chip
+                    :color="cf.rangeDays.value === 90 ? 'primary' : undefined"
+                    :outline="cf.rangeDays.value !== 90"
+                    @click="cf.setRange({ days: 90 })"
+                  >
                     <ion-label>90 días</ion-label>
-                  </ion-segment-button>
-                  <ion-segment-button value="365">
+                  </ion-chip>
+                  <ion-chip
+                    :color="cf.rangeDays.value === 365 ? 'primary' : undefined"
+                    :outline="cf.rangeDays.value !== 365"
+                    @click="cf.setRange({ days: 365 })"
+                  >
                     <ion-label>1 año</ion-label>
-                  </ion-segment-button>
-                </ion-segment>
+                  </ion-chip>
+                </div>
               </ion-col>
             </ion-row>
 
             <ion-row>
               <ion-col size="6" size-sm="3">
-                <ion-card class="metric-card ingresos-card">
+                <ion-card class="metric-card ingresos-card shadow1">
                   <ion-card-content>
                     <ion-label class="metric-label">Ingresos</ion-label>
                     <ion-text color="success" class="metric-value">{{
@@ -45,7 +60,7 @@ SPDX-License-Identifier: AGPL-3.0-only
               </ion-col>
 
               <ion-col size="6" size-sm="3">
-                <ion-card class="metric-card egresos-card">
+                <ion-card class="metric-card egresos-card shadow1">
                   <ion-card-content>
                     <ion-label class="metric-label">Egresos</ion-label>
                     <ion-text color="danger" class="metric-value">{{
@@ -56,25 +71,27 @@ SPDX-License-Identifier: AGPL-3.0-only
               </ion-col>
 
               <ion-col size="6" size-sm="3">
-                <ion-card class="metric-card neto-card">
+                <ion-card class="metric-card neto-card shadow1">
                   <ion-card-content>
                     <ion-label class="metric-label">Neto</ion-label>
                     <ion-text
                       :color="(cf.summary.value?.neto ?? 0) >= 0 ? 'success' : 'danger'"
                       class="metric-value"
-                    >{{ cf.formatCurrency(cf.summary.value?.neto ?? 0) }}</ion-text>
+                      >{{ cf.formatCurrency(cf.summary.value?.neto ?? 0) }}</ion-text
+                    >
                   </ion-card-content>
                 </ion-card>
               </ion-col>
 
               <ion-col size="6" size-sm="3">
-                <ion-card class="metric-card promedio-card">
+                <ion-card class="metric-card promedio-card shadow1">
                   <ion-card-content>
                     <ion-label class="metric-label">Promedio / día</ion-label>
                     <ion-text
                       :color="(cf.summary.value?.promedioDiario ?? 0) >= 0 ? 'success' : 'danger'"
                       class="metric-value"
-                    >{{ cf.formatCurrency(cf.summary.value?.promedioDiario ?? 0) }}</ion-text>
+                      >{{ cf.formatCurrency(cf.summary.value?.promedioDiario ?? 0) }}</ion-text
+                    >
                   </ion-card-content>
                 </ion-card>
               </ion-col>
@@ -82,7 +99,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
             <ion-row>
               <ion-col size="12">
-                <ion-card>
+                <ion-card class="shadow1 chart-card">
                   <ion-card-content class="chart-wrapper">
                     <CashFlowChart
                       v-if="cf.summary.value"
@@ -111,34 +128,38 @@ import {
   IonGrid,
   IonRow,
   IonCol,
-  IonSegment,
-  IonSegmentButton,
+  IonButtons,
+  IonMenuButton,
+  IonChip,
   IonLabel,
   IonCard,
   IonCardContent,
   IonText,
-} from '@ionic/vue'
+} from '@ionic/vue';
 
-import { onMounted } from 'vue'
-import { useCashFlow } from '@/composables/useCashFlow'
-import CashFlowChart from '@/components/CashFlowChart.vue'
+import { onMounted, computed } from 'vue';
+import { useCashFlow } from '@/composables/useCashFlow';
+import systemController from '@/controllers/systemConfigController';
+import CashFlowChart from '@/components/CashFlowChart.vue';
 
-const cf = useCashFlow()
+const cf = useCashFlow();
+const designMode = computed(() => systemController.getDesignMode());
 
 onMounted(() => {
-  cf.load()
-})
-
-function onRangeChange(ev: CustomEvent) {
-  const val = ev.detail.value
-  if (val === '30' || val === '90' || val === '365') {
-    cf.setRange({ days: Number(val) as 30 | 90 | 365 })
-  }
-}
+  cf.load();
+});
 </script>
 
 <style scoped>
-.metric-card {
+.range-chips {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.metric-card,
+.chart-card {
   margin: 0;
 }
 

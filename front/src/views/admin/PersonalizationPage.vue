@@ -9,7 +9,7 @@ SPDX-License-Identifier: AGPL-3.0-only
     <ion-header class="ion-no-border" mode="ios">
       <ion-toolbar>
         <ion-buttons slot="start">
-          <ion-back-button :default-href="undefined" @click="goBack"></ion-back-button>
+          <ion-menu-button :mode="designMode"></ion-menu-button>
         </ion-buttons>
         <ion-title>Personalización</ion-title>
       </ion-toolbar>
@@ -18,7 +18,7 @@ SPDX-License-Identifier: AGPL-3.0-only
     <ion-content>
       <ion-grid>
         <ion-row class="ion-justify-content-center">
-          <ion-col size="6">
+          <ion-col size="12" size-md="6">
             <ion-list>
               <ion-item lines="full">
                 <ion-icon slot="start" :icon="colorPaletteOutline"></ion-icon>
@@ -89,7 +89,7 @@ import {
   IonHeader,
   IonToolbar,
   IonButtons,
-  IonBackButton,
+  IonMenuButton,
   IonTitle,
   IonContent,
   IonList,
@@ -98,8 +98,7 @@ import {
   IonSelect,
   IonSelectOption,
 } from '@ionic/vue';
-import { ref, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref, computed, onMounted } from 'vue';
 import type { ThemeMode } from '@/stores/useSystemConfig';
 import { colorPaletteOutline, sunnyOutline, moonOutline } from 'ionicons/icons';
 // End Imports
@@ -112,7 +111,7 @@ import systemController from '@/controllers/systemConfigController';
 // End Components
 
 // Vars
-const router = useRouter();
+const designMode = computed(() => systemController.getDesignMode());
 const theme = ref<ThemeMode>('auto');
 const autoLightTheme = ref<ThemeMode>('light');
 const autoDarkTheme = ref<ThemeMode>('dark');
@@ -184,10 +183,6 @@ function applyTheme(t: ThemeMode | string) {
   }
 
   console.log('Body classList:', body.className);
-}
-
-function goBack() {
-  router.back();
 }
 // End Functions
 

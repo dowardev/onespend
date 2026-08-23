@@ -31,39 +31,12 @@ SPDX-License-Identifier: AGPL-3.0-only
 
     <ion-content>
       <!-- content -->
-      <section>
-        <ion-grid>
-          <ion-row class="ion-justify-content-center">
-            <ion-col size="8">
-              <section class="ion-padding-top">
-                <ion-item lines="none" class="transparent">
-                  <ion-buttons slot="end">
-                    <ion-button title="Retroceder" @click="goBack">
-                      <ion-icon :icon="chevronBackOutline"></ion-icon>
-                    </ion-button>
-
-                    <ion-button
-                      title="Seleccionar fecha"
-                      @click="openDatePicker({ event: $event })"
-                    >
-                      {{ formattedSelectedDate }}
-                    </ion-button>
-
-                    <ion-button title="Avanzar" @click="goForward">
-                      <ion-icon :icon="chevronForwardOutline"></ion-icon>
-                    </ion-button>
-                  </ion-buttons>
-                </ion-item>
-              </section>
-
-              <section>
-                <template v-if="isDataLoaded">
-                  <InicioViewComponent />
-                </template>
-              </section>
-            </ion-col>
-          </ion-row>
-        </ion-grid>
+      <section class="budget-content">
+        <section class="budget-body">
+          <template v-if="isDataLoaded">
+            <InicioViewComponent @open-date-picker="(e: Event) => openDatePicker({ event: e })" />
+          </template>
+        </section>
       </section>
       <!-- end content -->
 
@@ -84,7 +57,7 @@ SPDX-License-Identifier: AGPL-3.0-only
         keep-contents-mounted
         @did-dismiss="showDatePicker = false"
       >
-        <ion-content class="centered-popover">
+        <ion-content>
           <ion-datetime
             :value="budgetDayStore.selectedDate"
             presentation="date"
@@ -139,17 +112,14 @@ import {
   IonButton,
   IonButtons,
   IonMenuButton,
-  IonCol,
   IonContent,
   IonDatetime,
-  IonGrid,
   IonHeader,
   IonIcon,
   IonItem,
   IonLabel,
   IonPage,
   IonPopover,
-  IonRow,
   IonTitle,
   IonToolbar,
   IonAlert,
@@ -178,7 +148,10 @@ import budgetEntriesController from '@/controllers/budgetEntriesController';
 import budgetProvidersController from '@/controllers/budgetProvidersController';
 import accountsController from '@/controllers/accountsController';
 import { SuppliersController, type Supplier } from '@/controllers/suppliersController';
-import { recurringRecordsController, type RecurringRecord } from '@/controllers/recurringRecordsController';
+import {
+  recurringRecordsController,
+  type RecurringRecord,
+} from '@/controllers/recurringRecordsController';
 import { isDueOnDate, shouldAutoInsert } from '@/composables/useRecurrence';
 import { useBudgetDay } from '@/composables/useBudgetDay';
 import attachmentService from '@/services/attachmentService';
@@ -232,27 +205,27 @@ const formattedSelectedDate = computed(() => {
 // end computed
 
 // onIonViewWillEnter
-  onIonViewWillEnter(async () => {
+onIonViewWillEnter(async () => {
+  try {
+    await dataMediator.reloadAll();
     try {
-      await dataMediator.reloadAll();
-      try {
-        await syncController.pullFromServer();
-      } catch {
-        // background pull; don't block view rendering
-      }
-      await accountsController.loadAll();
-      await budgetDayStore.loadBudgetForDate({ date: budgetDayStore.selectedDate });
-      if (!repairRan.value) {
-        await recurringRecordsController.repairRecords();
-        repairRan.value = true;
-      }
-      await processRecurringForDate();
-      isDataLoaded.value = true;
-    } catch (error) {
-      console.error('Failed to load budget data:', error);
-      isDataLoaded.value = true;
+      await syncController.pullFromServer();
+    } catch {
+      // background pull; don't block view rendering
     }
-  });
+    await accountsController.loadAll();
+    await budgetDayStore.loadBudgetForDate({ date: budgetDayStore.selectedDate });
+    if (!repairRan.value) {
+      await recurringRecordsController.repairRecords();
+      repairRan.value = true;
+    }
+    await processRecurringForDate();
+    isDataLoaded.value = true;
+  } catch (error) {
+    console.error('Failed to load budget data:', error);
+    isDataLoaded.value = true;
+  }
+});
 // end onIonViewWillEnter
 
 // onIonViewWillLeave
@@ -396,9 +369,7 @@ async function processRecurringForDate() {
         }
 
         if (record.type === 'cargo') {
-          const alreadyExists = existingEntries.some(
-            (e) => e._fromRecurringId === syncId,
-          );
+          const alreadyExists = existingEntries.some((e) => e._fromRecurringId === syncId);
           if (alreadyExists) continue;
           if (record.entryType === 'ingreso') {
             await budgetEntriesController.addIngreso({
@@ -416,9 +387,7 @@ async function processRecurringForDate() {
             });
           }
         } else {
-          const alreadyExists = existingProviders.some(
-            (p) => p._fromRecurringId === syncId,
-          );
+          const alreadyExists = existingProviders.some((p) => p._fromRecurringId === syncId);
           if (alreadyExists) continue;
           await budgetProvidersController.addProvider({
             name: record.name,
@@ -433,9 +402,10 @@ async function processRecurringForDate() {
             })),
             items: record.items?.map((i) => ({
               amount: Number(i.amount),
-              accountId: typeof i.accountId === 'object' && i.accountId
-                ? (i.accountId as { id: string | number }).id
-                : (i.accountId ?? null) as string | number | null,
+              accountId:
+                typeof i.accountId === 'object' && i.accountId
+                  ? (i.accountId as { id: string | number }).id
+                  : ((i.accountId ?? null) as string | number | null),
             })),
           });
         }
@@ -443,7 +413,6 @@ async function processRecurringForDate() {
         pendientes.push(record);
       }
     }
-
 
     pendingRecurringRecords.value = pendientes;
     if (pendientes.some((r) => r.autoInsert && r.time)) {
@@ -513,14 +482,18 @@ async function generateRandomData() {
   if (accountIds.length < 2) {
     const existingNames = (await accountsController.loadAll()).map((a) => String(a.name));
     if (!existingNames.includes('Caja Principal')) {
-      await accountsController.addAccount({ account: { name: 'Caja Principal', initialBalance: 0 } });
+      await accountsController.addAccount({
+        account: { name: 'Caja Principal', initialBalance: 0 },
+      });
     }
     if (!existingNames.includes('Banco')) {
       await accountsController.addAccount({ account: { name: 'Banco', initialBalance: 0 } });
     }
     accountIds = await getRandomAccountIds();
     if (accountIds.length < 2) {
-      await accountsController.addAccount({ account: { name: 'Caja Principal', initialBalance: 0 } });
+      await accountsController.addAccount({
+        account: { name: 'Caja Principal', initialBalance: 0 },
+      });
       await accountsController.addAccount({ account: { name: 'Banco', initialBalance: 0 } });
       accountIds = await getRandomAccountIds();
       if (accountIds.length === 0) {
@@ -561,22 +534,53 @@ async function generateRandomData() {
 
   const paymentTypes: PaymentType[] = ['cash', 'digital'];
   const ingresoCategories = [
-    'Venta de', 'Servicio de', 'Cobro por', 'Honorarios de',
-    'Comisión por', 'Renta de', 'Consultoría de',
+    'Venta de',
+    'Servicio de',
+    'Cobro por',
+    'Honorarios de',
+    'Comisión por',
+    'Renta de',
+    'Consultoría de',
   ];
   const ingresoItems = [
-    'productos', 'mercancía', 'servicios profesionales', 'asesoría legal',
-    'diseño gráfico', 'desarrollo web', 'consultoría', 'capacitación',
-    'mantenimiento', 'instalación', 'transporte', 'logística',
+    'productos',
+    'mercancía',
+    'servicios profesionales',
+    'asesoría legal',
+    'diseño gráfico',
+    'desarrollo web',
+    'consultoría',
+    'capacitación',
+    'mantenimiento',
+    'instalación',
+    'transporte',
+    'logística',
   ];
   const egresoItems = [
-    'Compra de', 'Pago de', 'Renta de', 'Mantenimiento de',
-    'Suscripción de', 'Servicio de', 'Suministro de',
+    'Compra de',
+    'Pago de',
+    'Renta de',
+    'Mantenimiento de',
+    'Suscripción de',
+    'Servicio de',
+    'Suministro de',
   ];
   const egresoCategories = [
-    'materiales', 'insumos', 'oficina', 'electricidad', 'agua',
-    'internet', 'telefonía', 'seguros', 'transporte', 'combustible',
-    'publicidad', 'marketing', 'hosting', 'software', 'equipo',
+    'materiales',
+    'insumos',
+    'oficina',
+    'electricidad',
+    'agua',
+    'internet',
+    'telefonía',
+    'seguros',
+    'transporte',
+    'combustible',
+    'publicidad',
+    'marketing',
+    'hosting',
+    'software',
+    'equipo',
   ];
 
   let successCount = 0;
@@ -634,7 +638,6 @@ async function generateRandomData() {
         });
       }
 
-  
       successCount++;
       console.log(`[generateRandomData] Día ${date}: OK`);
     } catch (e) {
@@ -649,9 +652,10 @@ async function generateRandomData() {
 
   await toast.dismiss();
   const color = failCount > 0 ? (successCount > 0 ? 'warning' : 'danger') : 'success';
-  const message = failCount > 0
-    ? `Generados ${successCount}/${days} días (${failCount} fallos)`
-    : `Datos generados para ${days} días`;
+  const message =
+    failCount > 0
+      ? `Generados ${successCount}/${days} días (${failCount} fallos)`
+      : `Datos generados para ${days} días`;
 
   const resultToast = await toastController.create({
     message,
@@ -713,7 +717,7 @@ async function applySinglePendingRecord(params: { record: RecurringRecord }) {
         accountId:
           typeof i.accountId === 'object' && i.accountId
             ? (i.accountId as { id: string | number }).id
-            : (i.accountId ?? null) as string | number | null,
+            : ((i.accountId ?? null) as string | number | null),
       })),
     });
   }
@@ -732,3 +736,34 @@ async function applyAllPendingRecords() {
 }
 // end functions
 </script>
+
+<style scoped>
+/* Mobile/tablet: cadena de altura para que el registro pegue al borde inferior.
+   La página no scrollea; el registro scrollea internamente. (hasta 991px) */
+@media (max-width: 991px) {
+  ion-content {
+    --overflow: hidden;
+  }
+
+  .budget-content {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  /* el cuerpo (InicioViewComponent) ocupa el resto */
+  .budget-body {
+    flex: 1;
+    min-height: 0;
+  }
+}
+
+/* Desktop: centrar contenido con max-width (sin grid wrapper). */
+@media (min-width: 992px) {
+  .budget-content {
+    max-width: 800px;
+    margin: 0 auto;
+  }
+}
+</style>

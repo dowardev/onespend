@@ -18,7 +18,7 @@ SPDX-License-Identifier: AGPL-3.0-only
     <ion-content>
       <ion-grid>
         <ion-row class="ion-justify-content-center">
-          <ion-col size="4">
+          <ion-col size="12" size-sm="8" size-md="6" size-lg="4">
             <section class="ion-padding-start ion-padding-end">
               <ion-list class="transparent">
                 <ion-card class="shadow1">

@@ -8,6 +8,9 @@ SPDX-License-Identifier: AGPL-3.0-only
   <ion-page class="maintenance-page admin-page">
     <ion-header class="ion-no-border" mode="ios">
       <ion-toolbar>
+        <ion-buttons slot="start">
+          <ion-menu-button :mode="designMode"></ion-menu-button>
+        </ion-buttons>
         <ion-title>Mantenimiento</ion-title>
       </ion-toolbar>
     </ion-header>
@@ -15,13 +18,11 @@ SPDX-License-Identifier: AGPL-3.0-only
     <ion-content>
       <ion-grid>
         <ion-row class="ion-justify-content-center">
-          <ion-col size="6">
+          <ion-col size="12" size-md="6">
             <ion-list>
               <ion-list-header>
                 <ion-label>Herramientas de mantenimiento del sistema</ion-label>
               </ion-list-header>
-
-
             </ion-list>
           </ion-col>
         </ion-row>
@@ -38,11 +39,15 @@ import {
   IonToolbar,
   IonTitle,
   IonContent,
+  IonButtons,
+  IonMenuButton,
   IonList,
   IonItem,
   IonLabel,
 } from '@ionic/vue';
+import { computed } from 'vue';
 import { useRouter } from 'vue-router';
+import systemController from '@/controllers/systemConfigController';
 // End Imports
 
 // Controllers
@@ -53,6 +58,7 @@ import { useRouter } from 'vue-router';
 
 // Vars
 const router = useRouter();
+const designMode = computed(() => systemController.getDesignMode());
 
 // End Vars
 

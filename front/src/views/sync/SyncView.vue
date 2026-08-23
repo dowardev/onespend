@@ -9,7 +9,7 @@ SPDX-License-Identifier: AGPL-3.0-only
     <ion-header>
       <ion-toolbar>
         <ion-buttons slot="start">
-          <ion-back-button default-href="/budget"></ion-back-button>
+          <ion-menu-button :mode="designMode"></ion-menu-button>
         </ion-buttons>
         <ion-title>Sincronización</ion-title>
       </ion-toolbar>
@@ -72,7 +72,9 @@ SPDX-License-Identifier: AGPL-3.0-only
             <ion-button
               data-cy="sync-btn"
               expand="block"
-              :disabled="!isOnline || isSyncing || (pendingChanges === 0 && activeConflictDiffs.length === 0)"
+              :disabled="
+                !isOnline || isSyncing || (pendingChanges === 0 && activeConflictDiffs.length === 0)
+              "
               class="sync-button"
               @click="handleSyncNow"
             >
@@ -144,149 +146,196 @@ SPDX-License-Identifier: AGPL-3.0-only
           </ion-card-content>
         </ion-card>
 
-      <ion-card v-if="dlqCount > 0">
-        <ion-card-header>
-          <ion-card-title>Elementos fallidos</ion-card-title>
-        </ion-card-header>
-        <ion-card-content>
-          <div class="dlq-info">
-            <ion-icon :icon="warningOutline" color="danger"></ion-icon>
-            <span>{{ dlqCount }} {{ dlqCount === 1 ? 'elemento' : 'elementos' }} en cola de elementos fallidos</span>
-          </div>
-          <ion-button expand="block" fill="outline" color="danger" @click="handleShowDLQ">
-            <ion-icon slot="start" :icon="alertCircleOutline"></ion-icon>
-            Gestionar cola de elementos fallidos
-          </ion-button>
-        </ion-card-content>
-      </ion-card>
-
-      <ion-card v-if="activeConflictDiffs.length > 0" data-cy="conflicts-card">
-        <ion-card-header>
-          <ion-card-title>Conflictos activos <ion-badge data-cy="conflict-count-badge" color="warning">{{ activeConflictDiffs.length }}</ion-badge></ion-card-title>
-        </ion-card-header>
-        <ion-card-content>
-          <ion-list>
-            <ion-item v-for="(entry, idx) in activeConflictDiffs" :key="entry.sync_id + idx" data-cy="conflict-item">
-              <ion-label>
-                <h3>{{ getEntityLabel(entry.entityType) }}</h3>
-                <p v-if="entry.diffs.length > 0" class="conflict-fields">
-                  <span
-                    v-for="diff in entry.diffs.slice(0, 5)"
-                    :key="diff.field"
-                    class="conflict-field-tag"
-                    :class="{
-                      'tag-server': diff.changed_in === 'server',
-                      'tag-client': diff.changed_in === 'client',
-                      'tag-both': diff.changed_in === 'both',
-                    }"
-                  >
-                    {{ diff.field }}
-                  </span>
-                  <span v-if="entry.diffs.length > 5" class="conflict-more">+{{ entry.diffs.length - 5 }} más</span>
-                </p>
-              </ion-label>
-              <ion-badge
-                slot="end"
-                data-cy="conflict-badge"
-                :color="entry.diffs.some(d => d.changed_in === 'both') ? 'danger' : 'warning'"
-                @click="showConflictDiff(entry)"
+        <ion-card v-if="dlqCount > 0">
+          <ion-card-header>
+            <ion-card-title>Elementos fallidos</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            <div class="dlq-info">
+              <ion-icon :icon="warningOutline" color="danger"></ion-icon>
+              <span
+                >{{ dlqCount }} {{ dlqCount === 1 ? 'elemento' : 'elementos' }} en cola de elementos
+                fallidos</span
               >
-                {{ entry.diffs.length }} campo{{ entry.diffs.length !== 1 ? 's' : '' }}
-              </ion-badge>
-            </ion-item>
-          </ion-list>
-        </ion-card-content>
-      </ion-card>
+            </div>
+            <ion-button expand="block" fill="outline" color="danger" @click="handleShowDLQ">
+              <ion-icon slot="start" :icon="alertCircleOutline"></ion-icon>
+              Gestionar cola de elementos fallidos
+            </ion-button>
+          </ion-card-content>
+        </ion-card>
 
-      <ion-card v-if="resolvedConflicts.length > 0">
-        <ion-card-header>
-          <ion-card-title>Conflictos resueltos <ion-badge color="medium">{{ resolvedConflicts.length }}</ion-badge></ion-card-title>
-        </ion-card-header>
-        <ion-card-content>
-          <ion-list>
-            <ion-item v-for="conflict in resolvedConflicts" :key="conflict.entity_id + conflict.entity_type">
-              <ion-label>
-                <h3>{{ getEntityLabel(conflict.entity_type) }}</h3>
-                <p>ID: {{ conflict.entity_id }}</p>
-                <p>Resolución: {{ conflict.conflict_data?.resolution ?? 'servidor' }}</p>
-              </ion-label>
-              <ion-note slot="end">{{ formatResolvedAt(conflict) }}</ion-note>
-            </ion-item>
-          </ion-list>
-        </ion-card-content>
-      </ion-card>
+        <ion-card v-if="activeConflictDiffs.length > 0" data-cy="conflicts-card">
+          <ion-card-header>
+            <ion-card-title
+              >Conflictos activos
+              <ion-badge data-cy="conflict-count-badge" color="warning">{{
+                activeConflictDiffs.length
+              }}</ion-badge></ion-card-title
+            >
+          </ion-card-header>
+          <ion-card-content>
+            <ion-list>
+              <ion-item
+                v-for="(entry, idx) in activeConflictDiffs"
+                :key="entry.sync_id + idx"
+                data-cy="conflict-item"
+              >
+                <ion-label>
+                  <h3>{{ getEntityLabel(entry.entityType) }}</h3>
+                  <p v-if="entry.diffs.length > 0" class="conflict-fields">
+                    <span
+                      v-for="diff in entry.diffs.slice(0, 5)"
+                      :key="diff.field"
+                      class="conflict-field-tag"
+                      :class="{
+                        'tag-server': diff.changed_in === 'server',
+                        'tag-client': diff.changed_in === 'client',
+                        'tag-both': diff.changed_in === 'both',
+                      }"
+                    >
+                      {{ diff.field }}
+                    </span>
+                    <span v-if="entry.diffs.length > 5" class="conflict-more"
+                      >+{{ entry.diffs.length - 5 }} más</span
+                    >
+                  </p>
+                </ion-label>
+                <ion-badge
+                  slot="end"
+                  data-cy="conflict-badge"
+                  :color="entry.diffs.some((d) => d.changed_in === 'both') ? 'danger' : 'warning'"
+                  @click="showConflictDiff(entry)"
+                >
+                  {{ entry.diffs.length }} campo{{ entry.diffs.length !== 1 ? 's' : '' }}
+                </ion-badge>
+              </ion-item>
+            </ion-list>
+          </ion-card-content>
+        </ion-card>
 
-      <ion-modal data-cy="conflict-modal" :is-open="showConflictModal" css-class="conflict-modal-large" @did-dismiss="showConflictModal = false">
-        <ion-header>
-          <ion-toolbar>
-            <ion-buttons slot="start">
-              <ion-button @click="showConflictModal = false">Cerrar</ion-button>
-            </ion-buttons>
-            <ion-title>Conflicto detectado</ion-title>
-          </ion-toolbar>
-        </ion-header>
-        <ion-content>
-          <div v-if="selectedConflict" class="conflict-detail-new">
-            <div class="conflict-intro">
-              <ion-icon :icon="warningOutline" size="large" color="warning" />
-              <div>
-                <h2>{{ getEntityLabel(selectedConflict.entityType) }}</h2>
-                <p class="conflict-intro-text">Este registro se modificó desde dos sitios a la vez. Elige qué versión quieres conservar:</p>
-                <p class="conflict-intro-hint">↕ Los valores que difieren entre versiones están resaltados en ambas columnas</p>
+        <ion-card v-if="resolvedConflicts.length > 0">
+          <ion-card-header>
+            <ion-card-title
+              >Conflictos resueltos
+              <ion-badge color="medium">{{ resolvedConflicts.length }}</ion-badge></ion-card-title
+            >
+          </ion-card-header>
+          <ion-card-content>
+            <ion-list>
+              <ion-item
+                v-for="conflict in resolvedConflicts"
+                :key="conflict.entity_id + conflict.entity_type"
+              >
+                <ion-label>
+                  <h3>{{ getEntityLabel(conflict.entity_type) }}</h3>
+                  <p>ID: {{ conflict.entity_id }}</p>
+                  <p>Resolución: {{ conflict.conflict_data?.resolution ?? 'servidor' }}</p>
+                </ion-label>
+                <ion-note slot="end">{{ formatResolvedAt(conflict) }}</ion-note>
+              </ion-item>
+            </ion-list>
+          </ion-card-content>
+        </ion-card>
+
+        <ion-modal
+          data-cy="conflict-modal"
+          :is-open="showConflictModal"
+          css-class="conflict-modal-large"
+          @did-dismiss="showConflictModal = false"
+        >
+          <ion-header>
+            <ion-toolbar>
+              <ion-buttons slot="start">
+                <ion-button @click="showConflictModal = false">Cerrar</ion-button>
+              </ion-buttons>
+              <ion-title>Conflicto detectado</ion-title>
+            </ion-toolbar>
+          </ion-header>
+          <ion-content>
+            <div v-if="selectedConflict" class="conflict-detail-new">
+              <div class="conflict-intro">
+                <ion-icon :icon="warningOutline" size="large" color="warning" />
+                <div>
+                  <h2>{{ getEntityLabel(selectedConflict.entityType) }}</h2>
+                  <p class="conflict-intro-text">
+                    Este registro se modificó desde dos sitios a la vez. Elige qué versión quieres
+                    conservar:
+                  </p>
+                  <p class="conflict-intro-hint">
+                    ↕ Los valores que difieren entre versiones están resaltados en ambas columnas
+                  </p>
+                </div>
+              </div>
+
+              <div class="conflict-cards-grid">
+                <div class="version-card version-local">
+                  <div class="version-card-header">
+                    <span class="version-card-badge version-card-badge-local">Tu versión</span>
+                    <span class="version-card-time">{{ formatRelativeTime(clientTimestamp) }}</span>
+                  </div>
+                  <ion-list class="transparent">
+                    <ion-item v-for="rf in displayableFields" :key="rf.field" lines="full">
+                      <ion-label>
+                        <h3>{{ rf.label }}</h3>
+                        <p class="field-value">{{ rf.clientDisplay }}</p>
+                      </ion-label>
+                    </ion-item>
+                  </ion-list>
+                  <div v-if="sameFieldCount > 0" class="version-card-footer">
+                    ✓ {{ sameFieldCount }} campo{{ sameFieldCount === 1 ? '' : 's' }} coinciden — no
+                    hay cambios
+                  </div>
+                </div>
+
+                <div class="version-card version-server">
+                  <div class="version-card-header">
+                    <span class="version-card-badge version-card-badge-server"
+                      >Versión del servidor</span
+                    >
+                    <span class="version-card-time">{{ formatRelativeTime(serverTimestamp) }}</span>
+                  </div>
+                  <ion-list class="transparent">
+                    <ion-item v-for="rf in displayableFields" :key="rf.field" lines="full">
+                      <ion-label>
+                        <h3>{{ rf.label }}</h3>
+                        <p class="field-value">{{ rf.serverDisplay }}</p>
+                      </ion-label>
+                    </ion-item>
+                  </ion-list>
+                  <div v-if="sameFieldCount > 0" class="version-card-footer">
+                    ✓ {{ sameFieldCount }} campo{{ sameFieldCount === 1 ? '' : 's' }} coinciden — no
+                    hay cambios
+                  </div>
+                </div>
+              </div>
+
+              <div class="conflict-actions">
+                <ion-button
+                  data-cy="resolve-client-btn"
+                  expand="block"
+                  shape="round"
+                  color="primary"
+                  @click="handleResolveClient"
+                >
+                  <ion-icon slot="start" :icon="personOutline" />
+                  Conservar lo que tengo aquí
+                </ion-button>
+                <ion-button
+                  data-cy="resolve-server-btn"
+                  expand="block"
+                  shape="round"
+                  fill="outline"
+                  color="medium"
+                  @click="handleResolveServer"
+                >
+                  <ion-icon slot="start" :icon="cloudOutline" />
+                  Conservar lo del servidor
+                </ion-button>
               </div>
             </div>
-
-            <div class="conflict-cards-grid">
-              <div class="version-card version-local">
-                <div class="version-card-header">
-                  <span class="version-card-badge version-card-badge-local">Tu versión</span>
-                  <span class="version-card-time">{{ formatRelativeTime(clientTimestamp) }}</span>
-                </div>
-                <ion-list class="transparent">
-                  <ion-item v-for="rf in displayableFields" :key="rf.field" lines="full">
-                    <ion-label>
-                      <h3>{{ rf.label }}</h3>
-                      <p class="field-value">{{ rf.clientDisplay }}</p>
-                    </ion-label>
-                  </ion-item>
-                </ion-list>
-                <div v-if="sameFieldCount > 0" class="version-card-footer">
-                  ✓ {{ sameFieldCount }} campo{{ sameFieldCount === 1 ? '' : 's' }} coinciden — no hay cambios
-                </div>
-              </div>
-
-              <div class="version-card version-server">
-                <div class="version-card-header">
-                  <span class="version-card-badge version-card-badge-server">Versión del servidor</span>
-                  <span class="version-card-time">{{ formatRelativeTime(serverTimestamp) }}</span>
-                </div>
-                <ion-list class="transparent">
-                  <ion-item v-for="rf in displayableFields" :key="rf.field" lines="full">
-                    <ion-label>
-                      <h3>{{ rf.label }}</h3>
-                      <p class="field-value">{{ rf.serverDisplay }}</p>
-                    </ion-label>
-                  </ion-item>
-                </ion-list>
-                <div v-if="sameFieldCount > 0" class="version-card-footer">
-                  ✓ {{ sameFieldCount }} campo{{ sameFieldCount === 1 ? '' : 's' }} coinciden — no hay cambios
-                </div>
-              </div>
-            </div>
-
-            <div class="conflict-actions">
-              <ion-button data-cy="resolve-client-btn" expand="block" shape="round" color="primary" @click="handleResolveClient">
-                <ion-icon slot="start" :icon="personOutline" />
-                Conservar lo que tengo aquí
-              </ion-button>
-              <ion-button data-cy="resolve-server-btn" expand="block" shape="round" fill="outline" color="medium" @click="handleResolveServer">
-                <ion-icon slot="start" :icon="cloudOutline" />
-                Conservar lo del servidor
-              </ion-button>
-            </div>
-          </div>
-        </ion-content>
-      </ion-modal>
+          </ion-content>
+        </ion-modal>
 
         <ion-card v-if="showDebugInfo">
           <ion-card-header>
@@ -310,11 +359,7 @@ SPDX-License-Identifier: AGPL-3.0-only
           <ion-toolbar>
             <ion-title>Reparando sincronización</ion-title>
             <ion-buttons slot="end">
-              <ion-button
-                v-if="!isRepairing"
-                fill="clear"
-                @click="closeRepairModal"
-              >
+              <ion-button v-if="!isRepairing" fill="clear" @click="closeRepairModal">
                 <ion-icon slot="icon-only" :icon="closeOutline" />
               </ion-button>
             </ion-buttons>
@@ -352,8 +397,8 @@ SPDX-License-Identifier: AGPL-3.0-only
           </div>
         </ion-content>
       </ion-modal>
-  </ion-content>
-</ion-page>
+    </ion-content>
+  </ion-page>
 </template>
 
 <script setup lang="ts">
@@ -363,7 +408,7 @@ import {
   IonHeader,
   IonToolbar,
   IonButtons,
-  IonBackButton,
+  IonMenuButton,
   IonTitle,
   IonContent,
   IonCard,
@@ -408,6 +453,7 @@ import {
 
 // Controllers
 import { SyncController } from '@/controllers/syncController';
+import systemController from '@/controllers/systemConfigController';
 import type { RepairProgress } from '@/controllers/syncController';
 import { conflictResolutionService } from '@/services/sync/ConflictResolutionService';
 import { resolveConflictFields } from '@/controllers/lookupResolver';
@@ -441,6 +487,7 @@ interface ActiveConflict {
 }
 
 const syncController = SyncController;
+const designMode = computed(() => systemController.getDesignMode());
 const showDebugInfo = ref(false);
 const pendingQueue = ref<SyncItem[]>([]);
 const dlqCount = ref(0);
@@ -450,19 +497,19 @@ const showConflictModal = ref(false);
 const selectedConflict = ref<ActiveConflict | null>(null);
 const resolvedFields = ref<DisplayField[]>([]);
 const clientTimestamp = computed(() => {
-  const ts = selectedConflict.value?.client_data?.updated_at
-  if (!ts) return undefined
-  const d = new Date(String(ts))
-  return isNaN(d.getTime()) ? undefined : d.getTime() / 1000
-})
+  const ts = selectedConflict.value?.client_data?.updated_at;
+  if (!ts) return undefined;
+  const d = new Date(String(ts));
+  return isNaN(d.getTime()) ? undefined : d.getTime() / 1000;
+});
 const serverTimestamp = computed(() => {
-  const ts = selectedConflict.value?.server_data?.updated_at
-  if (!ts) return undefined
-  const d = new Date(String(ts))
-  return isNaN(d.getTime()) ? undefined : d.getTime() / 1000
-})
-const displayableFields = computed(() => resolvedFields.value.filter(f => f.hasDifference))
-const sameFieldCount = computed(() => resolvedFields.value.length - displayableFields.value.length)
+  const ts = selectedConflict.value?.server_data?.updated_at;
+  if (!ts) return undefined;
+  const d = new Date(String(ts));
+  return isNaN(d.getTime()) ? undefined : d.getTime() / 1000;
+});
+const displayableFields = computed(() => resolvedFields.value.filter((f) => f.hasDifference));
+const sameFieldCount = computed(() => resolvedFields.value.length - displayableFields.value.length);
 const router = useRouter();
 const showRepairModal = ref(false);
 const isRepairing = ref(false);
@@ -484,24 +531,28 @@ function showConflictDiff(conflict: ActiveConflict) {
   showConflictModal.value = true;
 }
 
-watch(selectedConflict, async (conflict) => {
-  if (!conflict) {
-    resolvedFields.value = []
-    return
-  }
-  resolvedFields.value = await resolveConflictFields({
-    serverData: conflict.server_data,
-    clientData: conflict.client_data,
-  })
-}, { immediate: true })
+watch(
+  selectedConflict,
+  async (conflict) => {
+    if (!conflict) {
+      resolvedFields.value = [];
+      return;
+    }
+    resolvedFields.value = await resolveConflictFields({
+      serverData: conflict.server_data,
+      clientData: conflict.client_data,
+    });
+  },
+  { immediate: true },
+);
 
 function formatRelativeTime(timestamp?: number): string {
-  if (timestamp === undefined || timestamp === null) return ''
-  const diff = Date.now() / 1000 - timestamp
-  if (diff < 60) return 'hace unos segundos'
-  if (diff < 3600) return `hace ${Math.floor(diff / 60)} min`
-  if (diff < 86400) return `hace ${Math.floor(diff / 3600)} h`
-  return `hace ${Math.floor(diff / 86400)} días`
+  if (timestamp === undefined || timestamp === null) return '';
+  const diff = Date.now() / 1000 - timestamp;
+  if (diff < 60) return 'hace unos segundos';
+  if (diff < 3600) return `hace ${Math.floor(diff / 60)} min`;
+  if (diff < 86400) return `hace ${Math.floor(diff / 3600)} h`;
+  return `hace ${Math.floor(diff / 86400)} días`;
 }
 
 async function handleShowDLQ() {
@@ -657,7 +708,9 @@ async function handleResolveClient() {
     await toast.present();
   } else {
     const toast = await toastController.create({
-      message: result.error ? `Error al resolver el conflicto: ${result.error}` : 'Error al resolver el conflicto',
+      message: result.error
+        ? `Error al resolver el conflicto: ${result.error}`
+        : 'Error al resolver el conflicto',
       duration: 3000,
       color: 'danger',
     });
@@ -683,7 +736,9 @@ async function handleResolveServer() {
     await toast.present();
   } else {
     const toast = await toastController.create({
-      message: result.error ? `Error al resolver el conflicto: ${result.error}` : 'Error al resolver el conflicto',
+      message: result.error
+        ? `Error al resolver el conflicto: ${result.error}`
+        : 'Error al resolver el conflicto',
       duration: 3000,
       color: 'danger',
     });
@@ -710,10 +765,17 @@ function formatResolvedAt(conflict: ResolvedConflict): string {
 async function handleRepairSync() {
   const alert = await alertController.create({
     header: 'Reparar sincronización',
-    message: 'Esto escaneará toda tu base local y la comparará con el servidor para recuperar elementos que no se hayan sincronizado. Puede subir cambios que borraste de la cola intencionalmente. ¿Continuar?',
+    message:
+      'Esto escaneará toda tu base local y la comparará con el servidor para recuperar elementos que no se hayan sincronizado. Puede subir cambios que borraste de la cola intencionalmente. ¿Continuar?',
     buttons: [
       { text: 'Cancelar', role: 'cancel' },
-      { text: 'Entendido, reparar', role: 'confirm', handler: async () => { await startRepair(); } },
+      {
+        text: 'Entendido, reparar',
+        role: 'confirm',
+        handler: async () => {
+          await startRepair();
+        },
+      },
     ],
   });
   await alert.present();
@@ -1065,6 +1127,7 @@ ion-card {
 
 .repair-modal {
   --width: 320px;
+  --max-width: calc(100vw - 32px);
   --height: 280px;
   --border-radius: 16px;
 }
@@ -1088,8 +1151,12 @@ ion-card {
 }
 
 @keyframes repairSpin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .repair-message {

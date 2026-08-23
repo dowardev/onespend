@@ -23,53 +23,70 @@ SPDX-License-Identifier: AGPL-3.0-only
     </ion-header>
 
     <ion-content>
-      <ion-card class="shadow1 main-card-content">
-        <ion-list style="height: 100%" class="ion-margin-top transparent">
-          <ion-list-header>
-            <ion-label>Lista de cuentas</ion-label>
-          </ion-list-header>
+      <ion-grid class="accounts__grid">
+        <ion-row class="ion-justify-content-center">
+          <ion-col size-xs="12" size-md="10" size-lg="8" size-xl="6" class="accounts__col">
+            <ion-list class="transparent">
+              <ion-list-header>
+                <ion-label>Lista de cuentas</ion-label>
 
-          <ion-searchbar
-            v-model="searchTerm"
-            mode="ios"
-            placeholder="Buscar cuentas"
-            show-clear-button="focus"
-          ></ion-searchbar>
+                <ion-button v-if="!showSearch" @click="showSearch = true">
+                  <ion-icon :icon="searchOutline"></ion-icon>
+                </ion-button>
+              </ion-list-header>
 
-          <div class="list-content accounts__content">
-            <template v-for="group in groupedAccounts" :key="group.letter">
-              <ion-item-group>
-                <ion-item-divider sticky>
-                  <ion-label>{{ group.letter }}</ion-label>
-                </ion-item-divider>
+              <!-- search accounts -->
+              <div class="search-row" :class="{ 'search-row--open': showSearch }">
+                <div class="search-row__inner">
+                  <ion-item lines="none">
+                    <ion-searchbar
+                      v-model="searchTerm"
+                      mode="ios"
+                      placeholder="Buscar cuentas"
+                      show-clear-button="focus"
+                    ></ion-searchbar>
 
-                <ion-item
-                  v-for="c in group.items"
-                  :key="c.id"
-                  button
-                  class="transparent"
-                  @click="edit({ account: c })"
-                >
-                  <ion-label>
-                    <h3>{{ c.name }}</h3>
-                    <p>Balance inicial: {{ c.initialBalance ?? 0 }}</p>
-                  </ion-label>
+                    <ion-button fill="clear" @click="showSearch = false">Cancelar</ion-button>
+                  </ion-item>
+                </div>
+              </div>
 
-                  <ion-buttons slot="end" class="account-actions">
-                    <ion-button
-                      color="danger"
-                      fill="clear"
-                      @click.stop="confirmRemoveAccount({ id: c.id, name: c.name })"
+              <div class="list-content accounts__content">
+                <template v-for="group in groupedAccounts" :key="group.letter">
+                  <ion-item-group>
+                    <ion-item-divider sticky>
+                      <ion-label>{{ group.letter }}</ion-label>
+                    </ion-item-divider>
+
+                    <ion-item
+                      v-for="c in group.items"
+                      :key="c.id"
+                      button
+                      class="transparent"
+                      @click="edit({ account: c })"
                     >
-                      <ion-icon :icon="trashOutline" color="danger"></ion-icon>
-                    </ion-button>
-                  </ion-buttons>
-                </ion-item>
-              </ion-item-group>
-            </template>
-          </div>
-        </ion-list>
-      </ion-card>
+                      <ion-label>
+                        <h3>{{ c.name }}</h3>
+                        <p>Balance inicial: {{ c.initialBalance ?? 0 }}</p>
+                      </ion-label>
+
+                      <ion-buttons slot="end" class="account-actions">
+                        <ion-button
+                          color="danger"
+                          fill="clear"
+                          @click.stop="confirmRemoveAccount({ id: c.id, name: c.name })"
+                        >
+                          <ion-icon :icon="trashOutline" color="danger"></ion-icon>
+                        </ion-button>
+                      </ion-buttons>
+                    </ion-item>
+                  </ion-item-group>
+                </template>
+              </div>
+            </ion-list>
+          </ion-col>
+        </ion-row>
+      </ion-grid>
 
       <ion-modal
         class="accounts__modal"
@@ -110,11 +127,10 @@ import {
   IonAlert,
   IonButtons,
   IonIcon,
-  IonCard,
   IonMenuButton,
   IonSearchbar,
 } from '@ionic/vue';
-import { addOutline, trashOutline } from 'ionicons/icons';
+import { addOutline, searchOutline, trashOutline } from 'ionicons/icons';
 // End Imports
 
 // Controllers
@@ -141,6 +157,7 @@ interface AccountFormData {
 const showModal = ref(false);
 const modalAccount = ref<any | null>(null);
 const searchTerm = ref('');
+const showSearch = ref(false);
 const deleteConfirmAccount = reactive({
   open: false,
   accountId: null as string | number | null,
@@ -276,9 +293,54 @@ const groupedAccounts = computed(() => {
 </script>
 
 <style scoped>
+/* cadena de altura: grid/row/col ocupan todo el alto del content */
+.accounts__grid {
+  height: 100%;
+}
+
+.accounts__grid ion-row {
+  height: 100%;
+}
+
+.accounts__col {
+  height: 100%;
+}
+
+/* el list ocupa todo el alto disponible del content */
+ion-list.transparent {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* scroll interno: el div se adapta al espacio restante (searchbar abierto/cerrado) */
+/* y activa su scroll solo cuando el contenido choca con el borde */
 .accounts__content {
-  height: calc(100% - 117px);
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
+}
+
+/* searchbar show/hide animation */
+.search-row {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 300ms ease;
+}
+
+.search-row--open {
+  grid-template-rows: 1fr;
+}
+
+.search-row__inner {
+  min-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+
+.search-row--open .search-row__inner {
+  opacity: 1;
 }
 
 .account-actions {
@@ -305,12 +367,6 @@ ion-item:focus-within .account-actions {
     opacity: 1;
     pointer-events: auto;
   }
-}
-
-@media (min-width: 426px) and (max-width: 768px) {
-}
-
-@media (min-width: 769px) and (max-width: 1024px) {
 }
 
 @media (min-width: 1025px) and (max-width: 1440px) {

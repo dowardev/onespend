@@ -20,7 +20,7 @@ SPDX-License-Identifier: AGPL-3.0-only
     <ion-content>
       <ion-grid>
         <ion-row class="ion-justify-content-center">
-          <ion-col size="4">
+          <ion-col size="12" size-sm="8" size-md="6" size-lg="4">
             <!-- Provider form -->
             <ion-list class="ion-padding-start ion-padding-end">
               <ion-card class="shadow1">
@@ -77,7 +77,8 @@ SPDX-License-Identifier: AGPL-3.0-only
                     type="number"
                     placeholder="0"
                     :value="getProductQuantity({ product })"
-                    style="width: 80px; text-align: end"
+                    class="input-fluid"
+                    style="--input-width: 80px; text-align: end"
                     :class="{
                       'ion-invalid': isProductQuantityInvalid({
                         productId: product.id,
@@ -127,7 +128,8 @@ SPDX-License-Identifier: AGPL-3.0-only
                     type="number"
                     placeholder="Precio"
                     :value="product.productPrice || ''"
-                    style="width: 90px; text-align: end"
+                    class="input-fluid"
+                    style="--input-width: 90px; text-align: end"
                     @ion-input="
                       (e) => {
                         updateTemporaryProduct({
@@ -142,7 +144,8 @@ SPDX-License-Identifier: AGPL-3.0-only
                     type="number"
                     placeholder="Cant"
                     :value="product.quantity || ''"
-                    style="width: 65px; text-align: end"
+                    class="input-fluid"
+                    style="--input-width: 65px; text-align: end"
                     @ion-input="
                       (e) => {
                         updateTemporaryProduct({
@@ -238,7 +241,7 @@ SPDX-License-Identifier: AGPL-3.0-only
         </ion-row>
 
         <ion-row class="ion-justify-content-center">
-          <ion-col size="4">
+          <ion-col size="12" size-sm="8" size-md="6" size-lg="4">
             <DetailsSection
               :notes="providerNotes"
               :show-attachments-modal="showAttachmentsModal"

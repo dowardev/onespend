@@ -33,9 +33,9 @@ SPDX-License-Identifier: AGPL-3.0-only
     <ion-content>
       <ion-grid>
         <ion-row class="ion-justify-content-center">
-          <ion-col size="4">
+          <ion-col size="12" size-sm="8" size-md="6" size-lg="4">
             <!-- Section 1: Information -->
-            <ion-list class="ion-padding-start ion-padding-end">
+            <ion-list>
               <ion-list-header>
                 <ion-label>Información</ion-label>
               </ion-list-header>
@@ -97,7 +97,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
             <!-- Section 2b: Distribución por Cuenta (if cargo) -->
             <template v-if="isCargo">
-              <div class="ion-padding-start ion-padding-end">
+              <div>
                 <AccountDistributionPicker
                   :items="cargoItems"
                   header-label="Distribución por Cuenta"
@@ -112,7 +112,7 @@ SPDX-License-Identifier: AGPL-3.0-only
             <!-- end Section 2b -->
 
             <!-- Section 3: Concurrencia/fecha/etc -->
-            <ion-list class="ion-padding-start ion-padding-end">
+            <ion-list>
               <ion-list-header>
                 <ion-label>Fecha</ion-label>
               </ion-list-header>
@@ -303,7 +303,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
             <!-- Section 5: Productos (if provedor) -->
             <template v-if="isProvedor">
-              <ion-list class="ion-padding-start ion-padding-end">
+              <ion-list>
                 <ion-list-header>
                   <ion-label>Productos</ion-label>
                   <ion-button @click="addTemporaryProduct()">
@@ -335,7 +335,8 @@ SPDX-License-Identifier: AGPL-3.0-only
                       type="number"
                       placeholder="Precio"
                       :value="product.productPrice || ''"
-                      style="width: 90px; text-align: end"
+                      class="input-fluid"
+                      style="--input-width: 90px; text-align: end"
                       @ion-input="
                         updateProductField({
                           index,
@@ -349,7 +350,8 @@ SPDX-License-Identifier: AGPL-3.0-only
                       type="number"
                       placeholder="Cant"
                       :value="product.quantity || ''"
-                      style="width: 65px; text-align: end"
+                      class="input-fluid"
+                      style="--input-width: 65px; text-align: end"
                       @ion-input="
                         updateProductField({
                           index,
@@ -376,7 +378,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
             <!-- Section 6: Distribución (if provedor) -->
             <template v-if="isProvedor">
-              <div class="ion-padding-start ion-padding-end">
+              <div>
                 <AccountDistributionPicker
                   :items="formData.items"
                   header-label="Distribución por Cuenta"
@@ -391,7 +393,7 @@ SPDX-License-Identifier: AGPL-3.0-only
             <!-- end Section 6 -->
 
             <!-- Section 7: Mas detalles -->
-            <ion-list class="ion-padding-start ion-padding-end">
+            <ion-list>
               <ion-list-header>
                 <ion-label>Mas detalles</ion-label>
               </ion-list-header>
@@ -684,23 +686,31 @@ const formData = ref({
 });
 
 const itemsValidator = (items: RecurringItem[]) => {
-  return items.every(item => {
-    const val = String(item.amount).trim()
-    return val !== '' && !isNaN(Number(val)) && Number(val) > 0 && item.accountId != null
-  })
-}
+  return items.every((item) => {
+    const val = String(item.amount).trim();
+    return val !== '' && !isNaN(Number(val)) && Number(val) > 0 && item.accountId != null;
+  });
+};
 
 const rules = computed(() => ({
   name: { required },
   amount: { numeric, minValue: minValue(0) },
   startDate: { required },
   repeatFrequency: { required },
-  items: { itemsValid: helpers.withMessage('Todos los items deben tener un monto válido y cuenta asignada', itemsValidator) },
+  items: {
+    itemsValid: helpers.withMessage(
+      'Todos los items deben tener un monto válido y cuenta asignada',
+      itemsValidator,
+    ),
+  },
 }));
-const v$ = useVuelidate(rules, computed(() => ({
-  ...formData.value,
-  items: isCargo.value ? cargoItems.value : formData.value.items,
-})));
+const v$ = useVuelidate(
+  rules,
+  computed(() => ({
+    ...formData.value,
+    items: isCargo.value ? cargoItems.value : formData.value.items,
+  })),
+);
 
 const cargoItems = ref<RecurringItem[]>([{ amount: '', accountId: null }]);
 
@@ -885,7 +895,7 @@ function handleBack() {
 
 async function handleSave() {
   v$.value.$touch();
-  if (!await v$.value.$validate()) return;
+  if (!(await v$.value.$validate())) return;
 
   const data = formData.value;
 
@@ -1089,9 +1099,7 @@ async function onSupplierFormSaved(payload: SupplierFormPayload) {
     const suppliers = await suppliersCtrl.listSuppliers();
     allSuppliers.value = suppliers || [];
 
-    const newSupplier = allSuppliers.value.find(
-      (s: Supplier) => s.name === payload.name,
-    );
+    const newSupplier = allSuppliers.value.find((s: Supplier) => s.name === payload.name);
     if (newSupplier) {
       selectSupplier({ supplier: newSupplier });
     }
@@ -1148,7 +1156,10 @@ function onUpdateItemAccount(params: { index: number; accountId: { id: string | 
   }
 }
 
-function onUpdateCargoItemAccount(params: { index: number; accountId: { id: string | number } | null }) {
+function onUpdateCargoItemAccount(params: {
+  index: number;
+  accountId: { id: string | number } | null;
+}) {
   const { index, accountId } = params;
   if (cargoItems.value[index]) {
     cargoItems.value[index].accountId = accountId;
@@ -1247,5 +1258,4 @@ ion-chip.chip-selected {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-
 </style>

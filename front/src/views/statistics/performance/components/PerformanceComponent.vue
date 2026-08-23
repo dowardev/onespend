@@ -542,7 +542,11 @@ defineExpose({ statement, dateLabel, loadData, refresh });
   font-weight: 700;
   font-size: clamp(0.85rem, 2.5vw, 1rem);
   text-align: right;
-  min-width: 90px;
+}
+@media (min-width: 768px) {
+  .summary-amount {
+    min-width: 90px;
+  }
 }
 .comparison-label {
   font-size: 0.75rem;
@@ -562,20 +566,32 @@ defineExpose({ statement, dateLabel, loadData, refresh });
 }
 .cmp-old {
   font-size: 0.75rem;
-  min-width: 90px;
   text-align: right;
   margin-right: 8px;
+}
+@media (min-width: 768px) {
+  .cmp-old {
+    min-width: 90px;
+  }
 }
 .cmp-current {
   font-size: 0.85rem;
   font-weight: 600;
-  min-width: 100px;
   text-align: right;
+}
+@media (min-width: 768px) {
+  .cmp-current {
+    min-width: 100px;
+  }
 }
 .cmp-diff {
   font-size: 0.8rem;
   font-weight: 700;
-  min-width: 55px;
   text-align: right;
+}
+@media (min-width: 768px) {
+  .cmp-diff {
+    min-width: 55px;
+  }
 }
 </style>
