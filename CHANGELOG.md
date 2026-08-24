@@ -20,6 +20,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 - `front/package.json`: desktop/Electron build scripts (`electron:build`, `build:linux`, `build:win`, `build:mac`, `build:all`) now set `DESKTOP_BUILD=true` so `vite.config.ts` keeps the relative base for `file://`-loaded builds while web builds use the absolute base
 - `packages/sso-client` 0.0.2 → 0.0.3: renamed package scope to `@dowardev/sso-client`, switched main entry to ESM (`dist/index.js`), and added constructor URL validation
 
+### Removed
+
+- Root `src/` tree (53 files): removed stale duplicate of `front/src/` that was not referenced by the real app and caused confusion during the LBDS-175 responsiveness work; also removed legacy root `vite.config.ts`/`tsconfig.json`/`tsconfig.node.json` pointing to it, plus two unused one-shot migration scripts (`scripts/run-normalize-dates.ts`, `front/scripts/run-normalize-dates.ts`) depending on it (LBDS-181)
+
 ## [v0.76.0] - 2026-08-10
 
 ### Added
