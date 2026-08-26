@@ -27,6 +27,8 @@ import ProviderEditPage from '@/views/budget/suppliers/ProviderEditPage.vue';
 import EntryEditPage from '@/views/budget/entries/EntryEditPage.vue';
 import RecurringPage from '@/views/recurring/RecurringPage.vue';
 import RecurringEditPage from '@/views/recurring/RecurringEditPage.vue';
+import PrivacyPolicyPage from '@/views/info/PrivacyPolicyPage.vue';
+import DownloadsPage from '@/views/info/DownloadsPage.vue';
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -142,6 +144,16 @@ const routes: Array<RouteRecordRaw> = [
     path: '/test/performance',
     name: 'PerformanceTest',
     component: PerformanceTestPage,
+  },
+  {
+    path: '/privacy-policy',
+    name: 'PrivacyPolicyPage',
+    component: PrivacyPolicyPage,
+  },
+  {
+    path: '/downloads',
+    name: 'DownloadsPage',
+    component: DownloadsPage,
   },
 ];
 

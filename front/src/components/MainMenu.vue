@@ -196,6 +196,36 @@ SPDX-License-Identifier: AGPL-3.0-only
           </ion-item>
         </div>
       </ion-list>
+
+          <ion-list>
+            <ion-list-header>
+              <ion-label>Extras</ion-label>
+            </ion-list-header>
+
+            <div>
+              <ion-item
+                button
+                lines="none"
+                :class="{ 'menu-active': isDownloads }"
+                :aria-current="isDownloads ? 'page' : undefined"
+                @click="navigate({ name: 'DownloadsPage' })"
+              >
+                <ion-icon slot="start" :icon="downloadOutline"></ion-icon>
+                <ion-label>Descargas</ion-label>
+              </ion-item>
+
+              <ion-item
+                button
+                lines="none"
+                :class="{ 'menu-active': isPrivacyPolicy }"
+                :aria-current="isPrivacyPolicy ? 'page' : undefined"
+                @click="navigate({ name: 'PrivacyPolicyPage' })"
+              >
+                <ion-icon slot="start" :icon="shieldCheckmarkOutline"></ion-icon>
+                <ion-label>Privacidad</ion-label>
+              </ion-item>
+            </div>
+          </ion-list>
     </ion-content>
   </ion-menu>
 </template>
@@ -235,6 +265,8 @@ import {
   personCircleOutline,
   logOutOutline,
   trendingUpOutline,
+  shieldCheckmarkOutline,
+  downloadOutline,
 } from 'ionicons/icons';
 import SyncStatus from './SyncStatus.vue';
 // End Imports
@@ -278,6 +310,8 @@ const isStatisticsPerformance = computed(() => route.path === '/statistics/perfo
 const isAdmin = computed(() => route.path.startsWith('/admin/maintenance'));
 const isPersonalization = computed(() => route.path === '/admin/personalization');
 const isPerformanceTest = computed(() => route.path === '/test/performance');
+const isPrivacyPolicy = computed(() => route.path === '/privacy-policy');
+const isDownloads = computed(() => route.path === '/downloads');
 
 const isLogin = computed(() => route.path === '/login');
 const isRegister = computed(() => route.path === '/register');

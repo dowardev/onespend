@@ -6,7 +6,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 # Changelog
 
-## [Unreleased]
+## [v0.76.1-rc.1] - 2026-08-24
 
 ### Fixed
 
