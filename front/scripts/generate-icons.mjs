@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 // Generate Linux icon set from a base PNG using nearest-neighbor scaling
-// Input: public/PuntoClick.png
+// Input: public/onespend-icon.png
 // Output: build/icons/{16,32,48,64,128,256,512}x{size}.png
 /* eslint-disable no-undef */
 import fs from 'fs';
@@ -18,15 +18,15 @@ const srcPathPrimary = path.resolve(
   __dirname,
   '..',
   'public',
-  'PuntoClick.png'
+  'onespend-icon.png'
 );
 const srcPathFallback = path.resolve(__dirname, '..', 'public', 'favicon.png');
 let srcPath = srcPathPrimary;
 
-// If PuntoClick.png doesn't exist, fall back to favicon.png if available
+// If onespend-icon.png does not exist, fall back to favicon.png if available
 if (!fs.existsSync(srcPathPrimary) && fs.existsSync(srcPathFallback)) {
   console.warn(
-    `PuntoClick.png not found at ${srcPathPrimary}. Using favicon.png as fallback.`
+    `onespend-icon.png not found at ${srcPathPrimary}. Using favicon.png as fallback.`
   );
   srcPath = srcPathFallback;
 }

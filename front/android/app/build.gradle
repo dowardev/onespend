@@ -1,5 +1,47 @@
 apply plugin: 'com.android.application'
 
+// Read the app version from the web package.json so every release is
+// registered in the Android build without manual Gradle edits.
+def appVersion = '0.0.0'
+def pkgJson = file('../../package.json')
+if (pkgJson.exists()) {
+    def matcher = (pkgJson.text =~ /"version"\s*:\s*"([^"]+)"/)
+    if (matcher.find()) {
+        appVersion = matcher.group(1)
+    }
+}
+// versionCode must be a monotonically increasing integer; derive it from
+// major/minor/patch (rc suffix ignored): 0.76.1 -> 76001
+def versionParts = appVersion.tokenize('-')[0].tokenize('.')
+def versionCodeNum = 0
+if (versionParts.size() >= 3) {
+    versionCodeNum = (versionParts[0] as Integer) * 100000 + (versionParts[1] as Integer) * 100 + (versionParts[2] as Integer)
+}
+
+// Release signing: keystore path and passwords come from environment
+// variables (CI) or android/keystore.properties (local, gitignored).
+def releaseSigning = null
+def keystorePropsFile = rootProject.file('keystore.properties')
+def keystorePath = System.getenv('KEYSTORE_FILE') ?: 'onespend-release.keystore'
+def keystorePass = System.getenv('KEYSTORE_PASSWORD')
+def keyAliasName = System.getenv('KEY_ALIAS') ?: 'onespend'
+if (keystorePropsFile.exists()) {
+    def props = new Properties()
+    keystorePropsFile.withInputStream { props.load(it) }
+    keystorePath = props.getProperty('KEYSTORE_FILE', keystorePath)
+    keystorePass = props.getProperty('KEYSTORE_PASSWORD')
+    keyAliasName = props.getProperty('KEY_ALIAS', keyAliasName)
+}
+if (keystorePass != null && rootProject.file(keystorePath).exists()) {
+    def storeFileResolved = rootProject.file(keystorePath)
+    releaseSigning = {
+        storeFile storeFileResolved
+        storePassword keystorePass
+        keyAlias keyAliasName
+        keyPassword keystorePass
+    }
+}
+
 android {
     namespace = "com.dowardev.onespend"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -7,8 +49,8 @@ android {
         applicationId "com.dowardev.onespend"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode versionCodeNum
+        versionName appVersion
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,10 +58,18 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    if (releaseSigning != null) {
+        signingConfigs {
+            release releaseSigning
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            if (releaseSigning != null) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 }

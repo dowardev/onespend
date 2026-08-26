@@ -35,3 +35,7 @@ npm-debug.log*
 /build/icons/
 /squashfs-root/
 .playwright-cli/
+
+# Android release signing (secrets — never commit)
+android/*.keystore
+android/keystore.properties
