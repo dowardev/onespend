@@ -1,0 +1,1 @@
+Expense and budget tracker that works offline, with optional self-hosted sync.

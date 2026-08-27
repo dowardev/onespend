@@ -1,0 +1,22 @@
+OneSpend es un gestor de gastos y presupuestos libre y de código abierto.
+
+Registrá tus gastos diarios, organizalos por cuentas y categorías, definí
+presupuestos mensuales y seguí tus finanzas con gráficos y estadísticas.
+
+Características:
+
+- Offline-first: todos los datos se guardan localmente en tu dispositivo
+- Sincronización opcional contra tu propio servidor autoalojado
+- Presupuestos por categoría con resúmenes mensuales claros
+- Gastos e ingresos recurrentes
+- Gestión de proveedores
+- Exportación a PDF y Excel
+- Adjuntos para recibos y documentos
+- Instalable como PWA, app nativa Android o app de escritorio
+
+OneSpend no incluye publicidad, rastreadores ni analítica. Tus datos
+financieros nunca salen de tu dispositivo salvo que configures
+explícitamente la sincronización contra tu propio servidor.
+
+Licencia: AGPL-3.0-only
+Código fuente: https://gitlab.com/dowardev/onespend
