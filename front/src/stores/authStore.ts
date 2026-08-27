@@ -10,6 +10,7 @@ export interface User {
   name: string;
   user: string;
   email: string;
+  isAdmin: boolean;
 }
 
 export const useAuthStore = defineStore('auth', () => {
@@ -21,6 +22,7 @@ export const useAuthStore = defineStore('auth', () => {
   const userName = computed(() => user.value?.name || '');
   const userEmail = computed(() => user.value?.email || '');
   const userUsername = computed(() => user.value?.user || '');
+  const userIsAdmin = computed(() => user.value?.isAdmin ?? false);
 
   function setUser(u: User | null) {
     user.value = u;
@@ -51,6 +53,7 @@ export const useAuthStore = defineStore('auth', () => {
     userName,
     userEmail,
     userUsername,
+    userIsAdmin,
     setUser,
     setIsLoading,
     setError,

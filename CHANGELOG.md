@@ -6,6 +6,20 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 # Changelog
 
+## [v0.76.1-rc.2] - 2026-08-27
+
+### Added
+
+- PWA icons `pwa-64x64.png`, `pwa-192x192.png`, `pwa-512x512.png` added under `front/public/` so the generated PWA manifest stops referencing non-existent files (LBDS-198)
+- F-Droid entry added to the Downloads page (`front/src/views/info/DownloadsPage.vue`) with a "Próximamente" badge and a note on the F-Droid signing model (LBDS-198)
+- F-Droid distribution docs and recipe draft in `fdroid/README.md`, including the full first-publish and update flow (LBDS-198)
+- Fastlane store metadata under `front/android/fastlane/metadata/android/com.dowardev.onespend/`: title, short/full descriptions (en-US and es), 7 phone screenshots per locale, and a 512×512 icon (LBDS-198)
+- Admin-only menu gating: "Mantenimiento" and "Pruebas Rendimiento" entries in `front/src/components/MainMenu.vue` are now shown only to admin users, driven by the `is_admin` flag propagated from the SSO user into the auth store
+
+### Removed
+
+- `classpath 'com.google.gms:google-services:4.4.4'` from `front/android/build.gradle`; the plugin is only applied when `google-services.json` exists (it does not in the repo), so the dependency was never used (LBDS-198)
+
 ## [v0.76.1-rc.1] - 2026-08-24
 
 ### Fixed

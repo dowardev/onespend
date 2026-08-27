@@ -1,0 +1,22 @@
+OneSpend is a free and open-source expense and budget tracker.
+
+Track your daily expenses, organize them by accounts and categories, set
+monthly budgets, and follow your finances with charts and statistics.
+
+Highlights:
+
+- Offline-first: all data is stored locally on your device
+- Optional end-to-end sync against your own self-hosted server
+- Budgets per category with clear monthly summaries
+- Recurring expenses and income tracking
+- Suppliers and providers management
+- Export to PDF and Excel
+- Attachments for receipts and documents
+- Installable as a PWA, native Android app, or desktop app
+
+OneSpend does not include ads, trackers, or analytics. Your financial data
+never leaves your device unless you explicitly configure sync against your
+own server.
+
+License: AGPL-3.0-only
+Source code: https://gitlab.com/dowardev/onespend

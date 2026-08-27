@@ -163,6 +163,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
         <div>
           <ion-item
+v-if="isUserAdmin"
             button
             lines="none"
             :class="{ 'menu-active': isAdmin }"
@@ -185,6 +186,7 @@ SPDX-License-Identifier: AGPL-3.0-only
           </ion-item>
 
           <ion-item
+v-if="isUserAdmin"
             button
             lines="none"
             :class="{ 'menu-active': isPerformanceTest }"
@@ -317,6 +319,7 @@ const isLogin = computed(() => route.path === '/login');
 const isRegister = computed(() => route.path === '/register');
 
 const isAuthenticated = computed(() => authController.getIsAuthenticated());
+const isUserAdmin = computed(() => authController.getIsAdmin());
 const userName = computed(() => authController.getUserName());
 
 // End Computed

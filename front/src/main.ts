@@ -71,6 +71,7 @@ ssoClient.onAuthStateChange((state) => {
       name: state.user.name || '',
       user: state.user.user || '',
       email: state.user.email || '',
+          isAdmin: Boolean((state.user as { is_admin?: boolean }).is_admin),
     });
     // Trigger initial sync after login
     syncService.fullSyncAndSave(async () => {

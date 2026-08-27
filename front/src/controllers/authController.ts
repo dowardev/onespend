@@ -8,6 +8,24 @@ import { clearAllUserData } from '@/services/dataClearService'
 import { syncService } from '@/services/syncService'
 import { syncApiService } from '@/services/sync/SyncApiService'
 
+type SSOUserWithAdmin = {
+  id?: string | number;
+  name?: string;
+  user?: string;
+  email?: string;
+  is_admin?: boolean;
+}
+
+function toStoreUser(user: SSOUserWithAdmin): User {
+  return {
+    id: Number(user.id),
+    name: user.name || '',
+    user: user.user || '',
+    email: user.email || '',
+    isAdmin: Boolean(user.is_admin),
+  }
+}
+
 class AuthController {
   private _store: ReturnType<typeof useAuthStore> | null = null
   private cleanupAuthExpiredListener: (() => void) | null = null
@@ -85,18 +103,17 @@ class AuthController {
     return this.store.userEmail
   }
 
+  getIsAdmin(): boolean {
+    return this.store.userIsAdmin
+  }
+
   async checkAuth(): Promise<boolean> {
     const isAuth = getSSOClient().isAuthenticated
     if (isAuth) {
       const user = await getSSOClient().getUser()
       if (user) {
-        this.store.setUser({
-          id: Number(user.id),
-          name: user.name || '',
-          user: user.user || '',
-          email: user.email || '',
-        })
-      }
+        this.store.setUser(toStoreUser(user))
+          }
     } else {
       this.store.logout()
     }
@@ -107,13 +124,8 @@ class AuthController {
     try {
       const user = await getSSOClient().getUser()
       if (user) {
-        return {
-          id: Number(user.id),
-          name: user.name || '',
-          user: user.user || '',
-          email: user.email || '',
-        }
-      }
+            return toStoreUser(user)
+          }
     } catch {
       // ignore
     }
