@@ -60,11 +60,14 @@ async function syncBudgetProvider(params: { provider: any; operation?: 'create' 
 
 async function syncRecurringRecord(params: { record: any; operation?: 'create' | 'update' | 'delete' }) {
   const { record, operation = 'create' } = params;
-  let syncId = record.sync_id;
+  // Records coming from the UI are Vue reactive proxies; IndexedDB's structured clone
+  // cannot clone proxies, so strip them via a deep clone before building the payload.
+  const plain = JSON.parse(JSON.stringify(record));
+  let syncId = plain.sync_id;
   if (!syncId) {
-    syncId = record.sync_id = String(record.id || generateSyncId());
+    syncId = plain.sync_id = String(plain.id || generateSyncId());
   }
-  await syncService.queueOperation({ id: syncId, entityType: 'recurring_record', operation, data: toApiFormat('recurring_record', record) ?? {} });
+  await syncService.queueOperation({ id: syncId, entityType: 'recurring_record', operation, data: toApiFormat('recurring_record', plain) ?? {} });
   return syncService.getQueueCount();
 }
 

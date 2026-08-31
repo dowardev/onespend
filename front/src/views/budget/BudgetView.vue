@@ -124,7 +124,6 @@ import {
   IonToolbar,
   IonAlert,
   onIonViewWillEnter,
-  onIonViewWillLeave,
   toastController,
 } from '@ionic/vue';
 import {
@@ -152,7 +151,10 @@ import {
   recurringRecordsController,
   type RecurringRecord,
 } from '@/controllers/recurringRecordsController';
-import { isDueOnDate, shouldAutoInsert } from '@/composables/useRecurrence';
+import {
+  processRecurringForDate,
+  pendingRecurringRecords,
+} from '@/services/recurringProcessor';
 import { useBudgetDay } from '@/composables/useBudgetDay';
 import attachmentService from '@/services/attachmentService';
 import pendingAttachmentsService from '@/services/pendingAttachmentsService';
@@ -182,9 +184,7 @@ const moreOptionsEvent = ref<Event | null>(null);
 const isDataLoaded = ref(false);
 const designMode = computed(() => systemController.getDesignMode());
 const isDev = computed(() => import.meta.env.DEV);
-const pendingRecurringRecords = ref<RecurringRecord[]>([]);
 const showPendingModal = ref(false);
-const recurringTimer = ref<ReturnType<typeof setInterval> | null>(null);
 const repairRan = ref(false);
 // end vars and const
 
@@ -219,7 +219,7 @@ onIonViewWillEnter(async () => {
       await recurringRecordsController.repairRecords();
       repairRan.value = true;
     }
-    await processRecurringForDate();
+    await processRecurringForDate(budgetDayStore.selectedDate);
     isDataLoaded.value = true;
   } catch (error) {
     console.error('Failed to load budget data:', error);
@@ -228,11 +228,7 @@ onIonViewWillEnter(async () => {
 });
 // end onIonViewWillEnter
 
-// onIonViewWillLeave
-onIonViewWillLeave(() => {
-  stopRecurringTimer();
-});
-// end onIonViewWillLeave
+
 
 // functions
 // NOTE: functions must follow the structure of named parameters
@@ -265,7 +261,7 @@ async function onDateSelected(e: CustomEvent) {
     await budgetDayStore.loadBudgetForDate({ date: dateStr });
     showDatePicker.value = false;
     setTimeout(async () => {
-      await processRecurringForDate();
+      await processRecurringForDate(budgetDayStore.selectedDate);
     }, 50);
   }
 }
@@ -278,7 +274,7 @@ async function goBack() {
   budgetDayStore.setSelectedDate(dateStr);
   await budgetDayStore.loadBudgetForDate({ date: dateStr });
   setTimeout(async () => {
-    await processRecurringForDate();
+    await processRecurringForDate(budgetDayStore.selectedDate);
   }, 50);
 }
 
@@ -290,7 +286,7 @@ async function goForward() {
   budgetDayStore.setSelectedDate(dateStr);
   await budgetDayStore.loadBudgetForDate({ date: dateStr });
   setTimeout(async () => {
-    await processRecurringForDate();
+    await processRecurringForDate(budgetDayStore.selectedDate);
   }, 50);
 }
 
@@ -304,140 +300,10 @@ async function goToToday() {
   await budgetDayStore.loadBudgetForDate({ date: dateStr });
   showDatePicker.value = false;
   setTimeout(async () => {
-    await processRecurringForDate();
+    await processRecurringForDate(budgetDayStore.selectedDate);
   }, 50);
 }
 
-async function deduplicateRecurringEntries(): Promise<void> {
-  const existingEntries = budgetEntriesController.getEntries();
-  const existingProviders = budgetProvidersController.getProviders();
-  const entryRecurringIds = new Set<string>();
-  const providerRecurringIds = new Set<string>();
-  let hadDuplicates = false;
-
-  for (const e of existingEntries) {
-    if (e._fromRecurringId) {
-      if (entryRecurringIds.has(e._fromRecurringId)) {
-        budgetEntriesController.removeEntry({ id: e.id });
-        console.warn('[recurring] dedup: removed duplicate entry', e.id, e._fromRecurringId);
-        hadDuplicates = true;
-      } else {
-        entryRecurringIds.add(e._fromRecurringId);
-      }
-    }
-  }
-  for (const p of existingProviders) {
-    if (p._fromRecurringId) {
-      if (providerRecurringIds.has(p._fromRecurringId)) {
-        budgetProvidersController.removeProvider({ id: p.id });
-        console.warn('[recurring] dedup: removed duplicate provider', p.id, p._fromRecurringId);
-        hadDuplicates = true;
-      } else {
-        providerRecurringIds.add(p._fromRecurringId);
-      }
-    }
-  }
-
-  if (hadDuplicates) {
-    // Duplicates were removed above (logged per entry); nothing else to do here yet.
-  }
-}
-
-async function processRecurringForDate() {
-  try {
-    const dateStr = budgetDayStore.selectedDate;
-    if (!dateStr) return;
-
-    await deduplicateRecurringEntries();
-
-    const existingEntries = budgetEntriesController.getEntries();
-    const existingProviders = budgetProvidersController.getProviders();
-    const records = await recurringRecordsController.getActiveRecords();
-    const pendientes: RecurringRecord[] = [];
-
-    for (const record of records) {
-      if (!isDueOnDate({ record, dateStr })) continue;
-
-      const auto = shouldAutoInsert({ record, dateStr });
-
-      if (auto) {
-        const syncId = record.sync_id;
-        if (!syncId) {
-          console.warn('[recurring] SKIP — missing sync_id for', record.name);
-          pendientes.push(record);
-          continue;
-        }
-
-        if (record.type === 'cargo') {
-          const alreadyExists = existingEntries.some((e) => e._fromRecurringId === syncId);
-          if (alreadyExists) continue;
-          if (record.entryType === 'ingreso') {
-            await budgetEntriesController.addIngreso({
-              name: record.name,
-              amount: record.amount || 0,
-              accountId: record.accountId,
-              _fromRecurringId: syncId,
-            });
-          } else {
-            await budgetEntriesController.addEgreso({
-              name: record.name,
-              amount: record.amount || 0,
-              accountId: record.accountId,
-              _fromRecurringId: syncId,
-            });
-          }
-        } else {
-          const alreadyExists = existingProviders.some((p) => p._fromRecurringId === syncId);
-          if (alreadyExists) continue;
-          await budgetProvidersController.addProvider({
-            name: record.name,
-            estimated: record.estimated,
-            accountId: record.accountId ? Number(record.accountId) : null,
-            _fromRecurringId: syncId,
-            products: record.products?.map((p) => ({
-              id: p.supplierProductId ? String(p.supplierProductId) : undefined,
-              productName: p.productName,
-              productPrice: p.productPrice,
-              quantity: p.quantity,
-            })),
-            items: record.items?.map((i) => ({
-              amount: Number(i.amount),
-              accountId:
-                typeof i.accountId === 'object' && i.accountId
-                  ? (i.accountId as { id: string | number }).id
-                  : ((i.accountId ?? null) as string | number | null),
-            })),
-          });
-        }
-      } else {
-        pendientes.push(record);
-      }
-    }
-
-    pendingRecurringRecords.value = pendientes;
-    if (pendientes.some((r) => r.autoInsert && r.time)) {
-      startRecurringTimer();
-    } else {
-      stopRecurringTimer();
-    }
-  } catch (error) {
-    console.error('Failed to process recurring records:', error);
-  }
-}
-
-function startRecurringTimer() {
-  if (recurringTimer.value) return;
-  recurringTimer.value = setInterval(async () => {
-    await processRecurringForDate();
-  }, 60000);
-}
-
-function stopRecurringTimer() {
-  if (recurringTimer.value) {
-    clearInterval(recurringTimer.value);
-    recurringTimer.value = null;
-  }
-}
 
 function confirmClearDay() {
   showMoreOptions.value = false;

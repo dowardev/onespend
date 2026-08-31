@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import { budgetEntriesDb } from '@/db/controllers/budgetEntriesDb'
+import { dataMediator } from '@/services/dataMediator';
 import { toBudgetEntryRow } from '@/db/mappers'
 import { useBudgetEntriesStore, mapEntryRow } from '@/stores/budgetEntriesStore';
 import { useBudgetDayStore } from '@/stores/budgetDayStore';
@@ -33,6 +34,11 @@ class BudgetEntriesController {
     const toStr = end.toISOString().slice(0, 10)
     const rows: BudgetEntryRow[] = await budgetEntriesDb.getByDateRange({ from: fromStr, to: toStr })
     return rows.map(mapEntryRow)
+  }
+
+  getEntriesForDate(params: { date: string }): Income[] {
+    const rows = dataMediator.refs.entries.value as BudgetEntryRow[];
+    return rows.filter((r) => r.date === params.date).map(mapEntryRow);
   }
 
   async addEntry(params: { entry: Income }) {

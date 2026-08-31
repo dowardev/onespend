@@ -12,6 +12,32 @@ SPDX-License-Identifier: AGPL-3.0-only
           <ion-menu-button :mode="designMode"></ion-menu-button>
         </ion-buttons>
         <ion-title>Historial</ion-title>
+        <ion-buttons slot="end">
+          <ion-button aria-label="Buscar" :color="showSearch ? 'primary' : undefined" @click="toggleSearch">
+            <ion-icon :icon="searchOutline"></ion-icon>
+          </ion-button>
+          <ion-button
+            aria-label="Filtrar por fecha"
+            :color="dateFilter ? 'primary' : undefined"
+            @click="openDatePicker($event)"
+          >
+            <ion-icon :icon="calendarOutline"></ion-icon>
+          </ion-button>
+        </ion-buttons>
+      </ion-toolbar>
+
+      <!-- search show/hide animation (replica patrón de SuppliersPage) -->
+      <ion-toolbar class="search-toolbar">
+        <div class="search-row" :class="{ 'search-row--open': showSearch }">
+          <div class="search-row__inner">
+            <ion-searchbar
+              v-model="searchTerm"
+              mode="ios"
+              placeholder="Buscar por nombre, cuenta o proveedor"
+              show-clear-button="focus"
+            ></ion-searchbar>
+          </div>
+        </div>
       </ion-toolbar>
     </ion-header>
 
@@ -21,6 +47,14 @@ SPDX-License-Identifier: AGPL-3.0-only
           <ion-row class="ion-justify-content-center">
             <ion-col size="12" size-sm="10" size-md="8" size-lg="6">
               <section class="ion-padding-top">
+                <div v-if="dateFilter" class="ion-padding">
+                  <ion-chip color="primary" @click="clearDateFilter">
+                    <ion-icon :icon="calendarOutline"></ion-icon>
+                    <ion-label>{{ formatDateFilter }}</ion-label>
+                    <ion-icon :icon="closeOutline"></ion-icon>
+                  </ion-chip>
+                </div>
+
                 <template v-if="dayBlocks.length > 0">
                   <template v-for="block in dayBlocks" :key="block.dateKey">
                     <ion-item-divider
@@ -116,6 +150,16 @@ SPDX-License-Identifier: AGPL-3.0-only
         </ion-grid>
       </section>
     </ion-content>
+
+    <DatePickerPopover
+      :popover-state="picker.popoverState"
+      :temp-picker-date-iso="picker.tempPickerDateISO.value"
+      :can-apply="picker.canApply.value"
+      @did-dismiss="picker.closePopover()"
+      @cancel="picker.closePopover()"
+      @apply="onApplyDateFilter"
+      @update:temp-picker-date-iso="picker.tempPickerDateISO.value = $event"
+    />
   </ion-page>
 </template>
 
@@ -138,8 +182,10 @@ import {
   IonBadge,
   IonButton,
   IonIcon,
+  IonChip,
+  IonSearchbar,
 } from '@ionic/vue';
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -150,10 +196,12 @@ import systemController from '@/controllers/systemConfigController';
 import { dataMediator } from '@/services/dataMediator';
 import { mapEntryRow, type Income } from '@/stores/budgetEntriesStore';
 import { formatCurrency, calcProviderProductsTotal } from '@/utils/currency';
-import { calendarOutline } from 'ionicons/icons';
+import { calendarOutline, searchOutline, closeOutline } from 'ionicons/icons';
 import { useBudgetDay } from '@/composables/useBudgetDay';
+import { useDatePicker } from '@/composables/useDatePicker';
 
 // 3. Components
+import DatePickerPopover from '@/views/budget/components/DatePickerPopover.vue';
 
 // 4. Interface and types imports
 
@@ -163,6 +211,35 @@ const budgetDay = useBudgetDay();
 
 // 6. Vars and const
 const todayDate = new Date().toISOString().slice(0, 10);
+const showSearch = ref(false);
+const searchTerm = ref('');
+const dateFilter = ref<string | null>(null);
+const picker = useDatePicker();
+const debouncedTerm = ref('');
+let debounceTimer: ReturnType<typeof setTimeout> | undefined;
+
+watch(
+  searchTerm,
+  (val) => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      debouncedTerm.value = val;
+    }, 300);
+  },
+  { immediate: true },
+);
+
+const formatDateFilter = computed(() => {
+  const value = dateFilter.value;
+  if (!value) return '';
+  try {
+    const d = new Date(value + 'T00:00:00');
+    if (isNaN(d.getTime())) return value;
+    return format(d, 'EEE, d MMM yyyy', { locale: es });
+  } catch {
+    return value;
+  }
+});
 
 interface AgendaUnifiedItem {
   id: string | number;
@@ -278,9 +355,29 @@ const dayBlocks = computed<DayBlock[]>(() => {
     colorByItemId.set(item.id, color);
   }
 
+  // Apply search + filters (running balances/colors keep full-history semantics)
+  const term = (debouncedTerm.value || '').toString().toLowerCase().trim();
+  const filteredItems: AgendaUnifiedItem[] = allItems.filter((item) => {
+    if (dateFilter.value && item.date !== dateFilter.value) return false;
+
+    if (term) {
+      const name = (item.name || '').toString().toLowerCase();
+      const providerName = ((item as any)._providerName || (item as any)._supplierName || '')
+        .toString()
+        .toLowerCase();
+      const accountName = item.accountId
+        ? (accountNameByAccountId.get(String(item.accountId)) ?? '').toLowerCase()
+        : '';
+      const haystack = `${name} ${providerName} ${accountName}`.toLowerCase();
+      if (!haystack.includes(term)) return false;
+    }
+
+    return true;
+  });
+
   // Group by date
   const groups = new Map<string, AgendaUnifiedItem[]>();
-  const sortedItems = [...allItems].sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+  const sortedItems = [...filteredItems].sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
 
   for (const item of sortedItems) {
     const key = item.date;
@@ -329,6 +426,26 @@ function handleDayClick(date: string) {
   router.push('/budget');
 }
 
+function toggleSearch() {
+  showSearch.value = !showSearch.value;
+}
+
+function openDatePicker(e: Event) {
+  picker.setDate({
+    date: dateFilter.value ? dateFilter.value : format(new Date(), 'yyyy-MM-dd'),
+  });
+  picker.openPopover({ e });
+}
+
+function onApplyDateFilter() {
+  const d = picker.applyDate();
+  if (d) dateFilter.value = d;
+}
+
+function clearDateFilter() {
+  dateFilter.value = null;
+}
+
 function handleItemClick(item: AgendaItemDisplay) {
   if (item.type === 'entry') {
     router.push(`/budget/entry/edit?entryId=${item.id}`);
@@ -367,4 +484,32 @@ function handleItemClick(item: AgendaItemDisplay) {
 .agenda-item {
   --min-height: 44px;
 }
+
+.search-toolbar {
+  --padding-top: 0;
+  --padding-bottom: 0;
+  --min-height: 0;
+}
+
+.search-row {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 300ms ease;
+}
+
+.search-row--open {
+  grid-template-rows: 1fr;
+}
+
+.search-row__inner {
+  min-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+
+.search-row--open .search-row__inner {
+  opacity: 1;
+}
+
 </style>

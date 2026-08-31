@@ -46,6 +46,7 @@ export function mapEntryRow(row: BudgetEntryRow): Income {
     groups: row.groups?.map((g) => ({ amount: g.amount, accountId: g.accountId ?? null })),
     supplierId: row.supplierId as string,
     supplierName: row.supplierName,
+    _fromRecurringId: row.fromRecurringId ?? undefined,
     createdAt: row.createdAt || Date.now(),
     synced_at: row.syncedAt,
   }

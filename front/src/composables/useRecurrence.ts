@@ -118,8 +118,11 @@ function shouldAutoInsert(params: {
     return false;
   }
 
+  // Only auto-insert on the actual day (today). For any other date (calendar browsing),
+  // the due charge goes to the pending list instead of being silently inserted into a
+  // future/past day, which would bypass the time gate and the pause-skip guard.
   if (!isDateToday({ dateStr })) {
-    return true;
+    return false;
   }
 
   if (!record.time) {

@@ -46,7 +46,7 @@ export interface Provider {
   _fromRecurringId?: string;
 }
 
-function mapProviderRow(row: BudgetProviderRow): Provider {
+export function mapProviderRow(row: BudgetProviderRow): Provider {
   return {
     id: row.sync_id,
     sync_id: row.sync_id,
