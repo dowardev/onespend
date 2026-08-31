@@ -512,8 +512,7 @@ SPDX-License-Identifier: AGPL-3.0-only
       @apply="confirmStartDate"
       @update:temp-picker-date-iso="startDatePicker.tempPickerDateISO.value = $event"
     />
-
-    <ion-popover
+                  <ion-popover
       :is-open="timePickerState.open"
       :event="timePickerState.event"
       keep-contents-mounted
@@ -521,12 +520,11 @@ SPDX-License-Identifier: AGPL-3.0-only
     >
       <ion-content class="ion-padding">
         <ion-datetime
-          :key="'timepicker-' + timePickerKey"
+          ref="timeDatetimeRef"
           :model-value="tempTime"
           presentation="time"
           style="background: transparent; width: 100%"
-          @ion-value-change="onTimeWheelChange"
-          @ion-change="onTimeWheelChange"
+          @update:model-value="onTimeWheelChange"
         />
         <ion-item>
           <ion-button slot="end" fill="clear" size="small" @click="cancelTime">
@@ -539,12 +537,21 @@ SPDX-License-Identifier: AGPL-3.0-only
       </ion-content>
     </ion-popover>
 
-    <ion-popover
-      :is-open="popoverMenu.open"
+        <ion-popover
+          :is-open="popoverMenu.open"
       :event="popoverMenu.event"
       @did-dismiss="closeMenuPopover"
     >
       <ion-content>
+        <ion-item lines="full" button @click="toggleStatus">
+              <ion-icon
+                slot="start"
+                :color="recordStatus === 'active' ? 'warning' : 'success'"
+                :icon="recordStatus === 'active' ? pauseOutline : playOutline"
+              />
+              <ion-label>{{ recordStatus === 'active' ? 'Pausar' : 'Reanudar' }}</ion-label>
+            </ion-item>
+
         <ion-item lines="full" button @click="handleDeleteFromPopover">
           <ion-icon slot="start" color="danger" :icon="trashOutline" />
           <ion-label>Eliminar</ion-label>
@@ -593,7 +600,6 @@ import {
   IonModal,
   IonChip,
   IonSearchbar,
-  IonDatetime,
   IonNote,
 } from '@ionic/vue';
 import {
@@ -603,6 +609,8 @@ import {
   arrowBackOutline,
   saveOutline,
   ellipsisVerticalOutline,
+  pauseOutline,
+  playOutline,
 } from 'ionicons/icons';
 import { ref, computed, reactive, onMounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
@@ -708,7 +716,10 @@ const v$ = useVuelidate(
   rules,
   computed(() => ({
     ...formData.value,
-    items: isCargo.value ? cargoItems.value : formData.value.items,
+    startDate: startDatePicker.dateISO.value?.slice(0, 10) ?? '',
+    items: (isCargo.value ? cargoItems.value : formData.value.items).map(
+      (i: RecurringItem) => ({ ...i }),
+    ),
   })),
 );
 
@@ -716,10 +727,8 @@ const cargoItems = ref<RecurringItem[]>([{ amount: '', accountId: null }]);
 
 const recordId = ref<string | number | null>(null);
 const recordSyncId = ref<string | null>(null);
+const recordStatus = ref<'active' | 'paused'>('active');
 
-const timePickerState = reactive({ open: false, event: null as Event | null });
-const timePickerKey = ref(0);
-const tempTime = ref('');
 
 // Supplier modal state
 const showSupplierModal = ref(false);
@@ -730,6 +739,10 @@ const selectedSupplierName = ref('');
 const submitTrigger = ref(0);
 
 // Popover menu state
+const timePickerState = reactive({ open: false, event: null as Event | null });
+const tempTime = ref('');
+const timeDatetimeRef = ref<any>(null);
+
 const popoverMenu = reactive({ open: false, event: null as Event | null });
 
 // Weekday constants
@@ -822,6 +835,12 @@ watch(
 onMounted(async () => {
   const today = format(new Date(), 'yyyy-MM-dd');
   startDatePicker.setDate({ date: today });
+      if (!isEditing.value) {
+        endDatePicker.setDate({ date: today });
+        if (!formData.value.time) {
+          const now = new Date();
+          formData.value.time = `${String(getHours(now)).padStart(2, '0')}:${String(getMinutes(now)).padStart(2, '0')}`;
+        }      }
 
   if (isEditing.value && route.query.recurringId) {
     await loadRecord({ recurringId: route.query.recurringId as string });
@@ -847,8 +866,9 @@ function loadRecord(params: { recurringId: string }) {
     .then((found) => found || recurringRecordsController.getRecordById({ id: recurringId }));
   record.then((found: RecurringRecord | null) => {
     if (!found) return;
-    recordId.value = found.id ?? null;
+    recordId.value = found.sync_id ?? found.id ?? null;
     recordSyncId.value = found.sync_id ?? null;
+        recordStatus.value = found.status === 'paused' ? 'paused' : 'active';
 
     formData.value.type = found.type;
     formData.value.entryType = found.entryType;
@@ -889,6 +909,21 @@ function loadRecord(params: { recurringId: string }) {
   });
 }
 
+
+    async function toggleStatus() {
+      if (!recordId.value) return;
+      await recurringRecordsController.toggleActive({ id: recordId.value });
+      recordStatus.value = recordStatus.value === 'active' ? 'paused' : 'active';
+      popoverMenu.open = false;
+      const { toastController } = await import('@ionic/vue');
+      const toast = await toastController.create({
+        message: recordStatus.value === 'active' ? 'Cargo reanudado' : 'Cargo pausado',
+        duration: 2000,
+        color: recordStatus.value === 'active' ? 'success' : 'warning',
+        position: 'bottom',
+      });
+      await toast.present();
+    }
 function handleBack() {
   router.back();
 }
@@ -997,16 +1032,14 @@ function confirmEndDate() {
 
 function openTimePicker(params: { e: Event }) {
   const { e } = params;
-  timePickerKey.value++;
   if (formData.value.time) {
     const parts = formData.value.time.split(':');
     const d = new Date();
     d.setHours(parseInt(parts[0]) || 0, parseInt(parts[1]) || 0, 0, 0);
     tempTime.value = format(d, "yyyy-MM-dd'T'HH:mm:ss");
   } else {
-    const midnight = new Date();
-    midnight.setHours(0, 0, 0, 0);
-    tempTime.value = format(midnight, "yyyy-MM-dd'T'HH:mm:ss");
+    const now = new Date();
+    tempTime.value = format(now, "yyyy-MM-dd'T'HH:mm:ss");
   }
   timePickerState.event = e;
   timePickerState.open = true;
@@ -1025,15 +1058,20 @@ function onTimeWheelChange(e: CustomEvent | string) {
 }
 
 function confirmTime() {
-  const value = tempTime.value;
-  if (!value) return;
-  let timeStr = '';
-  if (value.includes('T')) {
-    const d = new Date(value);
-    timeStr = `${String(getHours(d)).padStart(2, '0')}:${String(getMinutes(d)).padStart(2, '0')}`;
-  } else if (value.includes(':')) {
-    timeStr = value.slice(0, 5);
-  }
+  const refVal = timeDatetimeRef.value as any;
+  const dtEl = (refVal?.$el ?? refVal) as HTMLElement | undefined;
+  const col = (label: string) =>
+    (dtEl?.shadowRoot?.querySelector(`ion-picker-column[aria-label="${label}"]`) as any) || null;
+  const hourCol = col('Select an hour');
+  const minuteCol = col('Select a minute');
+  const periodCol = col('Select a day period');
+  if (!hourCol || !minuteCol) return;
+  let hour = Number(hourCol.value);
+  const minute = Number(minuteCol.value);
+  const period = String(periodCol?.value || 'am').toLowerCase();
+  if (period === 'pm' && hour < 12) hour += 12;
+  if (period === 'am' && hour === 12) hour = 0;
+  const timeStr = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
   if (timeStr) {
     formData.value.time = timeStr;
   }
@@ -1257,5 +1295,4 @@ ion-chip.chip-selected {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-</style>
+}</style>

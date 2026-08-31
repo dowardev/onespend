@@ -66,38 +66,49 @@ SPDX-License-Identifier: AGPL-3.0-only
 
                     <ion-item
                       v-for="record in group.items"
-                      :key="record.id"
-                      button
+                      :key="record.sync_id ?? record.id"
                       class="transparent"
+                      button
                       @click="editRecord({ record })"
                     >
+                      <div
+                        slot="start"
+                        class="item-indicator"
+                        :style="{ backgroundColor: record.type === 'provedor' || record.entryType === 'egreso' ? 'var(--ion-color-danger)' : 'var(--ion-color-success)' }"
+                      ></div>
                       <ion-label>
                         <h3>{{ record.name }}</h3>
-                        <p>{{ frequencyDescription({ record }) }}</p>
+                        <p>
+                          {{ frequencyDescription({ record }) }}<template v-if="record.time"> · {{ record.time }}</template>
+                        </p>
                       </ion-label>
-
-                      <ion-buttons slot="end" class="record-actions">
-                        <ion-button fill="clear" @click.stop="toggleRecord({ record })">
-                          <ion-icon
-                            :icon="record.status === 'active' ? pauseOutline : playOutline"
-                          />
-                        </ion-button>
-                        <ion-button
-                          fill="clear"
-                          color="danger"
-                          @click.stop="confirmRemove({ record })"
-                        >
-                          <ion-icon :icon="trashOutline" color="danger" />
-                        </ion-button>
-                      </ion-buttons>
 
                       <ion-badge
                         slot="end"
-                        :color="record.status === 'active' ? 'success' : 'warning'"
+                        :color="record.status === 'paused' ? 'warning' : 'success'"
                         style="margin-right: 8px"
                       >
-                        {{ record.status === 'active' ? 'Activo' : 'Pausado' }}
+                        {{ record.status === 'paused' ? 'Pausado' : 'Activo' }}
                       </ion-badge>
+                      <ion-button
+                        slot="end"
+                        v-if="record.status === 'active' || record.status === 'paused'"
+                        fill="clear"
+                        :aria-label="record.status === 'active' ? 'Pausar' : 'Reanudar'"
+                        @click.stop="toggleRecord({ record })"
+                      >
+                        <ion-icon
+                          :icon="record.status === 'active' ? pauseOutline : playOutline"
+                        />
+                      </ion-button>
+                      <ion-button
+                        slot="end"
+                        fill="clear"
+                        color="danger"
+                        @click.stop="confirmRemove({ record })"
+                      >
+                        <ion-icon :icon="trashOutline" color="danger" />
+                      </ion-button>
                     </ion-item>
                   </ion-item-group>
                 </template>
@@ -152,11 +163,11 @@ import {
 } from '@ionic/vue';
 import {
   addOutline,
-  trashOutline,
   pauseOutline,
   playOutline,
   flaskOutline,
   searchOutline,
+  trashOutline,
 } from 'ionicons/icons';
 // End Imports
 
@@ -345,18 +356,24 @@ function editRecord(params: { record: RecurringRecord }) {
 
 async function toggleRecord(params: { record: RecurringRecord }) {
   const { record } = params;
-  if (record.id == null) return;
-  await recurringRecordsController.toggleActive({ id: record.id });
-  await syncRecurringRecord({
-    record: { ...record, status: record.status === 'active' ? 'paused' : ('active' as const) },
-  });
+  const recId = record.sync_id ?? record.id;
+  if (recId == null) return;
+  const willPause = record.status === 'active';
+  await recurringRecordsController.toggleActive({ id: recId });
   await loadRecords();
+  const toast = await toastController.create({
+    message: willPause ? 'Cargo pausado' : 'Cargo reanudado',
+    duration: 2000,
+    position: 'bottom',
+    color: willPause ? 'warning' : 'success',
+  });
+  await toast.present();
 }
 
 function confirmRemove(params: { record: RecurringRecord }) {
   const { record } = params;
   deleteConfirm.open = true;
-  deleteConfirm.recordId = record.id ?? null;
+  deleteConfirm.recordId = (record.sync_id ?? record.id) ?? null;
   deleteConfirm.recordName = record.name || '';
 }
 
@@ -532,6 +549,13 @@ async function loadRecords() {
 
 <style scoped>
 /* cadena de altura: grid/row/col ocupan todo el alto del content */
+.item-indicator {
+  width: 4px;
+  height: 24px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
 .recurring__grid {
   height: 100%;
 }

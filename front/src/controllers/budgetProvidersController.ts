@@ -3,7 +3,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import { toBudgetProviderRow } from '@/db/mappers'
+import { dataMediator } from '@/services/dataMediator';
 import { useBudgetProvidersStore } from '@/stores/budgetProvidersStore';
+import { mapProviderRow } from '@/stores/budgetProvidersStore';
+import type { BudgetProviderRow } from '@/db/types';
 import { useBudgetDayStore } from '@/stores/budgetDayStore';
 import { syncQueue } from '@/services/syncQueue';
 import { budgetProvidersDb } from '@/db/controllers/budgetProvidersDb';
@@ -23,6 +26,11 @@ class BudgetProvidersController {
 
   getProviders() {
     return this.getStore().providers;
+  }
+
+  getProvidersForDate(params: { date: string }): Provider[] {
+    const rows = dataMediator.refs.providers.value as BudgetProviderRow[];
+    return rows.filter((r) => r.date === params.date).map(mapProviderRow);
   }
 
   async getAll(): Promise<Provider[]> {

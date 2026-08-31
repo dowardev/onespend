@@ -18,5 +18,6 @@ export default defineConfig({
     port: 5173,
     timeout: 60000,
     reuseExistingServer: true,
+    env: { VITE_DEV_BYPASS_AUTH: 'true' },
   },
 });

@@ -4,6 +4,11 @@
 
 import { recurringRecordsDb } from '@/db/controllers/recurringRecordsDb'
 import { syncQueue } from '@/services/syncQueue'
+import { ref } from 'vue'
+
+// Reactive signal bumped whenever the recurring records set changes (add/update/remove/toggle).
+// BudgetView watches it to re-run processRecurringForDate without a full page reload.
+export const recurringRecordsChangeSignal = ref(0);
 
 function generateId(): string {
   const arr = new Uint8Array(16);
@@ -56,6 +61,8 @@ export interface RecurringRecord {
   notes?: string;
   status: 'active' | 'paused' | 'deleted';
   createdAt?: number;
+  pausedAt?: number;
+  resumedAt?: number;
   synced_at?: number;
   _synced?: boolean;
 }
@@ -104,6 +111,7 @@ class RecurringRecordsController {
     const syncId = await recurringRecordsDb.add({ entry: newRecord as any });
     newRecord.id = typeof syncId === 'string' ? syncId : String(syncId);
     await syncQueue.syncRecurringRecord({ record: newRecord, operation: 'create' });
+    recurringRecordsChangeSignal.value++;
     return newRecord;
   }
 
@@ -114,6 +122,7 @@ class RecurringRecordsController {
     const updated = { ...existing, ...changes };
     await recurringRecordsDb.put({ entry: updated as any });
     await syncQueue.syncRecurringRecord({ record: updated, operation: 'update' });
+    recurringRecordsChangeSignal.value++;
   }
 
   async removeRecord(params: { id: string | number }): Promise<void> {
@@ -123,12 +132,18 @@ class RecurringRecordsController {
     existing.status = 'deleted';
     await recurringRecordsDb.put({ entry: existing as any });
     await syncQueue.syncRecurringRecord({ record: existing, operation: 'delete' });
+    recurringRecordsChangeSignal.value++;
   }
 
   async getRecordById(params: { id: string | number }): Promise<RecurringRecord | null> {
     const { id } = params;
     const all = await this.getAllRecords();
-    return all.find((r) => String(r.id) === String(id)) || null;
+    // sync_id is the guaranteed primary key; id is optional, so match both.
+        return (
+          all.find(
+            (r) => String(r.sync_id) === String(id) || String(r.id) === String(id),
+          ) || null
+        );
   }
 
   async getRecordBySyncId(params: { syncId: string }): Promise<RecurringRecord | null> {
@@ -140,9 +155,16 @@ class RecurringRecordsController {
     const { id } = params;
     const record = await this.getRecordById({ id });
     if (!record) return;
-    record.status = record.status === 'active' ? 'paused' : 'active';
+    const newStatus = record.status === 'active' ? 'paused' : 'active';
+    record.status = newStatus;
+    if (newStatus === 'paused') {
+      record.pausedAt = Date.now();
+    } else {
+      record.resumedAt = Date.now();
+    }
     await recurringRecordsDb.put({ entry: record as any });
     await syncQueue.syncRecurringRecord({ record, operation: 'update' });
+    recurringRecordsChangeSignal.value++;
   }
 
   async repairRecords(): Promise<number> {

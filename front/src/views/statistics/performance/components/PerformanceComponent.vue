@@ -128,10 +128,23 @@ SPDX-License-Identifier: AGPL-3.0-only
                 fill="clear"
                 size="small"
                 color="primary"
-                @click="handleEmptyAction"
+                @click="handleEmptyAction(section)"
               >
                 Agregar
               </ion-button>
+              <FinancialInfoPopover :term="section.title">
+                <template #trigger>
+                  <ion-button
+                    slot="end"
+                    fill="clear"
+                    size="small"
+                    color="medium"
+                    :aria-label="'Información sobre ' + section.title"
+                  >
+                    <ion-icon :icon="helpCircleOutline" />
+                  </ion-button>
+                </template>
+              </FinancialInfoPopover>
             </ion-item>
           </ion-list>
 
@@ -258,6 +271,7 @@ SPDX-License-Identifier: AGPL-3.0-only
       </ion-item>
     </ion-content>
   </ion-popover>
+
 </template>
 
 <script setup lang="ts">
@@ -286,7 +300,9 @@ import {
   trendingUpOutline,
   trendingDownOutline,
   fileTrayOutline,
+  helpCircleOutline,
 } from 'ionicons/icons';
+import { useRouter } from 'vue-router';
 import { computed, onMounted, watch, toRef } from 'vue';
 import { format } from 'date-fns';
 import { parseLocalDate } from '@/utils/date';
@@ -294,7 +310,7 @@ import { usePeriodRange, type PeriodType } from '@/composables/usePeriodRange';
 import { usePeriodConfig } from '@/composables/usePeriodConfig';
 import { useDatePopover } from '@/composables/useDatePopover';
 import { useBudgetEntries } from '@/composables/useBudgetEntries';
-import { useIncomeStatement } from '@/composables/useIncomeStatement';
+import { useIncomeStatement, type StatementSection } from '@/composables/useIncomeStatement';
 import IncomeStatementRow from './IncomeStatementRow.vue';
 import FinancialInfoPopover from './FinancialInfoPopover.vue';
 
@@ -303,6 +319,8 @@ const props = defineProps<{
 }>();
 
 const periodRef = toRef(props, 'period');
+
+const router = useRouter();
 const { weekStartDay, load: loadConfig } = usePeriodConfig();
 const {
   referenceDate,
@@ -434,10 +452,9 @@ function handleResetToToday() {
   void loadData();
 }
 
-function handleEmptyAction() {
-  // Navigate to budget page to add entries
-  // Placeholder - router navigation will be added when routing is available
-  console.log('[PerformanceComponent] Navigate to budget');
+function handleEmptyAction(section: StatementSection) {
+  // Navigate to the budget entry form to add a new income/expense for this section.
+  void router.push('/budget/entry/new');
 }
 
 async function loadData() {

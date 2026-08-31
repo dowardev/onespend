@@ -17,7 +17,7 @@ SPDX-License-Identifier: AGPL-3.0-only
       :model-value="tempPickerDateISO"
       presentation="date"
       style="background: transparent; width: 100%"
-      @update:model-value="$emit('update:tempPickerDateISO', $event)"
+      @update:model-value="$emit('update:temp-picker-date-iso', $event)"
     />
       <ion-item>
         <ion-button slot="start" fill="clear" size="small" @click="$emit('cancel')">
@@ -50,6 +50,6 @@ defineEmits<{
   didDismiss: [];
   cancel: [];
   apply: [];
-  'update:tempPickerDateISO': [value: string | null];
+  'update:temp-picker-date-iso': [value: string | null];
 }>();
 </script>

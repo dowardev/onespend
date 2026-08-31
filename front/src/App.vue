@@ -34,12 +34,14 @@ import { onMounted, ref, reactive } from 'vue';
 import { useRouter } from 'vue-router';
 import MainMenu from '@/components/MainMenu.vue';
 import DOMCleanupComponent from '@/components/DOMCleanupComponent.vue';
+import { useAuthStore } from '@/stores/authStore';
 // End Imports
 
 // Controllers
 import systemController from '@/controllers/systemConfigController';
 import authController from '@/controllers/authController';
 import accountsController from '@/controllers/accountsController';
+import { initRecurringProcessor } from '@/services/recurringProcessor';
 // End Controllers
 
 // Components
@@ -137,6 +139,26 @@ async function handleNavigate(params: { path?: string; name?: string }) {
   await accountsController.loadAll();
 
   await authController.checkAuth();
+
+  // DEV-only auth bypass for e2e tests: when VITE_DEV_BYPASS_AUTH is set, pretend we
+  // are authenticated so gated screens (e.g. the recurring list) render without a real
+  // SSO session. Production is unaffected (flag is dev-only).
+  if (import.meta.env.DEV && import.meta.env.VITE_DEV_BYPASS_AUTH) {
+    useAuthStore().setUser({
+      id: 1,
+      name: 'Dev Bypass',
+      user: 'dev',
+      email: 'dev@example.com',
+      isAdmin: true,
+    });
+  }
+
+  // Background recurring auto-insert: only run with a valid session so we don't write
+  // entries or queue sync attributed to the wrong account. BudgetView re-invokes the
+  // processor per viewed date (and that screen is auth-gated), so ungated boots skip it.
+  if (useAuthStore().isAuthenticated) {
+    await initRecurringProcessor();
+  }
 
   try {
     if (window && window.innerWidth >= 992) {
