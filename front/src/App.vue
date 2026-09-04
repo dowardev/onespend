@@ -30,7 +30,7 @@ import {
   menuController,
   isPlatform,
 } from '@ionic/vue';
-import { onMounted, ref, reactive } from 'vue';
+import { onMounted, onBeforeUnmount, ref, reactive } from 'vue';
 import { useRouter } from 'vue-router';
 import MainMenu from '@/components/MainMenu.vue';
 import DOMCleanupComponent from '@/components/DOMCleanupComponent.vue';
@@ -41,7 +41,7 @@ import { useAuthStore } from '@/stores/authStore';
 import systemController from '@/controllers/systemConfigController';
 import authController from '@/controllers/authController';
 import accountsController from '@/controllers/accountsController';
-import { initRecurringProcessor } from '@/services/recurringProcessor';
+import { initRecurringProcessor, stopRecurringProcessor } from '@/services/recurringProcessor';
 // End Controllers
 
 // Components
@@ -129,6 +129,10 @@ async function handleNavigate(params: { path?: string; name?: string }) {
 }
 
 // End Functions
+
+onBeforeUnmount(() => {
+  stopRecurringProcessor();
+});
 
 // Life cycle
   onMounted(async () => {

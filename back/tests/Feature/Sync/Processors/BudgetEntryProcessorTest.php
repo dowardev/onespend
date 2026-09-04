@@ -186,6 +186,55 @@ class BudgetEntryProcessorTest extends TestCase
         ]);
     }
 
+    public function test_process_creates_entity_with_category(): void
+    {
+        $syncId = 'test-be-category-1';
+
+        $result = $this->processor->create([
+            [
+                'id' => $syncId,
+                'name' => 'Salary Entry',
+                'amount' => 1000.00,
+                'date' => '2026-09-01',
+                'entry_type' => 'ingreso',
+                'payment_type' => 'cash',
+                'category' => 'salary',
+                'account_id' => (string) $this->account->sync_id,
+                'status' => 'active',
+            ],
+        ], $this->user->id);
+
+        $this->assertCount(1, $result);
+        $this->assertEquals($syncId, $result[0]['sync_id']);
+        $this->assertDatabaseHas('budget_entries', [
+            'sync_id' => $syncId,
+            'category' => 'salary',
+        ]);
+    }
+
+    public function test_process_creates_entity_without_category(): void
+    {
+        $syncId = 'test-be-no-category-1';
+
+        $result = $this->processor->create([
+            [
+                'id' => $syncId,
+                'name' => 'Uncategorized Entry',
+                'amount' => 50.00,
+                'date' => '2026-09-01',
+                'entry_type' => 'egreso',
+                'payment_type' => 'cash',
+                'account_id' => (string) $this->account->sync_id,
+                'status' => 'active',
+            ],
+        ], $this->user->id);
+
+        $this->assertCount(1, $result);
+        $entry = BudgetEntry::where('sync_id', $syncId)->first();
+        $this->assertNotNull($entry);
+        $this->assertNull($entry->category);
+    }
+
     public function test_process_handles_conflict(): void
     {
         $syncId = 'test-be-conflict-1';

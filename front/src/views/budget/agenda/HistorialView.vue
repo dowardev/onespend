@@ -133,13 +133,16 @@ SPDX-License-Identifier: AGPL-3.0-only
                 <template v-else>
                   <section class="ion-padding ion-text-center">
                     <ion-icon :icon="calendarOutline" color="medium" size="large"></ion-icon>
-                    <p>
+                    <p v-if="hasActiveFilters">
+                      <ion-label color="medium"> Sin resultados para la búsqueda o el filtro </ion-label>
+                    </p>
+                    <p v-else>
                       <ion-label color="medium"> No hay registros en el historial </ion-label>
                     </p>
-                    <p>
-                      <ion-label color="medium"> Agrega un registro desde Presupuesto </ion-label>
-                    </p>
-                    <ion-button fill="outline" @click="router.push('/budget')">
+                    <ion-button v-if="hasActiveFilters" fill="outline" @click="clearAllFilters">
+                      Limpiar filtros
+                    </ion-button>
+                    <ion-button v-else fill="outline" @click="router.push('/budget')">
                       Ir a Presupuesto
                     </ion-button>
                   </section>
@@ -185,7 +188,7 @@ import {
   IonChip,
   IonSearchbar,
 } from '@ionic/vue';
-import { computed, ref, watch } from 'vue';
+import { computed, ref, watch, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -229,6 +232,9 @@ watch(
   { immediate: true },
 );
 
+onUnmounted(() => {
+  clearTimeout(debounceTimer);
+});
 const formatDateFilter = computed(() => {
   const value = dateFilter.value;
   if (!value) return '';
@@ -244,6 +250,7 @@ const formatDateFilter = computed(() => {
 interface AgendaUnifiedItem {
   id: string | number;
   name: string;
+  providerName?: string;
   amount: number;
   date: string;
   type: 'entry' | 'provider';
@@ -285,7 +292,8 @@ const dayBlocks = computed<DayBlock[]>(() => {
     .filter((e) => e.date)
     .map((e) => ({
       id: e.id,
-      name: e._providerName || e.name || '-',
+      name: e._providerName || e.supplierName || e.name || '-',
+      providerName: e._providerName || e.supplierName || undefined,
       amount: e.amount || 0,
       date: e.date,
       type: 'entry' as const,
@@ -362,9 +370,7 @@ const dayBlocks = computed<DayBlock[]>(() => {
 
     if (term) {
       const name = (item.name || '').toString().toLowerCase();
-      const providerName = ((item as any)._providerName || (item as any)._supplierName || '')
-        .toString()
-        .toLowerCase();
+      const providerName = (item.providerName || '').toString().toLowerCase();
       const accountName = item.accountId
         ? (accountNameByAccountId.get(String(item.accountId)) ?? '').toLowerCase()
         : '';
@@ -445,6 +451,14 @@ function onApplyDateFilter() {
 function clearDateFilter() {
   dateFilter.value = null;
 }
+
+function clearAllFilters() {
+  dateFilter.value = null;
+  searchTerm.value = '';
+  debouncedTerm.value = '';
+}
+
+const hasActiveFilters = computed(() => !!dateFilter.value || !!debouncedTerm.value.trim());
 
 function handleItemClick(item: AgendaItemDisplay) {
   if (item.type === 'entry') {

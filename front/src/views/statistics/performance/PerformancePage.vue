@@ -21,7 +21,7 @@ SPDX-License-Identifier: AGPL-3.0-only
             <ion-icon :icon="helpCircleOutline" />
           </ion-button>
 
-          <ion-button aria-label="Configuración" @click="openConfigModal">
+          <ion-button aria-label="Configuración" @click="goToConfig">
             <ion-icon :icon="settingsOutline"></ion-icon>
           </ion-button>
 
@@ -59,10 +59,6 @@ SPDX-License-Identifier: AGPL-3.0-only
         </ion-row>
       </ion-grid>
 
-      <ion-modal class="config-modal" :is-open="isConfigModalOpen" @did-dismiss="closeConfigModal">
-        <PersonalFinanceConfigModal @close="closeConfigModal" @save="onConfigSave" />
-      </ion-modal>
-
       <ion-loading :is-open="isExporting" message="Generando Excel..." />
     </ion-content>
   </ion-page>
@@ -84,40 +80,38 @@ import {
   IonMenuButton,
   IonButton,
   IonIcon,
-  IonModal,
   IonLoading,
   IonPopover,
+  onIonViewWillEnter,
 } from '@ionic/vue';
 import { ref, computed } from 'vue';
+import { useRouter } from 'vue-router';
 import { downloadOutline, settingsOutline, helpCircleOutline } from 'ionicons/icons';
 import { StatisticsController } from '@/controllers/statisticsController';
 import systemController from '@/controllers/systemConfigController';
 import type { IncomeStatementResult } from '@/composables/useIncomeStatement';
 
 import PerformanceComponent from '@/views/statistics/performance/components/PerformanceComponent.vue';
-import PersonalFinanceConfigModal from '@/views/statistics/performance/components/PersonalFinanceConfigModal.vue';
 
+const router = useRouter();
 const statisticsController = new StatisticsController();
 
 const designMode = computed(() => systemController.getDesignMode());
 
 const mainSegment = ref('day' as 'day' | 'week' | 'month' | 'year');
-const isConfigModalOpen = ref(false);
 const isExporting = ref(false);
 const performanceComponentRef = ref<any>(null);
 
-function openConfigModal() {
-  isConfigModalOpen.value = true;
+function goToConfig() {
+  void router.push('/statistics/performance/config');
 }
 
-function closeConfigModal() {
-  isConfigModalOpen.value = false;
-}
-
-async function onConfigSave() {
-  isConfigModalOpen.value = false;
-  await performanceComponentRef.value?.refresh();
-}
+// Ionic keeps tab pages alive: onMounted in the child runs only once, so
+// refresh on every view entry to pick up records created in Budget.
+onIonViewWillEnter(() => {
+  const instance = performanceComponentRef.value as { refresh?: () => Promise<void> } | null;
+  if (instance?.refresh) void instance.refresh();
+})
 
 async function exportToExcel() {
   if (isExporting.value) return;
@@ -144,6 +138,27 @@ async function exportToExcel() {
   const discMap = mapItems(stmt.discretionaryExpenses.items);
   const finMap = mapItems(stmt.financialExpenses.items);
 
+  const knownIncomeNames = ['Salario', 'Inversiones', 'Otros ingresos'];
+  const unmatchedIncome = stmt.incomes.items
+    .filter((i) => !knownIncomeNames.includes(i.name))
+    .reduce((a, b) => a + b.amount, 0);
+  const knownExpenseNames = new Set([
+    'Vivienda',
+    'Alimentación',
+    'Transporte',
+    'Salud',
+    'Entretenimiento',
+    'Otros',
+    ...Object.keys(finMap),
+  ]);
+  const unmatchedExpenses = [
+    ...stmt.costOfLife.items,
+    ...stmt.discretionaryExpenses.items,
+    ...stmt.financialExpenses.items,
+  ]
+    .filter((i) => !knownExpenseNames.has(i.name))
+    .reduce((a, b) => a + b.amount, 0);
+
   const label =
     typeof instance.dateLabel === 'object' && 'value' in instance.dateLabel
       ? (instance.dateLabel as { value: string }).value
@@ -156,7 +171,7 @@ async function exportToExcel() {
       incomeData: {
         salary: incomeMap['Salario'] ?? 0,
         investments: incomeMap['Inversiones'] ?? 0,
-        other: incomeMap['Otros ingresos'] ?? 0,
+        other: (incomeMap['Otros ingresos'] ?? 0) + unmatchedIncome,
         total: stmt.incomes.total,
       },
       expensesData: {
@@ -165,7 +180,10 @@ async function exportToExcel() {
         transport: costMap['Transporte'] ?? 0,
         entertainment: discMap['Entretenimiento'] ?? 0,
         health: costMap['Salud'] ?? 0,
-        other: (discMap['Otros'] ?? 0) + Object.values(finMap).reduce((a, b) => a + b, 0),
+        other:
+          (discMap['Otros'] ?? 0) +
+          Object.values(finMap).reduce((a, b) => a + b, 0) +
+          unmatchedExpenses,
         total:
           stmt.costOfLife.total + stmt.discretionaryExpenses.total + stmt.financialExpenses.total,
       },

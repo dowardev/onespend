@@ -31,6 +31,7 @@ export function toApiFormat(entityType: SyncEntityType, row: Record<string, any>
         })),
         supplier_id: row.supplierId,
         supplier_name: row.supplierName,
+        category: row.category ?? undefined,
         version: row.version ?? 0,
         updated_at: row.updatedAt ?? now,
       };
@@ -157,6 +158,7 @@ export function fromApiFormat(entityType: SyncEntityType, item: Record<string, a
         account_id: item.account_id,
         supplierId: item.supplier_id ? String(item.supplier_id) : null,
         supplierName: item.supplier_name ? String(item.supplier_name) : '',
+        category: item.category != null ? String(item.category) : undefined,
         groups: Array.isArray(item.groups)
           ? item.groups.map((g: any) => ({
               sync_id: g.sync_id || g.id,

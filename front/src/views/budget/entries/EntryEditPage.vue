@@ -34,6 +34,13 @@ SPDX-License-Identifier: AGPL-3.0-only
                     </ion-select>
                   </ion-item>
 
+                  <ion-item lines="full" class="transparent" button data-cy="category-selector" @click="openCategoryPicker()">
+                    <ion-label>Categoría</ion-label>
+                    <ion-label slot="end" class="ion-text-end" color="medium">
+                      {{ selectedCategoryName || 'Seleccionar' }}
+                    </ion-label>
+                  </ion-item>
+
                   <ion-item class="transparent" lines="full">
                     <ion-input
                       v-model="entryData.name"
@@ -133,6 +140,17 @@ SPDX-License-Identifier: AGPL-3.0-only
     />
 
     <!-- end alerts -->
+
+    <!-- category picker modal -->
+    <CategoryPickerModal
+      :is-open="showCategoryPicker"
+      :categories="entryCategories"
+      :selected-id="categoryId"
+      :entry-type="entryData.entryType"
+      @select="onCategorySelect"
+      @dismiss="showCategoryPicker = false"
+    />
+    <!-- end category picker modal -->
   </ion-page>
 </template>
 
@@ -156,7 +174,7 @@ import {
   IonPopover,
 } from '@ionic/vue';
 import { trashOutline } from 'ionicons/icons';
-import { computed, ref, onMounted, reactive } from 'vue';
+import { computed, ref, onMounted, reactive, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { format } from 'date-fns';
 import { useBudgetDay } from '@/composables/useBudgetDay';
@@ -171,8 +189,10 @@ import EditPageHeader from '@/views/budget/components/EditPageHeader.vue';
 import AccountDistributionPicker from '@/views/budget/components/AccountDistributionPicker.vue';
 import DeleteConfirmAlert from '@/views/budget/components/DeleteConfirmAlert.vue';
 import DatePickerPopover from '@/views/budget/components/DatePickerPopover.vue';
+import CategoryPickerModal from '@/components/CategoryPickerModal.vue';
 import DetailsSection from '@/views/budget/components/DetailsSection.vue';
 import { useEntryLoader } from '@/composables/useEntryLoader';
+import { entryCategoriesDb } from '@/db/controllers/entryCategoriesDb';
 // end imports
 
 // interface and types imports
@@ -180,6 +200,7 @@ interface EntryGroup {
   amount: number;
   accountId: string | number | { id: string | number } | null;
 }
+import type { EntryCategoryRow } from '@/db/types';
 // end interface and types imports
 
 // router
@@ -201,6 +222,9 @@ const entryData = ref({
 
 const entryNotes = ref('');
 const entrySyncId = ref<string | null>(null);
+const categoryId = ref<string | null>(null);
+const entryCategories = ref<EntryCategoryRow[]>([]);
+const showCategoryPicker = ref(false);
 const {
   showAttachmentsModal,
   pendingAttachments,
@@ -257,10 +281,24 @@ const v$ = useVuelidate(rules, computed(() => {
 
 // Computed from route
 const isEditing = computed(() => !!route.query.entryId);
+
+const selectedCategoryName = computed(() => {
+  if (!categoryId.value) return '';
+  return entryCategories.value.find((c) => c.id === categoryId.value)?.name || '';
+});
+
 // end computed
 
 // onmounted
 onMounted(async () => {
+  await entryCategoriesDb.ensureSeeded();
+  entryCategories.value = await entryCategoriesDb.getAll();
+
+  // Performance "Agregar" navigation carries entryType + date query params (REQ-6).
+  // Validate strictly and fall back to the current defaults on any malformed value.
+  const queryType = String(route.query.entryType || '');
+  const queryDate = String(route.query.date || '');
+
   if (isEditing.value && route.query.entryId) {
     await loadEntry(route.query.entryId as string);
   } else {
@@ -272,8 +310,25 @@ onMounted(async () => {
       : format(new Date(), 'yyyy-MM-dd') + 'T00:00:00';
     entryDatePicker.setDate({ date: dateStr });
   }
+
+  if (queryType === 'ingreso' || queryType === 'egreso') {
+    entryData.value = { ...entryData.value, entryType: queryType };
+    categoryId.value = null; // entryType reset clears any category (REQ-4 AC-4.1)
+  }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(queryDate)) {
+    const parsed = new Date(queryDate + 'T00:00:00');
+    if (!isNaN(parsed.getTime())) {
+      entryDatePicker.setDate({ date: queryDate + 'T00:00:00' });
+    }
+  }
 });
 // end onmounted
+
+// watch
+watch(() => entryData.value.entryType, () => {
+  categoryId.value = null;
+});
+// end watch
 
 // functions
 async function loadEntry(entryId: string) {
@@ -300,6 +355,7 @@ async function loadEntry(entryId: string) {
   };
 
   entryNotes.value = entryAny.notes || '';
+  categoryId.value = entryAny.category ?? null;
   entrySyncId.value = entryAny.sync_id || null;
 
   function normalizeAccountId(accountId: unknown): { id: string | number } | null {
@@ -390,6 +446,15 @@ function onUpdateItemAccount(params: { index: number; accountId: { id: string | 
   }
 }
 
+function openCategoryPicker() {
+  showCategoryPicker.value = true;
+}
+
+function onCategorySelect(category: EntryCategoryRow) {
+  categoryId.value = category.id;
+  showCategoryPicker.value = false;
+}
+
 async function handleSave() {
   const isValid = await v$.value.$validate()
   if (!isValid) return
@@ -414,6 +479,7 @@ async function handleSave() {
       accountId: getAccountIdValue(item.accountId),
     })),
     notes: entryNotes.value,
+    category: categoryId.value ?? undefined,
   };
 
   if (entryDatePicker.dateISO.value) {
@@ -429,8 +495,20 @@ async function handleSave() {
     const hasDateChanged = payload.date && payload.date !== originalDate;
 
     if (hasDateChanged) {
+      await budgetEntriesController.updateIngreso({
+        id: targetId,
+        changes: {
+          entryType: payload.entryType,
+          name: payload.name,
+          amount: payload.amount,
+          accountId: payload.accountId,
+          groups: payload.groups,
+          notes: payload.notes,
+          category: payload.category,
+        } as any,
+      });
       const { reassignEntry } = await import('@/composables/useReassignEntry');
-      reassignEntry({
+      await reassignEntry({
         entryId: targetId,
         newDate: payload.date,
         verbose: false,
@@ -445,6 +523,7 @@ async function handleSave() {
           accountId: payload.accountId,
           groups: payload.groups,
           notes: payload.notes,
+          category: payload.category,
         } as any,
       });
     }
@@ -454,6 +533,7 @@ async function handleSave() {
       amount: payload.amount,
       accountId: payload.accountId,
       groups: payload.groups,
+      category: payload.category,
     };
     if (payload.date) {
       entryDataAny.date = payload.date;

@@ -19,6 +19,7 @@ import type {
   StatisticsConfigRow,
   BackupRow,
   PendingAttachmentRow,
+  EntryCategoryRow,
 } from './types'
 
 class OneSpendDB extends Dexie {
@@ -37,6 +38,7 @@ class OneSpendDB extends Dexie {
   statisticsConfig!: Table<StatisticsConfigRow, number>
   backups!: Table<BackupRow, number>
   pendingAttachments!: Table<PendingAttachmentRow, number>
+  entryCategories!: Table<EntryCategoryRow, string>
 
   constructor() {
     super('OneSpendDB')
@@ -78,6 +80,9 @@ class OneSpendDB extends Dexie {
       statisticsConfig: '++id',
       backups: '++id, component, createdAt',
       pendingAttachments: '++id, syncId, entityType, timestamp',
+    })
+    this.version(5).stores({
+      entryCategories: 'id',
     })
   }
 }

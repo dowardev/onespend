@@ -4,6 +4,7 @@
 
 import { computed, type Ref } from 'vue'
 import type { Income } from '@/stores/budgetEntriesStore'
+import type { EntryCategoryRow, IncomeStatementSectionMap, IncomeStatementSection } from '@/db/types'
 
 export interface StatementItem {
   name: string
@@ -86,11 +87,16 @@ export function defaultCategorizeEntries(entries: Income[]): CategoryMap {
   return categories
 }
 
-function buildStatementItems(groups: CategoryMap, keys: string[], incomeTotal: number): StatementItem[] {
+function buildStatementItems(
+  groups: CategoryMap,
+  keys: string[],
+  incomeTotal: number,
+  nameFor: (key: string) => string = (key) => labelMap[key] || key,
+): StatementItem[] {
   return keys
     .filter((key) => (groups[key] || 0) > 0)
     .map((key) => ({
-      name: labelMap[key] || key,
+      name: nameFor(key),
       amount: groups[key] || 0,
       percentOfIncome: incomeTotal > 0 ? Number((((groups[key] || 0) / incomeTotal) * 100).toFixed(1)) : 0,
     }))
@@ -100,29 +106,94 @@ export function useIncomeStatement(params: {
   entries: Ref<Income[]>
   previousEntries?: Ref<Income[]>
   categorize?: (entries: Income[]) => CategoryMap
+  categories?: Ref<EntryCategoryRow[]>
+  sectionMap?: Ref<IncomeStatementSectionMap>
 }) {
-  const { entries, previousEntries, categorize = defaultCategorizeEntries } = params
+  const { entries, previousEntries, categorize = defaultCategorizeEntries, categories, sectionMap } = params
+
+  // REQ-5: entries with a KNOWN category id are bucketed under that id (section from the
+  // live registry, label = current category name). Entries without a category or with an
+  // unknown/deleted id fall back byte-identically to the keyword logic. Maps are rebuilt
+  // inside the computed so renames propagate on the next evaluation (id-keyed).
+  const categorySections = new Map<string, IncomeStatementSection>()
+  const categoryNames = new Map<string, string>()
+
+  function rebuildRegistry(): void {
+    // Rebuild the live registry on every evaluation (rename propagation, AC-5.4).
+    // Reads sectionMap live so async arrival triggers recompute via reactivity tracking.
+    categorySections.clear()
+    categoryNames.clear()
+    if (categories?.value) {
+      for (const c of categories.value) {
+        categoryNames.set(c.id, c.name)
+      }
+    }
+    // A known category id maps to its section via the config map (0..N sections).
+    const liveMap = sectionMap?.value ?? ({} as IncomeStatementSectionMap)
+    for (const [section, ids] of Object.entries(liveMap)) {
+      for (const id of ids) categorySections.set(id, section as IncomeStatementSection)
+    }
+  }
+
+  function categorizeWithCategoryRegistry(list: Income[]): CategoryMap {
+    const groups: CategoryMap = {}
+    const uncategorized: Income[] = []
+    for (const e of list) {
+      if (e.category && categorySections.has(e.category)) {
+        groups[e.category] = (groups[e.category] || 0) + Number(e.amount || 0)
+      } else {
+        uncategorized.push(e)
+      }
+    }
+    const fallback = categorize(uncategorized)
+    for (const [key, val] of Object.entries(fallback)) {
+      groups[key] = (groups[key] || 0) + val
+    }
+    return groups
+  }
+
+  function keysForSection(section: IncomeStatementSection, groups: CategoryMap): string[] {
+    const fixed: Record<IncomeStatementSection, string[]> = {
+      incomes: ['salary', 'investments', 'other_income'],
+      costOfLife: ['housing', 'food', 'transport', 'health'],
+      discretionaryExpenses: ['entertainment', 'other'],
+      financialExpenses: ['financial'],
+    }
+    const liveMap = sectionMap?.value ?? ({} as IncomeStatementSectionMap)
+    const reverse = new Map<string, IncomeStatementSection>()
+    for (const [sec, ids] of Object.entries(liveMap)) {
+      for (const id of ids) reverse.set(id, sec as IncomeStatementSection)
+    }
+    const configured = liveMap[section] || []
+    const fixedSet = new Set(fixed[section])
+    const custom = configured.filter((id) => groups[id] > 0 && !fixedSet.has(id))
+    const homeFixed = fixed[section].filter((key) => {
+      const mapped = reverse.get(key)
+      return mapped === undefined || mapped === section
+    })
+    return [...homeFixed, ...custom]
+  }
+
+  const nameFor = (key: string): string => categoryNames.get(key) || labelMap[key] || key
 
   const statement = computed<IncomeStatementResult>(() => {
+    rebuildRegistry()
     const incomeEntries = entries.value.filter((e) => e.entryType === 'ingreso')
     const expenseEntries = entries.value.filter((e) => e.entryType !== 'ingreso')
 
     const incomeTotal = incomeEntries.reduce((s, e) => s + Number(e.amount || 0), 0)
-    const incomeGroups = categorize(incomeEntries)
-    const incomeItems = buildStatementItems(incomeGroups, ['salary', 'investments', 'other_income'], incomeTotal)
+    const incomeGroups = categorizeWithCategoryRegistry(incomeEntries)
+    const incomeItems = buildStatementItems(incomeGroups, keysForSection('incomes', incomeGroups), incomeTotal, nameFor)
 
-    const expenseGroups = categorize(expenseEntries)
+    const expenseGroups = categorizeWithCategoryRegistry(expenseEntries)
 
-    const costOfLifeKeys = ['housing', 'food', 'transport', 'health']
-    const costOfLifeItems = buildStatementItems(expenseGroups, costOfLifeKeys, incomeTotal)
+    const costOfLifeItems = buildStatementItems(expenseGroups, keysForSection('costOfLife', expenseGroups), incomeTotal, nameFor)
     const costOfLifeTotal = costOfLifeItems.reduce((s, i) => s + i.amount, 0)
 
-    const discretionaryKeys = ['entertainment', 'other']
-    const discretionaryItems = buildStatementItems(expenseGroups, discretionaryKeys, incomeTotal)
+    const discretionaryItems = buildStatementItems(expenseGroups, keysForSection('discretionaryExpenses', expenseGroups), incomeTotal, nameFor)
     const discretionaryTotal = discretionaryItems.reduce((s, i) => s + i.amount, 0)
 
-    const financialKeys = ['financial']
-    const financialItems = buildStatementItems(expenseGroups, financialKeys, incomeTotal)
+    const financialItems = buildStatementItems(expenseGroups, keysForSection('financialExpenses', expenseGroups), incomeTotal, nameFor)
     const financialTotal = financialItems.reduce((s, i) => s + i.amount, 0)
 
     const grossProfit = incomeTotal - costOfLifeTotal
@@ -148,19 +219,18 @@ export function useIncomeStatement(params: {
 
   const comparison = computed<StatementComparison | null>(() => {
     if (!previousEntries) return null
+    rebuildRegistry()
     const prevIncomeEntries = previousEntries.value.filter((e) => e.entryType === 'ingreso')
     const prevExpenseEntries = previousEntries.value.filter((e) => e.entryType !== 'ingreso')
 
     const prevIncomeTotal = prevIncomeEntries.reduce((s, e) => s + Number(e.amount || 0), 0)
-    const prevExpenseGroups = categorize(prevExpenseEntries)
+    const prevExpenseGroups = categorizeWithCategoryRegistry(prevExpenseEntries)
 
-    const prevCostOfLifeKeys = ['housing', 'food', 'transport', 'health']
-    const prevCostOfLifeTotal = prevCostOfLifeKeys.reduce((s, k) => s + (prevExpenseGroups[k] || 0), 0)
+    const prevCostOfLifeTotal = keysForSection('costOfLife', prevExpenseGroups).reduce((s, k) => s + (prevExpenseGroups[k] || 0), 0)
 
-    const prevDiscretionaryKeys = ['entertainment', 'other']
-    const prevDiscretionaryTotal = prevDiscretionaryKeys.reduce((s, k) => s + (prevExpenseGroups[k] || 0), 0)
+    const prevDiscretionaryTotal = keysForSection('discretionaryExpenses', prevExpenseGroups).reduce((s, k) => s + (prevExpenseGroups[k] || 0), 0)
 
-    const prevFinancialTotal = prevExpenseGroups.financial || 0
+    const prevFinancialTotal = keysForSection('financialExpenses', prevExpenseGroups).reduce((s, k) => s + (prevExpenseGroups[k] || 0), 0)
     const prevGrossProfit = prevIncomeTotal - prevCostOfLifeTotal
     const prevOperatingSavings = prevGrossProfit - prevDiscretionaryTotal
     const prevNetResult = prevOperatingSavings - prevFinancialTotal
