@@ -57,12 +57,12 @@ const ssoClient = new SSOClient({
   clientId: import.meta.env.VITE_SSO_CLIENT_ID,
   apiBaseUrl: import.meta.env.VITE_API_URL,
 });
-await ssoClient.init();
 export { ssoClient };
 
 setSSOClient(ssoClient);
 
-// Sync SSO auth state with Pinia store
+// Sync SSO auth state with Pinia store — registered BEFORE init() so the initial
+// authenticated event (valid token already in storage) is never missed.
 ssoClient.onAuthStateChange((state) => {
   const authStore = useAuthStore();
   if (state.isAuthenticated && state.user) {
@@ -71,7 +71,7 @@ ssoClient.onAuthStateChange((state) => {
       name: state.user.name || '',
       user: state.user.user || '',
       email: state.user.email || '',
-          isAdmin: Boolean((state.user as { is_admin?: boolean }).is_admin),
+      isAdmin: Boolean((state.user as { is_admin?: boolean }).is_admin),
     });
     // Trigger initial sync after login
     syncService.fullSyncAndSave(async () => {
@@ -86,11 +86,6 @@ ssoClient.onAuthStateChange((state) => {
     authStore.logout();
   }
 });
-
-// Validate auth state with SSO server on startup
-await authController.checkAuth()
-// Start listening for auth expiration (401 responses)
-authController.start()
 
 try {
   (window as any).budgetEntriesController = budgetEntriesController;
@@ -114,30 +109,14 @@ function logBreakpoint() {
 
 const app = createApp(App).use(IonicVue).use(router).use(pinia);
 
-router.isReady().then(async () => {
-  try {
-    console.log('[main] Loading budget data before mount');
-    try {
-      const dayStore = useBudgetDayStore();
-      await dayStore.loadBudgetForDate({ date: dayStore.selectedDate });
-    } catch (e) {
-      console.warn('[main] loadDataForDate failed', e);
-    }
-  } catch (e) {
-    void e;
-  }
-
+// Mount-first: the app is offline-first (local Dexie data), so first paint must
+// never wait on the external SSO. Auth resolution runs in parallel below.
+void router.isReady().then(() => {
   app.mount('#app');
   logBreakpoint();
 
   const resizeListener = () => logBreakpoint();
   window.addEventListener('resize', resizeListener);
-
-  app.unmount = () => {
-    window.removeEventListener('resize', resizeListener);
-    const originalUnmount = app.unmount;
-    if (originalUnmount) originalUnmount();
-  };
 
   try {
     // @ts-expect-error expose for debugging
@@ -148,3 +127,18 @@ router.isReady().then(async () => {
     void e;
   }
 });
+
+// Resolve SSO/auth in parallel with the mount. init() reads the stored token and
+// calls the SSO server getUser() only when a token exists; a slow or unreachable
+// SSO no longer blanks the UI. checkAuth must run after init because it reads
+// ssoClient.isAuthenticated (set during init).
+void ssoClient.init()
+  .then(async () => {
+    await authController.checkAuth();
+    authController.start();
+  })
+  .catch(async (e) => {
+    console.warn('[main] SSO init failed — staying offline-first with local data:', e);
+    await authController.checkAuth();
+    authController.start();
+  });

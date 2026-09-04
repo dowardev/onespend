@@ -91,8 +91,8 @@ SPDX-License-Identifier: AGPL-3.0-only
                         {{ record.status === 'paused' ? 'Pausado' : 'Activo' }}
                       </ion-badge>
                       <ion-button
-                        slot="end"
                         v-if="record.status === 'active' || record.status === 'paused'"
+                        slot="end"
                         fill="clear"
                         :aria-label="record.status === 'active' ? 'Pausar' : 'Reanudar'"
                         @click.stop="toggleRecord({ record })"

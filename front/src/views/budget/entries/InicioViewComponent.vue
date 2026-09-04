@@ -225,40 +225,53 @@ const accountsList = computed(() => {
   return list.filter((acc: Account) => acc != null && acc.id != null);
 });
 
-function calculateAccountBalance(acc: Account, accountId: string | number) {
-  const initialBalance = Number(acc.initialBalance) || 0;
+function buildAccountsWithBalance(accounts: Account[]): AccountWithBalance[] {
+  // Single pass over the day's entries: bucket each entry's amount under every account it
+  // applies to (the direct accountId, plus each distinct group accountId). Replaces the old
+  // per-account `getEntries().filter(...)` scan, which was O(accounts × entries).
+  const totalsByAccount = new Map<string, { ingresos: number; egresos: number }>();
+  const add = (key: string, amount: number, entryType: string) => {
+    const t = totalsByAccount.get(key) || { ingresos: 0, egresos: 0 };
+    if (entryType === 'ingreso') t.ingresos += amount;
+    else t.egresos += amount;
+    totalsByAccount.set(key, t);
+  };
 
-  const entries = budgetEntriesController.getEntries();
-
-  const entriesForAccount = entries.filter((e: Income) => {
-    if (String(e.accountId) === String(accountId)) return true;
-    if (e.groups && Array.isArray(e.groups)) {
-      return e.groups.some((g: EntryGroup) => String(g.accountId) === String(accountId));
+  for (const e of budgetEntriesController.getEntries()) {
+    const amount = Number(e.amount || 0);
+    if (e.accountId != null) {
+      add(String(e.accountId), amount, e.entryType);
     }
-    return false;
+    if (e.groups && Array.isArray(e.groups)) {
+      const seen = new Set<string>();
+      for (const g of e.groups) {
+        if (g.accountId == null) continue;
+        const key = String(g.accountId);
+        if (key === String(e.accountId)) continue; // direct account already counted above
+        if (seen.has(key)) continue;
+        seen.add(key);
+        add(key, amount, e.entryType);
+      }
+    }
+  }
+
+  return accounts.map((acc: Account) => {
+    const t = totalsByAccount.get(String(acc.id)) || { ingresos: 0, egresos: 0 };
+    const initialBalance = Number(acc.initialBalance) || 0;
+    return {
+      ...acc,
+      id: acc.id,
+      initialBalance,
+      ingresos: t.ingresos,
+      egresos: t.egresos,
+      balance: initialBalance + t.ingresos - t.egresos,
+      hasTransactions: t.ingresos > 0 || t.egresos > 0,
+    } as AccountWithBalance;
   });
-
-  const ingresos = entriesForAccount
-    .filter((e: Income) => e.entryType === 'ingreso')
-    .reduce((sum: number, e: Income) => sum + Number(e.amount || 0), 0);
-
-  const egresos = entriesForAccount
-    .filter((e: Income) => e.entryType === 'egreso')
-    .reduce((sum: number, e: Income) => sum + Number(e.amount || 0), 0);
-
-  return {
-    ...acc,
-    id: acc.id,
-    initialBalance,
-    ingresos,
-    egresos,
-    balance: initialBalance + ingresos - egresos,
-    hasTransactions: ingresos > 0 || egresos > 0,
-  } as AccountWithBalance;
 }
 
 const accountsWithBalance = computed(() => {
-  const result = accountsList.value.map((acc: Account) => calculateAccountBalance(acc, acc.id));
+  const result = buildAccountsWithBalance(accountsList.value);
 
   const withTransactions = result
     .filter((acc: AccountWithBalance) => acc.hasTransactions)
@@ -271,25 +284,28 @@ const accountsWithBalance = computed(() => {
   return [...withTransactions, ...withoutTransactions];
 });
 
-const totalIngresos = computed(() => {
+const financialTotals = computed(() => {
+  // Single scan over the day's entries for both totals (one pass instead of two).
   const entries = budgetEntriesController.getEntries();
-  return entries
-    .filter((e: Income) => e.entryType === 'ingreso')
-    .reduce((sum: number, e: Income) => sum + Number(e.amount || 0), 0);
+  let ingresos = 0;
+  let egresos = 0;
+  for (const e of entries) {
+    const amount = Number(e.amount || 0);
+    if (e.entryType === 'ingreso') ingresos += amount;
+    else egresos += amount;
+  }
+  return { ingresos, egresos };
 });
 
-const totalEgresos = computed(() => {
-  const entries = budgetEntriesController.getEntries();
-  const entriesTotal = entries
-    .filter((e: Income) => e.entryType === 'egreso')
-    .reduce((sum: number, e: Income) => sum + Number(e.amount || 0), 0);
+const totalIngresos = computed(() => financialTotals.value.ingresos);
 
+const totalEgresos = computed(() => {
   const providersTotal = providersToday.value.reduce(
     (sum, p) => sum + calcProviderProductsTotal({ provider: p }),
     0,
   );
 
-  return entriesTotal + providersTotal;
+  return financialTotals.value.egresos + providersTotal;
 });
 
 const totalDifference = computed(() => {
@@ -320,10 +336,8 @@ const providersToday = computed(() => {
 const unifiedItems = computed((): UnifiedItem[] => {
   const entries: Income[] = budgetEntriesController.getEntries() || [];
 
-  const selectedDateStr = String(budgetDayStore.selectedDate || '').slice(0, 10);
-  const providers: Provider[] = budgetProvidersController
-    .getProviders()
-    .filter((p: Provider) => String(p.date || '').slice(0, 10) === selectedDateStr);
+  // Reuse the day-scoped provider filter computed above instead of re-filtering here.
+  const providers: Provider[] = providersToday.value;
 
   const entryItems: UnifiedItem[] = entries.map((entry: Income) => ({
     id: entry.id,

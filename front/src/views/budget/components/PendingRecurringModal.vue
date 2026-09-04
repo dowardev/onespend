@@ -23,7 +23,7 @@ SPDX-License-Identifier: AGPL-3.0-only
           <template v-if="records.length > 0">
             <ion-item
               v-for="rec in records"
-              :key="rec.id"
+              :key="rec.sync_id ?? rec.id"
               lines="full"
               class="transparent"
             >

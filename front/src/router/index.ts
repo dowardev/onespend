@@ -21,6 +21,7 @@ import RegisterView from '@/views/auth/RegisterView.vue';
 import AuthCallbackPage from '@/views/auth/AuthCallbackPage.vue';
 import PerformanceTestPage from '@/views/test/PerformanceTestPage.vue';
 import PerformancePage from '@/views/statistics/performance/PerformancePage.vue';
+import PerformanceConfigCategoryPage from '@/views/statistics/performance/config/PerformanceConfigPage.vue';
 import CashFlow from '@/views/statistics/cashFlow/CashFlow.vue';
 
 import ProviderEditPage from '@/views/budget/suppliers/ProviderEditPage.vue';
@@ -89,6 +90,11 @@ const routes: Array<RouteRecordRaw> = [
     path: '/statistics/performance',
     name: 'StatisticsPerformance',
     component: PerformancePage,
+  },
+  {
+    path: '/statistics/performance/config',
+    name: 'PerformanceConfigPage',
+    component: PerformanceConfigCategoryPage,
   },
   {
     path: '/suppliers',

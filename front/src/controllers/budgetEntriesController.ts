@@ -63,8 +63,9 @@ class BudgetEntriesController {
     groups?: Array<{ amount: number; accountId: string | number | null }>;
     date?: string;
     _fromRecurringId?: string;
+    category?: string;
   }) {
-    const { name = '', amount = 0, paymentType = 'cash' as PaymentType, accountId = null, groups = [], date, _fromRecurringId } = params;
+    const { name = '', amount = 0, paymentType = 'cash' as PaymentType, accountId = null, groups = [], date, _fromRecurringId, category } = params;
     const dayStore = useBudgetDayStore();
     const entryDate = date || dayStore.selectedDate;
 
@@ -80,6 +81,7 @@ class BudgetEntriesController {
       groups,
       createdAt: Date.now(),
       _fromRecurringId,
+      category,
     };
 
     return this.addEntry({ entry });
@@ -93,8 +95,9 @@ class BudgetEntriesController {
     groups?: Array<{ amount: number; accountId: string | number | null }>;
     date?: string;
     _fromRecurringId?: string;
+    category?: string;
   }) {
-    const { name = '', amount = 0, paymentType = 'cash' as PaymentType, accountId = null, groups = [], date, _fromRecurringId } = params;
+    const { name = '', amount = 0, paymentType = 'cash' as PaymentType, accountId = null, groups = [], date, _fromRecurringId, category } = params;
     const dayStore = useBudgetDayStore();
     const entryDate = date || dayStore.selectedDate;
 
@@ -110,6 +113,7 @@ class BudgetEntriesController {
       groups,
       createdAt: Date.now(),
       _fromRecurringId,
+      category,
     };
 
     return this.addEntry({ entry });

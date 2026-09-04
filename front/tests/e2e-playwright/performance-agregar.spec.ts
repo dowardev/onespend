@@ -37,3 +37,30 @@ test('Performance empty section: Agregar navigates and help explains the concept
   await addBtn.click()
   await expect(page).toHaveURL(/\/budget\/entry\/new/, { timeout: 10000 })
 })
+
+test('empty section Agregar carries entryType + date query params (REQ-6)', async ({ page }) => {
+  await page.goto('/statistics/performance', { waitUntil: 'domcontentloaded' })
+  await page.waitForLoadState('networkidle')
+
+  // First empty section is "Ingresos" → incomes → entryType=ingreso.
+  const addBtn = page.locator('ion-button:has-text("Agregar")').first()
+  await expect(addBtn, 'an "Agregar" button should render for an empty section').toBeVisible({
+    timeout: 30000,
+  })
+  await addBtn.click()
+  await expect(page).toHaveURL(/\/budget\/entry\/new\?entryType=ingreso&date=\d{4}-\d{2}-\d{2}/, {
+    timeout: 10000,
+  })
+
+  // A cost-of-life expense section must navigate as egreso with the period's anchor date.
+  await page.goto('/statistics/performance', { waitUntil: 'domcontentloaded' })
+  await page.waitForLoadState('networkidle')
+  const costBtn = page.locator('ion-item.empty-section', { hasText: 'Costo de Vida' }).getByRole('button', {
+    name: 'Agregar',
+  })
+  await expect(costBtn).toBeVisible({ timeout: 30000 })
+  await costBtn.click()
+  await expect(page).toHaveURL(/\/budget\/entry\/new\?entryType=egreso&date=\d{4}-\d{2}-\d{2}/, {
+    timeout: 10000,
+  })
+})

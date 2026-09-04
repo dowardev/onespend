@@ -18,6 +18,7 @@ class BudgetEntrySyncRequest extends FormRequest
             'date' => 'required|date',
             'payment_type' => 'required|in:cash,digital',
             'entry_type' => 'required|in:ingreso,egreso',
+            'category' => 'nullable|string|max:100',
             'account_id' => 'nullable|string|max:100',
             'supplier_id' => 'nullable|string|max:100',
             'supplier_name' => 'nullable|string|max:255',

@@ -25,6 +25,7 @@ export interface BudgetEntryRow {
   accountId?: string | number | null
   supplierId?: string | number | null
   supplierName?: string
+  category?: string
   fromRecurringId?: string | null
   providerGroupId?: string | null
   providerName?: string
@@ -204,6 +205,25 @@ export interface StatisticsConfigRow {
   categoryKey: string
   name: string
   amount: number | null
+}
+
+export type IncomeStatementSection = 'incomes' | 'costOfLife' | 'discretionaryExpenses' | 'financialExpenses'
+
+export interface EntryCategoryRow {
+  id: string
+  name: string
+  createdAt?: number
+  updatedAt?: number
+}
+
+// Mapping of Income Statement section -> category ids (device-local, configured
+// in the Performance config panel). Sections are a Performance-page concept; a
+// category may appear in 0, 1, or several sections.
+export interface IncomeStatementSectionMap {
+  incomes: string[]
+  costOfLife: string[]
+  discretionaryExpenses: string[]
+  financialExpenses: string[]
 }
 
 export interface BackupRow {

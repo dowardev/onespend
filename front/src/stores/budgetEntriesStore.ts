@@ -26,6 +26,7 @@ export interface Income {
   synced_at?: number;
   supplierId?: string;
   supplierName?: string;
+  category?: string;
   _providerName?: string;
   _supplierId?: string | number;
   _fromProviderGroupId?: string | number;
@@ -46,6 +47,8 @@ export function mapEntryRow(row: BudgetEntryRow): Income {
     groups: row.groups?.map((g) => ({ amount: g.amount, accountId: g.accountId ?? null })),
     supplierId: row.supplierId as string,
     supplierName: row.supplierName,
+    category: row.category != null ? String(row.category) : undefined,
+    _providerName: row.providerName ?? row.supplierName ?? undefined,
     _fromRecurringId: row.fromRecurringId ?? undefined,
     createdAt: row.createdAt || Date.now(),
     synced_at: row.syncedAt,

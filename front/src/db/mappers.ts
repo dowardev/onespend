@@ -48,6 +48,7 @@ export function toBudgetEntryRow(entry: any): BudgetEntryRow {
     accountId: coerceAccountId(entry.accountId ?? entry.account_id),
     supplierId: entry.supplierId != null ? str(entry.supplierId) : (entry.supplier_id != null ? str(entry.supplier_id) : null),
     supplierName: str(entry.supplierName || entry.supplier_name) || undefined,
+    category: entry.category != null ? str(entry.category) : undefined,
     fromRecurringId: entry._fromRecurringId ?? entry.from_recurring_id ?? null,
     providerGroupId: entry._fromProviderGroupId != null ? str(entry._fromProviderGroupId) : null,
     providerName: str(entry._providerName || entry.provider_name) || undefined,

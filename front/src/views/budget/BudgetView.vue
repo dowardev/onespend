@@ -207,28 +207,34 @@ const formattedSelectedDate = computed(() => {
 // onIonViewWillEnter
 onIonViewWillEnter(async () => {
   try {
+    // 1. Local data only — what the UI needs to paint (Dexie, offline-first).
     await dataMediator.reloadAll();
-    try {
-      await syncController.pullFromServer();
-    } catch {
-      // background pull; don't block view rendering
-    }
     await accountsController.loadAll();
     await budgetDayStore.loadBudgetForDate({ date: budgetDayStore.selectedDate });
-    if (!repairRan.value) {
-      await recurringRecordsController.repairRecords();
-      repairRan.value = true;
-    }
-    await processRecurringForDate(budgetDayStore.selectedDate);
+
+    // Paint immediately with local data; never block rendering on network.
     isDataLoaded.value = true;
+
+    // 2. Background work (pull / repair / recurring processor) — the UI must
+    //    render first and update reactively when data arrives.
+    void (async () => {
+      try {
+        await syncController.pullFromServer();
+      } catch {
+        // background pull; don't block view rendering
+      }
+      if (!repairRan.value) {
+        await recurringRecordsController.repairRecords();
+        repairRan.value = true;
+      }
+      await processRecurringForDate(budgetDayStore.selectedDate);
+    })();
   } catch (error) {
     console.error('Failed to load budget data:', error);
     isDataLoaded.value = true;
   }
 });
 // end onIonViewWillEnter
-
-
 
 // functions
 // NOTE: functions must follow the structure of named parameters
@@ -303,7 +309,6 @@ async function goToToday() {
     await processRecurringForDate(budgetDayStore.selectedDate);
   }, 50);
 }
-
 
 function confirmClearDay() {
   showMoreOptions.value = false;
@@ -588,7 +593,7 @@ async function applySinglePendingRecord(params: { record: RecurringRecord }) {
     });
   }
 
-  const idx = pendingRecurringRecords.value.findIndex((r) => r.id === record.id);
+  const idx = pendingRecurringRecords.value.findIndex((r) => (r.sync_id ?? r.id) === (record.sync_id ?? record.id));
   if (idx !== -1) pendingRecurringRecords.value.splice(idx, 1);
   if (pendingRecurringRecords.value.length === 0) showPendingModal.value = false;
 }

@@ -134,15 +134,12 @@ SPDX-License-Identifier: AGPL-3.0-only
               </ion-button>
               <FinancialInfoPopover :term="section.title">
                 <template #trigger>
-                  <ion-button
-                    slot="end"
-                    fill="clear"
-                    size="small"
-                    color="medium"
+                  <ion-icon
+                    :icon="helpCircleOutline"
                     :aria-label="'Información sobre ' + section.title"
-                  >
-                    <ion-icon :icon="helpCircleOutline" />
-                  </ion-button>
+                    color="medium"
+                    size="small"
+                  />
                 </template>
               </FinancialInfoPopover>
             </ion-item>
@@ -303,14 +300,16 @@ import {
   helpCircleOutline,
 } from 'ionicons/icons';
 import { useRouter } from 'vue-router';
-import { computed, onMounted, watch, toRef } from 'vue';
+import { computed, onMounted, watch, toRef, ref } from 'vue';
 import { format } from 'date-fns';
-import { parseLocalDate } from '@/utils/date';
+import { parseLocalDate, formatLocalDate } from '@/utils/date';
 import { usePeriodRange, type PeriodType } from '@/composables/usePeriodRange';
 import { usePeriodConfig } from '@/composables/usePeriodConfig';
 import { useDatePopover } from '@/composables/useDatePopover';
 import { useBudgetEntries } from '@/composables/useBudgetEntries';
 import { useIncomeStatement, type StatementSection } from '@/composables/useIncomeStatement';
+import { entryCategoriesDb } from '@/db/controllers/entryCategoriesDb';
+import type { EntryCategoryRow, IncomeStatementSectionMap } from '@/db/types';
 import IncomeStatementRow from './IncomeStatementRow.vue';
 import FinancialInfoPopover from './FinancialInfoPopover.vue';
 
@@ -333,9 +332,14 @@ const {
 } = usePeriodRange(periodRef, { weekStartDay });
 
 const { currentEntries, previousEntries, isLoading, fetchPeriod } = useBudgetEntries();
+
+const sectionMap = ref<IncomeStatementSectionMap | null>(null);
+const entryCategories = ref<EntryCategoryRow[]>([]);
 const { statement, comparison } = useIncomeStatement({
   entries: currentEntries,
   previousEntries,
+  categories: entryCategories,
+  sectionMap,
 });
 
 const { popover: datePopover, open: openDatePopover, close: closeDatePopover } = useDatePopover();
@@ -453,11 +457,22 @@ function handleResetToToday() {
 }
 
 function handleEmptyAction(section: StatementSection) {
-  // Navigate to the budget entry form to add a new income/expense for this section.
-  void router.push('/budget/entry/new');
+  // Navigate to the budget entry form with the section's type and the viewed
+  // period's anchor date preselected (REQ-6). Incomes → ingreso; all expense
+  // sections → egreso.
+  const { start } = getBudgetDateRange();
+  const entryType = section === statement.value.incomes ? 'ingreso' : 'egreso';
+  void router.push({
+    path: '/budget/entry/new',
+    query: { entryType, date: formatLocalDate({ d: start }) },
+  });
 }
 
 async function loadData() {
+  if (sectionMap.value === null) {
+    sectionMap.value = await entryCategoriesDb.getSectionMap();
+  }
+  entryCategories.value = await entryCategoriesDb.getAll();
   const { start, end } = getBudgetDateRange();
   const { start: prevStart, end: prevEnd } = getPreviousPeriodDateRange();
   await fetchPeriod({ start, end, previousStart: prevStart, previousEnd: prevEnd });
@@ -465,6 +480,8 @@ async function loadData() {
 
 async function refresh() {
   await loadConfig();
+  sectionMap.value = await entryCategoriesDb.getSectionMap();
+  entryCategories.value = await entryCategoriesDb.getAll();
   await loadData();
 }
 
