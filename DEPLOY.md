@@ -253,7 +253,10 @@ Pipeline triggers automatically on tags matching
 | `SSH_USER`            | SSH user                 | `your-user`                    |
 | `DEPLOY_PATH_BACKEND` | Backend path on server   | `/home/user/onespend/back`     |
 | `DEPLOY_PATH_FRONTEND`| Frontend path on server  | `/home/user/public_html`       |
-| `VITE_API_URL`        | API URL (frontend build) | `https://api.yourdomain.com`   |
+| `VITE_API_URL`        | Frontend API URL (consumed directly by Vite build) | `https://api.yourdomain.com`   |
+| `VITE_SSO_URL`        | SSO API URL (consumed directly by Vite build) | `https://auth.yourdomain.com/api` |
+| `VITE_SSO_FRONTEND_URL` | SSO UI URL (consumed directly by Vite build) | `https://auth.yourdomain.com` |
+| `VITE_SSO_CLIENT_ID`  | SSO client id (consumed directly by Vite build) | `onespend-app` |
 <!-- markdownlint-enable MD013 -->
 
 ### Trigger

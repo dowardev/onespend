@@ -123,7 +123,6 @@ frontend_build:
     - .frontend_setup
     - .tag_rules
   script:
-    - cp "$FRONTEND_ENV_FILE" .env.production
     - pnpm run build
     - tar czf ../dist.tar.gz -C dist .
   artifacts:
@@ -159,6 +158,7 @@ backend_deploy:
         tar -xzf /tmp/backend.tar.gz -C $DEPLOY_PATH_BACKEND &&
         tar -xzf /tmp/sso-server.tar.gz -C $DEPLOY_PARENT/packages &&
         cd $DEPLOY_PATH_BACKEND &&
+        rm -f bootstrap/cache/*.php bootstrap/cache/*.json config/sanctum.php &&
         composer install --no-dev --optimize-autoloader &&
         php artisan migrate --force &&
         php artisan config:cache &&
@@ -212,6 +212,7 @@ rollback_backend:
         mkdir -p $DEPLOY_PATH_BACKEND &&
         tar -xzf /tmp/backend.tar.gz -C $DEPLOY_PATH_BACKEND &&
         cd $DEPLOY_PATH_BACKEND &&
+        rm -f bootstrap/cache/*.php bootstrap/cache/*.json config/sanctum.php &&
         composer install --no-dev --optimize-autoloader &&
         php artisan migrate --force &&
         php artisan config:cache &&
@@ -239,7 +240,6 @@ rollback_frontend:
     - cd front
     - corepack enable
     - pnpm install --frozen-lockfile
-    - cp "$FRONTEND_ENV_FILE" .env.production
     - pnpm run build
     - tar czvf dist.tar.gz -C dist .
     - scp -o ConnectTimeout=60 -P "$SSH_PORT" dist.tar.gz "$SSH_USER@$SSH_HOST:$DEPLOY_PATH_FRONTEND"
