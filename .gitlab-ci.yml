@@ -40,7 +40,7 @@ cache:
 .frontend_setup:
   before_script:
     - cd front
-    - corepack enable
+    - npm install -g pnpm@11.25.0 --no-audit --no-fund  # corepack download is broken in runners; npm fetch works
     - pnpm install --frozen-lockfile
 
 backend_lint:
@@ -238,7 +238,7 @@ rollback_frontend:
     - echo "Rolling back to $PREVIOUS_TAG"
     - git checkout "$PREVIOUS_TAG"
     - cd front
-    - corepack enable
+    - npm install -g pnpm@11.25.0 --no-audit --no-fund  # corepack download is broken in runners; npm fetch works
     - pnpm install --frozen-lockfile
     - pnpm run build
     - tar czvf dist.tar.gz -C dist .
