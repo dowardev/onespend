@@ -6,6 +6,24 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 # Changelog
 
+## [v0.76.1-rc.4] - 2026-09-04
+
+### Added
+
+- Explicit entry categories (LBDS-210 RC4 §1): global device-local categories picked at entry creation (searchable, accent-insensitive picker); backend `category` field on budget entries (migration + sync); Performance config page (`/statistics/performance/config`) with per-section category mapping (MR !58)
+- Excel export folds custom-category amounts into "other" buckets so it matches on-screen totals
+
+### Changed
+
+- Income Statement classification uses the explicit category-to-section mapping, keeping the keyword heuristic as a byte-identical fallback
+- App boot no longer blocks on SSO network calls (mount-first); Budget balances computed in a single pass; Performance refreshes on every view entry (LBDS-210 RC4 §2)
+
+### Fixed
+
+- Entry category persists on create/edit; custom section assignments and names apply live (reactive section map)
+- Reassigning a seed category no longer double-counts it; duplicate quick-category keeps the alert open; date+field edits no longer drop non-date changes
+- Performance config section map persists on confirm
+
 ## [v0.76.1-rc.2] - 2026-08-27
 
 ### Added
