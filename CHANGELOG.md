@@ -60,7 +60,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 ### Added
 - SPA `.htaccess` in `front/public/` so history-mode routing works on page reload
-- CI: `frontend_build` and `rollback_frontend` copy the `FRONTEND_ENV_FILE` File variable into `.env.production` before building, so the pipeline compiles the frontend with the configured production URLs
+- CI: `frontend_build` and `rollback_frontend` compile the frontend with the `VITE_*` CI/CD variables (consumed directly by Vite); the `FRONTEND_ENV_FILE` File-variable copy was removed
 
 ### Changed
 - Setup script verifies the frontend env file (`.env.development` in dev, `.env.production` otherwise) is configured before building; warns and continues in dev, aborts in production
