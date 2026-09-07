@@ -261,4 +261,78 @@ class BudgetEntryProcessorTest extends TestCase
         $this->assertCount(1, $result['conflicts']);
         $this->assertEquals($syncId, $result['conflicts'][0]['sync_id']);
     }
+    public function test_process_updates_entity_with_groups(): void
+    {
+        $syncId = 'test-be-update-groups-1';
+        $account2 = Account::create([
+            'user_id' => $this->user->id,
+            'sync_id' => 'test-account-be-ug-2',
+            'name' => 'Account 2',
+            'status' => 'active',
+        ]);
+
+        $this->processor->create([
+            [
+                'id' => $syncId,
+                'name' => 'Entry To Update Groups',
+                'amount' => 300,
+                'date' => '2026-06-15',
+                'entry_type' => 'egreso',
+                'payment_type' => 'cash',
+                'account_id' => (string) $this->account->sync_id,
+                'status' => 'active',
+                'groups' => [
+                    ['sync_id' => 'g-seed-1', 'account_id' => (string) $this->account->sync_id, 'amount' => 300],
+                ],
+            ],
+        ], $this->user->id);
+
+        $entry = BudgetEntry::where('sync_id', $syncId)->first();
+        $this->assertNotNull($entry);
+        $this->assertCount(1, BudgetEntryGroup::where('budget_entry_id', $entry->id)->get());
+
+        // Update with stable client sync_ids: replaces groups idempotently.
+        $this->processor->update([
+            [
+                'id' => $syncId,
+                'name' => 'Entry To Update Groups',
+                'groups' => [
+                    ['sync_id' => 'g-1', 'account_id' => (string) $this->account->sync_id, 'amount' => 150],
+                    ['sync_id' => 'g-2', 'account_id' => (string) $account2->sync_id, 'amount' => 250],
+                ],
+            ],
+        ], $this->user->id);
+
+        $groups = BudgetEntryGroup::where('budget_entry_id', $entry->id)->orderBy('amount')->get();
+        $this->assertCount(2, $groups);
+        $this->assertEquals(['g-1', 'g-2'], $groups->pluck('sync_id')->all());
+        $this->assertEquals($this->account->id, $groups[0]->account_id);
+        $this->assertEquals($account2->id, $groups[1]->account_id);
+        $this->assertEquals([150, 250], $groups->pluck('amount')->map(fn ($v) => (int) $v)->all());
+
+        // Re-applying the same payload is idempotent (no churn, no duplicates).
+        $this->processor->update([
+            [
+                'id' => $syncId,
+                'name' => 'Entry To Update Groups',
+                'groups' => [
+                    ['sync_id' => 'g-1', 'account_id' => (string) $this->account->sync_id, 'amount' => 150],
+                    ['sync_id' => 'g-2', 'account_id' => (string) $account2->sync_id, 'amount' => 250],
+                ],
+            ],
+        ], $this->user->id);
+        $this->assertCount(2, BudgetEntryGroup::where('budget_entry_id', $entry->id)->get());
+
+        // Update without the groups key leaves existing groups untouched.
+        $this->processor->update([
+            ['id' => $syncId, 'name' => 'Entry To Update Groups'],
+        ], $this->user->id);
+        $this->assertCount(2, BudgetEntryGroup::where('budget_entry_id', $entry->id)->get());
+
+        // Explicit empty groups clears all groups for the entry.
+        $this->processor->update([
+            ['id' => $syncId, 'name' => 'Entry To Update Groups', 'groups' => []],
+        ], $this->user->id);
+        $this->assertCount(0, BudgetEntryGroup::where('budget_entry_id', $entry->id)->get());
+    }
 }

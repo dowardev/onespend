@@ -146,7 +146,6 @@ SPDX-License-Identifier: AGPL-3.0-only
       :is-open="showCategoryPicker"
       :categories="entryCategories"
       :selected-id="categoryId"
-      :entry-type="entryData.entryType"
       @select="onCategorySelect"
       @dismiss="showCategoryPicker = false"
     />

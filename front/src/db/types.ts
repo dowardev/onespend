@@ -218,7 +218,7 @@ export interface EntryCategoryRow {
 
 // Mapping of Income Statement section -> category ids (device-local, configured
 // in the Performance config panel). Sections are a Performance-page concept; a
-// category may appear in 0, 1, or several sections.
+// category belongs to at most ONE section (1:1 enforcement, see setSectionMap).
 export interface IncomeStatementSectionMap {
   incomes: string[]
   costOfLife: string[]

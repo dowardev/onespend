@@ -83,17 +83,25 @@ class BudgetEntryProcessor extends AbstractEntityProcessor
             }
 
             $item = $entry['_original'] ?? null;
-            $groups = $item['groups'] ?? null;
-
-            if (empty($groups)) {
+            if (! is_array($item) || ! array_key_exists('groups', $item)) {
                 continue;
             }
+            $groups = $item['groups'] ?? [];
 
             $entryModel = BudgetEntry::where('sync_id', $syncId)
                 ->where('user_id', $userId)
                 ->first();
 
             if (! $entryModel) {
+                continue;
+            }
+
+            if (empty($groups)) {
+                // Explicit empty groups: clear all existing groups for the entry.
+                BudgetEntryGroup::where('budget_entry_id', $entryModel->id)
+                    ->where('user_id', $userId)
+                    ->delete();
+
                 continue;
             }
 

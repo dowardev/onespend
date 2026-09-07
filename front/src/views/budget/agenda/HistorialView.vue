@@ -213,7 +213,7 @@ const router = useRouter();
 const budgetDay = useBudgetDay();
 
 // 6. Vars and const
-const todayDate = new Date().toISOString().slice(0, 10);
+const todayDate = format(new Date(), 'yyyy-MM-dd');
 const showSearch = ref(false);
 const searchTerm = ref('');
 const dateFilter = ref<string | null>(null);
