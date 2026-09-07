@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Syncing an entry update with an explicit empty `groups` array now clears its groups; updates that omit `groups` leave existing groups untouched (LBDS-228).
+
 ## [v0.76.1-rc.4] - 2026-09-04
 
 ### Added

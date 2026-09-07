@@ -36,3 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Excel export folds custom-category amounts into "other" buckets so it matches on-screen totals.
 - Creating a duplicate category keeps the alert open instead of closing silently.
 - Editing an entry's date together with other fields no longer drops the non-date changes.
+- Category picker no longer receives the dead `entry-type` prop (LBDS-228).
+- Section-map comment and category-section docs now state the enforced 1:1 rule (first section wins) (LBDS-228).
+- Default Income Statement section map is persisted on first read, so upgraded installs stop relying on the in-memory fallback (LBDS-228).
+- Historial "Today" badge uses the device-local date instead of UTC (LBDS-228).

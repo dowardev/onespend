@@ -101,14 +101,17 @@ export const entryCategoriesDb = {
     if (stored && typeof stored === 'object') {
       return { ...DEFAULT_SECTION_MAP, ...(stored as Partial<IncomeStatementSectionMap>) }
     }
+    // Persist the default map on first read so upgraded installs stop relying
+    // on the in-memory fallback.
+    await configDb.set({ key: INCOME_SECTION_MAP_KEY, value: { ...DEFAULT_SECTION_MAP } })
     return { ...DEFAULT_SECTION_MAP }
   },
 
   async setSectionMap(params: { map: IncomeStatementSectionMap }): Promise<void> {
     const { map } = params
     // 1:1 enforcement: each category can belong to at most ONE section. If the same
-    // id appears in multiple sections, keep only the LAST occurrence in the canonical
-    // order ( incomes < costOfLife < discretionaryExpenses < financialExpenses ).
+    // id appears in multiple sections, keep only the FIRST occurrence in the canonical
+    // order ( incomes < costOfLife < discretionaryExpenses < financialExpenses ). so the earliest section wins.
     const seen = new Set<string>()
     const clamped = { ...map }
     const sections: Array<keyof IncomeStatementSectionMap> = [
