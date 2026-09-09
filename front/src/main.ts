@@ -28,12 +28,14 @@ import '@ionic/vue/css/display.css';
 import './theme/variables.css';
 
 import { createPinia, setActivePinia } from 'pinia';
+import { App as CapacitorApp } from '@capacitor/app';
 import { setSSOClient } from '@/ssoClientAccessor';
 import { useAuthStore } from '@/stores/authStore';
 import { useAccountsStore } from '@/stores/accountsStore';
 import { useBudgetEntriesStore } from '@/stores/budgetEntriesStore';
 import { useBudgetProvidersStore } from '@/stores/budgetProvidersStore';
 import { useSuppliersStore } from '@/stores/suppliersStore';
+import { useSsoNativeReturn } from '@/composables/useSsoNativeReturn';
 import { syncService } from '@/services/syncService';
 import authController from '@/controllers/authController';
 import budgetEntriesController from './controllers/budgetEntriesController';
@@ -60,6 +62,25 @@ const ssoClient = new SSOClient({
 export { ssoClient };
 
 setSSOClient(ssoClient);
+
+// Native SSO return: on Android the login runs in the external browser and
+// comes back as a com.dowardev.onespend://auth/callback deep link.
+const ssoNativeReturn = useSsoNativeReturn();
+void ssoNativeReturn
+  .start({ router })
+  .then(async () => {
+    try {
+      const launchUrl = await CapacitorApp.getLaunchUrl();
+      if (launchUrl?.url) {
+        await ssoNativeReturn.handleAppUrl({ url: launchUrl.url, router });
+      }
+    } catch (launchError) {
+      console.warn('[sso-native] Could not handle launch URL:', launchError);
+    }
+  })
+  .catch((startError) => {
+    console.warn('[sso-native] Could not start native return listener:', startError);
+  });
 
 // Sync SSO auth state with Pinia store — registered BEFORE init() so the initial
 // authenticated event (valid token already in storage) is never missed.

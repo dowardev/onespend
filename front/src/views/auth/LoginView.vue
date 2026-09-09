@@ -16,40 +16,98 @@ SPDX-License-Identifier: AGPL-3.0-only
     </ion-header>
 
     <ion-content :fullscreen="true" class="ion-padding">
-      <div class="auth-container">
-        <div class="logo-section">
-          <h1>oneSpend</h1>
-          <p>Redirigiendo al servidor de autenticación...</p>
-        </div>
+      <ion-grid>
+        <ion-row class="ion-justify-content-center">
+          <ion-col size="12" size-md="6" size-lg="4">
+            <div class="auth-container">
+              <div class="logo-section">
+                <h1>oneSpend</h1>
+                <p v-if="!showError">Redirigiendo al servidor de autenticación...</p>
+                <p v-else>No se pudo completar el inicio de sesión.</p>
+              </div>
 
-        <div class="loading-section">
-          <ion-spinner name="crescent" class="auth-spinner" />
-          <p>Serás redirigido al portal SSO para iniciar sesión.</p>
-        </div>
-      </div>
+              <ion-card v-if="showError" color="danger">
+                <ion-card-content>
+                  <p>No se pudo completar el inicio de sesión con SSO. Inténtalo de nuevo.</p>
+                  <ion-button expand="block" @click="handleRetry">Reintentar</ion-button>
+                </ion-card-content>
+              </ion-card>
+
+              <div v-else class="loading-section">
+                <ion-spinner name="crescent" class="auth-spinner" />
+                <p>Serás redirigido al portal SSO para iniciar sesión.</p>
+              </div>
+            </div>
+          </ion-col>
+        </ion-row>
+      </ion-grid>
     </ion-content>
   </ion-page>
 </template>
 
 <script setup lang="ts">
-// 1. Imports
+// 1. Imports (ionic/vue/ionicons)
 import {
+  IonBackButton,
+  IonButton,
+  IonButtons,
+  IonCard,
+  IonCardContent,
+  IonCol,
   IonContent,
+  IonGrid,
   IonHeader,
   IonPage,
+  IonRow,
+  IonSpinner,
   IonTitle,
   IonToolbar,
-  IonButtons,
-  IonBackButton,
-  IonSpinner,
 } from '@ionic/vue'
-import { onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import authController from '@/controllers/authController'
+
+// 2. Controllers / Composables
+// Shared login logic lives in authController; route and router are framework composables.
+
+// 5. Main
+const route = useRoute()
+const router = useRouter()
+
+// 6. Vars and const
+const loginFailed = ref(false)
+
+// 8. Computed
+const hasSsoError = computed(() => route.query.sso_error !== undefined)
+const showError = computed(() => hasSsoError.value || loginFailed.value)
 
 // 9. OnMounted
 onMounted(async () => {
-  await authController.login()
+  if (hasSsoError.value) {
+    return
+  }
+  await tryLogin()
 })
+
+// 10. Functions (named parameters pattern)
+async function tryLogin(): Promise<void> {
+  try {
+    await authController.login()
+  } catch (loginError) {
+    console.warn('[login] SSO login failed:', loginError)
+    loginFailed.value = true
+  }
+}
+
+async function handleRetry(): Promise<void> {
+  loginFailed.value = false
+  try {
+    await router.replace({ path: '/login', query: {} })
+  } catch (navigationError) {
+    console.warn('[login] Could not clear SSO error query:', navigationError)
+  }
+  await tryLogin()
+}
 </script>
 
 <style scoped>

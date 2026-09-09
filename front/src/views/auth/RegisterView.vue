@@ -16,40 +16,84 @@ SPDX-License-Identifier: AGPL-3.0-only
     </ion-header>
 
     <ion-content :fullscreen="true" class="ion-padding">
-      <div class="auth-container">
-        <div class="logo-section">
-          <h1>oneSpend</h1>
-          <p>Redirigiendo al registro SSO...</p>
-        </div>
+      <ion-grid>
+        <ion-row class="ion-justify-content-center">
+          <ion-col size="12" size-md="6" size-lg="4">
+            <div class="auth-container">
+              <div class="logo-section">
+                <h1>oneSpend</h1>
+                <p v-if="!showError">Redirigiendo al registro SSO...</p>
+                <p v-else>No se pudo completar el registro.</p>
+              </div>
 
-        <div class="loading-section">
-          <ion-spinner name="crescent" class="auth-spinner" />
-          <p>Serás redirigido al portal SSO para crear tu cuenta.</p>
-        </div>
-      </div>
+              <ion-card v-if="showError" color="danger">
+                <ion-card-content>
+                  <p>No se pudo completar el registro con SSO. Inténtalo de nuevo.</p>
+                  <ion-button expand="block" @click="handleRetry">Reintentar</ion-button>
+                </ion-card-content>
+              </ion-card>
+
+              <div v-else class="loading-section">
+                <ion-spinner name="crescent" class="auth-spinner" />
+                <p>Serás redirigido al portal SSO para crear tu cuenta.</p>
+              </div>
+            </div>
+          </ion-col>
+        </ion-row>
+      </ion-grid>
     </ion-content>
   </ion-page>
 </template>
 
 <script setup lang="ts">
-// 1. Imports
+// 1. Imports (ionic/vue/ionicons)
 import {
+  IonBackButton,
+  IonButton,
+  IonButtons,
+  IonCard,
+  IonCardContent,
+  IonCol,
   IonContent,
+  IonGrid,
   IonHeader,
   IonPage,
+  IonRow,
+  IonSpinner,
   IonTitle,
   IonToolbar,
-  IonButtons,
-  IonBackButton,
-  IonSpinner,
 } from '@ionic/vue'
-import { onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import authController from '@/controllers/authController'
+
+// 2. Controllers / Composables
+// Shared register logic lives in authController.
+
+// 6. Vars and const
+const registerFailed = ref(false)
+
+// 8. Computed
+const showError = computed(() => registerFailed.value)
 
 // 9. OnMounted
 onMounted(async () => {
-  await authController.register()
+  await tryRegister()
 })
+
+// 10. Functions (named parameters pattern)
+async function tryRegister(): Promise<void> {
+  try {
+    await authController.register()
+  } catch (registerError) {
+    console.warn('[register] SSO register failed:', registerError)
+    registerFailed.value = true
+  }
+}
+
+async function handleRetry(): Promise<void> {
+  registerFailed.value = false
+  await tryRegister()
+}
 </script>
 
 <style scoped>

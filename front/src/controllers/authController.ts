@@ -7,6 +7,9 @@ import { getSSOClient } from '@/ssoClientAccessor'
 import { clearAllUserData } from '@/services/dataClearService'
 import { syncService } from '@/services/syncService'
 import { syncApiService } from '@/services/sync/SyncApiService'
+import { Capacitor } from '@capacitor/core'
+import { Browser } from '@capacitor/browser'
+import { SSO_NATIVE_REDIRECT_URI } from '@/composables/useSsoNativeReturn'
 
 type SSOUserWithAdmin = {
   id?: string | number;
@@ -38,12 +41,31 @@ class AuthController {
   }
 
   async login(_params?: { login?: string; password?: string }): Promise<void> {
+    if (Capacitor.isNativePlatform()) {
+      await getSSOClient().loginWithRedirect({
+        redirectUri: SSO_NATIVE_REDIRECT_URI,
+        openUrl: async ({ url }: { url: string }) => {
+          await Browser.open({ url })
+        },
+      })
+      return
+    }
     await getSSOClient().loginWithRedirect({
       redirectUri: `${window.location.origin}/auth/callback`,
     })
   }
 
   async register(_params?: Record<string, unknown>): Promise<void> {
+    if (Capacitor.isNativePlatform()) {
+      await getSSOClient().loginWithRedirect({
+        redirectUri: SSO_NATIVE_REDIRECT_URI,
+        screenHint: 'register',
+        openUrl: async ({ url }: { url: string }) => {
+          await Browser.open({ url })
+        },
+      })
+      return
+    }
     await getSSOClient().loginWithRedirect({
       redirectUri: `${window.location.origin}/auth/callback`,
       screenHint: 'register',

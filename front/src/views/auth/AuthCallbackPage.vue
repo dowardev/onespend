@@ -26,6 +26,9 @@ import { ref, onMounted } from "vue"
 import { useRouter } from "vue-router"
 import { getSSOClient } from "@/ssoClientAccessor"
 
+// 2. Controllers / Composables
+import authController from "@/controllers/authController"
+
 // 5. Main
 const router = useRouter()
 const loading = ref(true)
@@ -45,9 +48,7 @@ onMounted(async () => {
 
 // 10. Functions
 async function redirectToSSO() {
-  await getSSOClient().loginWithRedirect({
-    redirectUri: `${window.location.origin}/auth/callback`,
-  })
+  await authController.login()
 }
 </script>
 
