@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
+import { generateSyncId } from '@/utils/UuidGenerator'
+
 const SYNC_LOCK_KEY = 'onespend-sync-lock';
 const HEARTBEAT_INTERVAL = 10000;
 const LOCK_TIMEOUT = 30000;
@@ -12,7 +14,7 @@ export class SyncLockService {
   private _isLocked = false;
 
   constructor() {
-    this.tabId = crypto.randomUUID();
+    this.tabId = generateSyncId();
   }
 
   async acquire(params: { timeoutMs?: number }): Promise<boolean> {

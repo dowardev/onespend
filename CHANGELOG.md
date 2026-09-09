@@ -6,6 +6,12 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+
+- Android SSO login returns to the app via custom-scheme deep link (`com.dowardev.onespend://auth/callback`, Browser + `appUrlOpen`) instead of stranding in the external browser; visible error card with retry on failure, cold-start return handling (LBDS-233)
+
 ## [v0.76.1-rc.4] - 2026-09-04
 
 ### Added
