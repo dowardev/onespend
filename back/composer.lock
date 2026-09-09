@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "b7cc05cebb45ce0b61a894327f0cdd1d",
+    "content-hash": "bb33b0b8ce809d2f8bc94497b9577071",
     "packages": [
         {
             "name": "brick/math",
@@ -379,11 +379,11 @@
         },
         {
             "name": "dowardev/sso-server",
-            "version": "1.0.0",
+            "version": "0.1.1",
             "dist": {
                 "type": "path",
-                "url": "../packages/sso-server",
-                "reference": "0993184bbcaac20096e26f3acfdbfd236594e2b5"
+                "url": "../../sso/packages/sso-server",
+                "reference": "a2d09029bfeb53e40f51230be6389a5e3a523d43"
             },
             "require": {
                 "laravel/framework": "^11.0 || ^12.0 || ^13.0",

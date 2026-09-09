@@ -569,12 +569,16 @@ deploy_fullstack() {
     run_cmd "Backend: prepare build directory" \
       "mkdir -p '$BUILD_DIR' && cp -r $BACKEND_DIR/* $BACKEND_DIR/.[^.]* '$BUILD_DIR/'"
 
-    # Local packages (composer path repositories like ../packages/*) must be
-    # siblings of back/ so composer install can resolve them during the build.
-    if [[ -d "$BACKEND_DIR/../packages" ]]; then
-      run_cmd "Backend: stage local packages (path repositories)" \
-        "cp -r $BACKEND_DIR/../packages '$TMP_ROOT/packages'"
+    # Local packages (composer path repositories like ../../sso/*) must be
+    # staged so composer install can resolve them during the build:
+    # BUILD_DIR ($TMP_ROOT/back) resolves ../../sso to $TMP_ROOT/sso.
+    SSO_DIR="$(cd "$BACKEND_DIR/../../sso" 2>/dev/null && pwd || true)"
+    if [[ -z "$SSO_DIR" || ! -d "$SSO_DIR/packages/sso-server" ]]; then
+      echo "ERROR: sibling sso checkout missing at $BACKEND_DIR/../../sso" >&2
+      exit 1
     fi
+    run_cmd "Backend: stage sibling sso packages (path repositories)" \
+        "mkdir -p '$TMP_ROOT/sso' && cp -r $SSO_DIR/packages '$TMP_ROOT/sso/'"
 
     run_cmd "Backend: composer install --no-dev" \
       "cd '$BUILD_DIR' && composer install --no-dev --optimize-autoloader --no-interaction"
