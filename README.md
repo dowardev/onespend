@@ -30,8 +30,9 @@ Multi-platform personal expense management app.
 
 - **Framework:** Laravel 12 + PHP 8.2+
 - **Database:** MariaDB
-- **Auth:** External SSO via `tu-org/sso-server`
+- **Auth:** External SSO via `dowardev/sso-server`
   (`sso.auth`, `sso.user` middleware)
+- **SSO packages:** local `composer install` requires the sibling `sso` checkout at `../sso` (composer path repository; CI checks it out automatically)
 - **Queues:** Database driver (sync in production)
 - **Schedule:** Daily cleanup 3 AM, monitor every 10 min
 - **Tests:** PHPUnit
@@ -100,5 +101,5 @@ terms of the GNU Affero General Public License as published by the Free
 Software Foundation, either version 3 of the License, or (at your option) any
 later version. See the [LICENSE](LICENSE) file for the full text.
 
-The `@dowardev/sso-client` package (`packages/sso-client/`) is distributed
+The `@dowardev/sso-client` package (consumed from the npm registry; source in the `sso` repo) is distributed
 under the MIT license (permissive).

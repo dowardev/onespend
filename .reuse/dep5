@@ -58,10 +58,3 @@ License: AGPL-3.0-only
 Files: *.png
 Copyright: 2026 DowarDev
 License: AGPL-3.0-only
-
-# sso-client package (MIT). This block MUST stay last: reuse/dep5 semantics
-# give precedence to the last matching paragraph, so it overrides any generic
-# AGPL glob above for package.json, tsconfig.json and dist/ artifacts.
-Files: packages/sso-client/*
-Copyright: 2026 DowarDev
-License: MIT

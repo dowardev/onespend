@@ -37,6 +37,18 @@ cache:
   before_script:
     - cd back
 
+# The backend resolves dowardev/sso-server from a composer path repository
+# pointing at the sibling sso checkout (../../sso/packages/sso-server).
+# Runners only clone this repo, so every backend job must check out the
+# sibling first (same group: CI_JOB_TOKEN is enough, no extra secrets).
+.sso_checkout:
+  before_script:
+    - command -v git >/dev/null || apk add --no-cache git
+    - rm -rf "$(dirname $CI_PROJECT_DIR)/sso"
+    # NOTE: floats on sso main; the breaking-change guard is the ^0.1 constraint
+    # on dowardev/sso-server (version field), so compatible minors are safe.
+    - git clone --depth 1 --branch main "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/dowardev/sso.git" "$(dirname $CI_PROJECT_DIR)/sso"
+
 .frontend_setup:
   before_script:
     - cd front
@@ -48,6 +60,7 @@ backend_lint:
   image: composer:2.8
   extends:
     - .backend_setup
+    - .sso_checkout
     - .tag_rules
   script:
     - composer install --prefer-dist --no-progress --no-interaction
@@ -61,6 +74,7 @@ backend_test:
       alias: mariadb
   extends:
     - .backend_setup
+    - .sso_checkout
     - .tag_rules
   variables:
     DB_CONNECTION: mariadb
@@ -102,6 +116,7 @@ backend_build:
   image: composer:2.8
   extends:
     - .backend_setup
+    - .sso_checkout
     - .tag_rules
   script:
     - composer install --prefer-dist --no-progress --no-interaction
@@ -135,6 +150,7 @@ backend_deploy:
   image: alpine:3.20
   extends:
     - .ssh_setup
+    - .sso_checkout
     - .tag_rules
   needs:
     - backend_build
@@ -149,14 +165,16 @@ backend_deploy:
         --exclude='bootstrap/cache/*.php'
         --exclude='public/build/'
         -C back .
-    - tar -czf /tmp/sso-server.tar.gz -C packages sso-server
+    - tar -czf /tmp/sso-server.tar.gz -C ../sso/packages sso-server
     - scp -o ConnectTimeout=60 -P "$SSH_PORT" /tmp/backend.tar.gz "$SSH_USER@$SSH_HOST:/tmp/backend.tar.gz"
     - scp -o ConnectTimeout=60 -P "$SSH_PORT" /tmp/sso-server.tar.gz "$SSH_USER@$SSH_HOST:/tmp/sso-server.tar.gz"
     - DEPLOY_PARENT=$(dirname $DEPLOY_PATH_BACKEND)
+    - DEPLOY_GRANDPARENT=$(dirname $DEPLOY_PARENT)
+    - '[ "$(basename $DEPLOY_PATH_BACKEND)" = "back" ] || (echo "DEPLOY_PATH_BACKEND must end in /back" >&2; exit 1)'
     - ssh -o ConnectTimeout=60 -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "
-        mkdir -p $DEPLOY_PARENT/packages &&
+        mkdir -p $DEPLOY_GRANDPARENT/sso/packages &&
         tar -xzf /tmp/backend.tar.gz -C $DEPLOY_PATH_BACKEND &&
-        tar -xzf /tmp/sso-server.tar.gz -C $DEPLOY_PARENT/packages &&
+        tar -xzf /tmp/sso-server.tar.gz -C $DEPLOY_GRANDPARENT/sso/packages &&
         cd $DEPLOY_PATH_BACKEND &&
         rm -f bootstrap/cache/*.php bootstrap/cache/*.json config/sanctum.php &&
         composer install --no-dev --optimize-autoloader &&
@@ -192,6 +210,7 @@ rollback_backend:
   image: alpine:3.20
   extends:
     - .ssh_setup
+    - .sso_checkout
     - .tag_rules
   when: manual
   script:
@@ -208,9 +227,14 @@ rollback_backend:
         --exclude='public/build/'
         -C back .
     - scp -o ConnectTimeout=60 -P "$SSH_PORT" /tmp/backend.tar.gz "$SSH_USER@$SSH_HOST:/tmp/backend.tar.gz"
+    - tar -czf /tmp/sso-server.tar.gz -C ../sso/packages sso-server
+    - scp -o ConnectTimeout=60 -P "$SSH_PORT" /tmp/sso-server.tar.gz "$SSH_USER@$SSH_HOST:/tmp/sso-server.tar.gz"
+    - DEPLOY_GRANDPARENT=$(dirname $(dirname $DEPLOY_PATH_BACKEND))
     - ssh -o ConnectTimeout=60 -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "
         mkdir -p $DEPLOY_PATH_BACKEND &&
+        mkdir -p $DEPLOY_GRANDPARENT/sso/packages &&
         tar -xzf /tmp/backend.tar.gz -C $DEPLOY_PATH_BACKEND &&
+        tar -xzf /tmp/sso-server.tar.gz -C $DEPLOY_GRANDPARENT/sso/packages &&
         cd $DEPLOY_PATH_BACKEND &&
         rm -f bootstrap/cache/*.php bootstrap/cache/*.json config/sanctum.php &&
         composer install --no-dev --optimize-autoloader &&
@@ -218,6 +242,7 @@ rollback_backend:
         php artisan config:cache &&
         php artisan route:cache &&
         rm /tmp/backend.tar.gz
+        rm /tmp/sso-server.tar.gz
       "
 
 rollback_frontend:

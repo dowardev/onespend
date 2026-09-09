@@ -11,7 +11,7 @@
     "repositories": [
         {
             "type": "path",
-            "url": "../packages/sso-server",
+            "url": "../../sso/packages/sso-server",
             "options": {
                 "symlink": false
             }
@@ -21,7 +21,7 @@
         "php": "^8.2",
         "laravel/framework": "^12.0",
         "laravel/tinker": "^2.10.1",
-        "dowardev/sso-server": "*"
+        "dowardev/sso-server": "^0.1"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

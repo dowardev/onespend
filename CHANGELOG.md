@@ -8,6 +8,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 ## [Unreleased]
 
+### Removed
+
+- Vendored `packages/sso-client` + `packages/sso-server` copies; the front consumes `@dowardev/sso-client` from the npm registry and the back resolves `dowardev/sso-server` from the sibling `sso` checkout (CI checks it out via `CI_JOB_TOKEN`, deploy ships it next to `back/`) (LBDS-234)
+
 ### Fixed
 
 - Android SSO login returns to the app via custom-scheme deep link (`com.dowardev.onespend://auth/callback`, Browser + `appUrlOpen`) instead of stranding in the external browser; visible error card with retry on failure, cold-start return handling (LBDS-233)
