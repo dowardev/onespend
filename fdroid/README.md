@@ -71,10 +71,10 @@ It already carries the real values for the current release:
 
 | Field | Value | Source |
 | ----- | ----- | ------ |
-| `versionName` | `0.76.2` | `"version"` in `front/package.json` |
-| `versionCode` | `7602` | formula `major*100000 + minor*100 + patch` |
-| `commit` | `v0.76.2` | exact tag name (already pushed) |
-| `CurrentVersion` / `CurrentVersionCode` | `0.76.2` / `7602` | bumped by hand per release (see below) |
+| `versionName` | `0.76.3` | `"version"` in `front/package.json` |
+| `versionCode` | `7603` | formula `major*100000 + minor*100 + patch` |
+| `commit` | `v0.76.3` | exact tag name (already pushed) |
+| `CurrentVersion` / `CurrentVersionCode` | `0.76.3` / `7603` | bumped by hand per release (see below) |
 
 Updates are **manual** (`AutoUpdateMode: None` / `UpdateCheckMode: None`).
 Auto-update is impossible here: `versionCode` is *computed* from semver
@@ -90,10 +90,10 @@ bumping only `CurrentVersion` / `CurrentVersionCode`.
 - [x] `images/icon.png` (512x512)
 - [x] 7 `phoneScreenshots` per locale
 - [x] `changelogs/<versionCode>.txt` per locale (max 500 chars) — one file
-      per release, e.g. `en-US/changelogs/7602.txt`
+      per release, e.g. `en-US/changelogs/7603.txt`
 - [x] Public repo with FOSS license file (`AGPL-3.0-only`)
 - [x] No proprietary deps (no GMS/Firebase/Crashlytics — verified LBDS-198)
-- [x] Tagged release commit (`v0.76.2` pushed)
+- [x] Tagged release commit (`v0.76.3` pushed)
 
 ## Signing model comparison
 
