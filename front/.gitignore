@@ -37,5 +37,8 @@ npm-debug.log*
 .playwright-cli/
 
 # Android release signing (secrets — never commit)
-android/*.keystore
+# Any keystore variant, including timestamped backups (a private key must never
+# reach the repository, whatever the file is named).
+android/*.keystore*
+android/*.jks*
 android/keystore.properties
