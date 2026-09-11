@@ -39,51 +39,58 @@ Verified for LBDS-198:
 
 ## Build steps
 
+The F-Droid build mirrors the validated local release build, with the public
+backend/SSO endpoints injected as exported variables (there is no
+`.env.production` file on the build server, and `build:native` reads
+`process.env` first for exactly this reason):
+
 ```bash
 cd front
+export VITE_API_URL=<public api url>
+export VITE_SSO_URL=<public sso api url>
+export VITE_SSO_FRONTEND_URL=<public sso frontend url>
+export SSO_CLIENT_ID_NATIVE=<public native client id>
 pnpm install
-pnpm run build
+pnpm run build:native
 npx cap sync android
 cd android
 ./gradlew assembleRelease
 ```
 
-## Recipe draft
+> `pnpm run build` (plain web build) is NOT enough for the native app: it
+> would bake the WEB SSO client id and native sign-in would fail with a
+> `redirect_uri` mismatch. Always use `build:native` (see `front/ANDROID.md`).
 
-The metadata YAML below is the base for the merge request to fdroiddata.
-Fields like `CurrentVersion` are maintained by the F-Droid update bot once the
-app is accepted.
+## Recipe file
 
-```yaml
-Categories:
-  - Money
-License: AGPL-3.0-only
-AuthorName: DowarDev
-WebSite: https://onespend.dowar.xyz
-SourceCode: https://gitlab.com/dowardev/onespend
-IssueTracker: https://gitlab.com/dowardev/onespend/-/issues
+The file `fdroid/com.dowardev.onespend.yml` in this repo IS the submission:
+copy it to `metadata/com.dowardev.onespend.yml` in a fork of
+[fdroiddata](https://gitlab.com/fdroid/fdroiddata), replacing the
+`__PUBLIC_*__` placeholders with the real public values, and open the MR.
+It already carries the real values for the current release:
 
-RepoType: git
-Repo: https://gitlab.com/dowardev/onespend.git
+| Field | Value | Source |
+| ----- | ----- | ------ |
+| `versionName` | `0.76.2` | `"version"` in `front/package.json` |
+| `versionCode` | `7602` | formula `major*100000 + minor*100 + patch` |
+| `commit` | `v0.76.2` | exact tag name (already pushed) |
+| `CurrentVersion` / `CurrentVersionCode` | `0.76.2` / `7602` | maintained by the F-Droid update bot after acceptance |
 
-Builds:
-  - versionName: <x.y.z>
-    versionCode: <n>
-    commit: <release tag>
-    subdir: front/android/app
-    sudo:
-      - apt-get update
-      - apt-get install -y npm
-          - npm install --global pnpm@latest-10
-    output: build/outputs/apk/release/app-release-unsigned.apk
-    build:
-      - cd ../..
-      - pnpm install
-      - pnpm run build
-      - npx cap sync android
-      - cd android
-      - gradle assembleRelease
-```
+Auto-update is configured via `UpdateCheckMode: Tags` with
+`UpdateCheckData: ^v(\d+\.\d+\.\d+)$`, so the bot only follows clean
+`vX.Y.Z` tags and ignores `-rc` tags (which would collide on versionCode).
+
+## Upstream metadata checklist (required before the MR)
+
+- [x] `title.txt`, `short_description.txt` (< 80 chars, no trailing dot),
+      `full_description.txt` in `en-US` and `es`
+- [x] `images/icon.png` (512x512)
+- [x] 7 `phoneScreenshots` per locale
+- [x] `changelogs/<versionCode>.txt` per locale (max 500 chars) — one file
+      per release, e.g. `en-US/changelogs/7602.txt`
+- [x] Public repo with FOSS license file (`AGPL-3.0-only`)
+- [x] No proprietary deps (no GMS/Firebase/Crashlytics — verified LBDS-198)
+- [x] Tagged release commit (`v0.76.2` pushed)
 
 ## Signing model comparison
 

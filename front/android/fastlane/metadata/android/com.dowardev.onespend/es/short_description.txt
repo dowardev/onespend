@@ -1,1 +1,1 @@
-Controlá tus gastos y presupuestos. Funciona sin conexión y sincronizá opcionalmente con tu propio servidor.
+Controlá tus gastos y presupuestos offline, con sincronización opcional

@@ -1,0 +1,1 @@
+Primera versión estable: control de gastos y presupuestos offline, presupuestos mensuales por categoría, ingresos y gastos recurrentes, gráficos, exportación a PDF/Excel y adjuntos de recibos.

@@ -17,11 +17,13 @@
 // `.env.production.example`) and a fresh clone only has to change that value.
 // The variable deliberately has no `VITE_` prefix: it is read at build time and
 // never needs to reach the browser bundle.
+// `process.env` is checked first so CI and reproducible builders (e.g. F-Droid,
+// which have no `.env.production` file) can inject it via exported variables.
 import { build, loadEnv } from 'vite'
 
 const mode = 'production'
 const env = loadEnv(mode, process.cwd(), '')
-const nativeClientId = env.SSO_CLIENT_ID_NATIVE
+const nativeClientId = process.env.SSO_CLIENT_ID_NATIVE || env.SSO_CLIENT_ID_NATIVE
 
 if (!nativeClientId) {
   console.warn(
