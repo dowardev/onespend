@@ -2,7 +2,7 @@
   "name": "OneSpend",
   "private": true,
   "license": "AGPL-3.0-only",
-  "version": "0.76.1-rc.4",
+  "version": "0.76.2",
   "type": "module",
   "scripts": {
     "dev": "vite",

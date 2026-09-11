@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Performance help button (per empty section) that explains the concept via the financial glossary.
 
 ### Changed
+- `@dowardev/sso-client` bumped to `^0.2.2`: the PKCE verifier now lives in `localStorage`, so a WebView recreated while the external browser is open keeps the login return working.
 - Income Statement classification now uses the explicit category-to-section mapping, keeping the keyword heuristic as a byte-identical fallback for unmapped entries.
 - App boot no longer blocks on SSO network calls (mount-first); Budget page entry gate is non-blocking.
 - Budget account balances computed in a single pass.
@@ -23,6 +24,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Recurring auto-insert moved to an app-level background processor that runs independently of the active screen.
 
 ### Fixed
+- Native sign-in could not reach local HTTP backends from debug builds (`net::ERR_CLEARTEXT_NOT_PERMITTED`): a debug-only manifest overlay allows cleartext, while release builds keep the platform default.
+- Deep links are honoured only while an SSO flow started by the app is still pending (persisted with a 10-minute TTL). A stale or foreign custom-scheme URL no longer clears local data as a "logout return", and an app resume no longer reprocesses the sticky launch URL — which re-exchanged a spent authorization code and bounced a signed-in user to the sign-in screen.
+- Native logout: the confirmation alert closes immediately instead of waiting for the whole logout, and signing out keeps the user on Budget instead of the sign-in screen (which used to auto-open a second browser over the SSO logout page that was still completing).
+- Web SSO callback surfaces error returns (`?error=`) again instead of landing silently on Budget.
+- e2e mocks use the real token key (`@dowardev/sso-client:token`).
 - Recurring charge save button now enables correctly.
 - Recurring auto-insert no longer requires a page reload.
 - Recurring pause/resume works in both directions (DataCloneError from reactive proxies fixed by deep-cloning in the sync queue).

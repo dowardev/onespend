@@ -8,13 +8,25 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 ## [Unreleased]
 
-### Removed
+## [v0.76.2] - 2026-09-10
 
-- Vendored `packages/sso-client` + `packages/sso-server` copies; the front consumes `@dowardev/sso-client` from the npm registry and the back resolves `dowardev/sso-server` from the sibling `sso` checkout (CI checks it out via `CI_JOB_TOKEN`, deploy ships it next to `back/`) (LBDS-234)
+First non-prerelease build: the Android sign-in and sign-out flow is validated on a physical device against both local and production backends.
 
 ### Fixed
 
-- Android SSO login returns to the app via custom-scheme deep link (`com.dowardev.onespend://auth/callback`, Browser + `appUrlOpen`) instead of stranding in the external browser; visible error card with retry on failure, cold-start return handling (LBDS-233)
+- Android: SSO sign-in returns to the app through a custom-scheme deep link (`com.dowardev.onespend://auth/callback`, Browser + `appUrlOpen`) instead of stranding in the external browser, with a visible error card and retry on failure (LBDS-233).
+- Android: signing out left the user on the sign-in screen, and a stale or foreign deep link could erase local data. Deep links are now honoured only while an SSO flow started by the app is still pending, and signing out keeps the user on Budget.
+- Android: sign-in could not complete against a local backend in debug builds; debug builds now allow cleartext traffic and release builds keep the platform default.
+- Web: an SSO error return (`?error=`) on the callback surfaces again instead of landing silently on Budget.
+
+### Changed
+
+- `@dowardev/sso-client` is consumed at 0.2.3: the PKCE verifier survives the WebView being recreated while the external browser is open, and signing out revokes the refresh token even with an expired access token.
+- e2e: the Cypress suite was retired — its remaining spec was migrated to Playwright, and the suite now starts its own dev server on a dedicated port with the auth bypass, so it can no longer run against a different app (LBDS-243).
+
+### Removed
+
+- Vendored `packages/sso-client` + `packages/sso-server` copies; the front consumes `@dowardev/sso-client` from the npm registry and the back resolves `dowardev/sso-server` from the sibling `sso` checkout (CI checks it out via `CI_JOB_TOKEN`, deploy ships it next to `back/`) (LBDS-234)
 
 ## [v0.76.1-rc.4] - 2026-09-04
 
