@@ -1,0 +1,1 @@
+First stable release: offline-first expense and budget tracking, monthly budgets per category, recurring income and expenses, charts, PDF/Excel export and receipt attachments.

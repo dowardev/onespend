@@ -8,6 +8,12 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 ## [Unreleased]
 
+## [v0.76.3] - 2026-09-11
+
+### Fixed
+
+- Android store metadata now follows the standard Triple-T/Fastlane layout (per-locale descriptions, icon and screenshots, no app-id level), so F-Droid picks up the listing.
+
 ## [v0.76.2] - 2026-09-10
 
 First non-prerelease build: the Android sign-in and sign-out flow is validated on a physical device against both local and production backends.
