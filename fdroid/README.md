@@ -74,11 +74,14 @@ It already carries the real values for the current release:
 | `versionName` | `0.76.2` | `"version"` in `front/package.json` |
 | `versionCode` | `7602` | formula `major*100000 + minor*100 + patch` |
 | `commit` | `v0.76.2` | exact tag name (already pushed) |
-| `CurrentVersion` / `CurrentVersionCode` | `0.76.2` / `7602` | maintained by the F-Droid update bot after acceptance |
+| `CurrentVersion` / `CurrentVersionCode` | `0.76.2` / `7602` | bumped by hand per release (see below) |
 
-Auto-update is configured via `UpdateCheckMode: Tags` with
-`UpdateCheckData: ^v(\d+\.\d+\.\d+)$`, so the bot only follows clean
-`vX.Y.Z` tags and ignores `-rc` tags (which would collide on versionCode).
+Updates are **manual** (`AutoUpdateMode: None` / `UpdateCheckMode: None`).
+Auto-update is impossible here: `versionCode` is *computed* from semver
+(`major*100000 + minor*100 + patch`), so no manifest field or tag regex
+yields it, and the fdroiddata schema forbids combining `Tags` with
+`UpdateCheckIgnore`. For each release, open a minimal MR to fdroiddata
+bumping only `CurrentVersion` / `CurrentVersionCode`.
 
 ## Upstream metadata checklist (required before the MR)
 
