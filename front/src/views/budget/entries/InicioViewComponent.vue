@@ -79,6 +79,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                     :lines="bIdx === renderedEntries.length - 1 ? 'none' : 'full'"
                     class="transparent"
                     button
+                    data-cy="budget-entry-row"
                     @click="handleUnifiedItemClick(block.item)"
                   >
                     <ion-label>

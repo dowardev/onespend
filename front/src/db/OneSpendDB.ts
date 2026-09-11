@@ -122,5 +122,12 @@ if (import.meta.env.DEV) {
       const { conflictResolutionService } = await import('@/services/sync/ConflictResolutionService')
       return conflictResolutionService.getStore().getCount()
     },
+    // e2e support: Cypress persists IndexedDB between runs, so leftovers (queued
+    // items, accounts, entries) from an earlier run leak into the next one and
+    // make specs depend on their execution history. Dexie's delete() closes the
+    // connection and drops the database; reload afterwards to re-open it clean.
+    resetLocalData: async (): Promise<void> => {
+      await db.delete()
+    },
   }
 }

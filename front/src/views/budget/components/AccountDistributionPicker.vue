@@ -30,7 +30,7 @@ SPDX-License-Identifier: AGPL-3.0-only
           </ion-button>
         </div>
 
-        <ion-item lines="full" class="transparent" :class="{ 'ion-invalid ion-touched': forceValidation && !getAccountIdValue(item.accountId) }" button @click="openAccountModal({ index: realIndex(displayIdx) })">
+        <ion-item lines="full" class="transparent" :class="{ 'ion-invalid ion-touched': forceValidation && !getAccountIdValue(item.accountId) }" button data-cy="entry-account-selector" @click="openAccountModal({ index: realIndex(displayIdx) })">
           <ion-label>
             Cuenta
             <p>{{ getAccountName({ accountId: item.accountId }) || 'Seleccionar cuenta' }}</p>
@@ -40,6 +40,7 @@ SPDX-License-Identifier: AGPL-3.0-only
         <ion-item lines="full" class="transparent">
           <ion-input
             :model-value="item.amount"
+            data-cy="entry-amount-input"
             label="Cantidad"
             label-placement="floating"
             type="number"

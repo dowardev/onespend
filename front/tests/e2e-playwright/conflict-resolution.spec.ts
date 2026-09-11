@@ -8,12 +8,17 @@ const CONFLICT_SYNC_ID = 'test-conflict-001'
 
 async function setupAuth(page: Page) {
   await page.addInitScript(() => {
-    localStorage.setItem('@tu-org/sso-client:token', 'test-sso-token')
+    localStorage.setItem('@dowardev/sso-client:token', 'test-sso-token')
   })
 }
 
 async function mockExternalCalls(page: Page) {
-  await page.route(/^(?!http:\/\/localhost:5173).*/, async (route) => {
+  // Port-agnostic on purpose: matching on "not the dev server" pinned these specs
+  // to 5173, a port another project uses on some machines. Mock the API/SSO calls
+  // by path instead, so the suite runs on any port.
+  await page.route(
+    (url) => url.pathname.startsWith('/api/') || url.pathname.includes('user-auth'),
+    async (route) => {
     const url = route.request().url()
     if (url.includes('/user-auth')) {
       await route.fulfill({
