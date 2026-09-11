@@ -33,6 +33,11 @@ cache:
     - echo "$SSH_KNOWN_HOSTS" >> ~/.ssh/known_hosts
     - eval $(ssh-agent -s) && ssh-add ~/.ssh/id_rsa
 
+# NOTE: a template's `before_script` is REPLACED when another extended template
+# defines one, so the `cd back` below is lost in every job that also extends
+# `.sso_checkout` (which came later and defines its own). Those jobs must `cd
+# back` explicitly in their `script`, or composer/pint/artisan run in the
+# repository root, where there is no composer.json.
 .backend_setup:
   before_script:
     - cd back
@@ -63,6 +68,8 @@ backend_lint:
     - .sso_checkout
     - .tag_rules
   script:
+    # `.sso_checkout` replaces `.backend_setup`'s before_script, so `cd back` again.
+    - cd back
     - composer install --prefer-dist --no-progress --no-interaction
     - vendor/bin/pint --test app/ config/ database/ routes/ bootstrap/app.php bootstrap/providers.php
 
@@ -86,6 +93,8 @@ backend_test:
     MARIADB_ROOT_PASSWORD: toor
     MARIADB_DATABASE: onespend_test
   script:
+    # `.sso_checkout` replaces `.backend_setup`'s before_script, so `cd back` again.
+    - cd back
     - docker-php-ext-install pdo_mysql
     - cp .env.example .env
     - composer install --prefer-dist --no-progress --no-interaction
@@ -119,6 +128,8 @@ backend_build:
     - .sso_checkout
     - .tag_rules
   script:
+    # `.sso_checkout` replaces `.backend_setup`'s before_script, so `cd back` again.
+    - cd back
     - composer install --prefer-dist --no-progress --no-interaction
   artifacts:
     paths:
@@ -149,9 +160,12 @@ backend_deploy:
   stage: deploy
   image: alpine:3.20
   extends:
-    - .ssh_setup
-    - .sso_checkout
     - .tag_rules
+  # `!reference` COMPOSES both before_scripts: extending both templates would let
+  # `.sso_checkout` replace `.ssh_setup`, leaving the job without ssh/scp.
+  before_script:
+    - !reference [.sso_checkout, before_script]
+    - !reference [.ssh_setup, before_script]
   needs:
     - backend_build
     - backend_test
@@ -209,9 +223,11 @@ rollback_backend:
   stage: rollback
   image: alpine:3.20
   extends:
-    - .ssh_setup
-    - .sso_checkout
     - .tag_rules
+  # Same composition as backend_deploy: see the note there.
+  before_script:
+    - !reference [.sso_checkout, before_script]
+    - !reference [.ssh_setup, before_script]
   when: manual
   script:
     - PREVIOUS_TAG=$(git tag --list "v*" --sort=-version:refname | sed -n '2p')
