@@ -345,13 +345,30 @@ async function handleLogout() {
       {
         text: 'Cerrar Sesión',
         role: 'confirm',
-        handler: async () => {
-          await authController.logout();
+        handler: () => {
+          // Fire-and-forget: the alert must close immediately. Awaiting
+          // the whole logout here leaves the alert stuck on slow
+          // networks or on the hanging queue/SDK calls seen on device.
+          void finishLogout();
         },
       },
     ],
   });
   await alert.present();
+}
+
+async function finishLogout(): Promise<void> {
+  try {
+    const loggedOut = await authController.logout();
+    if (loggedOut) {
+      // Logged-out users keep browsing locally: land on budget, never
+      // on /login (which would auto-open a login browser over the
+      // logout page still completing, aborting the server logout).
+      await navigate({ path: '/budget' });
+    }
+  } catch (logoutError) {
+    console.warn('[menu] Logout failed:', logoutError);
+  }
 }
 
 async function navigate(params: { path?: string; name?: string }) {

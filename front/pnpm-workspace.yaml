@@ -6,3 +6,6 @@ allowBuilds:
   vue-demi: true
 minimumReleaseAgeExclude:
   - '@dowardev/sso-client@0.2.0'
+  - '@dowardev/sso-client@0.2.1'
+  - '@dowardev/sso-client@0.2.2'
+  - '@dowardev/sso-client@0.2.3'

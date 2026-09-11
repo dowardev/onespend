@@ -36,6 +36,27 @@ const error = ref("")
 
 // 9. OnMounted
 onMounted(async () => {
+  const params = new URL(window.location.href).searchParams
+  const oauthError = params.get("error")
+  const code = params.get("code")
+
+  if (oauthError) {
+    // The SSO refused or the user cancelled. Silent success here would look
+    // like the app ignored the attempt, so surface it instead.
+    error.value =
+      params.get("error_description") || `No se completó el inicio de sesión (${oauthError})`
+    loading.value = false
+    return
+  }
+
+  if (!code) {
+    // Codeless return on the callback URL is a logout return, not an
+    // error: logged-out users keep browsing locally on budget.
+    loading.value = false
+    router.replace("/budget")
+    return
+  }
+
   try {
     await getSSOClient().handleCallback(window.location.href)
     loading.value = false

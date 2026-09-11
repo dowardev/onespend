@@ -6,6 +6,9 @@ import { db } from '@/db/OneSpendDB';
 
 const LOCAL_STORAGE_KEYS = [
   'auth_token',
+  '@dowardev/sso-client:token',
+  '@dowardev/sso-client:refresh-token',
+  '@dowardev/sso-client:remember-me',
   'sync_queue',
   'last_sync',
   'dixie:lastError',

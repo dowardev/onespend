@@ -9,7 +9,11 @@ import { syncService } from '@/services/syncService'
 import { syncApiService } from '@/services/sync/SyncApiService'
 import { Capacitor } from '@capacitor/core'
 import { Browser } from '@capacitor/browser'
-import { SSO_NATIVE_REDIRECT_URI } from '@/composables/useSsoNativeReturn'
+import {
+  SSO_NATIVE_REDIRECT_URI,
+  markSsoLoginStarted,
+  markSsoLogoutStarted,
+} from '@/composables/useSsoNativeReturn'
 
 type SSOUserWithAdmin = {
   id?: string | number;
@@ -40,12 +44,43 @@ class AuthController {
     return this._store
   }
 
+  private async runWithBrowserCancel(params: { task: () => Promise<void> }): Promise<void> {
+    let cancelTask: (() => void) | null = null
+    const cancelled = new Promise<never>((_, reject) => {
+      cancelTask = () => reject(new Error('External browser closed before completing authentication'))
+    })
+    const cancelHandle = await Browser.addListener('browserFinished', () => {
+      window.setTimeout(() => {
+        if (!getSSOClient().isAuthenticated) {
+          cancelTask?.()
+        }
+      }, 2000)
+    })
+    try {
+      await Promise.race([params.task(), cancelled])
+    } finally {
+      try {
+        await cancelHandle.remove()
+      } catch (removeError) {
+        console.warn('[auth] Could not remove browser listener:', removeError)
+      }
+    }
+  }
+
   async login(_params?: { login?: string; password?: string }): Promise<void> {
     if (Capacitor.isNativePlatform()) {
-      await getSSOClient().loginWithRedirect({
-        redirectUri: SSO_NATIVE_REDIRECT_URI,
-        openUrl: async ({ url }: { url: string }) => {
-          await Browser.open({ url })
+      // Record the flow before leaving the app: the deep-link return is only
+      // honoured while a flow is pending, which is what stops stale or foreign
+      // deep links from being processed as if they were ours.
+      markSsoLoginStarted()
+      await this.runWithBrowserCancel({
+        task: async () => {
+          await getSSOClient().loginWithRedirect({
+            redirectUri: SSO_NATIVE_REDIRECT_URI,
+            openUrl: async (params: { url: string }) => {
+              await Browser.open(params)
+            },
+          })
         },
       })
       return
@@ -57,11 +92,16 @@ class AuthController {
 
   async register(_params?: Record<string, unknown>): Promise<void> {
     if (Capacitor.isNativePlatform()) {
-      await getSSOClient().loginWithRedirect({
-        redirectUri: SSO_NATIVE_REDIRECT_URI,
-        screenHint: 'register',
-        openUrl: async ({ url }: { url: string }) => {
-          await Browser.open({ url })
+      markSsoLoginStarted()
+      await this.runWithBrowserCancel({
+        task: async () => {
+          await getSSOClient().loginWithRedirect({
+            redirectUri: SSO_NATIVE_REDIRECT_URI,
+            screenHint: 'register',
+            openUrl: async (params: { url: string }) => {
+              await Browser.open(params)
+            },
+          })
         },
       })
       return
@@ -89,7 +129,17 @@ class AuthController {
     this.store.setIsLoading(true)
 
     try {
-      await getSSOClient().logout()
+      if (Capacitor.isNativePlatform()) {
+        markSsoLogoutStarted()
+        await getSSOClient().logout({
+          redirectUri: SSO_NATIVE_REDIRECT_URI,
+          openUrl: async ({ url }: { url: string }) => {
+            await Browser.open({ url })
+          },
+        })
+      } else {
+        await getSSOClient().logout()
+      }
     } catch (e) {
       console.error('Logout error:', e)
     } finally {

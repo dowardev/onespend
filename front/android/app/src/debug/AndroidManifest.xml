@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+SPDX-FileCopyrightText: 2026 DowarDev
+
+SPDX-License-Identifier: AGPL-3.0-only
+
+Debug-only manifest overlay.
+
+Android blocks cleartext (plain HTTP) traffic by default from API 28+.
+Debug builds talk to local dev servers (http://localhost:8001/8002/8101
+through `adb reverse`), so the WebView needs cleartext allowed, otherwise
+every request fails with net::ERR_CLEARTEXT_NOT_PERMITTED.
+
+Release builds keep the platform default (cleartext blocked) because this
+file only applies to the debug variant.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application android:usesCleartextTraffic="true" />
+
+</manifest>

@@ -9,12 +9,16 @@ const {
   mockIsNativePlatform,
   mockBrowserOpen,
   mockBrowserClose,
+  mockBrowserAddListener,
   mockAppAddListener,
+  mockAppGetLaunchUrl,
 } = vi.hoisted(() => ({
   mockIsNativePlatform: vi.fn((): boolean => false),
   mockBrowserOpen: vi.fn(),
   mockBrowserClose: vi.fn(),
+  mockBrowserAddListener: vi.fn(async () => ({ remove: vi.fn() })),
   mockAppAddListener: vi.fn(),
+  mockAppGetLaunchUrl: vi.fn(async () => null),
 }))
 
 vi.mock('@capacitor/core', () => ({
@@ -22,17 +26,35 @@ vi.mock('@capacitor/core', () => ({
 }))
 
 vi.mock('@capacitor/browser', () => ({
-  Browser: { open: mockBrowserOpen, close: mockBrowserClose },
+  Browser: { open: mockBrowserOpen, close: mockBrowserClose, addListener: mockBrowserAddListener },
 }))
 
 vi.mock('@capacitor/app', () => ({
-  App: { addListener: mockAppAddListener },
+  App: { addListener: mockAppAddListener, getLaunchUrl: mockAppGetLaunchUrl },
+}))
+
+vi.mock('@/services/dataClearService', () => ({
+  clearAllUserData: vi.fn(),
+  dataClearService: { clearAllUserData: vi.fn() },
+}))
+
+vi.mock('@/services/syncService', () => ({
+  syncService: { getQueueCount: vi.fn(async () => 0) },
 }))
 
 import { SSOClient } from '@dowardev/sso-client'
 import { getSSOClient, setSSOClient } from '@/ssoClientAccessor'
 import authController from '@/controllers/authController'
-import { SSO_NATIVE_REDIRECT_URI, isSsoNativeCallbackUrl, useSsoNativeReturn } from '@/composables/useSsoNativeReturn'
+import {
+  SSO_NATIVE_REDIRECT_URI,
+  isSsoNativeCallbackUrl,
+  markSsoLoginStarted,
+  markSsoLogoutStarted,
+  useSsoNativeReturn,
+} from '@/composables/useSsoNativeReturn'
+import { createPinia, setActivePinia } from 'pinia'
+import { clearAllUserData } from '@/services/dataClearService'
+import { syncService } from '@/services/syncService'
 
 function createRealClient(): SSOClient {
   return new SSOClient({
@@ -43,10 +65,11 @@ function createRealClient(): SSOClient {
   })
 }
 
-function stubTokenExchange(params: { client: SSOClient }): { getPostedData: () => Record<string, unknown> } {
+function stubTokenExchange(params: { client: SSOClient }): { getPostedData: () => Record<string, unknown>; exchange: ReturnType<typeof vi.spyOn> } {
   const { client } = params
   let posted: Record<string, unknown> = {}
-  vi.spyOn(client as unknown as { internalPost: (url: string, data: object) => Promise<unknown> }, 'internalPost').mockImplementation(
+  const exchange = vi.spyOn(client as unknown as { internalPost: (url: string, data: object) => Promise<unknown> }, 'internalPost')
+  exchange.mockImplementation(
     async (url: string, data: object) => {
       expect(url).toBe('oauth/token')
       posted = data as Record<string, unknown>
@@ -58,13 +81,16 @@ function stubTokenExchange(params: { client: SSOClient }): { getPostedData: () =
       }
     },
   )
-  return { getPostedData: () => posted }
+  return { getPostedData: () => posted, exchange }
 }
 
 function seedPkce(params: { state: string; redirectUri: string }): void {
   const { state, redirectUri } = params
-  sessionStorage.setItem(`@dowardev/sso-client:pkce:${state}`, 'test-verifier-seeded-for-spec')
-  sessionStorage.setItem(`@dowardev/sso-client:pkce:${state}:redirect-uri`, redirectUri)
+  // sso-client 0.2.2+ keeps PKCE in localStorage: the OS recreates the WebView
+  // while the external browser is in front, so sessionStorage would be empty
+  // by the time the deep link returns.
+  localStorage.setItem(`@dowardev/sso-client:pkce:${state}`, 'test-verifier-seeded-for-spec')
+  localStorage.setItem(`@dowardev/sso-client:pkce:${state}:redirect-uri`, redirectUri)
 }
 
 describe('SSO native return (LBDS-233)', () => {
@@ -72,8 +98,15 @@ describe('SSO native return (LBDS-233)', () => {
     vi.stubGlobal('crypto', webcrypto)
     vi.clearAllMocks()
     mockIsNativePlatform.mockReturnValue(false)
+    setActivePinia(createPinia())
+    vi.mocked(syncService.getQueueCount).mockResolvedValue(0)
+    vi.mocked(clearAllUserData).mockResolvedValue(undefined)
     localStorage.clear()
     sessionStorage.clear()
+    // Most specs drive a login return; the codeless/logout specs re-mark the
+    // flow explicitly. Without a marker the composable deliberately ignores
+    // deep links (see the "no flow in flight" specs).
+    markSsoLoginStarted()
   })
 
   it('opens the authorize URL with the native redirect URI in the external browser on native login', async () => {
@@ -292,6 +325,10 @@ describe('SSO native return (LBDS-233)', () => {
     stubTokenExchange({ client: succeedingClient })
     setSSOClient(succeedingClient)
     seedPkce({ state: 'retry-state', redirectUri: SSO_NATIVE_REDIRECT_URI })
+    // Tapping "Reintentar" starts a fresh login flow, which is what makes the
+    // next deep link admissible: a return is only processed while a flow is
+    // in flight (stale or foreign deep links are ignored by design).
+    markSsoLoginStarted()
     const second = useSsoNativeReturn()
 
     const secondHandled = await second.handleAppUrl({
@@ -303,4 +340,262 @@ describe('SSO native return (LBDS-233)', () => {
     expect(second.status.value).toBe('success')
     expect(retryReplace).toHaveBeenCalledWith('/budget')
   })
+
+  it('opens the logout URL with the native redirect URI in the external browser on native logout', async () => {
+    mockIsNativePlatform.mockReturnValue(true)
+    const logout = vi.fn().mockResolvedValue(undefined)
+    setSSOClient({ logout } as unknown as SSOClient)
+
+    const result = await authController.logout()
+
+    expect(result).toBe(true)
+    expect(logout).toHaveBeenCalledTimes(1)
+    const options = logout.mock.calls[0][0] as { redirectUri: string; openUrl: (params: { url: string }) => Promise<void> }
+    expect(options.redirectUri).toBe(SSO_NATIVE_REDIRECT_URI)
+    expect(typeof options.openUrl).toBe('function')
+    // The opener handed to the SSO client must launch the external browser
+    // with a logout URL carrying the native redirect URI.
+    const logoutUrl = `https://sso.example.com/auth/logout?client_id=test-client&redirect_uri=${encodeURIComponent(SSO_NATIVE_REDIRECT_URI)}`
+    await options.openUrl({ url: logoutUrl })
+    expect(mockBrowserOpen).toHaveBeenCalledTimes(1)
+    expect(mockBrowserOpen).toHaveBeenCalledWith({ url: logoutUrl })
+    const openedUrl = new URL(mockBrowserOpen.mock.calls[0][0].url)
+    expect(openedUrl.pathname).toBe('/auth/logout')
+    expect(openedUrl.searchParams.get('redirect_uri')).toBe(SSO_NATIVE_REDIRECT_URI)
+  })
+
+  it('treats a codeless deep-link return as logout: closes the browser and goes to /budget', async () => {
+    markSsoLogoutStarted()
+    const client = createRealClient()
+    const exchange = vi.spyOn(client as unknown as { internalPost: () => Promise<unknown> }, 'internalPost')
+    setSSOClient(client)
+    const replace = vi.fn()
+    const { handleAppUrl, status, error } = useSsoNativeReturn()
+
+    const handled = await handleAppUrl({
+      url: SSO_NATIVE_REDIRECT_URI,
+      router: { replace } as never,
+    })
+
+    expect(handled).toBe(true)
+    expect(exchange).not.toHaveBeenCalled()
+    expect(mockBrowserClose).toHaveBeenCalled()
+    expect(replace).toHaveBeenCalledWith('/budget')
+    expect(status.value).toBe('success')
+    expect(error.value).toBeNull()
+  })
+
+  it('stays success on codeless return when the browser close fails', async () => {
+    markSsoLogoutStarted()
+    const client = createRealClient()
+    setSSOClient(client)
+    mockBrowserClose.mockRejectedValueOnce(new Error('close failed'))
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const replace = vi.fn()
+    const { handleAppUrl, status } = useSsoNativeReturn()
+
+    const handled = await handleAppUrl({
+      url: SSO_NATIVE_REDIRECT_URI,
+      router: { replace } as never,
+    })
+
+    expect(handled).toBe(true)
+    expect(replace).toHaveBeenCalledWith('/budget')
+    expect(status.value).toBe('success')
+    warn.mockRestore()
+  })
+
+  it('keeps web logout unchanged without opening the external browser', async () => {
+    mockIsNativePlatform.mockReturnValue(false)
+    const logout = vi.fn().mockResolvedValue(undefined)
+    setSSOClient({ logout } as unknown as SSOClient)
+
+    const result = await authController.logout()
+
+    expect(result).toBe(true)
+    expect(logout).toHaveBeenCalledTimes(1)
+    expect(logout).toHaveBeenCalledWith()
+    expect(mockBrowserOpen).not.toHaveBeenCalled()
+  })
+
+  it('ignores a redelivered deep link that was already consumed', async () => {
+    markSsoLoginStarted()
+    const client = createRealClient()
+    const { exchange } = stubTokenExchange({ client })
+    setSSOClient(client)
+    seedPkce({ state: 'dup-state', redirectUri: SSO_NATIVE_REDIRECT_URI })
+    const { handleAppUrl } = useSsoNativeReturn()
+    const url = `${SSO_NATIVE_REDIRECT_URI}?code=dup-code&state=dup-state`
+
+    expect(await handleAppUrl({ url })).toBe(true)
+    expect(await handleAppUrl({ url })).toBe(true)
+    expect(exchange).toHaveBeenCalledTimes(1)
+  })
+
+  it('routes OAuth error returns to login with sso_error', async () => {
+    const { handleAppUrl, status, error } = useSsoNativeReturn()
+    const replace = vi.fn()
+
+    const handled = await handleAppUrl({
+      url: `${SSO_NATIVE_REDIRECT_URI}?error=access_denied&state=some-state`,
+      router: { replace } as never,
+    })
+
+    expect(handled).toBe(true)
+    expect(status.value).toBe('error')
+    expect(error.value).toBe('access_denied')
+    expect(replace).toHaveBeenCalledWith('/login?sso_error=1')
+  })
+
+  it('clears local session on codeless logout return', async () => {
+    markSsoLogoutStarted()
+    const { handleAppUrl, status } = useSsoNativeReturn()
+    const replace = vi.fn()
+
+    const handled = await handleAppUrl({
+      url: `${SSO_NATIVE_REDIRECT_URI}?logout=1`,
+      router: { replace } as never,
+    })
+
+    expect(handled).toBe(true)
+    expect(status.value).toBe('success')
+    expect(vi.mocked(clearAllUserData)).toHaveBeenCalled()
+    expect(replace).toHaveBeenCalledWith('/budget')
+  })
+
+  it('ignores a codeless deep link when no SSO flow is in flight (no data wipe)', async () => {
+    // A deep link alone is not proof of a logout: acting on it wiped local data
+    // for any stale or foreign custom-scheme intent.
+    localStorage.clear()
+    const { handleAppUrl, status } = useSsoNativeReturn()
+    const replace = vi.fn()
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    const handled = await handleAppUrl({
+      url: `${SSO_NATIVE_REDIRECT_URI}?logout=1`,
+      router: { replace } as never,
+    })
+
+    expect(handled).toBe(true)
+    expect(vi.mocked(clearAllUserData)).not.toHaveBeenCalled()
+    expect(mockBrowserClose).not.toHaveBeenCalled()
+    expect(replace).not.toHaveBeenCalled()
+    expect(status.value).toBe('idle')
+    warn.mockRestore()
+  })
+
+  it('ignores a code return when no SSO flow is in flight (no exchange)', async () => {
+    localStorage.clear()
+    const client = createRealClient()
+    const { exchange } = stubTokenExchange({ client })
+    const { handleAppUrl } = useSsoNativeReturn()
+    const replace = vi.fn()
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    await handleAppUrl({
+      url: `${SSO_NATIVE_REDIRECT_URI}?code=stale-code&state=stale-state`,
+      router: { replace } as never,
+    })
+
+    expect(exchange).not.toHaveBeenCalled()
+    expect(replace).not.toHaveBeenCalled()
+    warn.mockRestore()
+  })
+
+  it('ignores a login return while a logout flow is in flight', async () => {
+    markSsoLogoutStarted()
+    const client = createRealClient()
+    const { exchange } = stubTokenExchange({ client })
+    const { handleAppUrl } = useSsoNativeReturn()
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    await handleAppUrl({
+      url: `${SSO_NATIVE_REDIRECT_URI}?code=auth-code&state=some-state`,
+      router: { replace: vi.fn() } as never,
+    })
+
+    expect(exchange).not.toHaveBeenCalled()
+    warn.mockRestore()
+  })
+
+  it('does not re-run a failed exchange when the deep link is redelivered', async () => {
+    markSsoLoginStarted()
+    const client = createRealClient()
+    const exchange = vi
+      .spyOn(client as unknown as { internalPost: () => Promise<unknown> }, 'internalPost')
+      .mockRejectedValue(new Error('network blip'))
+    setSSOClient(client)
+    seedPkce({ state: 'retry-state', redirectUri: SSO_NATIVE_REDIRECT_URI })
+    const { handleAppUrl } = useSsoNativeReturn()
+    const replace = vi.fn()
+    const url = `${SSO_NATIVE_REDIRECT_URI}?code=retry-code&state=retry-state`
+
+    await handleAppUrl({ url, router: { replace } as never })
+    expect(exchange).toHaveBeenCalledTimes(1)
+    expect(replace).toHaveBeenCalledWith('/login?sso_error=1')
+
+    // A redelivered deep link must not re-attempt the exchange: the SDK already
+    // consumed the single-use PKCE verifier, so the retry could never succeed.
+    // Recovery is a fresh login from the UI.
+    await handleAppUrl({ url, router: { replace } as never })
+
+    expect(exchange).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not reprocess a sticky launch URL on resume without a pending flow', async () => {
+    mockIsNativePlatform.mockReturnValue(true)
+    mockAppAddListener.mockResolvedValue({ remove: vi.fn() })
+    // Android keeps returning the original launch intent: here it still carries
+    // the spent code of a login that already completed.
+    mockAppGetLaunchUrl.mockResolvedValue({
+      url: `${SSO_NATIVE_REDIRECT_URI}?code=spent-code&state=spent-state`,
+    })
+    localStorage.clear()
+    const { start } = useSsoNativeReturn()
+    const replace = vi.fn()
+
+    await start({ router: { replace } as never })
+    const resumeHandle = mockAppAddListener.mock.calls.find(
+      (call) => call[0] === 'appStateChange',
+    )
+    const onStateChange = resumeHandle?.[1] as (event: { isActive: boolean }) => void
+    onStateChange({ isActive: true })
+    await new Promise((resolve) => setTimeout(resolve, 20))
+
+    expect(replace).not.toHaveBeenCalled()
+  })
+
+  it('rechecks the launch URL when the app resumes', async () => {
+    markSsoLogoutStarted()
+    mockIsNativePlatform.mockReturnValue(true)
+    mockAppAddListener.mockResolvedValue({ remove: vi.fn() })
+    mockAppGetLaunchUrl.mockResolvedValue({ url: `${SSO_NATIVE_REDIRECT_URI}?logout=1` })
+    const replace = vi.fn()
+    const { start } = useSsoNativeReturn()
+
+    await start({ router: { replace } as never })
+    const resumeHandle = mockAppAddListener.mock.calls.find(
+      (call) => call[0] === 'appStateChange',
+    )
+    expect(resumeHandle).toBeTruthy()
+    const onStateChange = resumeHandle?.[1] as (event: { isActive: boolean }) => void
+    onStateChange({ isActive: true })
+    await vi.waitFor(() => expect(replace).toHaveBeenCalledWith('/budget'))
+  })
+
+  it('rejects login when the browser closes before completing authentication', async () => {
+    mockIsNativePlatform.mockReturnValue(true)
+    setSSOClient(createRealClient())
+    mockBrowserOpen.mockImplementationOnce(() => new Promise(() => {}))
+
+    const loginPromise = authController.login()
+    await vi.waitFor(() => expect(mockBrowserAddListener).toHaveBeenCalledWith('browserFinished', expect.any(Function)))
+    const finishedCall = mockBrowserAddListener.mock.calls.find(
+      (call: unknown[]) => call[0] === 'browserFinished',
+    ) as unknown[] | undefined
+    const onFinished = finishedCall?.[1] as () => void
+    expect(onFinished).toBeTruthy()
+    onFinished()
+    await expect(loginPromise).rejects.toThrow('closed before completing')
+  }, 10000)
 })
