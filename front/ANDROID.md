@@ -24,10 +24,17 @@ Environment variables
 - `CAPACITOR_LIVE_RELOAD_URL` (optional, dev only) — overrides the `server.url`
   in `capacitor.config.ts` so the app loads from your dev server instead of the
   bundled web assets. Example: `http://192.168.1.10:8100`.
+- `SSO_CLIENT_ID_NATIVE` (in `front/.env.production`) — the SSO client registered
+  for the app's custom-scheme redirect (e.g. `com.dowardev.onespend://auth/callback`).
+  `pnpm run build:native` reads it and ships it as the app's client id. It must be
+  a DIFFERENT client from the web one: the SSO validates `redirect_url` by exact
+  match and a client stores a single value, so the web client cannot authorise the
+  app. Without it the build warns and falls back to `VITE_SSO_CLIENT_ID`, and
+  sign-in then fails on the device with a redirect_uri mismatch.
 
 Build the debug APK
 - Build the web assets and sync them into the Android project:
-  pnpm run build
+  pnpm run build:native
   npx cap sync android
 - Compile the debug APK:
   cd android && ./gradlew assembleDebug
@@ -77,7 +84,7 @@ Production builds (signed)
 
   (Reading passwords from environment variables keeps them out of the repo.)
 - Build the signed release APK:
-  pnpm run build
+  pnpm run build:native
   npx cap sync android
   cd android && ./gradlew assembleRelease
 - Output: android/app/build/outputs/apk/release/app-release.apk

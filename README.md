@@ -76,9 +76,10 @@ composer test     # PHPUnit
 ```bash
 cd front
 pnpm run dev              # Web (Vite)
-pnpm run build            # Production build
+pnpm run build            # Production build (web)
+pnpm run build:native     # Production build (Android app; needs SSO_CLIENT_ID_NATIVE)
 pnpm run test:unit        # Vitest
-pnpm run test:e2e         # Cypress
+pnpm run test:e2e         # Playwright (starts its own dev server)
 pnpm run lint             # oxlint + eslint
 pnpm run format           # Prettier
 pnpm run electron:dev     # Desktop (Electron)

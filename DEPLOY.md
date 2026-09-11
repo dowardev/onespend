@@ -101,6 +101,11 @@ Edit the following variables in `.env`:
 <!-- markdownlint-enable MD013 -->
 
 > See [section 2](#2-sso-authentication) to obtain SSO credentials.
+
+The Android app needs its **own** SSO client: the server matches `redirect_url`
+exactly and a client stores a single value, so the web client (https callback)
+cannot authorise the app (custom scheme). `pnpm run build:native` reads
+`SSO_CLIENT_ID_NATIVE`; the web build keeps using `VITE_SSO_CLIENT_ID`.
 >
 > **Queue:** OneSpend uses a queue for background sync tasks.
 > In production, set `QUEUE_CONNECTION=sync` in your `.env`.
@@ -145,6 +150,7 @@ cp .env.production.example .env.production
 | `VITE_SSO_URL`          | SSO Server API URL     | `https://sso.yourdomain.com/api` |
 | `VITE_SSO_FRONTEND_URL` | SSO frontend URL       | `https://sso.yourdomain.com`     |
 | `VITE_SSO_CLIENT_ID`    | Your SSO client ID     | `[your_client_id]`               |
+| `SSO_CLIENT_ID_NATIVE`  | SSO client for the Android app build (see [front/ANDROID.md](front/ANDROID.md)) | `onespend-android` |
 <!-- markdownlint-enable MD013 -->
 
 > See [section 2](#2-sso-authentication) to obtain SSO credentials.
