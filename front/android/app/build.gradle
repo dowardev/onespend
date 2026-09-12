@@ -70,6 +70,13 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    dependenciesInfo {
+        // AGP 8.x otherwise injects a "Dependency metadata" APK signing block.
+        // That block is not part of the standard signing scheme, and F-Droid's
+        // scanner rejects extra signing blocks (see fdroid/README.md).
+        includeInApk = false
+        includeInBundle = false
+    }
     if (releaseSigning != null) {
         signingConfigs {
             release releaseSigning

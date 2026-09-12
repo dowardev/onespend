@@ -8,6 +8,12 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 ## [Unreleased]
 
+## [v0.76.5] - 2026-09-12
+
+### Fixed
+
+- Release APKs no longer carry AGP's extra "Dependency metadata" signing block, which F-Droid's scanner rejects. Required for the app to be accepted with a reproducible build.
+
 ## [v0.76.4] - 2026-09-11
 
 ### Added

@@ -1,0 +1,1 @@
+Drops the extra "Dependency metadata" signing block so the published APK passes F-Droid's scanner.

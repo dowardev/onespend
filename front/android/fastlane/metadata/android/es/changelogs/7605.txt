@@ -1,0 +1,1 @@
+Quita el bloque de firma adicional "Dependency metadata" para que el APK publicado pase el escáner de F-Droid.
