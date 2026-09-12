@@ -10,13 +10,25 @@ if (pkgJson.exists()) {
         appVersion = matcher.group(1)
     }
 }
-// versionCode must be a monotonically increasing integer; derive it from
-// major/minor/patch (rc suffix ignored): 0.76.1 -> 76001
-def versionParts = appVersion.tokenize('-')[0].tokenize('.')
-def versionCodeNum = 0
-if (versionParts.size() >= 3) {
-    versionCodeNum = (versionParts[0] as Integer) * 100000 + (versionParts[1] as Integer) * 100 + (versionParts[2] as Integer)
+// versionCode must be a monotonically increasing integer. Prefer the explicit
+// "versionCode" field in package.json: F-Droid's autoupdate reads it (see
+// fdroid/README.md), and it cannot evaluate the semver formula below. Fall back
+// to the derived value so branches without the field keep building.
+def explicitCode = null
+if (pkgJson.exists()) {
+    def codeMatcher = (pkgJson.text =~ /"versionCode"\s*:\s*(\d+)/)
+    if (codeMatcher.find()) {
+        explicitCode = codeMatcher.group(1) as Integer
+    }
 }
+// 0.76.1 -> (0*100000)+(76*100)+1 = 76001
+// rc suffix ignored: 0.76.1-rc.4 -> 76001
+def versionParts = appVersion.tokenize('-')[0].tokenize('.')
+def derivedCode = 0
+if (versionParts.size() >= 3) {
+    derivedCode = (versionParts[0] as Integer) * 100000 + (versionParts[1] as Integer) * 100 + (versionParts[2] as Integer)
+}
+def versionCodeNum = explicitCode != null ? explicitCode : derivedCode
 
 // Release signing: keystore path and passwords come from environment
 // variables (CI) or android/keystore.properties (local, gitignored).

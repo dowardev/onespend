@@ -1,0 +1,1 @@
+Agrega un versionCode explícito para que F-Droid detecte las versiones nuevas automáticamente, y publica el metadata de tienda en el formato estándar.

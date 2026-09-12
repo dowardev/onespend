@@ -1,0 +1,1 @@
+Adds an explicit versionCode so F-Droid can auto-detect new releases, and ships the standard store metadata layout.

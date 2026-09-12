@@ -8,6 +8,12 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 ## [Unreleased]
 
+## [v0.76.4] - 2026-09-11
+
+### Added
+
+- `versionCode` is an explicit field in `front/package.json`, so F-Droid's autoupdate can detect new releases (it cannot evaluate the semver formula in `build.gradle`, which remains the fallback for branches without the field).
+
 ## [v0.76.3] - 2026-09-11
 
 ### Fixed
