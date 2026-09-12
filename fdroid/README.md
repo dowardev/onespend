@@ -3,23 +3,52 @@
 This directory documents how OneSpend is published on
 [F-Droid](https://f-droid.org) and how that differs from other stores.
 
+Status: submitted as merge request
+[`!48564`](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/48564) to
+[fdroiddata](https://gitlab.com/fdroid/fdroiddata). The app is not in the index
+yet; the Downloads page entry stays on "Próximamente" until it is.
+
 ## How F-Droid publishing works
 
-F-Droid does not accept uploaded APKs. Instead:
+F-Droid does not accept uploaded APKs to publish. Instead:
 
-1. A build recipe (metadata YAML) is submitted via merge request to the
-   [fdroiddata](https://gitlab.com/fdroid/fdroiddata) repository.
-2. F-Droid's servers build the APK from the source tag declared in the recipe,
-   in a clean environment.
-3. The APK is signed with **F-Droid's own signing key**, not the release
-   keystore used for AppGallery / Google Play.
+1. A build recipe (metadata YAML) is submitted as a merge request to
+   [fdroiddata](https://gitlab.com/fdroid/fdroiddata).
+2. F-Droid's buildserver compiles the APK from the source commit declared in
+   the recipe, in a clean environment.
+3. Whether the published APK keeps our signature depends on the reproducible
+   build check described below.
 
 ### Consequences
 
-- F-Droid builds **cannot be installed as updates** over AppGallery or Play
-  installs (different signing keys). They are separate installation channels.
 - No proprietary dependencies or trackers are allowed in the build.
-- Updates are picked up from new Git tags on the upstream repository.
+- Updates come from new Git tags on the upstream repository; a bot opens a
+  merge request with the new build block.
+- F-Droid is a separate distribution channel. It only becomes update-compatible
+  with AppGallery / Google Play when the reproducible build check passes and
+  F-Droid publishes our own signed APK.
+
+## Reproducible build
+
+The recipe declares both `Binaries` (our published APK) and
+`AllowedAPKSigningKeys` (our release key fingerprint):
+
+```yaml
+Binaries: https://gitlab.com/dowardev/onespend/-/releases/v%v/downloads/onespend-%v.apk
+AllowedAPKSigningKeys: c6d2961a958ea23a36925ea818e0605b28c9f8e60f84f0432c7e68ee595fccce
+```
+
+`%v` is substituted with the version name by F-Droid.
+
+- If F-Droid's build matches the APK we published, F-Droid distributes **our**
+  signed APK — same key as the other channels, so users can switch between them.
+- If it does not match, F-Droid investigates. Our APK is never distributed
+  without that check, because `AllowedAPKSigningKeys` restricts which signature
+  may be accepted.
+
+Because of this, **every release must also publish its signed APK**, with a file
+name that the `Binaries` URL pattern resolves (see the release checklist below).
+The APK is built with JDK 21, matching the F-Droid buildserver toolchain.
 
 ## Build verification (proprietary-dependency check)
 
@@ -32,9 +61,8 @@ Verified for LBDS-198:
   `com.google.gms:google-services` classpath was removed from
   `front/android/build.gradle` — it was never applied (no `google-services.json`
   in the repo) and only pulled a Google component unnecessarily.
-- Web bundle: built locally (`pnpm run build`) and copied into the
-  Android project at build time by `npx cap sync android` (the dist/
-  output is not committed to the repository); no remote code
+- Web bundle: built locally and copied into the Android project at build time by
+  `npx cap sync android` (the `dist/` output is not committed); no remote code
   injection configured.
 
 ## Build steps
@@ -63,37 +91,83 @@ cd android
 
 ## Recipe file
 
-The file `fdroid/com.dowardev.onespend.yml` in this repo IS the submission:
-copy it to `metadata/com.dowardev.onespend.yml` in a fork of
-[fdroiddata](https://gitlab.com/fdroid/fdroiddata), replacing the
-`__PUBLIC_*__` placeholders with the real public values, and open the MR.
-It already carries the real values for the current release:
+`fdroid/com.dowardev.onespend.yml` in this repo mirrors
+`metadata/com.dowardev.onespend.yml` in the fork. Keep both in sync while the
+app is under review; afterwards the fdroiddata copy is the source of truth.
 
-| Field | Value | Source |
-| ----- | ----- | ------ |
-| `versionName` | `0.76.3` | `"version"` in `front/package.json` |
-| `versionCode` | `7603` | formula `major*100000 + minor*100 + patch` |
-| `commit` | `v0.76.3` | exact tag name (already pushed) |
-| `CurrentVersion` / `CurrentVersionCode` | `0.76.3` / `7603` | bumped by hand per release (see below) |
+Current build block:
 
-Updates are **manual** (`AutoUpdateMode: None` / `UpdateCheckMode: None`).
-Auto-update is impossible here: `versionCode` is *computed* from semver
-(`major*100000 + minor*100 + patch`), so no manifest field or tag regex
-yields it, and the fdroiddata schema forbids combining `Tags` with
-`UpdateCheckIgnore`. For each release, open a minimal MR to fdroiddata
-bumping only `CurrentVersion` / `CurrentVersionCode`.
+| Field | Value |
+| ----- | ----- |
+| `versionName` | `0.76.4` (`"version"` in `front/package.json`) |
+| `versionCode` | `7604` (`"versionCode"` in `front/package.json`) |
+| `commit` | `07132cdf905de528681e897641225f185ca5ce5e` — full SHA, never a tag |
 
-## Upstream metadata checklist (required before the MR)
+The recipe pins the **full commit hash** on purpose: a tag can be moved, a hash
+cannot, and the buildserver needs an immutable revision.
 
-- [x] `title.txt`, `short_description.txt` (< 80 chars, no trailing dot),
-      `full_description.txt` in `en-US` and `es`
-- [x] `images/icon.png` (512x512)
-- [x] 7 `phoneScreenshots` per locale
-- [x] `changelogs/<versionCode>.txt` per locale (max 500 chars) — one file
-      per release, e.g. `en-US/changelogs/7603.txt`
-- [x] Public repo with FOSS license file (`AGPL-3.0-only`)
-- [x] No proprietary deps (no GMS/Firebase/Crashlytics — verified LBDS-198)
-- [x] Tagged release commit (`v0.76.3` pushed)
+## Autoupdate
+
+Autoupdate is enabled and reads both values from `front/package.json`:
+
+```yaml
+AutoUpdateMode: Version
+UpdateCheckMode: Tags ^v[\d.]+$
+UpdateCheckData: front/package.json|"versionCode":\s*(\d+)|.|"version":\s*"([\d.]+)"
+```
+
+`UpdateCheckData` is required because `checkupdates` cannot evaluate the semver
+formula in `build.gradle`: it only extracts values with regexes. That is why
+`versionCode` is stored explicitly in `front/package.json` instead of being
+derived. `build.gradle` still falls back to the formula
+(`major * 100000 + minor * 100 + patch`) when the field is absent.
+
+The tag pattern excludes `-rc` tags, which would otherwise collide on
+versionCode.
+
+## Release checklist (every release)
+
+1. Bump **both** `"version"` and `"versionCode"` in `front/package.json`. They
+   must stay consistent with each other:
+   ```
+   versionCode = major * 100000 + minor * 100 + patch
+   0.76.4 → (0*100000)+(76*100)+4 = 7604
+   1.0.0  → (1*100000)+(0*100)+0  = 100000
+   ```
+2. Add `changelogs/<versionCode>.txt` in both `en-US` and `es` (max 500 chars).
+3. Add the release entry to the root `CHANGELOG.md`.
+4. Commit, then tag and push — clean semver, no `-rc` suffix:
+   ```bash
+   git tag vX.Y.Z
+   git push origin main vX.Y.Z
+   ```
+5. Build the signed release APK (see Build steps) and publish it as a GitLab
+   release asset named `onespend-X.Y.Z.apk`, so the `Binaries` URL resolves:
+   ```bash
+   glab release create vX.Y.Z --repo dowardev/onespend \
+     "/path/to/app-release.apk#onespend-X.Y.Z.apk"
+   ```
+   Verify the download works before moving on.
+6. F-Droid's bot opens a merge request adding the new build block. Replace the
+   tag with the **full commit hash** if it used one, and confirm the pipelines.
+
+## Store metadata
+
+Store metadata lives in the standard Triple-T / Fastlane layout, one directory
+per locale, with the icon inside each locale:
+
+```
+front/android/fastlane/metadata/android/
+├── en-US/
+│   ├── title.txt, short_description.txt, full_description.txt
+│   ├── changelogs/<versionCode>.txt
+│   └── images/icon.png, images/phoneScreenshots/*.png
+└── es/   (same)
+```
+
+- `short_description.txt` must stay under 80 characters and have no trailing dot.
+- `full_description.txt` must not duplicate a name or summary line.
+- The old layout with an `<applicationId>/` level in between is not detected.
 
 ## Signing model comparison
 
@@ -101,77 +175,27 @@ bumping only `CurrentVersion` / `CurrentVersionCode`.
 | ----------- | ------------------ | ----------------- |
 | AppGallery  | Release keystore   | Yes               |
 | Google Play | Release keystore   | Yes               |
-| F-Droid     | F-Droid server key | Only within F-Droid |
+| F-Droid     | Release keystore   | Yes, when the reproducible build check passes |
 
 The Downloads page entry lives in
 `front/src/views/info/DownloadsPage.vue` and must be enabled (badge +
 download link) only after the first F-Droid release is live.
 
-## Publishing flow
+## What you never do
 
-### Versioning contract (no exceptions)
-
-| Relationship | Rule |
-| ------------ | ---- |
-| Git tag ↔ versionName | Identical: `vX.Y.Z` ↔ `X.Y.Z` |
-| versionCode | Derived integer, strictly increasing, never reused |
-| One versionCode | One per tag/release |
-
-The only source of truth for the version is `"version"` in
-`front/package.json`. The Android build reads it automatically:
-`front/android/app/build.gradle` derives both `versionName` (the string) and
-`versionCode` (the integer) from it. You never edit the version in Gradle.
-
-```
-versionCode formula: major * 100000 + minor * 100 + patch
-0.76.1 → (0*100000)+(76*100)+1 = 76001
-1.0.0  → (1*100000)+(0*100)+0  = 100000
-```
-
-> Strip release-candidate suffixes for F-Droid: `1.0.0-rc.1` and `1.0.0`
-> produce the same versionCode because the `-rc` part is ignored. Use clean
-> semver when tagging a release for F-Droid.
-
-### First publish
-
-1. Set the version in `front/package.json` (clean semver, no `-rc`).
-2. Commit.
-3. Tag and push:
-   ```bash
-   git tag v1.0.0
-   git push origin v1.0.0
-   ```
-4. Fork [`fdroiddata`](https://gitlab.com/fdroid/fdroiddata) and create
-   `metadata/com.dowardev.onespend.yml` with the recipe above filled in:
-   - `versionName` = version in package.json
-   - `versionCode` = derived integer from the formula
-   - `commit` = the exact tag name created in step 3
-5. Open a merge request to `fdroiddata` describing the app and why it is
-   suitable (fully open source, no trackers).
-6. Wait for review. The first review can take weeks; fix feedback in the same
-   MR. F-Droid then builds the tag, signs with its own key, and publishes.
-
-### Updates (after the app is accepted)
-
-1. Bump `"version"` in `front/package.json`.
-2. Commit and tag: `git tag vX.Y.Z && git push origin vX.Y.Z`.
-3. With auto-update enabled the F-Droid bots pick up the new tag
-   automatically; otherwise open a minimal MR to `fdroiddata` changing only
-   `CurrentVersion` / `CurrentVersionCode`.
-4. F-Droid rebuilds and publishes (days, not weeks).
-
-### What you never do
-
-- Never upload an APK anywhere; F-Droid always builds from source.
-- Never sign anything with your keystore for F-Droid; they sign with their key.
+- Never move a tag that a recipe already pins — submit a new version instead.
+- Never commit a keystore or its passwords.
 - Never enable the Downloads page F-Droid entry until the app is live in the
   F-Droid index.
+- Never edit the version in `build.gradle`; `front/package.json` is the single
+  source of truth for both `versionName` and `versionCode`.
 
-### Where the pieces live
+## Where the pieces live
 
 | Piece | Path |
 | ----- | ---- |
-| This guide / recipe draft | `fdroid/README.md` |
-| Store metadata | `front/android/fastlane/metadata/android/com.dowardev.onespend/` |
+| This guide | `fdroid/README.md` |
+| Recipe (mirror of the submission) | `fdroid/com.dowardev.onespend.yml` |
+| Store metadata | `front/android/fastlane/metadata/android/{en-US,es}/` |
 | Downloads page entry | `front/src/views/info/DownloadsPage.vue` |
-| Version source of truth | `front/package.json` |
+| Version source of truth | `front/package.json` (`version` + `versionCode`) |
