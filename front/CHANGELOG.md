@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Performance help button (per empty section) that explains the concept via the financial glossary.
 
 ### Changed
+- Downloads page (`/downloads`) reorganized into Mobile / Web / Desktop groups with per-OS desktop entries (Linux, Windows, macOS — no more Electron branding); new upcoming entries: Uptodown (Android), Winget and Uptodown (Windows), DEB, Flathub, AUR and OBS (Linux) (LBDS-245).
 - `@dowardev/sso-client` bumped to `^0.2.2`: the PKCE verifier now lives in `localStorage`, so a WebView recreated while the external browser is open keeps the login return working.
 - Income Statement classification now uses the explicit category-to-section mapping, keeping the keyword heuristic as a byte-identical fallback for unmapped entries.
 - App boot no longer blocks on SSO network calls (mount-first); Budget page entry gate is non-blocking.
