@@ -86,8 +86,17 @@ class SyncController {
     return this.syncError.value;
   }
 
+  /**
+   * Reconciles a possibly stale offline flag (missed 'online' event on real
+   * devices) with the live `navigator.onLine` value before refusing work.
+   */
+  private refreshOnline(): boolean {
+    this.isOnline.value = syncQueueService.refreshOnlineStatus();
+    return this.isOnline.value;
+  }
+
   async syncNow(): Promise<boolean> {
-    if (!this.isOnline.value) {
+    if (!this.refreshOnline()) {
       this.syncError.value = 'Cannot sync while offline';
       return false;
     }
@@ -112,7 +121,7 @@ class SyncController {
   }
 
   async pullFromServer() {
-    if (!this.isOnline.value) {
+    if (!this.refreshOnline()) {
       this.syncError.value = 'Cannot pull while offline';
       return;
     }
@@ -133,7 +142,7 @@ class SyncController {
   }
 
   async fullSyncAndSave() {
-    if (!this.isOnline.value) {
+    if (!this.refreshOnline()) {
       this.syncError.value = 'Cannot full sync while offline';
       return;
     }
@@ -157,7 +166,7 @@ class SyncController {
   async repairSync(params: { onProgress: (p: RepairProgress) => void }): Promise<RepairResult> {
     const { onProgress } = params;
 
-    if (!this.isOnline.value) {
+    if (!this.refreshOnline()) {
       onProgress({ step: 'error', message: 'No se puede reparar sin conexión', percent: 0 });
       return { ok: false, created: 0, updated: 0, errors: 1 };
     }
