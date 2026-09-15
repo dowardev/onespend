@@ -149,6 +149,79 @@ class SyncOrchestratorService
         return $results;
     }
 
+    // LBDS-244: per-item fallback for a poisoned batch. Returns the same
+    // result shape with per-item errors carrying real sync_ids.
+    private function executeEntityOperationsPerItem(
+        SyncProcessorInterface $processor,
+        string $entityType,
+        array $toCreate,
+        array $toUpdate,
+        array $toDelete,
+        int $userId,
+        $existingMap,
+        array $conflicts,
+    ): array {
+        $created = [];
+        $updated = [];
+        $deleted = [];
+        $errors = [];
+
+        foreach ($toCreate as $item) {
+            $syncId = $item['id'] ?? ($item['sync_id'] ?? 'unknown');
+            try {
+                foreach ($processor->create([$item], $userId) as $row) {
+                    $created[] = $row;
+                }
+            } catch (\Exception $e) {
+                Log::warning('Sync per-item create failed', [
+                    'entity_type' => $entityType,
+                    'sync_id' => $syncId,
+                    'error' => $e->getMessage(),
+                ]);
+                $errors[] = ['sync_id' => $syncId, 'error' => $e->getMessage()];
+            }
+        }
+
+        foreach ($toUpdate as $item) {
+            $syncId = $item['id'] ?? ($item['sync_id'] ?? 'unknown');
+            try {
+                foreach ($processor->update([$item], $userId, $existingMap) as $row) {
+                    $updated[] = $row;
+                }
+            } catch (\Exception $e) {
+                Log::warning('Sync per-item update failed', [
+                    'entity_type' => $entityType,
+                    'sync_id' => $syncId,
+                    'error' => $e->getMessage(),
+                ]);
+                $errors[] = ['sync_id' => $syncId, 'error' => $e->getMessage()];
+            }
+        }
+
+        foreach ($toDelete as $syncId) {
+            try {
+                foreach ($processor->delete([$syncId], $userId) as $row) {
+                    $deleted[] = $row;
+                }
+            } catch (\Exception $e) {
+                Log::warning('Sync per-item delete failed', [
+                    'entity_type' => $entityType,
+                    'sync_id' => $syncId,
+                    'error' => $e->getMessage(),
+                ]);
+                $errors[] = ['sync_id' => $syncId, 'error' => $e->getMessage()];
+            }
+        }
+
+        return [
+            'created' => $created,
+            'updated' => $updated,
+            'deleted' => $deleted,
+            'conflicts' => $conflicts,
+            'errors' => $errors,
+        ];
+    }
+
     private function processEntityType(
         string $entityType,
         array $items,
@@ -200,17 +273,31 @@ class SyncOrchestratorService
             }
         }
 
-        $updated = $processor->update($toUpdate, $userId, $existingMap);
+        try {
+            $updated = $processor->update($toUpdate, $userId, $existingMap);
 
-        $result = [
-            'created' => $processor->create($toCreate, $userId),
-            'updated' => $updated,
-            'deleted' => $processor->delete($toDelete, $userId),
-            'conflicts' => $conflicts,
-            'errors' => [],
-        ];
+            $result = [
+                'created' => $processor->create($toCreate, $userId),
+                'updated' => $updated,
+                'deleted' => $processor->delete($toDelete, $userId),
+                'conflicts' => $conflicts,
+                'errors' => [],
+            ];
 
-        return $result;
+            return $result;
+        } catch (\Exception $e) {
+            // LBDS-244: one poison row (e.g. an FK to a local-only id) must not
+            // nuke the whole batch. Retry per item so siblings still sync and
+            // culprits come back with their real sync_id in errors.
+            Log::warning('Sync entity batch failed, retrying per item', [
+                'entity_type' => $entityType,
+                'error' => $e->getMessage(),
+            ]);
+
+            return $this->executeEntityOperationsPerItem(
+                $processor, $entityType, $toCreate, $toUpdate, $toDelete, $userId, $existingMap, $conflicts
+            );
+        }
     }
 
     private function saveConflictMetadata(string $entityType, string $syncId, int $userId, array $clientData, array $conflictInfo = []): void

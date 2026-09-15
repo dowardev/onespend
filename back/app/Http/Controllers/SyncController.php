@@ -405,15 +405,30 @@ class SyncController extends Controller
         ];
 
         foreach (['created', 'updated', 'deleted', 'skipped'] as $status) {
-            if (! empty($results[$status])) {
-                foreach ($results[$status] as $entityType => $items) {
-                    $compressed[$status][$entityType] = array_map(function ($item) {
-                        return [
-                            'sync_id' => $item['sync_id'] ?? ($item['id'] ?? null),
-                            'id' => $item['id'] ?? null,
-                        ];
-                    }, $items);
+            if (empty($results[$status]) || ! is_array($results[$status])) {
+                continue;
+            }
+            foreach ($results[$status] as $entityType => $items) {
+                if (! is_array($items)) {
+                    // Scalar buckets (e.g. a skipped count) carry no ackable ids.
+                    Log::warning('Sync compress: dropping non-array result bucket', [
+                        'status' => $status,
+                        'entityType' => $entityType,
+                    ]);
+
+                    continue;
                 }
+                $compressed[$status][$entityType] = array_map(function ($item) {
+                    if (! is_array($item)) {
+                        // Scalar acks (e.g. a bare sync_id string) — LBDS-244.
+                        return ['sync_id' => (string) $item, 'id' => null];
+                    }
+
+                    return [
+                        'sync_id' => $item['sync_id'] ?? ($item['id'] ?? null),
+                        'id' => $item['id'] ?? null,
+                    ];
+                }, $items);
             }
         }
 
@@ -440,7 +455,7 @@ class SyncController extends Controller
         }
 
         if (empty($hashes)) {
-            return $data;
+            return ['data' => $data, 'skipped' => []];
         }
 
         $recent = SyncMetadata::where('user_id', $userId)
@@ -450,16 +465,23 @@ class SyncController extends Controller
             ->flip();
 
         if ($recent->isEmpty()) {
-            return $data;
+            return ['data' => $data, 'skipped' => []];
         }
 
         $filtered = [];
         $skipped = 0;
+        $skippedIds = [];
         foreach ($data as $entityType => $items) {
             foreach ($items as $item) {
                 $hash = $this->computeDedupHash($entityType, $item);
                 if ($recent->has($hash)) {
                     $skipped++;
+
+                    // LBDS-244: remember dedup-dropped ids so the client can drain them.
+                    $dupId = $item['id'] ?? ($item['sync_id'] ?? null);
+                    if ($dupId !== null) {
+                        $skippedIds[$entityType][] = ['sync_id' => $dupId];
+                    }
 
                     continue;
                 }
@@ -474,7 +496,7 @@ class SyncController extends Controller
             ]);
         }
 
-        return $filtered;
+        return ['data' => $filtered, 'skipped' => $skippedIds];
     }
 
     public function merge(SyncMergeRequest $request): JsonResponse
@@ -513,20 +535,24 @@ class SyncController extends Controller
                 ], 409);
             }
 
-            $data = $this->filterDuplicateChanges($request->input('data'), $user->id);
+            $dedup = $this->filterDuplicateChanges($request->input('data'), $user->id);
+            $data = $dedup['data'];
+            $dedupSkipped = $dedup['skipped'];
 
             if (empty($data)) {
                 $this->recordSyncMetrics('merge', $startTime);
 
                 return response()->json([
                     'success' => true,
-                    'results' => ['updated' => [], 'errors' => [], 'conflicts' => []],
-                    'serverTime' => now()->toIso8601String(),
+                    'results' => ['updated' => [], 'errors' => [], 'conflicts' => [], 'skipped' => $dedupSkipped],
+                    'serverTime' => now()->timestamp,
                 ]);
             }
 
             try {
                 $results = $this->orchestrator->merge($data, $user->id);
+
+                $results['skipped'] = array_merge($results['skipped'] ?? [], $dedupSkipped);
             } catch (\Exception $e) {
                 $this->recordSyncMetrics('merge', $startTime, 'orchestrator_failure');
 
@@ -564,7 +590,7 @@ class SyncController extends Controller
             return response()->json([
                 'success' => true,
                 'results' => $compressedResults,
-                'serverTime' => now()->toIso8601String(),
+                'serverTime' => now()->timestamp,
             ]);
         } finally {
             optional($lock)->release();

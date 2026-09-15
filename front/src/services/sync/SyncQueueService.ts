@@ -39,6 +39,72 @@ function debug(...args: unknown[]): void {
   if (import.meta.env.DEV) { console.log(...args); }
 }
 
+// LBDS-244: ack ids arrive in mixed shapes (plain string, {sync_id},
+// {sync_id, id}, legacy {sync_id: null}). Centralize extraction so a
+// falsy sync_id can still fall back to id instead of sticking the queue.
+export function extractAckId(params: { item: unknown }): string | null {
+  const { item } = params;
+  if (typeof item === 'string') return item || null;
+  if (item && typeof item === 'object') {
+    const record = item as Record<string, unknown>;
+    const id = record.sync_id || record.id;
+    if (typeof id === 'string') return id || null;
+    if (typeof id === 'number' && Number.isFinite(id)) return String(id);
+  }
+  return null;
+}
+
+// LBDS-244: POST /api/sync/merge used to answer serverTime as an ISO-8601
+// string while the client stores unix seconds in last_sync. Normalize any
+// shape to unix seconds; null means 'do not advance last_sync'.
+export function normalizeServerTime(params: { serverTime: unknown }): number | null {
+  const { serverTime } = params;
+  if (typeof serverTime === 'number' && Number.isFinite(serverTime)) {
+    const floored = Math.floor(serverTime);
+    return floored > 0 ? floored : null;
+  }
+  if (typeof serverTime === 'string') {
+    const trimmed = serverTime.trim();
+    if (trimmed !== '') {
+      const asNumber = Number(trimmed);
+      if (Number.isFinite(asNumber)) {
+        const floored = Math.floor(asNumber);
+        return floored > 0 ? floored : null;
+      }
+      const parsed = Date.parse(trimmed);
+      if (!Number.isNaN(parsed)) return Math.floor(parsed / 1000);
+    }
+  }
+  return null;
+}
+
+// Collect ack ids from one results bucket (conflicts/errors), tolerating
+// every shape extractAckId understands.
+export function collectAckIds(params: { bucket: unknown }): string[] {
+  const { bucket } = params;
+  if (!Array.isArray(bucket)) return [];
+  const out: string[] = [];
+  for (const item of bucket) {
+    const id = extractAckId({ item });
+    if (id) out.push(id);
+  }
+  return out;
+}
+
+// Split sent chunk ids into queue-draining acks vs silent drops. Silent
+// drops (server 200 but item neither acked, errored nor conflicted) are
+// backed off so they reach the DLQ with a message instead of retrying
+// forever with an unchanged retryCount (LBDS-244 Bug C).
+export function partitionChunkIds(params: { chunkItemIds: string[]; succeededIds: string[]; errorIds: string[]; conflictIds: string[] }): { toRemove: string[]; missed: string[] } {
+  const { chunkItemIds, succeededIds, errorIds, conflictIds } = params;
+  const succeeded = new Set(succeededIds);
+  const errored = new Set(errorIds);
+  const conflicted = new Set(conflictIds);
+  const toRemove = chunkItemIds.filter((id) => succeeded.has(id) && !errored.has(id));
+  const missed = chunkItemIds.filter((id) => !succeeded.has(id) && !errored.has(id) && !conflicted.has(id));
+  return { toRemove, missed };
+}
+
 const LAST_SYNC_KEY = 'last_sync';
 const FULL_SYNC_ETAG_KEY = 'full_sync_etag';
 const CHUNK_SIZE = 50;
@@ -213,7 +279,30 @@ export class SyncQueueService {
       this._isOnline = navigator.onLine;
       window.addEventListener('online', () => this.handleOnline());
       window.addEventListener('offline', () => this.handleOffline());
+          // The 'online' event is unreliable on real devices (it can be missed
+          // when the OS restores connectivity or the page was backgrounded),
+          // leaving the queue stuck behind a stale offline flag. Re-read the
+          // live value whenever the page becomes visible again.
+          document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) this.refreshOnlineStatus();
+          });
     }
+  }
+
+  /**
+   * Re-reads the live `navigator.onLine` value and reconciles the cached
+   * flag. Call before any user-initiated sync/pull so a missed 'online'
+   * event cannot block syncing forever. Returns the reconciled status.
+   */
+  refreshOnlineStatus(): boolean {
+    if (typeof window !== 'undefined') {
+      const online = navigator.onLine;
+      if (online !== this._isOnline) {
+        this._isOnline = online;
+        this.onlineListeners.forEach((listener) => listener(online));
+      }
+    }
+    return this._isOnline;
   }
 
   private handleOnline() {
@@ -576,9 +665,15 @@ export class SyncQueueService {
 
       const now = Date.now();
 
+      // Legacy zombies (pre-patch malformed items) can stay stuck if
+      // the server silently drops them without an error bucket.
+      // Quarantine after 3 retries or when stale, so the user sees them
+      // in DLQ instead of a stuck "1 pendiente" counter.
+      const STALE_MS = 24 * 60 * 60 * 1000;
       for (const item of queue) {
-        if (item.retryCount >= 5) {
-          debug('[SYNC-PQ] zombie (retry>=5):', item.id);
+        const isStale = now - item.timestamp > STALE_MS && item.retryCount > 0;
+        if (item.retryCount >= 3 || isStale) {
+          debug('[SYNC-PQ] zombie (retry>=3|stale):', item.id);
           zombieEntries.push({
             entityType: item.entityType,
             operation: item.operation,
@@ -707,7 +802,7 @@ export class SyncQueueService {
               // Bump version for newly created budget_entries (server uses version=1 after create)
               const createdBe = ((mergeResult.results?.created?.budget_entry ?? []) as Array<Record<string, unknown> | string>);
               for (const item of createdBe) {
-                const syncId = typeof item === 'string' ? item : (item as Record<string, unknown>)?.sync_id as string;
+                const syncId = extractAckId({ item });
                 if (!syncId) continue;
                 const row = await budgetEntriesDb.getBySyncId({ syncId });
                 if (row && (!row.version || row.version < 1)) {
@@ -737,23 +832,48 @@ export class SyncQueueService {
                 for (const entityItems of Object.values(entityMap)) {
                   if (!Array.isArray(entityItems)) continue;
                   for (const item of entityItems) {
-                    const id = typeof item === 'string' ? item : item.sync_id;
+                    const id = extractAckId({ item });
                     if (id) succeededIds.add(id);
                   }
                 }
               }
 
               const errorIds = new Set<string>();
-              if (mergeResult.errors) {
-                for (const entityErrors of Object.values(mergeResult.errors as Record<string, Array<{ sync_id?: string }>>)) {
+              const errorMessages: string[] = [];
+              for (const source of [mergeResult.errors, mergeResult.results?.errors]) {
+                if (!source || typeof source !== 'object') continue;
+                for (const entityErrors of Object.values(source as Record<string, unknown>)) {
                   if (!Array.isArray(entityErrors)) continue;
                   for (const err of entityErrors) {
-                    if (err.sync_id) errorIds.add(err.sync_id);
+                    const errorId = extractAckId({ item: err });
+                    if (!errorId) continue;
+                    errorIds.add(errorId);
+                    const message = (err as Record<string, unknown>)?.error;
+                    if (typeof message === 'string' && message) errorMessages.push(message);
                   }
                 }
               }
-
-              const toRemove = chunkItemIds.filter((id) => succeededIds.has(id) && !errorIds.has(id));
+              
+              const conflictIds = new Set<string>();
+              const conflictsMap = mergeResult.results?.conflicts ?? mergeResult.conflicts;
+              if (conflictsMap && typeof conflictsMap === 'object') {
+                for (const conflictItems of Object.values(conflictsMap as Record<string, unknown>)) {
+                  for (const conflictId of collectAckIds({ bucket: conflictItems })) conflictIds.add(conflictId);
+                }
+              }
+              
+              const { toRemove, missed } = partitionChunkIds({
+                chunkItemIds,
+                succeededIds: [...succeededIds],
+                errorIds: [...errorIds],
+                conflictIds: [...conflictIds],
+              });
+              if (errorIds.size > 0) {
+                await this.applyBackoffToIds([...errorIds], errorMessages[0] ?? 'Server reported an error');
+              }
+              if (missed.length > 0) {
+                await this.applyBackoffToIds(missed, 'Server did not acknowledge item; retrying then quarantining');
+              }
               return { ok: true as const, toRemove, result: mergeResult };
             }
 
@@ -791,9 +911,10 @@ export class SyncQueueService {
       const beforeSync = localStorage.getItem(LAST_SYNC_KEY) || '0';
       const wasFullSyncBeforeProcess = beforeSync === '0';
 
-      if (allChunksSucceeded && finalResult?.serverTime) {
+      const pushServerTime = normalizeServerTime({ serverTime: finalResult?.serverTime });
+      if (allChunksSucceeded && pushServerTime !== null) {
         const nowSeconds = Math.floor(Date.now() / 1000);
-        const serverTime = finalResult.serverTime;
+        const serverTime = pushServerTime;
         // Solo avanzar last_sync si NO era full sync
         if (!wasFullSyncBeforeProcess) {
           if (serverTime > nowSeconds + 300) {

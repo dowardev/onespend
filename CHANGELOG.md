@@ -8,6 +8,11 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 ## [Unreleased]
 
+### Fixed
+
+- Sync end-to-end (LBDS-244): merge now correctly acknowledges deletes, `serverTime` stays numeric and incremental pulls are no longer corrupted, poisoned batches no longer roll back the whole chunk, a stale offline flag no longer blocks sync after reconnect, and zombie queue items auto-quarantine to DLQ instead of a stuck counter. Offline → online now drains with a single sync.
+- Playwright coverage for offline → online queue drain and stale-flag recovery.
+
 ## [v0.76.5] - 2026-09-12
 
 ### Fixed
