@@ -8,6 +8,17 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 ## [Unreleased]
 
+### Added
+
+- Sync problems can now be solved in one step: a single "Solucionar problemas de sincronización" action updates the status, forces a full sync and only repairs when something is still pending. The individual troubleshooting actions stay tucked away under a collapsed "Opciones avanzadas" section.
+- The sync page asks you to sign in instead of showing sync data when there is no active session.
+
+### Changed
+
+- Sync problems are reported honestly: forcing a sync or refreshing the status now shows the real error instead of a success message, and "Actualizar estado" shows progress while it works.
+- Confirmation dialogs no longer keep the screen blocked while the action runs.
+- The failed-items queue is easier to read, with plain-language labels, "hace 2 h"-style timestamps and long technical errors collapsed behind a detail toggle.
+
 ### Fixed
 
 - Sync end-to-end (LBDS-244): merge now correctly acknowledges deletes, `serverTime` stays numeric and incremental pulls are no longer corrupted, poisoned batches no longer roll back the whole chunk, a stale offline flag no longer blocks sync after reconnect, and zombie queue items auto-quarantine to DLQ instead of a stuck counter. Offline → online now drains with a single sync.

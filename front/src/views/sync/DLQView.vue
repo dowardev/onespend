@@ -11,94 +11,111 @@ SPDX-License-Identifier: AGPL-3.0-only
         <ion-buttons slot="start">
           <ion-back-button default-href="/sync"></ion-back-button>
         </ion-buttons>
+
         <ion-title>Cola de elementos fallidos</ion-title>
       </ion-toolbar>
     </ion-header>
 
     <ion-content>
-      <div class="dlq-container">
-        <ion-card v-if="dlqItems.length > 0">
-          <ion-card-header>
-            <ion-card-subtitle>
-              {{ dlqItems.length }} {{ dlqItems.length === 1 ? 'elemento' : 'elementos' }} fallidos
-            </ion-card-subtitle>
-          </ion-card-header>
-          <ion-card-content>
-            <ion-list>
-              <ion-item v-for="item in dlqItems" :key="item.id" class="dlq-item">
-                <div class="dlq-item-content">
-                  <div class="dlq-item-header">
-                    <ion-badge :color="getEntityColor(item.entityType)" class="entity-badge">
-                      {{ item.entityType }}
-                    </ion-badge>
-                    <ion-badge :color="getOperationColor(item.operation)" class="operation-badge">
-                      {{ item.operation }}
-                    </ion-badge>
-                  </div>
-                  <div class="dlq-item-details">
-                    <span class="entity-id">ID: {{ item.entityId }}</span>
-                    <span class="error-count">Intentos: {{ item.errorCount }}</span>
-                  </div>
-                  <div class="dlq-item-error">
-                    <ion-icon :icon="alertCircleOutline" class="error-icon"></ion-icon>
-                    <span class="error-text">{{ item.lastError }}</span>
-                  </div>
-                  <div class="dlq-item-time">
-                    <ion-icon :icon="timeOutline"></ion-icon>
-                    <span>Fallido: {{ formatFailedAt(item.failedAt) }}</span>
-                  </div>
-                </div>
-                <ion-button
-                  slot="end"
-                  fill="clear"
-                  color="primary"
-                  size="small"
-                  :disabled="isRetrying"
-                  @click="handleRetry({ item })"
-                >
-                  <ion-icon slot="start" :icon="refreshOutline"></ion-icon>
-                  Reintentar
-                </ion-button>
+      <ion-grid>
+        <ion-row class="ion-justify-content-center">
+          <ion-col size="12" size-md="10" size-lg="8" size-xl="6">
+            <ion-list v-if="dlqItems.length > 0" class="transparent">
+              <ion-list-header>
+                <ion-label>
+                  {{ dlqItems.length }}
+                  {{ dlqItems.length === 1 ? 'elemento fallido' : 'elementos fallidos' }}
+                </ion-label>
+              </ion-list-header>
+
+              <ion-card class="shadow1">
+                <ion-item v-for="item in dlqItems" :key="item.id ?? item.entityId" lines="inset">
+                  <ion-icon slot="start" :icon="alertCircleOutline" color="danger"></ion-icon>
+
+                  <ion-label class="dlq-label" @click="toggleDetail({ key: item.id ?? item.entityId })">
+                    <h3>
+                      {{ getEntityLabel({ entity: item.entityType }) }} ·
+                      {{ getOperationLabel({ operation: item.operation }) }}
+                    </h3>
+
+                    <p>
+                      {{ item.errorCount }} {{ item.errorCount === 1 ? 'intento' : 'intentos' }} ·
+                      {{ formatRelative({ timestamp: item.failedAt }) }}
+                    </p>
+
+                    <p class="error-preview" :class="{ expanded: expandedKey === (item.id ?? item.entityId) }">
+                      {{ item.lastError }}
+                    </p>
+
+                    <p v-if="expandedKey === (item.id ?? item.entityId)" class="entity-id">
+                      ID: {{ item.entityId }}
+                    </p>
+                  </ion-label>
+
+                  <ion-button
+                    slot="end"
+                    fill="clear"
+                    color="medium"
+                    :aria-label="
+                      (expandedKey === (item.id ?? item.entityId) ? 'Ocultar detalle de ' : 'Ver detalle de ') +
+                      getEntityLabel({ entity: item.entityType })
+                    "
+                    @click="toggleDetail({ key: item.id ?? item.entityId })"
+                  >
+                    <ion-icon
+                      slot="icon-only"
+                      :icon="expandedKey === (item.id ?? item.entityId) ? chevronUpOutline : chevronDownOutline"
+                    ></ion-icon>
+                  </ion-button>
+
+                  <ion-button
+                    slot="end"
+                    fill="clear"
+                    color="primary"
+                    :aria-label="'Reintentar ' + getEntityLabel({ entity: item.entityType })"
+                    :disabled="isRetrying"
+                    @click="handleRetry({ item })"
+                  >
+                    <ion-icon slot="icon-only" :icon="refreshOutline"></ion-icon>
+                  </ion-button>
+                </ion-item>
+              </ion-card>
+            </ion-list>
+
+            <ion-list v-if="dlqItems.length > 0" class="transparent">
+              <ion-item button :disabled="isRetrying" @click="handleRetryAll">
+                <ion-icon slot="start" :icon="refreshCircleOutline" color="primary"></ion-icon>
+
+                <ion-label>
+                  <h3>Reintentar todos</h3>
+                </ion-label>
+              </ion-item>
+
+              <ion-item button :disabled="isRetrying" @click="handleClearAll">
+                <ion-icon slot="start" :icon="trashOutline" color="danger"></ion-icon>
+
+                <ion-label>
+                  <h3>Eliminar todos</h3>
+                </ion-label>
               </ion-item>
             </ion-list>
 
-            <div class="dlq-actions">
-              <ion-button
-                expand="block"
-                fill="outline"
-                color="primary"
-                :disabled="isRetrying || dlqItems.length === 0"
-                @click="handleRetryAll"
-              >
-                <ion-icon slot="start" :icon="refreshCircleOutline"></ion-icon>
-                Reintentar todos
-              </ion-button>
+            <div v-else class="empty-state">
+              <ion-icon :icon="checkmarkCircleOutline" class="empty-icon"></ion-icon>
 
-              <ion-button
-                expand="block"
-                fill="outline"
-                color="danger"
-                :disabled="isRetrying || dlqItems.length === 0"
-                @click="handleClearAll"
-              >
-                <ion-icon slot="start" :icon="trashOutline"></ion-icon>
-                Eliminar todos
-              </ion-button>
+              <h2>No hay elementos fallidos</h2>
+
+              <p>La cola de elementos fallidos está vacía.</p>
             </div>
-          </ion-card-content>
-        </ion-card>
-
-        <div v-else class="empty-state">
-          <ion-icon :icon="checkmarkCircleOutline" class="empty-icon"></ion-icon>
-          <h2>No hay elementos fallidos</h2>
-          <p>La cola de elementos fallidos está vacía.</p>
-        </div>
-      </div>
+          </ion-col>
+        </ion-row>
+      </ion-grid>
     </ion-content>
   </ion-page>
 </template>
 
 <script lang="ts" setup>
+// 1. Imports (ionic/vue/ionicons)
 import {
   IonPage,
   IonHeader,
@@ -108,12 +125,13 @@ import {
   IonTitle,
   IonContent,
   IonCard,
-  IonCardHeader,
-  IonCardSubtitle,
-  IonCardContent,
+  IonGrid,
+  IonRow,
+  IonCol,
   IonList,
+  IonListHeader,
   IonItem,
-  IonBadge,
+  IonLabel,
   IonButton,
   IonIcon,
   alertController,
@@ -122,19 +140,43 @@ import {
 import { ref, onMounted } from 'vue';
 import {
   alertCircleOutline,
-  timeOutline,
+  chevronDownOutline,
+  chevronUpOutline,
   checkmarkCircleOutline,
   refreshOutline,
   refreshCircleOutline,
   trashOutline,
 } from 'ionicons/icons';
 
+// 2. Controllers / Composables
 import { SyncController } from '@/controllers/syncController';
+
+// 3. Components
+// (sin componentes hijos)
+
+// 4. Interface and types imports
 import type { DeadLetterItem } from '@/db/types';
 
+// 5. Main (props, emits, etc.)
+// (sin props ni emits)
+
+// 6. Vars and const
 const dlqItems = ref<DeadLetterItem[]>([]);
 const isRetrying = ref(false);
+const expandedKey = ref<string | number | null>(null);
 
+// 7. Watch
+// (sin watchers)
+
+// 8. Computed
+// (sin computed)
+
+// 9. OnMounted
+onMounted(async () => {
+  await loadDlqItems();
+});
+
+// 10. Functions (named parameters pattern)
 async function loadDlqItems() {
   dlqItems.value = await SyncController.getDlqItems();
 }
@@ -245,116 +287,73 @@ async function handleClearAll() {
   await alert.present();
 }
 
-function getEntityColor(entityType: string): string {
-  const colors: Record<string, string> = {
-    account: 'primary',
-    budget_provider: 'secondary',
-    budget_provider_product: 'tertiary',
-    budget_entry: 'success',
-    recurring_record: 'warning',
-    recurring_record_product: 'medium',
-    supplier: 'danger',
-    supplier_product: 'primary',
+function toggleDetail(params: { key: string | number }) {
+  const { key } = params;
+  expandedKey.value = expandedKey.value === key ? null : key;
+}
+
+function getEntityLabel(params: { entity: string }) {
+  const { entity } = params;
+  const labels: Record<string, string> = {
+    account: 'Cuentas',
+    budget: 'Presupuestos',
+    budget_entry: 'Entradas de gasto',
+    budget_entry_group: 'Grupos de entradas',
+    budget_provider: 'Proveedores del presupuesto',
+    budget_provider_product: 'Productos de proveedores',
+    entry: 'Entradas',
+    income: 'Ingresos',
+    recurring_record: 'Registros recurrentes',
+    recurring_record_product: 'Productos recurrentes',
+    supplier: 'Proveedores',
+    supplier_product: 'Productos de proveedores',
+    template: 'Plantillas',
   };
-  return colors[entityType] || 'medium';
+  return labels[entity] || entity;
 }
 
-function getOperationColor(operation: string): string {
-  const colors: Record<string, string> = {
-    create: 'success',
-    update: 'warning',
-    delete: 'danger',
+function getOperationLabel(params: { operation: string }) {
+  const { operation } = params;
+  const labels: Record<string, string> = {
+    create: 'Crear',
+    update: 'Actualizar',
+    delete: 'Eliminar',
   };
-  return colors[operation] || 'medium';
+  return labels[operation] || operation;
 }
 
-function formatFailedAt(timestamp: number): string {
-  const date = new Date(timestamp);
-  return date.toLocaleString();
+function formatRelative(params: { timestamp: number }) {
+  const { timestamp } = params;
+  const diff = Date.now() - timestamp;
+  if (diff < 60000) return 'hace unos segundos';
+  if (diff < 3600000) return `hace ${Math.floor(diff / 60000)} min`;
+  if (diff < 86400000) return `hace ${Math.floor(diff / 3600000)} h`;
+  return `hace ${Math.floor(diff / 86400000)} días`;
 }
-
-onMounted(async () => {
-  await loadDlqItems();
-});
 </script>
 
 <style scoped>
-.dlq-container {
-  padding: 16px;
+.dlq-label {
+  cursor: pointer;
 }
 
-.dlq-item {
-  --padding-start: 8px;
-  --padding-end: 8px;
-  --inner-padding-end: 8px;
+.error-preview {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  white-space: normal;
+  font-size: 0.8rem;
+  color: var(--ion-color-danger);
 }
 
-.dlq-item-content {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  flex: 1;
-  margin-right: 8px;
-}
-
-.dlq-item-header {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.entity-badge,
-.operation-badge {
-  text-transform: capitalize;
-}
-
-.dlq-item-details {
-  display: flex;
-  gap: 16px;
-  font-size: 0.85rem;
-  color: var(--ion-color-medium);
+.error-preview.expanded {
+  display: block;
 }
 
 .entity-id {
-  word-break: break-all;
-}
-
-.dlq-item-error {
-  display: flex;
-  align-items: flex-start;
-  gap: 4px;
-  font-size: 0.8rem;
-  color: var(--ion-color-danger);
-  margin-top: 4px;
-}
-
-.error-icon {
-  flex-shrink: 0;
-  font-size: 14px;
-  margin-top: 2px;
-}
-
-.error-text {
-  word-break: break-word;
-}
-
-.dlq-item-time {
-  display: flex;
-  align-items: center;
-  gap: 4px;
   font-size: 0.75rem;
-  color: var(--ion-color-medium);
-}
-
-.dlq-item-time ion-icon {
-  font-size: 12px;
-}
-
-.dlq-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 16px;
+  word-break: break-all;
 }
 
 .empty-state {

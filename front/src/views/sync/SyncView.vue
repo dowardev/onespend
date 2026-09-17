@@ -16,153 +16,170 @@ SPDX-License-Identifier: AGPL-3.0-only
     </ion-header>
 
     <ion-content>
-      <div class="sync-container">
-        <ion-card>
-          <ion-card-header>
-            <ion-card-title>Estado de sincronización</ion-card-title>
-          </ion-card-header>
-          <ion-card-content>
-            <div class="status-grid">
-              <div class="status-item">
-                <ion-icon :icon="getStatusIcon()" :class="{ spinning: isSyncing }"></ion-icon>
-                <div class="status-info">
-                  <span class="status-label">Estado</span>
-                  <span class="status-value">{{ getStatusText() }}</span>
-                </div>
-              </div>
+<ion-grid v-if="isAuthenticated">
+        <ion-row class="ion-justify-content-center">
+          <ion-col size="12" size-md="10" size-lg="8" size-xl="6">
+            <ion-list class="transparent">
+              <ion-list-header>
+                <ion-label>Estado de sincronización</ion-label>
 
-              <div class="status-item">
-                <ion-icon :icon="cloudOutline"></ion-icon>
-                <div class="status-info">
-                  <span class="status-label">Conexión</span>
-                  <span
-                    class="status-value"
-                    :class="{ 'text-success': isOnline, 'text-warning': !isOnline }"
-                  >
-                    {{ isOnline ? 'En línea' : 'Fuera de línea' }}
-                  </span>
-                </div>
-              </div>
+                <ion-button
+                  data-cy="sync-btn"
+                  size="small"
+                  :disabled="
+                    !isOnline || isSyncing || (pendingChanges === 0 && activeConflictDiffs.length === 0)
+                  "
+                  @click="handleSyncNow"
+                >
+                  <ion-icon slot="start" :icon="syncOutline"></ion-icon>
+                  {{ isSyncing ? 'Sincronizando...' : 'Sincronizar ahora' }}
+                </ion-button>
+              </ion-list-header>
 
-              <div class="status-item">
-                <ion-icon :icon="timeOutline"></ion-icon>
-                <div class="status-info">
-                  <span class="status-label">Pendientes</span>
-                  <span
-                    class="status-value"
-                    :class="{
-                      'text-warning': pendingChanges > 0,
-                      'text-success': pendingChanges === 0,
-                    }"
-                  >
-                    {{ pendingChanges }} {{ pendingChanges === 1 ? 'cambio' : 'cambios' }}
-                  </span>
-                </div>
-              </div>
+              <ion-card class="shadow1">
+                <ion-item lines="inset">
+                  <ion-icon slot="start" :icon="getStatusIcon()" :class="{ spinning: isSyncing }"></ion-icon>
+                  <ion-label>
+                    <h3>Estado</h3>
+                    <p>{{ getStatusText() }}</p>
+                  </ion-label>
+                </ion-item>
 
-              <div class="status-item">
-                <ion-icon :icon="calendarOutline"></ion-icon>
-                <div class="status-info">
-                  <span class="status-label">Última sincronización</span>
-                  <span class="status-value">{{ formatLastSync() }}</span>
-                </div>
-              </div>
-            </div>
+                <ion-item lines="inset">
+                  <ion-icon slot="start" :icon="cloudOutline"></ion-icon>
+                  <ion-label>
+                    <h3>Conexión</h3>
+                    <p :class="{ 'text-success': isOnline, 'text-warning': !isOnline }">
+                      {{ isOnline ? 'En línea' : 'Fuera de línea' }}
+                    </p>
+                  </ion-label>
+                </ion-item>
 
-            <ion-button
-              data-cy="sync-btn"
-              expand="block"
-              :disabled="
-                !isOnline || isSyncing || (pendingChanges === 0 && activeConflictDiffs.length === 0)
-              "
-              class="sync-button"
-              @click="handleSyncNow"
-            >
-              <ion-icon slot="start" :icon="syncOutline"></ion-icon>
-              {{ isSyncing ? 'Sincronizando...' : 'Sincronizar ahora' }}
-            </ion-button>
+                <ion-item lines="inset">
+                  <ion-icon slot="start" :icon="timeOutline"></ion-icon>
+                  <ion-label>
+                    <h3>Pendientes</h3>
+                    <p
+                      :class="{
+                        'text-warning': pendingChanges > 0,
+                        'text-success': pendingChanges === 0,
+                      }"
+                    >
+                      {{ pendingChanges }} {{ pendingChanges === 1 ? 'cambio' : 'cambios' }}
+                    </p>
+                  </ion-label>
+                </ion-item>
 
-            <ion-text v-if="syncError" color="danger" class="error-text">
-              {{ syncError }}
-            </ion-text>
-          </ion-card-content>
-        </ion-card>
+                <ion-item lines="inset">
+                  <ion-icon slot="start" :icon="calendarOutline"></ion-icon>
+                  <ion-label>
+                    <h3>Última sincronización</h3>
+                    <p>{{ formatLastSync() }}</p>
+                  </ion-label>
+                </ion-item>
 
-        <ion-card v-if="pendingChanges > 0">
-          <ion-card-header>
-            <ion-card-title>Cambios pendientes</ion-card-title>
-          </ion-card-header>
-          <ion-card-content>
-            <ion-list>
-              <ion-item v-for="(count, entity) in pendingByType" :key="entity">
-                <ion-label>{{ getEntityLabel(entity) }}</ion-label>
-                <ion-badge slot="end" color="medium">{{ count }}</ion-badge>
-              </ion-item>
+                <ion-item v-if="syncError" lines="none" color="danger">
+                  <ion-label class="ion-text-wrap">{{ syncError }}</ion-label>
+                </ion-item>
+              </ion-card>
             </ion-list>
 
+        <ion-list v-if="pendingChanges > 0" class="transparent">
+          <ion-list-header>
+            <ion-label>Cambios pendientes</ion-label>
             <ion-button
-              expand="block"
-              fill="outline"
+              fill="clear"
               color="danger"
-              class="clear-button"
+              size="small"
               @click="handleClearQueue"
             >
               <ion-icon slot="start" :icon="trashOutline"></ion-icon>
-              Limpiar cola de sincronización
+              Limpiar cola
             </ion-button>
-          </ion-card-content>
-        </ion-card>
+          </ion-list-header>
 
-        <ion-card>
-          <ion-card-header>
-            <ion-card-title>Acciones</ion-card-title>
-          </ion-card-header>
-          <ion-card-content>
-            <ion-button
-              expand="block"
-              fill="outline"
-              :disabled="!isOnline"
-              @click="handleForceSync"
+          <ion-card class="shadow1">
+            <ion-item
+              v-for="(count, entity) in pendingByType"
+              :key="entity"
+              lines="inset"
             >
-              <ion-icon slot="start" :icon="refreshCircleOutline"></ion-icon>
-              Forzar sincronización completa
-            </ion-button>
+              <ion-label>{{ getEntityLabel(entity) }}</ion-label>
+              <ion-badge slot="end" color="medium">{{ count }}</ion-badge>
+            </ion-item>
+          </ion-card>
+        </ion-list>
 
-            <ion-button
-              expand="block"
-              fill="outline"
-              color="warning"
-              :disabled="!isOnline || isRepairing"
-              @click="handleRepairSync"
-            >
+        <ion-card class="shadow1">
+          <ion-list lines="inset">
+            <ion-item button lines="full" :disabled="!isOnline || isFixing" @click="handleFixSyncProblems">
               <ion-icon slot="start" :icon="constructOutline"></ion-icon>
-              Reparar sincronización
-            </ion-button>
 
-            <ion-button expand="block" fill="outline" @click="handleRefreshStatus">
-              <ion-icon slot="start" :icon="refreshOutline"></ion-icon>
-              Actualizar estado
-            </ion-button>
-          </ion-card-content>
-        </ion-card>
+              <ion-label>
+                <h3>Solucionar problemas de sincronización</h3>
 
-        <ion-card v-if="dlqCount > 0">
-          <ion-card-header>
-            <ion-card-title>Elementos fallidos</ion-card-title>
-          </ion-card-header>
-          <ion-card-content>
-            <div class="dlq-info">
-              <ion-icon :icon="warningOutline" color="danger"></ion-icon>
-              <span
-                >{{ dlqCount }} {{ dlqCount === 1 ? 'elemento' : 'elementos' }} en cola de elementos
-                fallidos</span
-              >
-            </div>
-            <ion-button expand="block" fill="outline" color="danger" @click="handleShowDLQ">
-              <ion-icon slot="start" :icon="alertCircleOutline"></ion-icon>
-              Gestionar cola de elementos fallidos
-            </ion-button>
-          </ion-card-content>
+                <p>{{ isFixing && fixStatus ? fixStatus : 'Actualiza, sincroniza y repara en un solo paso' }}</p>
+              </ion-label>
+            </ion-item>
+          </ion-list>
+
+          <ion-accordion-group>
+            <ion-accordion value="advanced">
+              <ion-item slot="header" lines="none">
+                <ion-label>Opciones avanzadas</ion-label>
+
+                <ion-badge v-if="dlqCount > 0" slot="end" color="danger">{{ dlqCount }}</ion-badge>
+              </ion-item>
+
+              <ion-list slot="content" lines="inset">
+                <ion-item button :disabled="!isOnline || isFixing || isForcingSync" @click="handleForceSync">
+                  <ion-icon slot="start" :icon="refreshCircleOutline"></ion-icon>
+
+                  <ion-label>
+                    <h3>Forzar sincronización completa</h3>
+
+                    <p>{{ isForcingSync ? 'Sincronizando...' : 'Re-sube todo al servidor' }}</p>
+                  </ion-label>
+                </ion-item>
+
+                <ion-item
+                  button
+                  :disabled="!isOnline || isRepairing || isFixing"
+                  @click="handleRepairSync"
+                >
+                  <ion-icon slot="start" :icon="constructOutline"></ion-icon>
+
+                  <ion-label>
+                    <h3>Reparar sincronización</h3>
+
+                    <p>Compara tu base local con el servidor</p>
+                  </ion-label>
+                </ion-item>
+
+                <ion-item button :disabled="isFixing || isRefreshingStatus" @click="handleRefreshStatus">
+                  <ion-icon slot="start" :icon="refreshOutline"></ion-icon>
+
+                  <ion-label>
+                    <h3>Actualizar estado</h3>
+
+                    <p>{{ isRefreshingStatus ? 'Actualizando...' : 'Vuelve a leer la cola y los conflictos' }}</p>
+                  </ion-label>
+                </ion-item>
+
+                <ion-item v-if="dlqCount > 0" button @click="handleShowDLQ">
+                  <ion-icon slot="start" :icon="alertCircleOutline" color="danger"></ion-icon>
+
+                  <ion-label>
+                    <h3>Elementos fallidos</h3>
+
+                    <p>{{ dlqCount }} {{ dlqCount === 1 ? 'elemento' : 'elementos' }} en cola de fallidos</p>
+                  </ion-label>
+
+                  <ion-badge slot="end" color="danger">{{ dlqCount }}</ion-badge>
+                </ion-item>
+              </ion-list>
+            </ion-accordion>
+          </ion-accordion-group>
         </ion-card>
 
         <ion-card v-if="activeConflictDiffs.length > 0" data-cy="conflicts-card">
@@ -348,7 +365,27 @@ SPDX-License-Identifier: AGPL-3.0-only
             </ion-button>
           </ion-card-content>
         </ion-card>
-      </div>
+              </ion-col>
+            </ion-row>
+          </ion-grid>
+          <ion-grid v-else>
+            <ion-row class="ion-justify-content-center">
+              <ion-col size="12" size-md="10" size-lg="8" size-xl="6">
+                <div class="empty-state">
+                  <ion-icon :icon="cloudOfflineOutline" class="empty-icon"></ion-icon>
+
+                  <h2>Sesión requerida</h2>
+
+                  <p>Necesitás iniciar sesión para sincronizar tus datos.</p>
+
+                  <ion-button expand="block" @click="handleGoToLogin">
+                    <ion-icon slot="start" :icon="logInOutline"></ion-icon>
+                    Iniciar sesión
+                  </ion-button>
+                </div>
+              </ion-col>
+            </ion-row>
+          </ion-grid>
       <ion-modal
         :is-open="showRepairModal"
         :backdrop-dismiss="!isRepairing"
@@ -411,6 +448,9 @@ import {
   IonMenuButton,
   IonTitle,
   IonContent,
+  IonGrid,
+  IonRow,
+  IonCol,
   IonCard,
   IonCardHeader,
   IonCardTitle,
@@ -418,6 +458,7 @@ import {
   IonButton,
   IonIcon,
   IonList,
+  IonListHeader,
   IonItem,
   IonLabel,
   IonBadge,
@@ -427,6 +468,8 @@ import {
   IonChip,
   IonProgressBar,
   IonSpinner,
+  IonAccordion,
+  IonAccordionGroup,
   alertController,
   toastController,
 } from '@ionic/vue';
@@ -435,6 +478,7 @@ import { useRouter } from 'vue-router';
 import {
   cloudOutline,
   cloudOfflineOutline,
+  logInOutline,
   syncOutline,
   checkmarkCircleOutline,
   timeOutline,
@@ -454,6 +498,7 @@ import {
 // Controllers
 import { SyncController } from '@/controllers/syncController';
 import systemController from '@/controllers/systemConfigController';
+import authController from '@/controllers/authController';
 import type { RepairProgress } from '@/controllers/syncController';
 import { conflictResolutionService } from '@/services/sync/ConflictResolutionService';
 import { resolveConflictFields } from '@/controllers/lookupResolver';
@@ -516,6 +561,10 @@ const isRepairing = ref(false);
 const repairStep = ref<RepairProgress['step']>('pulling_server');
 const repairMessage = ref('');
 const repairPercent = ref(0);
+const isFixing = ref(false);
+const fixStatus = ref('');
+const isRefreshingStatus = ref(false);
+const isForcingSync = ref(false);
 // End Vars
 
 // Functions
@@ -653,40 +702,57 @@ async function handleForceSync() {
       {
         text: 'Continuar',
         role: 'confirm',
-        handler: async () => {
-          try {
-            await syncController.fullSyncAndSave();
-            await refreshStatus();
-            const toast = await toastController.create({
-              message: 'Sincronización completa exitosa',
-              duration: 2000,
-              color: 'success',
-            });
-            await toast.present();
-          } catch (error) {
-            const toast = await toastController.create({
-              message: 'Error en sincronización completa',
-              duration: 3000,
-              color: 'danger',
-            });
-            await toast.present();
-          }
+        handler: () => {
+          void runForceSync();
         },
       },
     ],
   });
   await alert.present();
+    }
+
+async function runForceSync() {
+        if (isForcingSync.value) return;
+        isForcingSync.value = true;
+        try {
+          await syncController.fullSyncAndSave();
+          await refreshStatus();
+          const syncErrorMsg = syncController.getSyncError();
+          const toast = await toastController.create({
+            message: syncErrorMsg
+              ? `Error en sincronización completa: ${syncErrorMsg}`
+              : 'Sincronización completa exitosa',
+            duration: 3000,
+            color: syncErrorMsg ? 'danger' : 'success',
+          });
+          await toast.present();
+        } finally {
+          isForcingSync.value = false;
+        }
 }
 
 async function handleRefreshStatus() {
-  await refreshStatus();
-  await syncController.pullFromServer();
-  const toast = await toastController.create({
-    message: 'Estado actualizado',
-    duration: 1000,
-    color: 'success',
-  });
-  await toast.present();
+  if (isRefreshingStatus.value) return;
+  isRefreshingStatus.value = true;
+  try {
+    await refreshStatus();
+    await syncController.pullFromServer();
+    const toast = await toastController.create({
+      message: 'Estado actualizado',
+      duration: 2000,
+      color: 'success',
+    });
+    await toast.present();
+  } catch (error) {
+    const toast = await toastController.create({
+      message: 'No se pudo actualizar el estado',
+      duration: 3000,
+      color: 'danger',
+    });
+    await toast.present();
+  } finally {
+    isRefreshingStatus.value = false;
+  }
 }
 
 async function handleResolveClient() {
@@ -772,8 +838,8 @@ async function handleRepairSync() {
       {
         text: 'Entendido, reparar',
         role: 'confirm',
-        handler: async () => {
-          await startRepair();
+        handler: () => {
+          void startRepair();
         },
       },
     ],
@@ -817,6 +883,69 @@ async function startRepair() {
   }
 }
 
+async function handleFixSyncProblems() {
+  const alert = await alertController.create({
+    header: 'Solucionar problemas de sincronización',
+    message:
+      'Esto va a actualizar el estado, forzar una sincronización completa y, solo si sigue habiendo pendientes o conflictos, reparar la sincronización. Puede subir cambios que borraste de la cola intencionalmente. ¿Continuar?',
+    buttons: [
+      { text: 'Cancelar', role: 'cancel' },
+      {
+        text: 'Solucionar',
+        role: 'confirm',
+        handler: () => {
+          void runFixSequence();
+        },
+      },
+    ],
+  });
+  await alert.present();
+}
+
+async function runFixSequence() {
+  isFixing.value = true;
+  try {
+    fixStatus.value = 'Actualizando estado...';
+    await refreshStatus();
+    await syncController.pullFromServer();
+
+    fixStatus.value = 'Sincronizando todo...';
+    await syncController.fullSyncAndSave();
+    await refreshStatus();
+    const seqError = syncController.getSyncError();
+    if (seqError) throw new Error(seqError);
+
+    if (pendingChanges.value > 0 || activeConflictDiffs.value.length > 0) {
+      fixStatus.value = 'Reparando sincronización...';
+      await startRepair();
+    } else {
+      const toast = await toastController.create({
+        message: 'Sincronización solucionada',
+        duration: 2000,
+        color: 'success',
+      });
+      await toast.present();
+    }
+  } catch (error) {
+      const reason = error instanceof Error ? `: ${error.message}` : '';
+    const toast = await toastController.create({
+      message: `Falló el paso (${fixStatus.value})${reason}`,
+      duration: 4000,
+      color: 'danger',
+    });
+    await toast.present();
+
+    await refreshStatus();
+  } finally {
+    fixStatus.value = '';
+    isFixing.value = false;
+  }
+}
+
+async function handleGoToLogin() {
+  await router.push('/login');
+}
+
 function handleRepairDismiss(event: CustomEvent) {
   if (isRepairing.value) {
     event.detail.preventDefault?.();
@@ -831,11 +960,14 @@ function closeRepairModal() {
 
 // Life cycle
 onMounted(async () => {
+  if (!authController.getIsAuthenticated()) return;
+
   await refreshStatus();
 });
 // End Life cycle
 
 // Computed
+const isAuthenticated = computed(() => authController.getIsAuthenticated());
 const isOnline = computed(() => syncController.getIsOnline());
 const isSyncing = computed(() => syncController.getIsSyncing());
 const pendingChanges = computed(() => syncController.getPendingChanges());
@@ -852,10 +984,40 @@ const pendingByType = computed(() => {
 // End Computed
 
 // Watch
+watch(isAuthenticated, async (authenticated) => {
+  if (authenticated) await refreshStatus();
+});
 // End Watch
 </script>
 
 <style scoped>
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 60vh;
+  text-align: center;
+  color: var(--ion-color-medium);
+}
+
+.empty-icon {
+  font-size: 64px;
+  color: var(--ion-color-medium);
+  margin-bottom: 16px;
+}
+
+.empty-state h2 {
+  font-size: 1.25rem;
+  margin-bottom: 8px;
+  color: var(--ion-text-color);
+}
+
+.empty-state p {
+  font-size: 0.9rem;
+  margin-bottom: 24px;
+}
+
 .sync-container {
   padding: 16px;
 }
@@ -936,18 +1098,6 @@ const pendingByType = computed(() => {
 
 ion-card {
   margin-bottom: 16px;
-}
-
-.dlq-info {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
-  font-size: 0.9rem;
-}
-
-.dlq-info ion-icon {
-  font-size: 20px;
 }
 
 .conflict-fields {

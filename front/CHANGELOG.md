@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Historial search by name and calendar date filter.
 - Performance empty-section "Agregar" buttons now navigate to the entry form.
 - Performance help button (per empty section) that explains the concept via the financial glossary.
+- Sync page: single "Solucionar problemas de sincronización" action that runs update → full sync → conditional repair, reporting each step on the row.
+- Sync page: without an active session the page renders a "Sesión requerida" empty state with a login CTA, and skips `refreshStatus()` and the sync UI instead of showing default (wrong) counters.
+- DLQ view: per-item error detail is collapsed behind a chevron toggle, and long server errors are clamped to two lines.
 
 ### Changed
 - Downloads page (`/downloads`) reorganized into Mobile / Web / Desktop groups with per-OS desktop entries (Linux, Windows, macOS — no more Electron branding); new upcoming entries: Uptodown (Android), Winget and Uptodown (Windows), DEB, Flathub, AUR and OBS (Linux) (LBDS-245).
@@ -23,6 +26,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Performance page refreshes on every view entry, so records created in Budget show without a manual reload.
 - Recurring list pause/resume button is now icon-only (with an aria-label); status badge and delete button kept.
 - Recurring auto-insert moved to an app-level background processor that runs independently of the active screen.
+- Sync page advanced actions (`Forzar sincronización completa`, `Reparar sincronización`, `Actualizar estado` and the failed-items entry) moved into a collapsed `ion-accordion` grouped with the one-step troubleshooting action inside a single `ion-card`; `dlqCount` is surfaced as a badge on the collapsed header (LBDS-263).
+- Sync and DLQ pages reworked to Ionic-First layout: responsive `ion-grid`/`ion-row`/`ion-col` container and `ion-list`/`ion-list-header`/`ion-item` instead of custom `div` grids, with unified `ion-card shadow1` blocks.
+- DLQ rows now use human-readable entity and operation labels and relative timestamps; the icon-only row actions carry distinct `aria-label`s naming the entity.
+- Confirmation alerts for force-sync, repair and the troubleshooting sequence are fire-and-forget, so the dialog dismisses immediately and progress stays visible on the row.
 
 ### Fixed
 - Native sign-in could not reach local HTTP backends from debug builds (`net::ERR_CLEARTEXT_NOT_PERMITTED`): a debug-only manifest overlay allows cleartext, while release builds keep the platform default.
@@ -47,3 +54,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Section-map comment and category-section docs now state the enforced 1:1 rule (first section wins) (LBDS-228).
 - Default Income Statement section map is persisted on first read, so upgraded installs stop relying on the in-memory fallback (LBDS-228).
 - Historial "Today" badge uses the device-local date instead of UTC (LBDS-228).
+- `Forzar sincronización completa` always reported success: `syncController.fullSyncAndSave()` records failures in `syncError` instead of throwing, so the handler now reads `getSyncError()` and reports the real error.
+- `Actualizar estado` gave no visible feedback: the row is now disabled and shows "Actualizando..." while it works, and reports success or failure.
+- Sync error banner rendered red text on the red `ion-item color="danger"` background because the inner label carried its own `color` prop, overriding Ionic's automatic contrast color.
+- DLQ expand/collapse is keyed on the row identity (`id ?? entityId`), so two rows for the same entity no longer expand together.
+- The one-step troubleshooting sequence left stale counters when a step failed; it now refreshes the status before clearing the progress flag.
