@@ -8,6 +8,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 ## [Unreleased]
 
+
+## [v0.77.0] - 2026-09-18
+
 ### Added
 
 - Sync problems can now be solved in one step: a single "Solucionar problemas de sincronización" action updates the status, forces a full sync and only repairs when something is still pending. The individual troubleshooting actions stay tucked away under a collapsed "Opciones avanzadas" section.

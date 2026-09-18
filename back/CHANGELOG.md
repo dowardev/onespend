@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+
+## [v0.77.0] - 2026-09-18
+
 ### Added
 
 - `MergeDeleteAckContractTest` covering the merge delete-acknowledgement contract (LBDS-244).

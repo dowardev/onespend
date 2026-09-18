@@ -1,0 +1,1 @@
+Sync now works end to end: the queue drains when you come back online, deleted items are acknowledged, and stuck items move to the failed-items list instead of blocking the pending counter. The sync page groups troubleshooting behind one action, and the failed-items list is easier to read.

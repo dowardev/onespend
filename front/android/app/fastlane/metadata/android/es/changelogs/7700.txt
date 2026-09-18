@@ -1,0 +1,1 @@
+La sincronización ahora funciona de punta a punta: la cola se vacía al recuperar conexión, los elementos borrados se confirman y los atascados pasan a la lista de fallidos en vez de trabar el contador. La página de sync agrupa el diagnóstico en una sola acción y la lista de fallidos se lee mejor.

@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+
+## [v0.77.0] - 2026-09-18
+
 ### Added
 - Sync page: single "Solucionar problemas de sincronización" action that runs update → full sync → conditional repair, reporting each step on the row.
 - Sync page: without an active session the page renders a "Sesión requerida" empty state with a login CTA, and skips `refreshStatus()` and the sync UI instead of showing default (wrong) counters.
