@@ -24,8 +24,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 ### Fixed
 
-- Sync end-to-end (LBDS-244): merge now correctly acknowledges deletes, `serverTime` stays numeric and incremental pulls are no longer corrupted, poisoned batches no longer roll back the whole chunk, a stale offline flag no longer blocks sync after reconnect, and zombie queue items auto-quarantine to DLQ instead of a stuck counter. Offline → online now drains with a single sync.
-- Playwright coverage for offline → online queue drain and stale-flag recovery.
+- Sync end-to-end (LBDS-244): deleting an item is now confirmed back to the app so the queue actually empties, the sync cursor no longer gets corrupted, one bad record no longer rolls back the other changes in the same sync, coming back online after a missed connection no longer leaves sync stuck, and records that keep failing move to the failed-items list instead of blocking the pending counter forever. Going offline and back online now drains the queue in a single sync.
+- Automated coverage for the offline → online queue drain and for recovery after a missed connection.
 
 ## [v0.76.5] - 2026-09-12
 
