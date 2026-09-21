@@ -104,16 +104,36 @@ class SyncController {
     this.isSyncing.value = true;
     this.syncError.value = null;
 
+    // LBDS-244: el issue del push es un canal por corrida, no estado global,
+    // para que la pull no dependa de que el push haya salido limpio. Se declara
+    // fuera del try para que el catch pueda conservarlo si la pull también falla.
+    let issue: string | null = null;
+
     try {
-      await syncService.processQueue();
+      await syncService.processQueue({
+        onIssue: (message) => { issue = message; },
+      });
+
+      // LBDS-244: la pull corre siempre, aunque el push tenga un issue; si no,
+      // mientras un item quede trabado el usuario deja de recibir cambios
+      // remotos.
       await syncService.pullChanges(async () => {
         await this.rebuildBudgetDaySnapshot();
       });
       this.lastSyncTime.value = syncService.getLastSyncTime();
+
+      if (issue) {
+        this.syncError.value = issue;
+        this.pendingChanges.value = await syncService.getQueueCount();
+        return false;
+      }
       this.pendingChanges.value = await syncService.getQueueCount();
       return true;
     } catch (error) {
-      this.syncError.value = error instanceof Error ? error.message : 'Sync failed';
+      // LBDS-244: si la pull falla después de un issue del push, el issue es
+      // más específico y accionable; sólo caemos al error de la pull cuando no
+      // hubo issue.
+      this.syncError.value = issue ?? (error instanceof Error ? error.message : 'Sync failed');
       return false;
     } finally {
       this.isSyncing.value = false;

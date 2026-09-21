@@ -8,6 +8,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 ## [Unreleased]
 
+### Fixed
+
+- Synchronization no longer stays stuck showing pending changes forever.
 
 ## [v0.77.0] - 2026-09-18
 

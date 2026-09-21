@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- The sync queue no longer stays stuck at "N pending": a missing server acknowledgement or a busy sync lock now arms a retry on its own, and the automatic retry is bounded and respects both the offline state and an expired token.
+- A failed queue push no longer suppresses the server pull, a sync failure is no longer reported as success, and the error toast is still shown when the status refresh also fails.
 
 ## [v0.77.0] - 2026-09-18
 
