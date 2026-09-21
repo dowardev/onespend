@@ -650,12 +650,27 @@ function formatLastSync() {
 
 async function handleSyncNow() {
   const success = await syncController.syncNow();
-  if (success) {
+  // LBDS-244: refreshStatus toca la red (getResolvedConflicts). Si falla, no
+  // debe tapar el toast de error del sync: lo guardamos y seguimos.
+  try {
     await refreshStatus();
+  } catch (refreshError) {
+    console.warn('[SyncView] No se pudo refrescar el estado de sync:', refreshError);
+  }
+  if (success) {
     const toast = await toastController.create({
       message: 'Sincronización completada',
       duration: 2000,
       color: 'success',
+    });
+    await toast.present();
+  } else {
+    // LBDS-244: a failed sync used to show nothing at all while the pending
+    // badge stayed non-zero, so the user could not tell the sync never ran.
+    const toast = await toastController.create({
+      message: syncController.getSyncError() ?? 'No se pudo sincronizar',
+      duration: 4000,
+      color: 'danger',
     });
     await toast.present();
   }

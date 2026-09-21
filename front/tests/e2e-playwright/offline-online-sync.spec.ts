@@ -250,7 +250,12 @@ test.describe('Stale offline flag after reconnect', () => {
     await expect(page.locator('[data-cy="sync-btn"]')).toHaveAttribute('aria-disabled', 'true')
 
     // 3. "Actualizar estado" must reconcile the stale flag (no force/repair).
-    await page.getByRole('button', { name: 'Actualizar estado' }).click()
+    // LBDS-263 moved the troubleshooting actions into a collapsed accordion, so the
+    // status refresh is only reachable once the user opens "Opciones avanzadas".
+    await page.locator('ion-accordion > ion-item[slot="header"]').first().click()
+    const refreshStatusButton = page.getByRole('button', { name: 'Actualizar estado' })
+    await expect(refreshStatusButton).toBeVisible({ timeout: 15000 })
+    await refreshStatusButton.click()
     await expect(page.getByText('En línea').first()).toBeVisible({ timeout: 15000 })
     // When enabled, Ionic removes aria-disabled entirely (no 'false' value).
     await expect(page.locator('[data-cy="sync-btn"]')).not.toHaveAttribute('aria-disabled', 'true', { timeout: 15000 })

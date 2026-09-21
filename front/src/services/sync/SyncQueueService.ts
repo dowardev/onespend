@@ -274,18 +274,76 @@ export class SyncQueueService {
   private authExpiredListeners: Set<() => void> = new Set();
   private _isOnline = true;
 
+  // LBDS-244: a merge response that does not acknowledge the sent ids (or an
+  // HTTP failure) puts the affected items into backoff. Nothing used to re-run
+  // processQueue when that backoff expired, so the queue stayed stuck at
+  // "N pendientes" with no error shown and no retry. This timer re-checks the
+  // queue while backoffed items exist and self-clears once it drains.
+  private backoffRetryTimeout: ReturnType<typeof setTimeout> | null = null;
+  private static readonly BACKOFF_RETRY_MIN_MS = 1000;
+  private static readonly BACKOFF_RETRY_MAX_MS = 30000;
+
+  // LBDS-244: a lock collision applies no backoff, so the retry it arms is a
+  // plain 1s re-check. Without a budget, a lock that is never released (a run
+  // that hangs before its finally, or one left behind by a page load whose
+  // heartbeat died) would keep that 1s loop alive forever. Reset on every
+  // successful acquire.
+  private lockRetryAttempts = 0;
+  private static readonly LOCK_RETRY_MAX_ATTEMPTS = 45;
+
+  // LBDS-244: un 401 deja el token inválido. Sin este flag, el scheduler
+  // reintentaba el merge cada ~1s contra un token vencido (applyBackoffToIds
+  // usa skipIncrements en el 401, así que retryCount nunca crece y el item
+  // jamás llega al DLQ). Se limpia cuando una corrida termina bien, de modo
+  // que un re-login reanuda los reintentos.
+  private syncBlockedByAuth = false;
+
+  // LBDS-244: los handlers se guardan como campos para poder quitarlos en
+  // dispose(); antes cada instancia dejaba online/offline/visibilitychange
+  // colgados (p. ej. una instancia nueva por test).
+  private readonly onOnlineHandler = (): void => {
+    this.handleOnline();
+  };
+
+  private readonly onOfflineHandler = (): void => {
+    this.handleOffline();
+  };
+
+  private readonly onVisibilityHandler = (): void => {
+    if (!document.hidden) this.refreshOnlineStatus();
+  };
+
   constructor() {
     if (typeof window !== 'undefined') {
       this._isOnline = navigator.onLine;
-      window.addEventListener('online', () => this.handleOnline());
-      window.addEventListener('offline', () => this.handleOffline());
-          // The 'online' event is unreliable on real devices (it can be missed
-          // when the OS restores connectivity or the page was backgrounded),
-          // leaving the queue stuck behind a stale offline flag. Re-read the
-          // live value whenever the page becomes visible again.
-          document.addEventListener('visibilitychange', () => {
-            if (!document.hidden) this.refreshOnlineStatus();
-          });
+      window.addEventListener('online', this.onOnlineHandler);
+      window.addEventListener('offline', this.onOfflineHandler);
+      // The 'online' event is unreliable on real devices (it can be missed
+      // when the OS restores connectivity or the page was backgrounded),
+      // leaving the queue stuck behind a stale offline flag. Re-read the
+      // live value whenever the page becomes visible again.
+      document.addEventListener('visibilitychange', this.onVisibilityHandler);
+    }
+  }
+
+  /**
+   * LBDS-244: quita los listeners registrados en el constructor y cancela el
+   * timer de reintento. Sin esto, cada instancia (p. ej. una por test) sigue
+   * viva y puede armar timers aunque ya no se use.
+   */
+  dispose(): void {
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('online', this.onOnlineHandler);
+      window.removeEventListener('offline', this.onOfflineHandler);
+      document.removeEventListener('visibilitychange', this.onVisibilityHandler);
+    }
+    if (this.backoffRetryTimeout) {
+      clearTimeout(this.backoffRetryTimeout);
+      this.backoffRetryTimeout = null;
+    }
+    if (this.debounceTimeout) {
+      clearTimeout(this.debounceTimeout);
+      this.debounceTimeout = null;
     }
   }
 
@@ -298,7 +356,9 @@ export class SyncQueueService {
     if (typeof window !== 'undefined') {
       const online = navigator.onLine;
       if (online !== this._isOnline) {
+        const wasOffline = !this._isOnline;
         this._isOnline = online;
+        if (wasOffline) this.resumeInterruptedRetries();
         this.onlineListeners.forEach((listener) => listener(online));
       }
     }
@@ -306,13 +366,21 @@ export class SyncQueueService {
   }
 
   private handleOnline() {
+    const wasOffline = !this._isOnline;
     this._isOnline = true;
+    if (wasOffline) this.resumeInterruptedRetries();
     this.onlineListeners.forEach((listener) => listener(true));
   }
 
   private handleOffline() {
     this.cancelActiveRequests();
     this._isOnline = false;
+    // LBDS-244: sin conexión, processQueue devuelve null sin lanzar, así que
+    // un retry ya armado se re-armaba para siempre. Lo cancelamos acá.
+    if (this.backoffRetryTimeout) {
+      clearTimeout(this.backoffRetryTimeout);
+      this.backoffRetryTimeout = null;
+    }
     this.onlineListeners.forEach((listener) => listener(false));
   }
 
@@ -327,7 +395,40 @@ export class SyncQueueService {
   }
 
   private notifyAuthExpired(): void {
+    // LBDS-244: bloquea los reintentos automáticos hasta que un run vuelva a
+    // tener token válido (ver syncBlockedByAuth).
+    this.syncBlockedByAuth = true;
     this.authExpiredListeners.forEach((listener) => listener());
+  }
+
+  /**
+   * LBDS-244: cualquier respuesta exitosa del servidor prueba que el token
+   * volvió a ser válido. Limpiamos el bloqueo por auth y, si quedaron ítems en
+   * backoff, re-armamos el reintento sin esperar un tap manual.
+   */
+  private resumeRetriesAfterAuthRecovery(): void {
+    if (!this.syncBlockedByAuth) return;
+    this.syncBlockedByAuth = false;
+    void this.scheduleBackoffRetry();
+  }
+
+  /**
+   * LBDS-244: al recuperar la conexión, un retry interrumpido por
+   * handleOffline() quedó sin timer. Sólo lo re-armamos si hay evidencia de un
+   * reintento interrumpido (retryCount > 0 o nextRetryAt), para no
+   * auto-sincronizar ítems frescos que se encolaron estando offline.
+   */
+  private resumeInterruptedRetries(): void {
+    void syncQueueDb.getAll()
+      .then((queue) => {
+        const hasInterruptedRetry = queue.some(
+          (item) => (item.retryCount ?? 0) > 0 || item.nextRetryAt !== undefined,
+        );
+        if (hasInterruptedRetry) void this.scheduleBackoffRetry();
+      })
+      .catch((error) => {
+        debug('resumeInterruptedRetries failed:', error);
+      });
   }
 
   getOnlineStatus(): boolean {
@@ -496,7 +597,7 @@ export class SyncQueueService {
     return allIds.filter((id) => !processed.has(id));
   }
 
-  private async applyBackoffToIds(ids: string[], errorMsg: string, skipIncrements = false): Promise<void> {
+  private async applyBackoffToIds(ids: string[], errorMsg: string, skipIncrements = false, onIssue?: (message: string) => void): Promise<void> {
     if (ids.length === 0) return;
     const existingItems = await syncQueueDb.getByIds({ ids });
     const updated = existingItems
@@ -512,6 +613,57 @@ export class SyncQueueService {
       });
     if (updated.length > 0) {
       await syncQueueDb.bulkPut({ entries: updated });
+    }
+    onIssue?.(
+      `El servidor no confirmó ${updated.length} ${updated.length === 1 ? 'cambio' : 'cambios'} pendientes: ${errorMsg}`,
+    );
+    // LBDS-244: without this, a dropped/unacked item waited forever — nothing
+    // retried when its backoff expired and the badge never returned to zero.
+    this.scheduleBackoffRetry();
+  }
+
+  /**
+   * Re-arms a queue re-check while the queue is non-empty. The delay comes
+   * from the live queue (earliest pending nextRetryAt) and is clamped, so a
+   * long backoff is still re-checked periodically and a lock no-op is retried
+   * too (its items are ready, not backoffed, and still need the retry that
+   * LBDS-244 used to lack). Stops on its own once the queue drains.
+   *
+   * LBDS-244: se auto-contiene. No arma nada si estamos offline ni si un 401
+   * bloqueó la sync por auth, y cualquier fallo interno se traga para que sus
+   * call sites no puedan producir un unhandled rejection.
+   */
+  private async scheduleBackoffRetry(): Promise<void> {
+    try {
+      if (typeof window === 'undefined') return;
+      if (!this._isOnline) return;
+      if (this.syncBlockedByAuth) return;
+      const queue = await syncQueueDb.getAll();
+      if (queue.length === 0) return;
+
+      const now = Date.now();
+      const backoffed = queue.filter((item) => item.nextRetryAt !== undefined && item.nextRetryAt > now);
+      const earliest = backoffed.length > 0
+        ? Math.min(...backoffed.map((item) => item.nextRetryAt!))
+        : now;
+      const delay = Math.min(
+        SyncQueueService.BACKOFF_RETRY_MAX_MS,
+        Math.max(SyncQueueService.BACKOFF_RETRY_MIN_MS, earliest - now + 250),
+      );
+
+      if (this.backoffRetryTimeout) clearTimeout(this.backoffRetryTimeout);
+      this.backoffRetryTimeout = setTimeout(() => {
+        this.backoffRetryTimeout = null;
+        debug('[SYNC-PQ] backoff retry firing — calling processQueue');
+        void this.processQueue()
+          .then(() => this.scheduleBackoffRetry())
+          .catch((error) => {
+            if (error instanceof AuthExpiredError) return;
+            debug('Backoff retry failed:', error);
+          });
+      }, delay);
+    } catch (error) {
+      debug('scheduleBackoffRetry failed:', error);
     }
   }
 
@@ -638,8 +790,19 @@ export class SyncQueueService {
     }
   }
 
-  async processQueue(): Promise<SyncResult | null> {
+  async processQueue(params?: { onIssue?: (message: string) => void }): Promise<SyncResult | null> {
     debug('[SYNC-PQ] start');
+    // LBDS-244: el issue es por corrida, no estado compartido del servicio. Así
+    // un run de fondo (debounce/timer) no puede pisar lo que reporta el tap del
+    // usuario. Solo se emite el primer mensaje de la corrida.
+    const { onIssue } = params ?? {};
+    let issueReported = false;
+    const reportIssue = (message: string): void => {
+      if (issueReported) return;
+      issueReported = true;
+      onIssue?.(message);
+      debug('[SYNC-ISSUE]', message);
+    };
     if (!this._isOnline) {
       return null;
     }
@@ -647,9 +810,28 @@ export class SyncQueueService {
     debug('[SYNC-PQ] acquiring lock...');
     const lockAcquired = await syncLockService.acquire({ timeoutMs: 0 });
     if (!lockAcquired) {
+      // LBDS-244: an in-flight run (or a stale localStorage lock, which can
+      // survive a page navigation for up to 30s because release() compares a
+      // per-page-load tabId) used to turn a user-initiated sync into a silent
+      // no-op. Surface it instead.
+      reportIssue('Hay otra sincronización en curso; reintentá en unos segundos');
+      // LBDS-244: surfacing it was not enough — the tap armed nothing, so the
+      // queue stayed at "N pendientes" until the user tapped again. Re-check on
+      // its own until the lock frees (no backoff is applied on this path, so
+      // the scheduler re-checks every second) and stop once the queue drains.
+      // The counter bounds the loop, so a lock that is never released cannot
+      // turn into an endless 1s re-check.
+      if (this.lockRetryAttempts < SyncQueueService.LOCK_RETRY_MAX_ATTEMPTS) {
+        this.lockRetryAttempts++;
+        debug('[SYNC-PQ] lock busy — silent retry', this.lockRetryAttempts);
+        this.scheduleBackoffRetry();
+      } else {
+        debug('[SYNC-PQ] lock busy — retry budget exhausted');
+      }
       return null;
     }
     debug('[SYNC-PQ] lock acquired');
+    this.lockRetryAttempts = 0;
 
     const zombieIds: string[] = [];
     const zombieEntries: DeadLetterItem[] = [];
@@ -709,6 +891,9 @@ export class SyncQueueService {
 
       if (queuedItems.length === 0) {
         debug('[SYNC-PQ] no ready items');
+        // LBDS-244: everything is inside its backoff window. This used to be a
+        // silent no-op for a user-initiated sync; say so instead.
+        reportIssue('Cambios en reintento automático; esperá unos segundos y volvé a sincronizar');
         return null;
       }
 
@@ -764,12 +949,13 @@ export class SyncQueueService {
               response = await syncApiService.merge({ data: chunk as unknown as Record<string, unknown[]> });
             } catch (error) {
               const msg = error instanceof Error ? error.message : 'Unknown error';
-              await this.applyBackoffToIds(chunkItemIds, msg);
+              await this.applyBackoffToIds(chunkItemIds, msg, false, reportIssue);
               throw error;
             }
 
             if (response.status === 401) {
-              await this.applyBackoffToIds(chunkItemIds, 'HTTP 401: Authentication expired', true);
+              this.syncBlockedByAuth = true;
+              await this.applyBackoffToIds(chunkItemIds, 'HTTP 401: Authentication expired', true, reportIssue);
               this.notifyAuthExpired();
               throw new AuthExpiredError();
             }
@@ -777,9 +963,12 @@ export class SyncQueueService {
             if (!response.ok) {
               debug('[SYNC-PQ] HTTP', response.status, response.statusText, 'for chunk ids', chunkItemIds);
               const pendingIds = this.buildIdQueue(allQueuedIds, successfullyProcessedIds);
-              await this.applyBackoffToIds(pendingIds, `HTTP ${response.status}: ${response.statusText}`);
+              await this.applyBackoffToIds(pendingIds, `HTTP ${response.status}: ${response.statusText}`, false, reportIssue);
               return { ok: false as const };
             }
+
+            // LBDS-244: el merge respondió sin 401, el token es válido otra vez.
+            this.resumeRetriesAfterAuthRecovery();
 
             const mergeResult = await response.json();
 
@@ -869,10 +1058,10 @@ export class SyncQueueService {
                 conflictIds: [...conflictIds],
               });
               if (errorIds.size > 0) {
-                await this.applyBackoffToIds([...errorIds], errorMessages[0] ?? 'Server reported an error');
+                await this.applyBackoffToIds([...errorIds], errorMessages[0] ?? 'Server reported an error', false, reportIssue);
               }
               if (missed.length > 0) {
-                await this.applyBackoffToIds(missed, 'Server did not acknowledge item; retrying then quarantining');
+                await this.applyBackoffToIds(missed, 'Server did not acknowledge item; retrying then quarantining', false, reportIssue);
               }
               return { ok: true as const, toRemove, result: mergeResult };
             }
@@ -932,10 +1121,14 @@ export class SyncQueueService {
       const remainingCount = await syncQueueDb.count();
       debug('[SYNC-PQ] done. allChunksSucceeded:', allChunksSucceeded, 'remainingQueue:', remainingCount, 'finalResult:', finalResult ? 'ok' : 'null');
 
+      // LBDS-244: la corrida llegó al final sin 401; un re-login ya puede
+      // reanudar los reintentos automáticos.
+      this.syncBlockedByAuth = false;
+
       return finalResult || null;
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Unknown error';
-      await this.applyBackoffToIds(queuedItems.map((i) => i.id), msg);
+      await this.applyBackoffToIds(queuedItems.map((i) => i.id), msg, false, reportIssue);
       throw error;
     } finally {
       debug('[SYNC-PQ] lock released');
@@ -1128,6 +1321,9 @@ export class SyncQueueService {
             break;
           }
 
+          // LBDS-244: pull exitosa — el token volvió a ser válido.
+          this.resumeRetriesAfterAuthRecovery();
+
           const result = (await response.json()) as ServerSyncResponse;
 
           if (result.changes) {
@@ -1179,6 +1375,8 @@ if (Object.keys(allChanges).length > 0) {
 
     if (fullResponse.status === 304) {
       console.warn('[SyncQueueService] fullSync returned 304 — no changes since last full sync');
+      // LBDS-244: 304 también prueba que el token sigue siendo válido.
+      this.resumeRetriesAfterAuthRecovery();
       return {};
     }
 
@@ -1190,6 +1388,9 @@ if (Object.keys(allChanges).length > 0) {
     if (!fullResponse.ok) {
       throw new Error(`Failed to pull changes: ${fullResponse.statusText}`);
     }
+
+    // LBDS-244: fullSync exitoso — el token volvió a ser válido.
+    this.resumeRetriesAfterAuthRecovery();
 
     const responseEtag = fullResponse.headers.get('ETag');
     if (responseEtag) {
