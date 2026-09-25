@@ -195,9 +195,11 @@ async function handleRetry(params: { item: DeadLetterItem }) {
     });
     await toast.present();
   } catch (error) {
+    console.error('[DLQView] handleRetry failed:', error);
+    const msg = error instanceof Error ? error.message : 'Error al reintentar';
     const toast = await toastController.create({
-      message: 'Error al reintentar',
-      duration: 2000,
+      message: `Error al reintentar: ${msg}`,
+      duration: 4000,
       color: 'danger',
     });
     await toast.present();
@@ -231,9 +233,11 @@ async function handleRetryAll() {
             });
             await toast.present();
           } catch (error) {
+            console.error('[DLQView] handleRetryAll failed:', error);
+            const msg = error instanceof Error ? error.message : 'Error al reintentar';
             const toast = await toastController.create({
-              message: 'Error al reintentar',
-              duration: 2000,
+              message: `Error al reintentar: ${msg}`,
+              duration: 4000,
               color: 'danger',
             });
             await toast.present();

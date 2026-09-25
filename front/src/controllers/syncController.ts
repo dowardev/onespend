@@ -9,6 +9,41 @@ import { syncQueueDb } from '@/db/controllers/syncQueueDb';
 import { syncQueueService } from '@/services/sync/SyncQueueService';
 import { useBudgetDayStore } from '@/stores/budgetDayStore';
 import type { DeadLetterItem } from '@/db/types';
+import db from '@/db/OneSpendDB';
+import { detectDivergence, type DivergenceReport, type LocalDbLike, type SnapshotServiceLike } from '@/services/sync/SyncDivergenceDetector';
+import { syncApiService } from '@/services/sync/SyncApiService';
+
+/**
+ * DLQ items can carry a `data` field that was stored before the queue was
+ * hardened against non-structured-cloneable values (e.g. when a class
+ * instance slipped into the payload before the DLQ put). Re-queueing the
+ * item now hits IndexedDB's `put` and throws `DataCloneError`, which
+ * blocks the user from draining the DLQ at all.
+ *
+ * Round-tripping the data through JSON forces every value to be a
+ * structured-cloneable primitive, plain array, or plain object (Maps,
+ * Sets, Date instances, functions, and class instances with non-cloneable
+ * properties are stripped or stringified). The server-side `SyncProcessor`
+ * receives the same shape it was always meant to consume — that contract
+ * is plain JSON.
+ *
+ * If the original data cannot even be JSON-stringified (a circular
+ * reference, etc.), we log a warning with the entity id and fall back to
+ * an empty payload so the user can at least clear the DLQ. We do NOT
+ * silently delete the item from the DLQ on its own.
+ */
+function sanitizeQueueData<T>(params: { item: string; entityType: string; data: T }): T {
+  const { item, entityType, data } = params;
+  try {
+    return JSON.parse(JSON.stringify(data)) as T;
+  } catch (error) {
+    console.warn(
+      `[syncController] DLQ item ${entityType}/${item} had non-JSON data; sanitizing to {}.`,
+      error,
+    );
+    return {} as T;
+  }
+}
 
 export type RepairStep =
   | 'pulling_server'
@@ -103,6 +138,13 @@ class SyncController {
 
     this.isSyncing.value = true;
     this.syncError.value = null;
+
+    // LBDS-276: requeue orphan creates (rows with no `serverId` that the
+    // user created locally but that the sync queue never picked up). This
+    // makes "Sincronizar ahora" complete — previously the primary button
+    // silently did nothing for those rows because the user had to find
+    // `Reparar sincronización` to enqueue them.
+    await syncQueueService.reconstructQueueForUnsyncedCreates();
 
     // LBDS-244: el issue del push es un canal por corrida, no estado global,
     // para que la pull no dependa de que el push haya salido limpio. Se declara
@@ -245,6 +287,49 @@ class SyncController {
     }
   }
 
+  /**
+   * LBDS-276: run a local ↔ server divergence diagnostic. Returns a typed
+   * report used by both the dev console (`window.__devDb.detectDivergence()`)
+   * and the Sync screen's "Diagnostico de divergencias" item.
+   *
+   * The classes covered are listed in
+   * `docs/plans/2026-09-21-lbds-276-sync-divergence-diagnosis.md`.
+   */
+  async detectDivergence(): Promise<DivergenceReport> {
+    return detectDivergence({
+      api: syncApiService as unknown as SnapshotServiceLike,
+      db: db as unknown as LocalDbLike,
+    });
+  }
+
+  /**
+   * LBDS-276: repair the actionable parts of a divergence report. The
+   * detector flags four actionable categories — `missingOnServer` (the
+   * server never received the row), `missingOnLocal` (the client hasn't
+   * pulled it down yet), `versionMismatch` and `serverTombstoneUnapplied`.
+   * This method addresses the first two by:
+   *
+   * - Running the existing `reconstructQueueForUnsyncedCreates` to push
+   *   every local row that has no `serverId` and was never queued.
+   * - Triggering a pull so every `missingOnLocal` row lands locally.
+   *
+   * The remaining categories (`danglingCategoryIds`, `localOnlyFields`)
+   * are not auto-repairable; the diagnosis doc records the user action.
+   */
+  async repairDivergence(): Promise<{ requeued: number }> {
+    const { created } = await syncQueueService.reconstructQueueForUnsyncedCreates();
+    if (created > 0) {
+      await syncService.processQueue();
+    }
+    // Pull down the rows the local side is missing. The new cursor logic
+    // (LBDS-276 class 3) prevents the pull from skipping the gap, so the
+    // second sync in a row converges instead of churning.
+    await syncService.pullChanges();
+    this.lastSyncTime.value = syncService.getLastSyncTime();
+    this.pendingChanges.value = await syncService.getQueueCount();
+    return { requeued: created };
+  }
+
   private async rebuildBudgetDaySnapshot() {
     try {
       const dayStore = useBudgetDayStore();
@@ -285,12 +370,13 @@ class SyncController {
 
   async retryDlqItem(params: { item: DeadLetterItem }): Promise<void> {
     const { item } = params;
+    const data = sanitizeQueueData({ item: item.entityId, entityType: item.entityType, data: item.data });
     await syncQueueDb.put({
       entry: {
         id: item.entityId,
         entityType: item.entityType,
         operation: item.operation,
-        data: item.data,
+        data,
         timestamp: Date.now(),
         retryCount: 0,
       },
@@ -306,7 +392,7 @@ class SyncController {
       id: item.entityId,
       entityType: item.entityType,
       operation: item.operation,
-      data: item.data,
+      data: sanitizeQueueData({ item: item.entityId, entityType: item.entityType, data: item.data }),
       timestamp: Date.now(),
       retryCount: 0,
     }));

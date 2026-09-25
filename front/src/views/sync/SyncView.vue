@@ -26,9 +26,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                 <ion-button
                   data-cy="sync-btn"
                   size="small"
-                  :disabled="
-                    !isOnline || isSyncing || (pendingChanges === 0 && activeConflictDiffs.length === 0)
-                  "
+                  :disabled="!isOnline || isSyncing"
                   @click="handleSyncNow"
                 >
                   <ion-icon slot="start" :icon="syncOutline"></ion-icon>
