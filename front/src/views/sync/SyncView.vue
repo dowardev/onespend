@@ -176,7 +176,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                   <ion-badge slot="end" color="danger">{{ dlqCount }}</ion-badge>
                 </ion-item>
 
-                <ion-item button :disabled="isDivergenceChecking || isFixing" @click="handleDiagnoseDivergence">
+                <ion-item button data-cy="diagnose-divergence-btn" :disabled="isDivergenceChecking || isFixing" @click="handleDiagnoseDivergence">
                   <ion-icon slot="start" :icon="searchOutline"></ion-icon>
 
                   <ion-label>
@@ -191,7 +191,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                   </ion-label>
                 </ion-item>
 
-                <ion-item button :disabled="isRepairingDivergence || isFixing" @click="handleRepairDivergence">
+                <ion-item button data-cy="repair-divergence-btn" :disabled="isRepairingDivergence || isFixing" @click="handleRepairDivergence">
                   <ion-icon slot="start" :icon="pulseOutline"></ion-icon>
 
                   <ion-label>

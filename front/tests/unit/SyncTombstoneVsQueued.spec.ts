@@ -150,6 +150,9 @@ describe('saveChangesToLocalDb — LBDS-276 class 4 (tombstone vs locally queued
 
     // Local row is deleted; no conflict (both sides agree).
     expect(mockAccountsBulkDelete).toHaveBeenCalledWith({ syncIds: ['a-3'] });
+    // The queued delete is now satisfied; it must be dropped from the queue
+    // so the next drain does not re-send a no-op delete.
+    expect(mockQueueBulkDelete).toHaveBeenCalledWith({ ids: ['a-3'] });
     expect(mockConflictAdd).not.toHaveBeenCalled();
   });
 

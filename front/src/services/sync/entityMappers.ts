@@ -32,6 +32,14 @@ export function toApiFormat(entityType: SyncEntityType, row: Record<string, any>
         supplier_id: row.supplierId,
         supplier_name: row.supplierName,
         category: row.category ?? undefined,
+        // LBDS-276: the server persists _from_recurring_id (migration
+        // 2026_05_26_000002, fillable in BudgetEntry::$fillable, validated
+        // in BudgetEntrySyncRequest). The pull mapper was already reading
+        // it; the push side was dropping the link, so a freshly-created
+        // entry with `_fromRecurringId` set lost the recurring reference
+        // on its first push.
+        _from_recurring_id:
+          row._fromRecurringId ?? row.from_recurring_id ?? row.fromRecurringId ?? undefined,
         version: row.version ?? 0,
         updated_at: row.updatedAt ?? now,
       };

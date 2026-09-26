@@ -1452,15 +1452,17 @@ export class SyncQueueService {
       throw new Error('Cannot pull changes while offline');
     }
 
-    let lastSync = localStorage.getItem(LAST_SYNC_KEY) || '0';
+    const lastSync = localStorage.getItem(LAST_SYNC_KEY) || '0';
     const wasFullSync = lastSync === '0';
-    // Prevent future timestamps (more than 5 minutes ahead)
-    const now = Math.floor(Date.now() / 1000);
-    if (parseInt(lastSync, 10) > now + 300) {
-      console.warn('[SyncQueueService] last_sync is in the future, resetting to 0');
-      lastSync = '0';
-      localStorage.setItem(LAST_SYNC_KEY, '0');
-    }
+    // LBDS-276 class 5: the previous "reset to 0 if last_sync is more than
+    // 5 minutes ahead of the client clock" guard was the single remaining
+    // way to rewind the cursor. A client clock ≥ 5 min behind the server
+    // (the very case the monotonic advance exists to handle) would have
+    // its correct last_sync value clobbered to '0', forcing a full sync on
+    // the next call. The monotonic advance plus the server-side filter
+    // (`updated_at >= last_sync`) is now the source of truth; any past
+    // over-write by a buggy build stays frozen at its old value and gets
+    // resolved on the next reconciliation pull.
     const MAX_PULL_RETRIES = 3;
     let lastError: Error | null = null;
 

@@ -336,7 +336,11 @@ export interface DetectorDeps {
   api: SnapshotServiceLike;
   db: LocalDbLike;
   /** Iff supplied, the detector uses the entryCategories table it carries. */
-  fetchServerSnapshot?: (types: string[]) => Promise<{ serverTime?: number; rowsByType: Record<string, ServerSnapshotRow[]>; tombstoneIds: string[] }>;
+  fetchServerSnapshot?: (types: string[]) => Promise<{
+    serverTime?: number;
+    rowsByType: Record<string, ServerSnapshotRow[]>;
+    tombstoneIdsByType: Record<string, string[]>;
+  }>;
 }
 
 type DexieTableLike<T> = {
@@ -398,11 +402,21 @@ export async function readLocalSnapshots(
  * live row + every tombstone across all synced entity types. Self-contained;
  * survives at most `MAX_SNAPSHOT_PAGES` round trips to keep a stuck sync
  * session from holding the detector forever.
+ *
+ * Tombstones are tracked per-entity-type so the per-entity report does not
+ * attribute account tombstones to budget_entry. The server emits each
+ * tombstone inside the entity's own bucket (`/api/sync/changes` returns
+ * `{id, _deleted: true}` under the matching key), and we keep that
+ * attribution here.
  */
 export async function fetchServerSnapshot(
   api: SnapshotServiceLike,
   options: { entityTypes?: readonly string[] } = {},
-): Promise<{ serverTime?: number; rowsByType: Record<string, ServerSnapshotRow[]>; tombstoneIds: string[] }> {
+): Promise<{
+  serverTime?: number;
+  rowsByType: Record<string, ServerSnapshotRow[]>;
+  tombstoneIdsByType: Record<string, string[]>;
+}> {
   const types = options.entityTypes ?? [
     'account',
     'supplier',
@@ -414,8 +428,11 @@ export async function fetchServerSnapshot(
     'recurring_record_product',
   ];
   const rowsByType: Record<string, ServerSnapshotRow[]> = {};
-  for (const t of types) rowsByType[t] = [];
-  const tombstoneIds: string[] = [];
+  const tombstoneIdsByType: Record<string, string[]> = {};
+  for (const t of types) {
+    rowsByType[t] = [];
+    tombstoneIdsByType[t] = [];
+  }
   let cursor: string | null = null;
   let serverTime: number | undefined;
   for (let page = 0; page < MAX_SNAPSHOT_PAGES; page++) {
@@ -434,10 +451,15 @@ export async function fetchServerSnapshot(
         if (!Array.isArray(items)) continue;
         for (const item of items) {
           if (item._deleted) {
-            if (typeof item.sync_id === 'string') tombstoneIds.push(item.sync_id);
-            else if (typeof (item as unknown as { id?: unknown }).id === 'string') tombstoneIds.push((item as unknown as { id: string }).id);
+            const id =
+              typeof item.sync_id === 'string'
+                ? item.sync_id
+                : typeof (item as unknown as { id?: unknown }).id === 'string'
+                  ? (item as unknown as { id: string }).id
+                  : null;
+            if (id) tombstoneIdsByType[t].push(id);
           } else {
-            (rowsByType[t] = rowsByType[t] || []).push(item);
+            rowsByType[t].push(item);
           }
         }
       }
@@ -446,7 +468,7 @@ export async function fetchServerSnapshot(
     cursor = body.cursor ?? null;
     if (!cursor) break;
   }
-  return { serverTime, rowsByType, tombstoneIds };
+  return { serverTime, rowsByType, tombstoneIdsByType };
 }
 
 /** Runs the four stages end to end. */
@@ -468,7 +490,7 @@ export async function detectDivergence(deps: DetectorDeps): Promise<DivergenceRe
     ]);
   } catch {
     serverReachable = false;
-    serverReadout = { serverTime: undefined, rowsByType: {}, tombstoneIds: [] };
+    serverReadout = { serverTime: undefined, rowsByType: {}, tombstoneIdsByType: {} };
   }
 
   const entityTypes: SyncEntityType[] = [
@@ -485,17 +507,15 @@ export async function detectDivergence(deps: DetectorDeps): Promise<DivergenceRe
   for (const et of entityTypes) {
     const localRows = localReadout.rowsByType[et] ?? [];
     const serverRows = serverReadout.rowsByType[et] ?? [];
-    // Tombstones are global ids (the server emits {sync_id, _deleted} for any
-    // entity). The comparator only cares about which ids lack a local row at
-    // all, so we pass the full list as `serverTombstoneIds` per entity type.
-
+    // LBDS-276: tombstones are tracked per-entity-type in the snapshot so the
+    // per-entity report does not attribute account tombstones to budget_entry.
     entities[et] = compareEntitySets({
       entityType: et,
       localRows,
       serverRows,
       localOnlyFieldSet: LocalOnlyFieldRegistry[et] ?? [],
       resolvedCategoryIds: et === 'budget_entry' ? localReadout.resolvedCategoryIds : undefined,
-      serverTombstoneIds: serverReadout.tombstoneIds,
+      serverTombstoneIds: serverReadout.tombstoneIdsByType[et] ?? [],
       locallyQueuedIds: localReadout.queuedIds,
     });
   }
