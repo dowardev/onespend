@@ -20,6 +20,10 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# Working-trees / scratch / orchestration files (not part of the project)
+/docs/plans/
+/odd/
+
 # Environment files (secrets — never commit)
 .env
 .env.*

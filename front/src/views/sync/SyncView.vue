@@ -26,9 +26,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                 <ion-button
                   data-cy="sync-btn"
                   size="small"
-                  :disabled="
-                    !isOnline || isSyncing || (pendingChanges === 0 && activeConflictDiffs.length === 0)
-                  "
+                  :disabled="!isOnline || isSyncing"
                   @click="handleSyncNow"
                 >
                   <ion-icon slot="start" :icon="syncOutline"></ion-icon>
@@ -177,6 +175,56 @@ SPDX-License-Identifier: AGPL-3.0-only
 
                   <ion-badge slot="end" color="danger">{{ dlqCount }}</ion-badge>
                 </ion-item>
+
+                <ion-item button data-cy="diagnose-divergence-btn" :disabled="isDivergenceChecking || isFixing" @click="handleDiagnoseDivergence">
+                  <ion-icon slot="start" :icon="searchOutline"></ion-icon>
+
+                  <ion-label>
+                    <h3>Diagnóstico de divergencias</h3>
+
+                    <p>
+                      {{ isDivergenceChecking
+                        ? 'Comparando local vs servidor...'
+                        : 'Detecta filas que el servidor no recibió, id de categoría pendientes, etc.'
+                      }}
+                    </p>
+                  </ion-label>
+                </ion-item>
+
+                <ion-item button data-cy="repair-divergence-btn" :disabled="isRepairingDivergence || isFixing" @click="handleRepairDivergence">
+                  <ion-icon slot="start" :icon="pulseOutline"></ion-icon>
+
+                  <ion-label>
+                    <h3>Reparar divergencias</h3>
+
+                    <p>
+                      {{ isRepairingDivergence
+                        ? 'Re-encadenando filas huérfanas y sincronizando...'
+                        : 'Re-encadena filas que el servidor nunca recibió y baja lo que falte'
+                      }}
+                    </p>
+                  </ion-label>
+                </ion-item>
+
+                <div v-if="divergenceSummary !== null" data-cy="divergence-summary">
+                  <ion-text v-if="divergenceServerReachable === false" color="danger">
+                    <p class="ion-padding-start">No se pudo contactar al servidor. La repair corre en local; el diagnóstico requiere red.</p>
+                  </ion-text>
+
+                  <ion-text v-else-if="divergenceSummary.length === 0" color="success">
+                    <p class="ion-padding-start">Sin divergencias detectadas — local y servidor coinciden.</p>
+                  </ion-text>
+
+                  <ul v-else class="ion-padding-start">
+                    <li v-for="line in divergenceSummary" :key="line">{{ line }}</li>
+                  </ul>
+
+                  <p class="ion-padding-start">
+                    <ion-text color="medium">
+                      Detalle completo vía <code>window.__devDb.detectDivergence()</code> en la consola.
+                    </ion-text>
+                  </p>
+                </div>
               </ion-list>
             </ion-accordion>
           </ion-accordion-group>
@@ -492,6 +540,8 @@ import {
   personOutline,
   constructOutline,
   closeOutline,
+  searchOutline,
+  pulseOutline,
 } from 'ionicons/icons';
 // End Imports
 
@@ -565,6 +615,14 @@ const isFixing = ref(false);
 const fixStatus = ref('');
 const isRefreshingStatus = ref(false);
 const isForcingSync = ref(false);
+// LBDS-276: divergence diagnostic state. `divergenceSummary` carries the
+// human-readable lines produced by `syncController.detectDivergence()`; the
+// list renders only when the user taps the new "Diagnostico de divergencias"
+// item inside the existing advanced accordion.
+const isDivergenceChecking = ref(false);
+const divergenceSummary = ref<string[] | null>(null);
+const divergenceServerReachable = ref<boolean | null>(null);
+const isRepairingDivergence = ref(false);
 // End Vars
 
 // Functions
@@ -915,6 +973,52 @@ async function handleFixSyncProblems() {
     ],
   });
   await alert.present();
+}
+
+// LBDS-276: divergence diagnostic. The handler runs the detector (which
+// fetches a server snapshot + reads all the local Dexie tables) and renders
+// the human-readable drift summary inside the advanced accordion.
+async function handleDiagnoseDivergence() {
+  if (isDivergenceChecking.value) return;
+  isDivergenceChecking.value = true;
+  try {
+    const report = await syncController.detectDivergence();
+    divergenceSummary.value = report.summary;
+    divergenceServerReachable.value = report.serverReachable;
+  } catch (error) {
+    console.warn('[SyncView] detectDivergence failed:', error);
+    divergenceSummary.value = null;
+    divergenceServerReachable.value = false;
+  } finally {
+    isDivergenceChecking.value = false;
+  }
+}
+
+// LBDS-276: run the actionable part of the divergence repair (re-queue
+// orphan creates + pull). The detector's dangling-category / local-only-
+// field categories are surfaced by the diagnosis doc; this handler does not
+// silently invent labels or fabricate server columns.
+async function handleRepairDivergence() {
+  if (isRepairingDivergence.value) return;
+  isRepairingDivergence.value = true;
+  try {
+    const { requeued } = await syncController.repairDivergence();
+    const toast = await toastController.create({
+      message: requeued > 0
+        ? `Re-encadenadas ${requeued} fila(s); sincronización completada`
+        : 'Sincronización completada',
+      duration: 2500,
+      color: 'success',
+    });
+    await toast.present();
+    await handleDiagnoseDivergence();
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'No se pudo reparar la divergencia';
+    const toast = await toastController.create({ message: msg, duration: 4000, color: 'danger' });
+    await toast.present();
+  } finally {
+    isRepairingDivergence.value = false;
+  }
 }
 
 async function runFixSequence() {

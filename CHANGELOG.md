@@ -11,6 +11,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 ### Fixed
 
 - Synchronization no longer stays stuck showing pending changes forever.
+- The app can now tell you when its records have drifted apart from the server. A new "Diagnóstico de divergencias" action under the sync advanced options compares what is on this device with what is on the server and reports any differences (rows missing on one side, conflicting category references, recurring entries missing their schedule). A second "Reparar divergencias" action re-syncs whatever is missing on either side so two syncs in a row converge instead of churning.
 
 ## [v0.77.0] - 2026-09-18
 

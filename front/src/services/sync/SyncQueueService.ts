@@ -106,6 +106,58 @@ export function partitionChunkIds(params: { chunkItemIds: string[]; succeededIds
 }
 
 const LAST_SYNC_KEY = 'last_sync';
+
+/**
+ * LBDS-276 class 5: monotonic guard for `last_sync`. The old code could
+ * rewind the cursor when the client clock was behind the server's (merge
+ * branch) or simply used the server `now()` instead of the max row
+ * `updated_at` actually delivered (pull branch), opening a skip window.
+ *
+ * This helper never decreases the stored value. Callers keep their own
+ * "preferred candidate" logic; the persistence side is monotone-only.
+ */
+export function advanceLastSyncMonotonic(params: { candidate: number | null | undefined }): void {
+  const { candidate } = params;
+  if (!Number.isFinite(candidate ?? NaN)) return;
+  const c = Math.floor(Number(candidate));
+  if (c <= 0) return;
+  const prevRaw = localStorage.getItem(LAST_SYNC_KEY);
+  const prev = prevRaw ? parseInt(prevRaw, 10) : 0;
+  const safePrev = Number.isFinite(prev) && prev >= 0 ? prev : 0;
+  const next = Math.max(safePrev, c);
+  if (next > safePrev) localStorage.setItem(LAST_SYNC_KEY, String(next));
+}
+
+/** Inverse of the monotonic guard: returns the parsed stored value. */
+export function readLastSync(): number {
+  const raw = localStorage.getItem(LAST_SYNC_KEY);
+  if (!raw) return 0;
+  const parsed = parseInt(raw, 10);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+}
+
+/** LBDS-276 class 3 / 5 combined helper: pull-time advance.
+ *
+ *  Closes the skip window in `updated_at >= last_sync` semantics by anchoring
+ *  on the max delivered `updated_at` when at least one row came back (rows
+ *  we actually saw set the floor; anything between that and `serverTime` is
+ *  re-delivered next pull). Falls back to `serverTime` when the response
+ *  carried no rows (so the cursor still moves monotonically). The helper
+ *  never rewinds.
+ */
+export function advanceLastSyncAfterPull(params: { serverTime?: number; maxUpdatedAt?: number }): void {
+  const { serverTime, maxUpdatedAt } = params;
+  // LBDS-276 class 3 fix: anchor on `maxUpdatedAt` when present, NOT on
+  // `serverTime`. Using serverTime re-opens the skip window this method
+  // exists to close.
+  if (Number.isFinite(maxUpdatedAt ?? NaN) && (maxUpdatedAt ?? 0) > 0) {
+    advanceLastSyncMonotonic({ candidate: maxUpdatedAt });
+    return;
+  }
+  if (Number.isFinite(serverTime ?? NaN) && (serverTime ?? 0) > 0) {
+    advanceLastSyncMonotonic({ candidate: serverTime });
+  }
+}
 const FULL_SYNC_ETAG_KEY = 'full_sync_etag';
 const CHUNK_SIZE = 50;
 
@@ -129,7 +181,7 @@ export async function resolveAccountId(map: Map<number, string>, value: unknown)
   return null;
 }
 
-async function mapServerItemToRow(params: {
+export async function mapServerItemToRow(params: {
   entityType: string;
   item: SyncItemData;
   base: any;
@@ -163,6 +215,17 @@ async function mapServerItemToRow(params: {
       r.accountId = await resolveAccountId(accountIdMap, i.account_id);
       r.supplierId = i.supplier_id ? String(i.supplier_id) : (base.supplierId ?? null);
       r.supplierName = i.supplier_name ? String(i.supplier_name) : (base.supplierName ?? '');
+      // LBDS-276 class 1: restore `category` from the server payload so the
+      // reference id survives a second-device pull. The label lookup is a
+      // device-local join through entryCategories; the diagnostic detector
+      // reports dangling ids.
+      r.category = i.category != null ? String(i.category) : (base.category ?? undefined);
+      // LBDS-276 class 2: `_from_recurring_id` is server-persisted (migration
+      // 2026_05_26_000002; fillable in BudgetEntry::$fillable) but the live
+      // pull mapper did not read it. Resolves the recurring → entry link.
+      r._fromRecurringId = i._from_recurring_id != null
+        ? String(i._from_recurring_id)
+        : (base._fromRecurringId ?? null);
       r.status = String(i.status ?? base.status ?? 'active');
       r.version = Number(i.version) || base.version || 0;
       if (Array.isArray(i.groups)) {
@@ -238,7 +301,30 @@ async function mapServerItemToRow(params: {
       r.serverId = i.id_server ? Number(i.id_server) : (base.serverId ?? null);
       r.name = String(i.name ?? base.name ?? '');
       r.amount = Number(i.amount ?? base.amount ?? 0);
-      r.frequency = String(i.frequency ?? base.frequency ?? 'monthly');
+      // LBDS-276 class 2: the prior mapper assigned `r.frequency` from
+      // `i.frequency`, but the front row uses `repeatFrequency`. A pull on a
+      // brand-new local row left the field undefined. Map the full server-side
+      // repeated schedule onto the camelCase `RecurringRecordRow` keys.
+      r.type = (i.type ?? base.type) != null ? String(i.type ?? base.type) : (base.type ?? '');
+      r.repeatFrequency = String(i.repeat_frequency ?? base.repeatFrequency ?? 'monthly');
+      r.repeatInterval = Number(i.repeat_interval ?? base.repeatInterval ?? 1);
+      r.repeatDays = Array.isArray(i.repeat_days)
+        ? i.repeat_days as number[]
+        : (Array.isArray(base.repeatDays) ? (base.repeatDays as number[]) : undefined);
+      r.repeatMonthDay = i.repeat_month_day != null ? Number(i.repeat_month_day) : (base.repeatMonthDay ?? undefined);
+      r.repeatMonthWeekdayMode = i.repeat_month_weekday_mode != null ? Boolean(i.repeat_month_weekday_mode) : (base.repeatMonthWeekdayMode ?? undefined);
+      r.repeatMonthWeekday = i.repeat_month_weekday != null ? Number(i.repeat_month_weekday) : (base.repeatMonthWeekday ?? undefined);
+      r.repeatMonthWeekdayOrdinal = i.repeat_month_weekday_ordinal != null ? Number(i.repeat_month_weekday_ordinal) : (base.repeatMonthWeekdayOrdinal ?? undefined);
+      r.repeatYearMonth = i.repeat_year_month != null ? Number(i.repeat_year_month) : (base.repeatYearMonth ?? undefined);
+      r.repeatYearDay = i.repeat_year_day != null ? Number(i.repeat_year_day) : (base.repeatYearDay ?? undefined);
+      r.time = i.time ?? base.time ?? undefined;
+      r.autoInsert = i.auto_insert != null ? Boolean(i.auto_insert) : (base.autoInsert ?? false);
+      r.estimated = i.estimated != null ? Number(i.estimated) : (base.estimated ?? undefined);
+      r.items = Array.isArray(i.items) ? (i.items as unknown[]) : (base.items ?? undefined);
+      // LBDS-275-class field (notes on recurring_record). Server persists
+      // `notes`; pull mapper previously dropped it for new rows.
+      r.notes = i.notes != null ? String(i.notes) : (base.notes ?? undefined);
+      r.status = String(i.status ?? base.status ?? 'active');
       r.startDate = i.start_date ?? base.startDate ?? '';
       r.endDate = i.end_date ?? base.endDate ?? null;
       r.paymentType = String(i.payment_type ?? base.paymentType ?? 'cash');
@@ -1102,17 +1188,13 @@ export class SyncQueueService {
 
       const pushServerTime = normalizeServerTime({ serverTime: finalResult?.serverTime });
       if (allChunksSucceeded && pushServerTime !== null) {
-        const nowSeconds = Math.floor(Date.now() / 1000);
         const serverTime = pushServerTime;
         // Solo avanzar last_sync si NO era full sync
         if (!wasFullSyncBeforeProcess) {
-          if (serverTime > nowSeconds + 300) {
-            localStorage.setItem(LAST_SYNC_KEY, String(nowSeconds));
-          } else if (serverTime > nowSeconds) {
-            localStorage.setItem(LAST_SYNC_KEY, String(serverTime - 60));
-          } else {
-            localStorage.setItem(LAST_SYNC_KEY, String(serverTime));
-          }
+          // LBDS-276 class 5: monotonically advance only. We never rewind to
+          // the client clock (which can sit behind the server) and we never
+          // pick `nowSeconds` over a higher stored value.
+          advanceLastSyncMonotonic({ candidate: serverTime });
         }
       }
 
@@ -1234,8 +1316,20 @@ export class SyncQueueService {
     onChangesSaved?: (changes: Record<string, SyncItemData[]>) => Promise<void>,
   ): Promise<{ failedEntityTypes: string[] }> {
     const queueItems = await syncQueueDb.getAll();
-    const queuedSyncIds = new Set<string>(queueItems.map((q) => q.id));
+    // LBDS-276 class 4: keep the queued *operation* alongside the id so we
+    // can decide what to do with each locally-queued id when the server
+    // delivers a competing change.
+    const queuedOpById = new Map<string, 'create' | 'update' | 'delete'>();
+    for (const q of queueItems) {
+      queuedOpById.set(q.id, q.operation);
+    }
     const failedEntityTypes: string[] = [];
+    // Queue ids we should drop as part of this pull (e.g. a queued create
+    // whose row the server has soft-deleted — doomed push).
+    const queueIdsToDrop: string[] = [];
+    // Conflicts to escalate: the server-side change contradicted a queued
+    // local op (e.g. a tombstone arrived while a queued update was pending).
+    const conflictsToAdd: Array<{ entityType: string; syncId: string; reason: string; clientData?: SyncItemData; serverData?: SyncItemData }> = [];
 
     const sortedEntityTypes = Object.keys(changes).sort((a, b) => {
       const order = ['account', 'supplier', 'budget_provider', 'recurring_record', 'budget_entry', 'budget_provider_product', 'supplier_product', 'recurring_record_product'];
@@ -1252,9 +1346,48 @@ export class SyncQueueService {
       for (const item of items) {
         const syncId = (item.sync_id || item.id) as string;
         if (!syncId) continue;
-        if (queuedSyncIds.has(syncId)) {
+        const queuedOp = queuedOpById.get(syncId);
+
+        // LBDS-276 class 4: case-aware decision when the row is also queued
+        // locally. The old blanket `continue` made the queue's later update
+        // resurrect soft-deleted server rows.
+        if (queuedOp !== undefined) {
+          if (item._deleted) {
+            if (queuedOp === 'create') {
+              // Drop the queued create: the server never carried it (or has
+              // already deleted it). Applying the delete locally keeps both
+              // sides converged; the queue entry is now meaningless and
+              // would only produce a doomed "create against deleted row".
+              queueIdsToDrop.push(syncId);
+              deleteIds.push(syncId);
+              continue;
+            }
+            if (queuedOp === 'delete') {
+              // Both sides agree the row is gone. Apply the local delete and
+              // drop the now-satisfied queue entry. No conflict to surface.
+              queueIdsToDrop.push(syncId);
+              deleteIds.push(syncId);
+              continue;
+            }
+            // queuedOp is `update`. We cannot apply the server's tombstone
+            // locally because the user's pending update would undo it on its
+            // next drain. Surface as a conflict so the divergence detector
+            // and the user can resolve it.
+            conflictsToAdd.push({
+              entityType,
+              syncId,
+              reason: `server tombstone unapplied: queued ${queuedOp} for the same sync_id`,
+              clientData: queueItems.find((q) => q.id === syncId)?.data as SyncItemData | undefined,
+              serverData: item,
+            });
+            continue;
+          }
+          // Non-deletion incoming change while a local op is queued. Skip to
+          // keep the user's pending intent authoritative — the queued op
+          // drains on its own path.
           continue;
         }
+
         if (item._deleted) {
           deleteIds.push(syncId);
         } else {
@@ -1275,6 +1408,35 @@ export class SyncQueueService {
       }
     }
 
+    // Persist queue drops + conflict escalation OUTSIDE the per-type try/catch
+    // so a queue/concurrency failure does not roll back the local-data writes.
+    if (queueIdsToDrop.length > 0) {
+      try {
+        await syncQueueDb.bulkDelete({ ids: queueIdsToDrop });
+        debug('[SyncQueueService] dropped queued creates superseded by server tombstones:', queueIdsToDrop);
+      } catch (error) {
+        console.warn('[SyncQueueService] Failed to drop queued items after tombstone resolution:', error);
+      }
+    }
+    if (conflictsToAdd.length > 0) {
+      try {
+        const { conflictResolutionService } = await import('@/services/sync/ConflictResolutionService');
+        for (const c of conflictsToAdd) {
+          await conflictResolutionService.getStore().add({
+            entityType: c.entityType,
+            item: {
+              sync_id: c.syncId,
+              client_data: c.clientData ?? ({} as SyncItemData),
+              server_data: c.serverData,
+              reason: c.reason,
+            },
+          });
+        }
+      } catch (error) {
+        console.warn('[SyncQueueService] Failed to escalate tombstone-vs-queued conflicts:', error);
+      }
+    }
+
     if (onChangesSaved) {
       await onChangesSaved(changes);
     }
@@ -1290,15 +1452,17 @@ export class SyncQueueService {
       throw new Error('Cannot pull changes while offline');
     }
 
-    let lastSync = localStorage.getItem(LAST_SYNC_KEY) || '0';
+    const lastSync = localStorage.getItem(LAST_SYNC_KEY) || '0';
     const wasFullSync = lastSync === '0';
-    // Prevent future timestamps (more than 5 minutes ahead)
-    const now = Math.floor(Date.now() / 1000);
-    if (parseInt(lastSync, 10) > now + 300) {
-      console.warn('[SyncQueueService] last_sync is in the future, resetting to 0');
-      lastSync = '0';
-      localStorage.setItem(LAST_SYNC_KEY, '0');
-    }
+    // LBDS-276 class 5: the previous "reset to 0 if last_sync is more than
+    // 5 minutes ahead of the client clock" guard was the single remaining
+    // way to rewind the cursor. A client clock ≥ 5 min behind the server
+    // (the very case the monotonic advance exists to handle) would have
+    // its correct last_sync value clobbered to '0', forcing a full sync on
+    // the next call. The monotonic advance plus the server-side filter
+    // (`updated_at >= last_sync`) is now the source of truth; any past
+    // over-write by a buggy build stays frozen at its old value and gets
+    // resolved on the next reconciliation pull.
     const MAX_PULL_RETRIES = 3;
     let lastError: Error | null = null;
 
@@ -1307,6 +1471,7 @@ export class SyncQueueService {
         let cursor: string | null = null;
         const allChanges: Record<string, SyncItemData[]> = {};
         let serverTime = 0;
+        let maxUpdatedAt = 0;
 
         do {
           const response = await syncApiService.getChanges({ lastSync, cursor, types: options?.types });
@@ -1330,6 +1495,19 @@ export class SyncQueueService {
             for (const [type, items] of Object.entries(result.changes)) {
               allChanges[type] = [...(allChanges[type] || []), ...items];
             }
+            // LBDS-276 class 3: track the max updated_at actually delivered
+            // so the advance cannot skip rows committed in the gap between
+            // the server `now()` and the last row in the response. Tombstones
+            // (no updated_at) are skipped here.
+            for (const items of Object.values(result.changes)) {
+              if (!Array.isArray(items)) continue;
+              for (const item of items) {
+                const u = (item as { updated_at?: unknown }).updated_at;
+                if (typeof u === 'number' && Number.isFinite(u) && u > maxUpdatedAt) {
+                  maxUpdatedAt = u;
+                }
+              }
+            }
           }
 
           cursor = result.cursor ?? null;
@@ -1345,12 +1523,10 @@ if (Object.keys(allChanges).length > 0) {
           if (wasFullSync) {
             // No avanzamos last_sync, se mantiene en 0
           } else if (serverTime && failedEntityTypes.length === 0) {
-            const now = Math.floor(Date.now() / 1000);
-            if (serverTime <= now + 300) {
-              localStorage.setItem(LAST_SYNC_KEY, String(serverTime));
-            } else {
-              localStorage.setItem(LAST_SYNC_KEY, String(serverTime - 60));
-            }
+            // LBDS-276 class 3: prefer the max updated_at actually delivered
+            // (a real cursor); fall back to serverTime when no rows came
+            // back. The helper is monotonic; `last_sync` never decreases.
+            advanceLastSyncAfterPull({ serverTime, maxUpdatedAt });
           } else if (failedEntityTypes.length > 0) {
             console.warn(`[SyncQueueService] Not advancing last_sync due to failed entity types: ${failedEntityTypes.join(', ')}`);
           }
@@ -1406,12 +1582,10 @@ if (Object.keys(allChanges).length > 0) {
       if (wasFullSync) {
         // No avanzamos last_sync
       } else if (fullResult.serverTime && failedEntityTypes.length === 0) {
-        const now = Math.floor(Date.now() / 1000);
-        if (fullResult.serverTime <= now + 300) {
-          localStorage.setItem(LAST_SYNC_KEY, String(fullResult.serverTime));
-        } else {
-          localStorage.setItem(LAST_SYNC_KEY, String(now));
-        }
+        // LBDS-276 class 5: never decrease `last_sync`. The branch above is
+        // the fullSync fallback; the helper is the same one used elsewhere
+        // so the timestamp can only move forward.
+        advanceLastSyncMonotonic({ candidate: fullResult.serverTime });
       } else if (failedEntityTypes.length > 0) {
         console.warn(`[SyncQueueService] Not advancing last_sync due to failed entity types: ${failedEntityTypes.join(', ')}`);
       }

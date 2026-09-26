@@ -21,6 +21,11 @@ import type {
   PendingAttachmentRow,
   EntryCategoryRow,
 } from './types'
+import type {
+  DivergenceReport,
+  LocalDbLike,
+  SnapshotServiceLike,
+} from '@/services/sync/SyncDivergenceDetector'
 
 class OneSpendDB extends Dexie {
   accounts!: Table<AccountRow, string>
@@ -128,6 +133,26 @@ if (import.meta.env.DEV) {
     // connection and drops the database; reload afterwards to re-open it clean.
     resetLocalData: async (): Promise<void> => {
       await db.delete()
+    },
+    // LBDS-276: diagnose client↔server divergence from the dev console.
+    detectDivergence: async (): Promise<DivergenceReport> => {
+      const detectorModule = (await import('@/services/sync/SyncDivergenceDetector'))
+      const syncApiModule = (await import('@/services/sync/SyncApiService'))
+      return detectorModule.detectDivergence({
+        api: syncApiModule.syncApiService as unknown as SnapshotServiceLike,
+        db: {
+          accounts: db.accounts as unknown as LocalDbLike['accounts'],
+          budgetEntries: db.budgetEntries as unknown as LocalDbLike['budgetEntries'],
+          budgetProviders: db.budgetProviders as unknown as LocalDbLike['budgetProviders'],
+          budgetProviderProducts: db.budgetProviderProducts as unknown as LocalDbLike['budgetProviderProducts'],
+          suppliers: db.suppliers as unknown as LocalDbLike['suppliers'],
+          supplierProducts: db.supplierProducts as unknown as LocalDbLike['supplierProducts'],
+          recurringRecords: db.recurringRecords as unknown as LocalDbLike['recurringRecords'],
+          recurringRecordProducts: db.recurringRecordProducts as unknown as LocalDbLike['recurringRecordProducts'],
+          entryCategories: db.entryCategories as unknown as LocalDbLike['entryCategories'],
+          syncQueue: db.syncQueue as unknown as LocalDbLike['syncQueue'],
+        },
+      })
     },
   }
 }

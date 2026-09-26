@@ -7,9 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Sync page: a "Diagnóstico de divergencias" action runs the new `SyncDivergenceDetector`, reports drift per entity type (rows missing on server / missing locally, version drift, fields that would be dropped by a pull, dangling category ids, unapplied server tombstones), and exposes the full report through `window.__devDb.detectDivergence()` for scripted use. A second "Reparar divergencias" action requeues the local rows that never reached the server and triggers a pull to converge (LBDS-276).
+- Detector module `front/src/services/sync/SyncDivergenceDetector.ts` with a pure `compareEntitySets` core driven by synthetic arrays, a small Dexie/HTTP wrapper, and a `LocalOnlyFieldRegistry` that lists fields the front holds but the server cannot reproduce (so `pull-droppable fields` can be computed).
+
 ### Fixed
 - The sync queue no longer stays stuck at "N pending": a missing server acknowledgement or a busy sync lock now arms a retry on its own, and the automatic retry is bounded and respects both the offline state and an expired token.
 - A failed queue push no longer suppresses the server pull, a sync failure is no longer reported as success, and the error toast is still shown when the status refresh also fails.
+- Pull overwrites no longer drop fields that the server actually stored: `mapServerItemToRow` now reads every column the `RecurringRecord` model persists under the front's camelCase keys (`repeatFrequency`, `repeatInterval`, `repeatDays`, the repeat-month/weekday rules, `repeatYearMonth`, `repeatYearDay`, `time`, `autoInsert`, `estimated`, `items`, `notes`, `status`, `type`), and restores `budget_entry.category` and `budget_entry._from_recurring_id` from the server payload (`entityMappers.toApiFormat` now sends `_from_recurring_id` for budget entries too) (LBDS-276 / LBDS-275-class gap).
+- `pullChanges` and the merge push now advance `last_sync` monotonically through `advanceLastSyncMonotonic` / `advanceLastSyncAfterPull`: a behind client clock cannot rewind the cursor, and the pull advance anchors on the max `updated_at` actually delivered instead of the server `now()`, closing the systematic skip window (LBDS-276).
+- Tombstones no longer silently disappear when the row is in the local queue: `saveChangesToLocalDb` now distinguishes the queued operation. A queued `create` against a server-side tombstone drops the queue entry and applies the delete locally (no resurrection). A queued `delete` against the same tombstone applies the delete and drops the now-satisfied queue entry. A queued `update` against a tombstone escalates a conflict so the divergence detector and the user can resolve it (LBDS-276 class 4).
 
 ## [v0.77.0] - 2026-09-18
 
