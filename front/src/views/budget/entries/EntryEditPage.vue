@@ -171,6 +171,7 @@ import {
   IonLabel,
   IonCard,
   IonPopover,
+  toastController,
 } from '@ionic/vue';
 import { trashOutline } from 'ionicons/icons';
 import { computed, ref, onMounted, reactive, watch } from 'vue';
@@ -405,13 +406,60 @@ function handleDeleteFromPopover() {
 }
 
 async function confirmDelete() {
-  if (entryData.value.id) {
-    if (entrySyncId.value) {
-      await deleteAllAttachments();
-    }
-  }
+  // Close the confirm alert immediately so the user gets feedback that the
+  // tap registered.
   deleteConfirm.showDeleteAlert.value = false;
+
+  if (!entryData.value.id) {
+    router.back();
+    return;
+  }
+
+  let deleteSucceeded = false;
+
+  try {
+    // Fire-and-forget the attachment cleanup. The attachment delete path
+    // (useAttachments.deleteAllAttachments) currently makes synchronous
+    // HTTP calls and does NOT go through the sync queue — see LBDS-280
+    // for the architectural fix. Until that lands, we accept that the
+    // attachments may orphan on the server if the call fails, but the
+    // entry itself is gone locally and queued for sync, so the user's
+    // intent is honoured.
+    if (entrySyncId.value) {
+      void deleteAllAttachments().catch((err) => {
+        console.warn('EntryEditPage.confirmDelete: attachment cleanup failed (background)', err);
+      });
+    }
+    // Optimistic entry delete: local Dexie + sync queue enqueue (no HTTP,
+    // so no waiting on the server). Matches the pattern in RecurringEditPage
+    // and ProviderEditPage.
+    await budgetEntriesController.removeEntry({ id: entryData.value.id });
+    deleteSucceeded = true;
+  } catch (err) {
+    console.error('EntryEditPage.confirmDelete error', err);
+  }
+
+  await showDeleteToast({
+    message: deleteSucceeded ? 'Entrada eliminada' : 'No se pudo eliminar la entrada',
+    color: deleteSucceeded ? 'success' : 'danger',
+  });
+
+  // Always navigate — the user confirmed the delete; we either succeeded
+  // (entry gone, queued for sync) or hit a rare catastrophic local-Dexie
+  // failure. In both cases the confirmation dialog is dismissed and the
+  // user moves on. The fire-and-forget attachment cleanup is logged on
+  // failure but does not block the flow.
   router.back();
+}
+
+async function showDeleteToast(params: { message: string; color: 'success' | 'danger' }) {
+  const toast = await toastController.create({
+    message: params.message,
+    duration: 2500,
+    color: params.color,
+    position: 'bottom',
+  });
+  await toast.present();
 }
 
 function resolveEntryDate(entry: any): string {

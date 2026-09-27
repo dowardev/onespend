@@ -161,11 +161,33 @@ class BudgetEntriesController {
 
   async removeEntry(params: { id: string | number }) {
     const { id } = params;
-    const entry = this.getStore().entries.find((e) => String(e.id) === String(id));
+    const idStr = String(id);
+
+    // Prefer the date-filtered store (cheap, has all fields populated).
+    let entry = this.getStore().entries.find((e) => String(e.id) === idStr);
+
+    // Fallback: the entry may have been loaded directly from Dexie (deep link
+    // to /budget/entry/edit?entryId=..., opened from Historial, etc.) without
+    // going through BudgetView, so it is not in the date-filtered store. Look
+    // it up in Dexie so the delete still goes through instead of being silently
+    // skipped. Fixes LBDS-279 regression where confirmDelete() appeared to do
+    // nothing when reached from outside the BudgetView flow.
+    let syncId: string;
     if (entry) {
-      await budgetEntriesDb.delete({ syncId: entry.sync_id as string });
-      syncQueue.syncEntry({ entry, operation: 'delete' });
+      syncId = entry.sync_id as string;
+    } else {
+      const row = await budgetEntriesDb.getBySyncId({ syncId: idStr });
+      if (!row) return;
+      syncId = row.sync_id;
+      // Normalise the row through mapEntryRow so the entry shape matches what
+      // the rest of the app sees (id === sync_id, same field names), and so
+      // the sync payload produced by toApiFormat('budget_entry', entry) carries
+      // exactly the data we deleted locally.
+      entry = mapEntryRow(row) as unknown as Income;
     }
+
+    await budgetEntriesDb.delete({ syncId });
+    syncQueue.syncEntry({ entry, operation: 'delete' });
   }
 
   async removeIngreso(params: { id: string | number }) {
