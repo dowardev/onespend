@@ -1,2 +1,5 @@
 [tools]
 php = "8.4"
+
+[env]
+PHP_PREBUILT_STATIC = "true"
