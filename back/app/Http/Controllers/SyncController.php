@@ -20,6 +20,7 @@ use App\Http\Requests\Sync\SyncResolveConflictsBatchRequest;
 use App\Jobs\SyncMergeJob;
 use App\Metrics\SyncMetrics;
 use App\Models\Account;
+use App\Models\Attachment;
 use App\Models\BudgetEntry;
 use App\Models\BudgetEntryGroup;
 use App\Models\BudgetProvider;
@@ -57,6 +58,12 @@ class SyncController extends Controller
         'supplier_product' => SupplierProduct::class,
         'recurring_record' => RecurringRecord::class,
         'recurring_record_product' => RecurringRecordProduct::class,
+        // LBDS-280: routes attachment deletes through the same queue as the
+        // rest of the entities. The orchestrator already iterates an
+        // explicit entityOrder; attachment is inserted BEFORE budget_entry
+        // so an entry delete in the same drain cycle does not race the
+        // attachment tombstone.
+        'attachment' => Attachment::class,
     ];
 
     public const ENTITY_REQUEST_TYPES = [
@@ -68,6 +75,10 @@ class SyncController extends Controller
         'supplier_product' => StoreSupplierProductRequest::class,
         'recurring_record' => StoreRecurringRecordRequest::class,
         'recurring_record_product' => StoreRecurringRecordProductRequest::class,
+        // LBDS-280: no FormRequest wired because attachments only travel
+        // through the queue as deletes (sync_id only); create/update still
+        // goes through AttachmentController for the binary upload. The
+        // validator's fallback logs a warning otherwise.
     ];
 
     private SyncOrchestratorService $orchestrator;

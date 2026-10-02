@@ -300,6 +300,10 @@ export const LocalOnlyFieldRegistry: Readonly<Record<SyncEntityType, readonly st
   recurring_record_product: [],
   supplier: [],
   supplier_product: [],
+  // LBDS-280: attachments only travel through the queue as deletes today;
+  // there are no local-only fields because the push mapper mirrors the
+  // server schema 1:1 (sync_id, entity_type, mime_type, ...).
+  attachment: [],
 };
 
 // ---------- Runtime detector ----------------------------------------------

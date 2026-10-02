@@ -49,7 +49,11 @@ export interface SyncItem {
     | 'recurring_record'
     | 'recurring_record_product'
     | 'supplier'
-    | 'supplier_product';
+    | 'supplier_product'
+    // LBDS-280: attachment rows are queue-op-only and only ever travel as
+    // `delete`. Mirrored here so the typed merge of queue items accepts
+    // the new entity without a cast.
+    | 'attachment';
   operation: 'create' | 'update' | 'delete';
   data: SyncItemData;
   timestamp: number;
@@ -127,4 +131,6 @@ export type SyncEntityType =
   | 'recurring_record'
   | 'recurring_record_product'
   | 'supplier'
-  | 'supplier_product';
+  | 'supplier_product'
+  // LBDS-280: see SyncItem.entityType comment above.
+  | 'attachment';

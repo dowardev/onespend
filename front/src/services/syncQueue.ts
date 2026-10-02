@@ -71,6 +71,20 @@ async function syncRecurringRecord(params: { record: any; operation?: 'create' |
   return syncService.getQueueCount();
 }
 
+// LBDS-280: routes attachment deletes through the same queue the rest of
+// the app uses. The server's AttachmentProcessor looks up the row by
+// `sync_id`, soft-deletes it, and the postprocessDelete hook strips the
+// file from storage — no new outbox, no special-cased retry path.
+async function syncAttachment(params: { attachment: any; operation?: 'create' | 'update' | 'delete' }) {
+  const { attachment, operation = 'delete' } = params;
+  let syncId = attachment.sync_id;
+  if (!syncId) {
+    syncId = attachment.sync_id = String(attachment.id || generateSyncId());
+  }
+  await syncService.queueOperation({ id: syncId, entityType: 'attachment', operation, data: toApiFormat('attachment', attachment) ?? {} });
+  return syncService.getQueueCount();
+}
+
 export const syncQueue = {
   syncAccount,
   syncEntry,
@@ -78,4 +92,5 @@ export const syncQueue = {
   syncSupplierProduct,
   syncBudgetProvider,
   syncRecurringRecord,
+  syncAttachment,
 };

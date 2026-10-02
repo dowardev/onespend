@@ -74,6 +74,16 @@ abstract class AbstractEntityProcessor implements SyncProcessorInterface
 
     protected function postprocessUpdate(array $updated, int $userId): void {}
 
+    /**
+     * LBDS-280: hook fired after a delete batch commits. Receives the list
+     * of sync_ids that were actually tombstoned by the parent impl so
+     * processors like AttachmentProcessor can perform side-effects (e.g.
+     * remove the file from storage).
+     *
+     * @param  array<int, array{sync_id: string}>  $deleted
+     */
+    protected function postprocessDelete(array $deleted, int $userId): void {}
+
     public function canProcess(string $entityType): bool
     {
         return $entityType === $this->getEntityName();
@@ -342,6 +352,9 @@ abstract class AbstractEntityProcessor implements SyncProcessorInterface
                     ->update($deleteData);
 
                 $this->bulkUpdateSyncMetadata($existing, 'deleted', $userId);
+
+                $deletedRows = array_map(fn ($syncId) => ['sync_id' => $syncId], $existing);
+                $this->postprocessDelete($deletedRows, $userId);
             }
 
             DB::commit();

@@ -133,6 +133,24 @@ export function toApiFormat(entityType: SyncEntityType, row: Record<string, any>
         amount: row.productPrice ?? row.amount ?? 0,
         quantity: row.quantity ?? 1,
       };
+    // LBDS-280: the push mapper for an attachment delete. The server's
+    // AttachmentProcessor only requires `id` (sync_id) for the delete path;
+    // the extra fields are sent so the merge payload is self-describing if
+    // we later add a hydration path. The server strips anything that is
+    // not on Attachment::$fillable.
+    case 'attachment':
+      return {
+        sync_id: row.sync_id,
+        entity_type: row.entityType ?? row.entity_type,
+        budget_entry_sync_id: row.entityType === 'entries' ? row.entitySyncId : null,
+        budget_provider_sync_id: row.entityType === 'providers' ? row.entitySyncId : null,
+        name: row.name,
+        mime_type: row.mimeType ?? row.mime_type,
+        size: row.size,
+        download_url: row.downloadUrl ?? row.download_url,
+        version: row.version ?? 0,
+        updated_at: row.updatedAt ?? now,
+      };
     default:
       return null;
   }
@@ -275,6 +293,26 @@ export function fromApiFormat(entityType: SyncEntityType, item: Record<string, a
         name: String(item.name ?? ''),
         amount: Number(item.amount ?? 0),
       };
+    // LBDS-280: inverse mapper for pull payloads. Today the merge controller
+    // does not hydrate attachments (uploads still use AttachmentController);
+    // this case exists so the mapper whitelist does not hit the default
+    // branch and so a future pull-path can read what we wrote.
+    case 'attachment': {
+      const parentSyncId: string = String(
+        item.budget_entry_sync_id ?? item.budget_provider_sync_id ?? '',
+      );
+      const entityType: 'entries' | 'providers' =
+        item.budget_provider_sync_id ? 'providers' : 'entries';
+      return {
+        ...common,
+        entitySyncId: parentSyncId,
+        entityType,
+        name: String(item.name ?? ''),
+        mimeType: String(item.mime_type ?? ''),
+        size: Number(item.size ?? 0),
+        downloadUrl: item.download_url ?? null,
+      };
+    }
     default:
       return null;
   }
