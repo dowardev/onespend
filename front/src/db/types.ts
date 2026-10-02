@@ -171,6 +171,10 @@ export type SyncEntityType =
   | 'recurring_record_product'
   | 'supplier'
   | 'supplier_product'
+  // LBDS-280: routes attachment deletes through the same queue/retry/DLQ
+  // machinery used by every other entity. Only the `delete` operation is
+  // wired; uploads still travel through AttachmentController.
+  | 'attachment'
 
 export interface SyncQueueItem {
   id: string
@@ -245,4 +249,24 @@ export interface PendingAttachmentRow {
     data: string
   }>
   timestamp: number
+}
+
+// LBDS-280: local mirror of `attachments` for a given entity. Lets the
+// client delete attachments offline (the queue carries the operation; this
+// table is just the input the composable walks without making an HTTP call).
+// A row flagged `pendingDelete` has its `operation: 'delete'` enqueued or
+// in-flight; the composable hides it until the ack drains the queue.
+export interface AttachmentRow {
+  sync_id: string
+  serverId?: number | null
+  entitySyncId: string
+  entityType: 'entries' | 'providers'
+  name: string
+  mimeType?: string
+  size?: number
+  downloadUrl?: string
+  pendingDelete?: boolean
+  createdAt?: number
+  updatedAt?: number
+  syncedAt?: number
 }

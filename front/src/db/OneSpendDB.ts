@@ -5,6 +5,7 @@
 import Dexie, { type Table } from 'dexie'
 import type {
   AccountRow,
+  AttachmentRow,
   BudgetEntryRow,
   BudgetEntryGroupRow,
   BudgetProviderRow,
@@ -44,6 +45,7 @@ class OneSpendDB extends Dexie {
   backups!: Table<BackupRow, number>
   pendingAttachments!: Table<PendingAttachmentRow, number>
   entryCategories!: Table<EntryCategoryRow, string>
+  attachments!: Table<AttachmentRow, string>
 
   constructor() {
     super('OneSpendDB')
@@ -88,6 +90,13 @@ class OneSpendDB extends Dexie {
     })
     this.version(5).stores({
       entryCategories: 'id',
+    })
+    this.version(6).stores({
+      // LBDS-280: local mirror of attachments so useAttachments can list and
+      // queue delete operations without ever calling the HTTP layer. The
+      // indexes let the composable pull all attachments for one entity in a
+      // single `where('entitySyncId').equals(...)`.lookup().
+      attachments: 'sync_id, serverId, entitySyncId, entityType, pendingDelete',
     })
   }
 }

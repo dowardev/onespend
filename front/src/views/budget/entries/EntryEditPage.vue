@@ -418,17 +418,12 @@ async function confirmDelete() {
   let deleteSucceeded = false;
 
   try {
-    // Fire-and-forget the attachment cleanup. The attachment delete path
-    // (useAttachments.deleteAllAttachments) currently makes synchronous
-    // HTTP calls and does NOT go through the sync queue — see LBDS-280
-    // for the architectural fix. Until that lands, we accept that the
-    // attachments may orphan on the server if the call fails, but the
-    // entry itself is gone locally and queued for sync, so the user's
-    // intent is honoured.
+    // LBDS-280: the attachment delete is now a sync-queue enqueue (no HTTP),
+    // so we can await it cheaply. The queue's retry/backoff/DLQ machinery
+    // owns the server-side delete; if it fails, the entry is still gone
+    // locally and queued for sync, so the user's intent is honoured.
     if (entrySyncId.value) {
-      void deleteAllAttachments().catch((err) => {
-        console.warn('EntryEditPage.confirmDelete: attachment cleanup failed (background)', err);
-      });
+      await deleteAllAttachments();
     }
     // Optimistic entry delete: local Dexie + sync queue enqueue (no HTTP,
     // so no waiting on the server). Matches the pattern in RecurringEditPage
@@ -447,8 +442,7 @@ async function confirmDelete() {
   // Always navigate — the user confirmed the delete; we either succeeded
   // (entry gone, queued for sync) or hit a rare catastrophic local-Dexie
   // failure. In both cases the confirmation dialog is dismissed and the
-  // user moves on. The fire-and-forget attachment cleanup is logged on
-  // failure but does not block the flow.
+  // user moves on.
   router.back();
 }
 

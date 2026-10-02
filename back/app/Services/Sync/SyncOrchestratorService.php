@@ -57,6 +57,11 @@ class SyncOrchestratorService
             'supplier_product',
             'budget_provider',
             'budget_provider_product',
+            // LBDS-280: tombstones attachments BEFORE budget_entry so an
+            // entry delete in the same drain cycle never races an
+            // attachment delete. The processor's postprocessDelete hook
+            // removes the file from storage as well.
+            'attachment',
             'budget_entry',
         ];
 

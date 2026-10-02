@@ -669,6 +669,10 @@ export class SyncQueueService {
         recurring_record_product: [],
         supplier: [],
         supplier_product: [],
+        // LBDS-280: each chunk shape declares the new `attachment` slot so a
+        // delete queued by syncQueue.syncAttachment lands in the same chunk
+        // the orchestrator hands to /api/sync/merge.
+        attachment: [],
       };
       for (const { entityType, item } of chunkItems) {
         chunk[entityType].push(item);
@@ -994,6 +998,9 @@ export class SyncQueueService {
         recurring_record_product: [],
         supplier: [],
         supplier_product: [],
+        // LBDS-280: same as the chunk shape; queue drains still iterate by
+        // entity type, but an attachment delete is its own bucket.
+        attachment: [],
       };
 
       for (const item of queuedItems) {

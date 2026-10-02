@@ -10,6 +10,7 @@ use App\Repositories\SyncMetadataRepository;
 use App\Services\Sync\ConflictDetector;
 use App\Services\Sync\ForeignKeyResolver;
 use App\Services\Sync\Processors\AccountProcessor;
+use App\Services\Sync\Processors\AttachmentProcessor;
 use App\Services\Sync\Processors\BudgetEntryProcessor;
 use App\Services\Sync\Processors\BudgetProviderProcessor;
 use App\Services\Sync\Processors\BudgetProviderProductProcessor;
@@ -44,6 +45,11 @@ class SyncServiceProvider extends ServiceProvider
             $orchestrator->registerProcessor('supplier_product', $app->make(SupplierProductProcessor::class));
             $orchestrator->registerProcessor('recurring_record', $app->make(RecurringRecordProcessor::class));
             $orchestrator->registerProcessor('recurring_record_product', $app->make(RecurringRecordProductProcessor::class));
+            // LBDS-280: routes attachment deletes through the queue. The
+            // processor uses postprocessDelete to remove the file from
+            // storage while the row is tombstoned (consistent with the
+            // rest of the entity processors).
+            $orchestrator->registerProcessor('attachment', $app->make(AttachmentProcessor::class));
 
             return $orchestrator;
         });
