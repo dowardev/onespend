@@ -381,6 +381,10 @@ configure_backend() {
         cp "$example_file" ".env"
     fi
 
+    # Prevent Laravel from silently loading .env.production / .env.development
+    # instead of .env (Laravel reads .env.{APP_ENV} when present, ignoring .env).
+    rm -f .env.production .env.development
+
     local app_name app_url frontend_url
     local db_host db_port db_database db_username db_password db_connection
     local mail_mailer mail_host mail_port mail_username mail_password mail_from_address mail_encryption
