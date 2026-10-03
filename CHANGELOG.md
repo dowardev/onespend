@@ -14,6 +14,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 - The app can now tell you when its records have drifted apart from the server. A new "Diagnóstico de divergencias" action under the sync advanced options compares what is on this device with what is on the server and reports any differences (rows missing on one side, conflicting category references, recurring entries missing their schedule). A second "Reparar divergencias" action re-syncs whatever is missing on either side so two syncs in a row converge instead of churning.
 - Budget entries can now be deleted from the edit page without reappearing after the confirmation (LBDS-279).
 - Attachment deletes now go through the sync queue alongside every other change, so deleting attachments offline (or with a flaky connection) no longer fails: the delete is queued, retried with backoff, and either drains when the connection comes back or moves to the failed-items list after enough retries. The file on the server is cleaned up as part of the delete (LBDS-280).
+- Adjuntos pendientes ya no se quedan varados cuando falla el sync. Si el guardado de un registro se completa pero la subida del adjunto tropieza con un 500, un 401, una caída de red o un cierre de sesión, la subida se reintenta sola al recuperar la conexión, al volver al primer plano, o al hacer un nuevo sync — y al re-loguearse los uploads pendientes se reanudan junto con los cambios de datos (LBDS-287).
 
 ## [v0.77.0] - 2026-09-18
 
