@@ -9,6 +9,9 @@ SPDX-License-Identifier: AGPL-3.0-only
     <!-- DOM Cleanup Component (invisible) -->
     <DOMCleanupComponent />
 
+    <!-- Dev-mode footer (visible on every screen until the user dismisses it). -->
+    <DevModeBanner />
+
     <ion-split-pane when="(min-width: 992px)" content-id="main-content">
       <MainMenu
         ref="menuRef"
@@ -34,6 +37,7 @@ import { onMounted, onBeforeUnmount, ref, reactive } from 'vue';
 import { useRouter } from 'vue-router';
 import MainMenu from '@/components/MainMenu.vue';
 import DOMCleanupComponent from '@/components/DOMCleanupComponent.vue';
+import DevModeBanner from '@/components/DevModeBanner.vue';
 import { useAuthStore } from '@/stores/authStore';
 // End Imports
 
