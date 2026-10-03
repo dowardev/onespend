@@ -384,6 +384,17 @@ export class SyncQueueService {
   // que un re-login reanuda los reintentos.
   private syncBlockedByAuth = false;
 
+  // LBDS-287: processPendingAttachments() used to be a side-effect of
+  // processQueue()'s post-merge-success block, so a 500 from the merge
+  // endpoint, a lock collision, or any per-chunk error path that surfaced
+  // as a throw stranded the upload. The drain is now independent: this
+  // timer polls pendingAttachments while there is work, fires on online
+  // recovery, fires when the page becomes visible, and re-arms itself
+  // only while the table is non-empty.
+  private pendingAttachmentsRetryTimeout: ReturnType<typeof setTimeout> | null = null;
+  public static readonly PENDING_ATTACHMENTS_RETRY_MIN_MS = 5000;
+  public static readonly PENDING_ATTACHMENTS_RETRY_MAX_MS = 30000;
+
   // LBDS-244: los handlers se guardan como campos para poder quitarlos en
   // dispose(); antes cada instancia dejaba online/offline/visibilitychange
   // colgados (p. ej. una instancia nueva por test).
@@ -396,7 +407,13 @@ export class SyncQueueService {
   };
 
   private readonly onVisibilityHandler = (): void => {
-    if (!document.hidden) this.refreshOnlineStatus();
+    if (!document.hidden) {
+      this.refreshOnlineStatus();
+      // LBDS-287: a foregrounded tab is the cheapest "the user is back"
+      // signal. Re-arm the pending-attachments drain so any uploads the
+      // user queued while backgrounded drain immediately on focus.
+      void this.schedulePendingAttachmentsRetry();
+    }
   };
 
   constructor() {
@@ -431,6 +448,11 @@ export class SyncQueueService {
       clearTimeout(this.debounceTimeout);
       this.debounceTimeout = null;
     }
+    // LBDS-287: same hygiene for the pending-attachments drain timer.
+    if (this.pendingAttachmentsRetryTimeout) {
+      clearTimeout(this.pendingAttachmentsRetryTimeout);
+      this.pendingAttachmentsRetryTimeout = null;
+    }
   }
 
   /**
@@ -455,6 +477,11 @@ export class SyncQueueService {
     const wasOffline = !this._isOnline;
     this._isOnline = true;
     if (wasOffline) this.resumeInterruptedRetries();
+    // LBDS-287: coming back online is also the moment pending uploads
+    // should drain. The merge queue gets its own retry via
+    // resumeInterruptedRetries above; the attachment drain needs the same
+    // "we just got connectivity, re-check" arm.
+    void this.schedulePendingAttachmentsRetry();
     this.onlineListeners.forEach((listener) => listener(true));
   }
 
@@ -466,6 +493,13 @@ export class SyncQueueService {
     if (this.backoffRetryTimeout) {
       clearTimeout(this.backoffRetryTimeout);
       this.backoffRetryTimeout = null;
+    }
+    // LBDS-287: same self-containment for the pending-attachments drain.
+    // An armed timer whose callback would have hit an offline check is
+    // wasted work; clear it so a fresh attempt arms on the next online.
+    if (this.pendingAttachmentsRetryTimeout) {
+      clearTimeout(this.pendingAttachmentsRetryTimeout);
+      this.pendingAttachmentsRetryTimeout = null;
     }
     this.onlineListeners.forEach((listener) => listener(false));
   }
@@ -480,9 +514,12 @@ export class SyncQueueService {
     return () => this.authExpiredListeners.delete(callback);
   }
 
-  private notifyAuthExpired(): void {
+  notifyAuthExpired(): void {
     // LBDS-244: bloquea los reintentos automáticos hasta que un run vuelva a
-    // tener token válido (ver syncBlockedByAuth).
+    // tener token válido (ver syncBlockedByAuth). Public since LBDS-287 so
+    // external callers (e.g. useAttachments.saveAttachments on an inline
+    // upload 401) can mark the sync as blocked without having to wait for
+    // the next processQueue chunk to see the 401.
     this.syncBlockedByAuth = true;
     this.authExpiredListeners.forEach((listener) => listener());
   }
@@ -496,6 +533,12 @@ export class SyncQueueService {
     if (!this.syncBlockedByAuth) return;
     this.syncBlockedByAuth = false;
     void this.scheduleBackoffRetry();
+    // LBDS-287: the merge queue re-arms on auth recovery, but the
+    // attachment drain is a separate scheduler. Without this, a user
+    // who re-logs in after a 401 would see the merge queue drain but
+    // pending uploads stay parked until the next visibility / online
+    // event. Re-arm here so uploads follow the same recovery.
+    void this.schedulePendingAttachmentsRetry();
   }
 
   /**
@@ -757,6 +800,84 @@ export class SyncQueueService {
     }
   }
 
+  /**
+   * LBDS-287: re-arms the pending-attachments drain independently of
+   * `processQueue`. The drain used to be a side-effect of a successful
+   * merge (called at the end of processQueue, inside the try), so a 500
+   * from the merge endpoint, a lock collision, or any per-chunk error
+   * path that surfaced as a throw stranded the upload forever. Now the
+   * drain is its own loop: it polls the pendingAttachments table while
+   * it is non-empty and only stops once everything drained (or the
+   * online / auth gates fail closed).
+   *
+   * Self-containment, same shape as scheduleBackoffRetry:
+   *  - no-op when nothing is pending
+   *  - no-op while offline (handleOffline already cleared the timer)
+   *  - no-op while a 401 has blocked sync (avoids spamming the server
+   *    with the same upload against an expired token)
+   *  - any internal error is swallowed so its call sites cannot produce
+   *    an unhandled rejection
+   */
+  // LBDS-287: consecutive-non-empty counter for exponential backoff.
+  // Resets to 0 as soon as the scheduler observes an empty pending
+  // table. The drain itself does not change the counter — the next
+  // scheduler tick reads the table and either increments (still work)
+  // or resets (all done).
+  private pendingAttachmentsConsecutiveNonEmpty = 0;
+
+  private async schedulePendingAttachmentsRetry(): Promise<void> {
+    try {
+      if (typeof window === 'undefined') return;
+      if (!this._isOnline) return;
+      if (this.syncBlockedByAuth) return;
+      const pending = await pendingAttachmentsService.getAllPendingAttachments();
+      if (pending.length === 0) {
+        this.pendingAttachmentsConsecutiveNonEmpty = 0;
+        return;
+      }
+      this.pendingAttachmentsConsecutiveNonEmpty++;
+
+      const base = SyncQueueService.PENDING_ATTACHMENTS_RETRY_MIN_MS;
+      // LBDS-287: exponential backoff capped at MAX. First tick uses the
+      // base; each subsequent tick while pending stays non-empty doubles
+      // up to the cap. Resets to base the moment the table empties, so a
+      // one-off transient 5xx does not lock us into a slow cadence.
+      const delay = Math.min(
+        SyncQueueService.PENDING_ATTACHMENTS_RETRY_MAX_MS,
+        base * Math.pow(2, Math.max(0, this.pendingAttachmentsConsecutiveNonEmpty - 1)),
+      );
+
+      if (this.pendingAttachmentsRetryTimeout) clearTimeout(this.pendingAttachmentsRetryTimeout);
+      this.pendingAttachmentsRetryTimeout = setTimeout(() => {
+        this.pendingAttachmentsRetryTimeout = null;
+        debug('[SYNC-PQ] pending attachments retry firing');
+        this.processPendingAttachments()
+          .then(() => this.schedulePendingAttachmentsRetry())
+          .catch((error) => {
+            debug('Pending attachments retry failed:', error);
+            // Even on failure, re-arm so a transient 5xx does not strand
+            // the queue forever. The drain itself short-circuits while
+            // offline or auth-blocked.
+            void this.schedulePendingAttachmentsRetry();
+          });
+      }, delay);
+    } catch (error) {
+      debug('schedulePendingAttachmentsRetry failed:', error);
+    }
+  }
+
+  /**
+   * LBDS-287: public trigger so callers that just enqueued a pending
+   * attachment (e.g. `useAttachments.saveAttachments` after a new-entry
+   * save) can request a drain without waiting for the next processQueue
+   * or the next visibility tick. The scheduler is self-containing: if
+   * there is nothing pending, or we are offline / auth-blocked, it is
+   * a no-op.
+   */
+  runPendingAttachmentsDrain(): void {
+    void this.schedulePendingAttachmentsRetry();
+  }
+
   private async updateLocalRecordsWithMysqlIds(
     results: Record<string, Record<string, Array<{ sync_id: string; id?: number | null }>>>,
   ): Promise<void> {
@@ -855,28 +976,62 @@ export class SyncQueueService {
     }
   }
 
+  // LBDS-287: processPendingAttachments() is now reachable from four
+  // triggers (processQueue finally, the self-rearming scheduler, the
+  // saveAttachments public drain, and handleOnline/visibilitychange).
+  // Without a guard, two triggers firing while the previous drain is
+  // still in flight (e.g. the upload took >5s and the scheduler's timer
+  // fired concurrently) both read the same pending rows, both call the
+  // upload endpoint, and the server ends up with two rows per file —
+  // a sync_id-distinct duplicate that the mobile then mirrors as a
+  // double attachment. The in-flight flag serialises the calls: the
+  // second one exits, the scheduler re-arms on its own .then if there
+  // is still pending, and any rows the first drain did not get to
+  // (because they were added while it was running) are picked up
+  // there.
+  private pendingDrainInFlight = false;
+
   private async processPendingAttachments() {
+    if (this.pendingDrainInFlight) {
+      debug('[SYNC-PQ] pending attachments drain already in flight — skipping concurrent call');
+      return;
+    }
+    // LBDS-287: a 401 from the merge sets syncBlockedByAuth and the
+    // processQueue finally block still calls this drain. Without this
+    // guard the drain would attempt uploads with the dead token, fail,
+    // and the scheduler would re-arm every backoff tick forever. The
+    // merge queue's scheduleBackoffRetry honours the flag; the
+    // attachment drain must too.
+    if (this.syncBlockedByAuth) {
+      debug('[SYNC-PQ] drain skipped: auth blocked');
+      return;
+    }
     if (!this._isOnline) return;
 
-    const pending = await pendingAttachmentsService.getAllPendingAttachments();
+    this.pendingDrainInFlight = true;
+    try {
+      const pending = await pendingAttachmentsService.getAllPendingAttachments();
 
-    for (const attachment of pending) {
-      try {
-        const files = attachment.files.map((f) =>
-          pendingAttachmentsService.base64ToFile(f.data, f.name, f.type),
-        );
-        const uploadFn = attachment.entityType === 'providers'
-          ? attachmentService.uploadProviderAttachments
-          : attachmentService.uploadAttachments;
-        await uploadFn(attachment.entitySyncId, files);
-        await pendingAttachmentsService.removePendingAttachment(attachment.entitySyncId, attachment.entityType);
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        const notFoundMsg = attachment.entityType === 'providers' ? 'Provider not found' : 'Entry not found';
-        if (errorMessage.includes(notFoundMsg)) {
+      for (const attachment of pending) {
+        try {
+          const files = attachment.files.map((f) =>
+            pendingAttachmentsService.base64ToFile(f.data, f.name, f.type),
+          );
+          const uploadFn = attachment.entityType === 'providers'
+            ? attachmentService.uploadProviderAttachments
+            : attachmentService.uploadAttachments;
+          await uploadFn(attachment.entitySyncId, files);
           await pendingAttachmentsService.removePendingAttachment(attachment.entitySyncId, attachment.entityType);
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          const notFoundMsg = attachment.entityType === 'providers' ? 'Provider not found' : 'Entry not found';
+          if (errorMessage.includes(notFoundMsg)) {
+            await pendingAttachmentsService.removePendingAttachment(attachment.entitySyncId, attachment.entityType);
+          }
         }
       }
+    } finally {
+      this.pendingDrainInFlight = false;
     }
   }
 
@@ -926,6 +1081,13 @@ export class SyncQueueService {
     const zombieIds: string[] = [];
     const zombieEntries: DeadLetterItem[] = [];
     const queuedItems: SyncItem[] = [];
+
+    // LBDS-287: el drain de attachments corre en el finally (ver más abajo),
+    // sin condicionarse al éxito del merge. Para eso el catch ya no relanza
+    // y el return final del try se acumula acá, así podemos limpiar y
+    // drenar antes de propagar el resultado o el error al caller.
+    let pendingError: unknown = null;
+    let pendingResult: SyncResult | null = null;
 
     try {
       const queue = await this.getQueue();
@@ -1205,8 +1367,6 @@ export class SyncQueueService {
         }
       }
 
-      await this.processPendingAttachments();
-
       const remainingCount = await syncQueueDb.count();
       debug('[SYNC-PQ] done. allChunksSucceeded:', allChunksSucceeded, 'remainingQueue:', remainingCount, 'finalResult:', finalResult ? 'ok' : 'null');
 
@@ -1214,15 +1374,37 @@ export class SyncQueueService {
       // reanudar los reintentos automáticos.
       this.syncBlockedByAuth = false;
 
-      return finalResult || null;
+      pendingResult = finalResult || null;
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Unknown error';
       await this.applyBackoffToIds(queuedItems.map((i) => i.id), msg, false, reportIssue);
-      throw error;
+      // LBDS-287: el drain corre en el finally de todos modos; guardamos
+      // el error para re-lanzarlo DESPUÉS de que el drain haya intentado
+      // subir archivos pendientes.
+      pendingError = error;
     } finally {
       debug('[SYNC-PQ] lock released');
       syncLockService.release();
+      // LBDS-287: el drain ya no es un side-effect de un merge exitoso. La
+      // llamada anterior vivía dentro del try, así que cualquier throw
+      // del loop del merge (HTTP 500, colisión de lock, 503 per-chunk)
+      // saltaba processPendingAttachments y dejaba el upload huérfano
+      // para siempre. Ahora corre DESPUÉS de soltar el lock, sin
+      // condicionarse al éxito del merge: si el merge falló, la entry
+      // drena por su propio retry path y el upload la sigue cuando la
+      // entidad ya existe en el servidor. El drain es self-containing
+      // (offline / auth-bloqueado son no-ops) y el scheduler se re-arma
+      // en línea, visibilidad y post-merge.
+      try {
+        await this.processPendingAttachments();
+      } catch (drainError) {
+        debug('[SYNC-PQ] processPendingAttachments failed in processQueue:', drainError);
+      }
+      void this.schedulePendingAttachmentsRetry();
     }
+
+    if (pendingError) throw pendingError;
+    return pendingResult;
   }
 
   private async bulkDeleteByEntityType(entityType: string, syncIds: string[]): Promise<void> {

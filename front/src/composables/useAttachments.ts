@@ -9,6 +9,7 @@ import pendingAttachmentsService, {
 } from '@/services/pendingAttachmentsService';
 import attachmentsDb from '@/db/controllers/attachmentsDb';
 import { syncQueue } from '@/services/syncQueue';
+import { syncQueueService } from '@/services/sync/SyncQueueService';
 
 /**
  * LBDS-280: the two server reads that used to live in `deleteAllAttachments`
@@ -164,11 +165,27 @@ export function useAttachments(params: {
           }
         } catch (error) {
           console.error('Failed to upload, saving to pending:', error);
+          // LBDS-287: a 401 from the inline upload means the token is
+          // dead. Without this, the row is parked in pendingAttachments
+          // and the scheduler retries every backoff tick against a
+          // token the server keeps rejecting. Mirror the merge-queue
+          // behaviour: notify the sync service so the scheduler
+          // short-circuits until resumeRetriesAfterAuthRecovery clears
+          // the flag on the next successful response.
+          if (error instanceof Error && /401|Authentication/i.test(error.message)) {
+            syncQueueService.notifyAuthExpired();
+          }
           await pendingAttachmentsService.addPendingAttachment(
             syncId.value,
             pendingAttachments.value,
             entityType,
           );
+          // LBDS-287: the in-line upload threw (e.g. parent entry not
+          // synced yet, server 503, network drop). The drain was the
+          // side-effect of a successful merge; now it runs independently
+          // of the merge outcome, so request an immediate re-check
+          // instead of waiting for the next sync / visibility tick.
+          syncQueueService.runPendingAttachmentsDrain();
         }
       } else {
         await pendingAttachmentsService.addPendingAttachment(
@@ -176,6 +193,12 @@ export function useAttachments(params: {
           pendingAttachments.value,
           entityType,
         );
+        // LBDS-287: new-entry saves always go to the pending store, and
+        // for new entries the parent row is on the queue — not yet on
+        // the server. Trigger the drain so the upload is picked up as
+        // soon as the parent lands, with no need to wait for a fresh
+        // sync tap.
+        syncQueueService.runPendingAttachmentsDrain();
       }
     }
 
