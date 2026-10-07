@@ -176,6 +176,11 @@ let the user override it from the menu. An empty `VITE_API_URL` is
 also valid — it produces an empty placeholder, and the user must
 paste a URL before sync can start.
 
+The default UI language (Spanish) and the user-facing language
+selector (Menu → Idioma) are not driven by an env var on purpose;
+see [Languages (i18n)](#4-languages-i18n) below for how to add a
+locale or change the default.
+
 ### 2. Build for Production
 
 ```bash
@@ -195,6 +200,48 @@ Upload `front/dist/` to the hosting public directory:
 Android APK/AAB builds are documented in [front/ANDROID.md](front/ANDROID.md).
 They are produced from the terminal with Gradle and Capacitor — no Android
 Studio required.
+
+### 4. Languages (i18n)
+
+The UI is wrapped for **Spanish** (default) and **English** via
+`vue-i18n` 9. The locale files live at `front/src/locales/{es,en}.json`
+and the configuration is `front/src/i18n.ts`. The user can switch the
+active language from **Menu → Idioma** in the side menu; the choice is
+persisted in `configDb` and rehydrated before the first paint, so a
+reload lands on the user's preferred language. The financial glossary
+popover and the income-statement section labels follow the active
+locale as well.
+
+**System locale fallback** (first install / no user override yet): the
+app calls `detectSystemLocale()` in `front/src/i18n.ts` on the very
+first launch, which reads `navigator.language` and returns `es` if
+the browser/device reports any `es-*` locale, `en` otherwise
+(F-Droid reviewer's policy: Spanish native speakers keep Spanish,
+everyone else gets English). The detected value is then persisted in
+`configDb` the same way an explicit user choice is, so subsequent
+launches use the persisted value and `navigator.language` is no
+longer consulted unless the user clears the override. There is no
+env var to disable this detection — the fallback is part of the
+product behaviour, not a deploy switch.
+
+To add a third locale (e.g. Portuguese):
+
+1. Create `front/src/locales/pt.json` with the same key tree as
+   `es.json` (English fallback covers any missing key via
+   `fallbackLocale` in `i18n.ts`).
+2. Register the locale in `front/src/locales/index.ts` and in
+   `front/src/i18n.ts` (`messages`, `availableLocales`, and the
+   `resolveInitialLocale` switch if you want a non-Spanish default).
+3. Add the `Idioma` / `Português` entry in `MainMenu.vue` so the user
+   can pick it from the side menu.
+4. Regenerate `en.json` / `pt.json` translations with `lingo.dev run`
+   (see `front/i18n.json` and the `LINGO_API_KEY` env var) so the
+   per-locale strings stay in sync.
+
+The default locale (currently Spanish) is set by `defaultLocale` in
+`front/src/i18n.ts`. For an English-first audience, change it to `'en'`
+and rebuild — no env var is read for this on purpose so the choice is
+explicit in the source.
 
 ---
 
