@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.78.0] - 2026-10-06
+
 ### Added
 - Sync page: a "Diagnóstico de divergencias" action runs the new `SyncDivergenceDetector`, reports drift per entity type (rows missing on server / missing locally, version drift, fields that would be dropped by a pull, dangling category ids, unapplied server tombstones), and exposes the full report through `window.__devDb.detectDivergence()` for scripted use. A second "Reparar divergencias" action requeues the local rows that never reached the server and triggers a pull to converge (LBDS-276).
 - Detector module `front/src/services/sync/SyncDivergenceDetector.ts` with a pure `compareEntitySets` core driven by synthetic arrays, a small Dexie/HTTP wrapper, and a `LocalOnlyFieldRegistry` that lists fields the front holds but the server cannot reproduce (so `pull-droppable fields` can be computed).

@@ -8,6 +8,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 ## [Unreleased]
 
+## [v0.78.0] - 2026-10-06
+
 ### Added
 
 - Sync is now opt-in and the server URL is overridable from a new **Ajustes → Conexiones** screen. The bundled URL only seeds the placeholder; users on self-hosted instances no longer need a custom build to point at their own server (LBDS-289).
