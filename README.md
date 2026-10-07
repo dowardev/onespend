@@ -22,9 +22,10 @@ Multi-platform personal expense management app.
 - **Framework:** Ionic 8 + Vue 3 (Composition API)
 - **State:** Pinia
 - **Charts:** Chart.js + vue-chartjs
+- **i18n:** `vue-i18n` 9 with `es` + `en` locale files; a language selector in the side menu lets the user switch at runtime
 - **Offline-first:** Sync engine with conflict resolution
 - **Build:** Vite 5
-- **Tests:** Vitest (unit), Cypress (e2e)
+- **Tests:** Vitest (unit), Playwright (e2e + i18n audit)
 
 ### Backend (`back/`)
 
@@ -104,6 +105,27 @@ rebuilding the APK / web bundle. Sync is opt-in: the app does not make
 any HTTP request to the bundled URL until the user explicitly enables
 it. This lets a single build serve users who self-host, users who use
 the author server, and users who do not sync at all.
+
+### Languages
+
+The UI is wrapped for **Spanish** (default) and **English**. A language
+selector sits in the side menu (`Menu → Idioma`); the choice is
+persisted in `configDb` and rehydrated before the first paint, so
+reloads land on the user's preferred language. The financial glossary
+popover and the income-statement section labels follow the active
+language as well. Adding a third locale is a matter of dropping a new
+JSON file under `front/src/locales/` and registering it in
+`front/src/i18n.ts`.
+
+**System locale fallback** (`detectSystemLocale()` in
+`front/src/i18n.ts`): on the very first launch — when the user has
+not yet picked a language and `configDb` has no override — the app
+reads `navigator.language` and resolves `es-*` to Spanish, anything
+else to English (F-Droid reviewer's policy: Spanish native speakers
+keep Spanish, everyone else gets English). The detected value is then
+persisted the same way an explicit user choice is, so subsequent
+launches use the persisted value and the browser language is no
+longer consulted unless the user clears the override.
 
 ## License
 
