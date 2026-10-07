@@ -89,15 +89,15 @@ SPDX-License-Identifier: AGPL-3.0-only
       <!-- alerts -->
       <ion-alert
         :is-open="showClearConfirm"
-        header="Vaciar día"
-        message="¿Deseas eliminar todos los registros de la fecha seleccionada?"
+        :header="t('budget.budgetview.clearDayHeader')"
+        :message="t('budget.budgetview.clearDayMessage')"
         :buttons="[
           {
-            text: 'Cancelar',
+            text: t('common.cancel'),
             role: 'cancel',
             handler: () => (showClearConfirm = false),
           },
-          { text: 'Vaciar', cssClass: 'danger', handler: performClearDay },
+          { text: t('budget.budgetview.clearDayConfirm'), cssClass: 'danger', handler: performClearDay },
         ]"
         @did-dismiss="showClearConfirm = false"
       ></ion-alert>
@@ -135,6 +135,7 @@ import {
   timeOutline,
 } from 'ionicons/icons';
 import { computed, ref } from 'vue';
+import { useLocale } from '@/composables/useLocale';
 import { format, addDays } from 'date-fns';
 import { es as esLocale } from 'date-fns/locale';
 import { parseLocalDate, formatLocalDate } from '@/utils/date';
@@ -161,6 +162,7 @@ import pendingAttachmentsService from '@/services/pendingAttachmentsService';
 import { dataMediator } from '@/services/dataMediator';
 import { SyncController } from '@/controllers/syncController';
 const syncController = SyncController;
+const { t } = useLocale();
 // end controllers
 
 // components
@@ -369,7 +371,7 @@ async function generateRandomData() {
       accountIds = await getRandomAccountIds();
       if (accountIds.length === 0) {
         const toast = await toastController.create({
-          message: 'Error creando cuentas automáticamente',
+          message: t('budget.budgetview.message'),
           duration: 3000,
           position: 'bottom',
           color: 'danger',

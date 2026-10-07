@@ -7,7 +7,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <template>
   <ion-alert
     :is-open="isOpen"
-    header="Confirmar eliminación"
+    :header="t('budget.components.deleteconfirmalert.text')"
     :message="message"
     :buttons="buttons"
     @did-dismiss="$emit('didDismiss')"
@@ -16,7 +16,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { IonAlert } from '@ionic/vue';
+import { useLocale } from '@/composables/useLocale';
 
+
+const { t } = useLocale();
 defineProps<{
   isOpen: boolean;
   message: string;

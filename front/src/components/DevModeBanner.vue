@@ -17,7 +17,7 @@ SPDX-License-Identifier: AGPL-3.0-only
     <button
       type="button"
       class="dev-footer__close"
-      aria-label="Cerrar banner"
+      :aria-label="t('devmodebanner.text')"
       data-testid="dev-banner-close"
       @click="dismiss"
     >
@@ -30,7 +30,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch,  } from 'vue';
+import { useLocale } from '@/composables/useLocale';
 import { IonIcon } from '@ionic/vue';
 import { closeOutline } from 'ionicons/icons';
 // Version is read from the CHANGELOG.md (canonical release artifact),
@@ -38,6 +39,8 @@ import { closeOutline } from 'ionicons/icons';
 // version header (`## [vX.Y.Z] - YYYY-MM-DD`).
 import changelogRaw from '../../CHANGELOG.md?raw';
 
+
+const { t } = useLocale();
 const DISMISS_KEY = 'onespend:dev-banner-dismissed-for';
 
 // The footer only dismisses for the version the user closed it on. Any
@@ -74,9 +77,9 @@ function syncShow(): void {
 
 const label = computed(() => {
   const v = currentVersion.value;
-  if (!v) return 'OneSpend en desarrollo activo';
-  if (isMajorAtLeast(v, 1)) return `OneSpend v${v} estable`;
-  return `OneSpend en desarrollo activo · v${v}`;
+  if (!v) return t('devmodebanner.unknownVersion');
+  if (isMajorAtLeast(v, 1)) return t('devmodebanner.stable', { version: v });
+  return t('devmodebanner.development', { version: v });
 });
 
 function dismiss(): void {

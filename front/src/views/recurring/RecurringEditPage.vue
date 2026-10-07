@@ -37,30 +37,30 @@ SPDX-License-Identifier: AGPL-3.0-only
             <!-- Section 1: Information -->
             <ion-list>
               <ion-list-header>
-                <ion-label>Información</ion-label>
+                <ion-label>{{ t('recurring.edit.section.info') }}</ion-label>
               </ion-list-header>
 
               <ion-card class="shadow1">
                 <ion-item lines="full" class="transparent">
                   <ion-input
                     v-model="formData.name"
-                    label="Nombre"
+                    :label="t('recurring.edit.field.name')"
                     label-placement="floating"
-                    placeholder="Nombre del registro"
+                    :placeholder="t('recurring.edit.field.namePlaceholder')"
                   />
                 </ion-item>
                 <ion-note v-if="v$.name.$error" color="danger" class="validation-error">
-                  El nombre es obligatorio
+{{ t("recurring.edit.validation.nameRequired") }}
                 </ion-note>
 
                 <ion-item lines="full" class="transparent">
                   <ion-select
                     v-model="formData.type"
                     interface="popover"
-                    label="Tipo"
+                    :label="t('recurring.edit.field.type')"
                     label-placement="stacked"
                   >
-                    <ion-select-option value="cargo">Cargo</ion-select-option>
+                    <ion-select-option value="cargo">{{ t("recurring.edit.type.cargo") }}</ion-select-option>
                     <ion-select-option value="provedor">Proveedor</ion-select-option>
                   </ion-select>
                 </ion-item>
@@ -69,10 +69,10 @@ SPDX-License-Identifier: AGPL-3.0-only
                   <ion-select
                     v-model="formData.entryType"
                     interface="popover"
-                    label="Tipo de entrada"
+                    :label="t('recurring.edit.field.entryType')"
                     label-placement="stacked"
                   >
-                    <ion-select-option value="ingreso">Ingreso</ion-select-option>
+                    <ion-select-option value="ingreso">{{ t("recurring.edit.entryType.income") }}</ion-select-option>
                     <ion-select-option value="egreso">Egreso</ion-select-option>
                   </ion-select>
                 </ion-item>
@@ -87,7 +87,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                   <ion-label class="truncate">
                     Proveedor
                     <p class="truncate">
-                      {{ selectedSupplierName || 'Seleccionar proveedor' }}
+                      {{ selectedSupplierName || t('common.selectProvider') }}
                     </p>
                   </ion-label>
                 </ion-item>
@@ -100,7 +100,7 @@ SPDX-License-Identifier: AGPL-3.0-only
               <div>
                 <AccountDistributionPicker
                   :items="cargoItems"
-                  header-label="Distribución por Cuenta"
+                  :header-label="t('recurring.edit.distribution.header')"
                   :can-add-more="true"
                   @add-item="handleAddCargoItem"
                   @remove-item="removeCargoItem"
@@ -114,30 +114,30 @@ SPDX-License-Identifier: AGPL-3.0-only
             <!-- Section 3: Concurrencia/fecha/etc -->
             <ion-list>
               <ion-list-header>
-                <ion-label>Fecha</ion-label>
+                <ion-label>{{ t("recurring.edit.section.date") }}</ion-label>
               </ion-list-header>
               <ion-card class="shadow1">
                 <ion-item lines="full" class="transparent">
                   <ion-select
                     v-model="formData.repeatFrequency"
                     interface="popover"
-                    label="Frecuencia"
+                    :label="t('recurring.edit.field.frequency')"
                     label-placement="stacked"
                   >
-                    <ion-select-option value="day">Día</ion-select-option>
-                    <ion-select-option value="week">Semana</ion-select-option>
-                    <ion-select-option value="month">Mes</ion-select-option>
-                    <ion-select-option value="year">Año</ion-select-option>
+                    <ion-select-option value="day">{{ t("recurring.edit.frequency.day") }}</ion-select-option>
+                    <ion-select-option value="week">{{ t("recurring.edit.frequency.week") }}</ion-select-option>
+                    <ion-select-option value="month">{{ t("recurring.edit.frequency.month") }}</ion-select-option>
+                    <ion-select-option value="year">{{ t("recurring.edit.frequency.year") }}</ion-select-option>
                   </ion-select>
                 </ion-item>
                 <ion-note v-if="v$.repeatFrequency.$error" color="danger" class="validation-error">
-                  La frecuencia es obligatoria
+{{ t("recurring.edit.validation.frequencyRequired") }}
                 </ion-note>
 
                 <ion-item lines="full" class="transparent">
                   <ion-input
                     v-model="formData.repeatInterval"
-                    label="Cada"
+                    :label="t('recurring.edit.field.every')"
                     label-placement="floating"
                     type="number"
                     placeholder="1"
@@ -167,7 +167,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                 <template v-if="formData.repeatFrequency === 'month'">
                   <ion-item lines="full" class="transparent">
                     <ion-toggle v-model="formData.repeatMonthWeekdayMode" label-placement="start">
-                      {{ formData.repeatMonthWeekdayMode ? 'Día de semana' : 'Día fijo' }}
+                      {{ formData.repeatMonthWeekdayMode ? t('recurring.edit.frequency.weekdayMode') : t('recurring.edit.frequency.fixedDayMode') }}
                     </ion-toggle>
                   </ion-item>
 
@@ -178,7 +178,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                   >
                     <ion-input
                       v-model="formData.repeatMonthDay"
-                      label="Día del mes"
+                      :label="t('recurring.edit.field.dayOfMonth')"
                       label-placement="floating"
                       type="number"
                       placeholder="1"
@@ -209,7 +209,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                       <ion-select
                         v-model="formData.repeatMonthWeekday"
                         interface="popover"
-                        label="Día de la semana"
+                        :label="t('recurring.edit.field.dayOfWeek')"
                         label-placement="stacked"
                       >
                         <ion-select-option
@@ -242,7 +242,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                   <ion-item lines="full" class="transparent">
                     <ion-input
                       v-model="formData.repeatYearDay"
-                      label="Día"
+                      :label="t('recurring.edit.field.day')"
                       label-placement="floating"
                       type="number"
                       placeholder="1"
@@ -260,7 +260,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                   button
                   @click="startDatePicker.openPopover({ e: $event })"
                 >
-                  <ion-label>Fecha de inicio</ion-label>
+                  <ion-label>{{ t("recurring.edit.field.startDate") }}</ion-label>
                   <ion-label slot="end">{{
                     toShortDate({ isoDate: startDatePicker.dateISO.value })
                   }}</ion-label>
@@ -275,7 +275,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                   button
                   @click="endDatePicker.openPopover({ e: $event })"
                 >
-                  <ion-label>Fecha de fin (opcional)</ion-label>
+                  <ion-label>{{ t("recurring.edit.field.endDate") }}</ion-label>
                   <ion-label slot="end">{{
                     toShortDate({ isoDate: endDatePicker.dateISO.value })
                   }}</ion-label>
@@ -283,7 +283,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
                 <ion-item lines="none" class="transparent">
                   <ion-toggle v-model="formData.autoInsert" label-placement="start">
-                    Auto-insertar
+{{ t("recurring.edit.field.autoInsert") }}
                   </ion-toggle>
                 </ion-item>
 
@@ -305,7 +305,7 @@ SPDX-License-Identifier: AGPL-3.0-only
             <template v-if="isProvedor">
               <ion-list>
                 <ion-list-header>
-                  <ion-label>Productos</ion-label>
+                  <ion-label>{{ t("recurring.edit.section.products") }}</ion-label>
                   <ion-button @click="addTemporaryProduct()">
                     <ion-icon slot="start" :icon="addOutline" />
                   </ion-button>
@@ -319,7 +319,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                     class="transparent"
                   >
                     <ion-input
-                      placeholder="Nombre"
+                      :placeholder="t('recurring.edit.distribution.itemNamePlaceholder')"
                       :value="product.productName"
                       style="flex: 1; --padding-start: 0"
                       @ion-input="
@@ -333,7 +333,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
                     <ion-input
                       type="number"
-                      placeholder="Precio"
+                      :placeholder="t('recurring.edit.distribution.itemPricePlaceholder')"
                       :value="product.productPrice || ''"
                       class="input-fluid"
                       style="--input-width: 90px; text-align: end"
@@ -348,7 +348,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
                     <ion-input
                       type="number"
-                      placeholder="Cant"
+                      :placeholder="t('recurring.edit.distribution.itemQtyPlaceholder')"
                       :value="product.quantity || ''"
                       class="input-fluid"
                       style="--input-width: 65px; text-align: end"
@@ -381,7 +381,7 @@ SPDX-License-Identifier: AGPL-3.0-only
               <div>
                 <AccountDistributionPicker
                   :items="formData.items"
-                  header-label="Distribución por Cuenta"
+                  :header-label="t('recurring.edit.distribution.header')"
                   :can-add-more="true"
                   @add-item="handleAddItem"
                   @remove-item="removeItem"
@@ -395,7 +395,7 @@ SPDX-License-Identifier: AGPL-3.0-only
             <!-- Section 7: Mas detalles -->
             <ion-list>
               <ion-list-header>
-                <ion-label>Mas detalles</ion-label>
+                <ion-label>{{ t("recurring.edit.section.details") }}</ion-label>
               </ion-list-header>
               <ion-card class="shadow1">
                 <ion-item lines="none" class="transparent">
@@ -403,7 +403,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                     v-model="formData.notes"
                     label="Notas"
                     label-placement="stacked"
-                    placeholder="Agregar notas..."
+                    :placeholder="t('recurring.edit.field.notesPlaceholder')"
                     :auto-grow="true"
                     :rows="3"
                   />
@@ -426,7 +426,7 @@ SPDX-License-Identifier: AGPL-3.0-only
               <ion-icon :icon="closeOutline" />
             </ion-button>
           </ion-buttons>
-          <ion-title>Seleccionar Proveedor</ion-title>
+          <ion-title>{{ t("recurring.edit.title.selectSupplier") }}</ion-title>
           <ion-buttons slot="end">
             <ion-button @click="showCreateSupplierView = true">
               <ion-icon :icon="addOutline" />
@@ -439,7 +439,7 @@ SPDX-License-Identifier: AGPL-3.0-only
               <ion-icon :icon="arrowBackOutline" />
             </ion-button>
           </ion-buttons>
-          <ion-title>Crear Proveedor</ion-title>
+          <ion-title>{{ t("recurring.edit.title.createSupplier") }}</ion-title>
           <ion-buttons slot="end">
             <ion-button @click="onCreateSupplier">
               <ion-icon :icon="saveOutline" />
@@ -451,7 +451,7 @@ SPDX-License-Identifier: AGPL-3.0-only
             <ion-searchbar
               v-model="supplierSearchQuery"
               mode="ios"
-              placeholder="Buscar proveedor"
+              :placeholder="t('recurring.edit.field.searchSupplierPlaceholder')"
               class="ion-no-padding"
             />
           </div>
@@ -462,7 +462,7 @@ SPDX-License-Identifier: AGPL-3.0-only
         <template v-if="!showCreateSupplierView">
           <ion-list class="transparent ion-padding-start ion-padding-end">
             <ion-list-header>
-              <ion-label>Proveedores</ion-label>
+              <ion-label>{{ t("recurring.edit.section.suppliers") }}</ion-label>
             </ion-list-header>
             <ion-card class="shadow1">
               <ion-item
@@ -549,7 +549,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                 :color="recordStatus === 'active' ? 'warning' : 'success'"
                 :icon="recordStatus === 'active' ? pauseOutline : playOutline"
               />
-              <ion-label>{{ recordStatus === 'active' ? 'Pausar' : 'Reanudar' }}</ion-label>
+              <ion-label>{{ recordStatus === 'active' ? t('recurring.action.pause') : t('recurring.action.resume') }}</ion-label>
             </ion-item>
 
         <ion-item lines="full" button @click="handleDeleteFromPopover">
@@ -602,6 +602,7 @@ import {
   IonSearchbar,
   IonNote,
 } from '@ionic/vue';
+import { useLocale } from '@/composables/useLocale';
 import {
   addOutline,
   trashOutline,
@@ -661,6 +662,7 @@ interface OrdinalOption {
 
 // router
 const router = useRouter();
+const { t } = useLocale();
 const route = useRoute();
 // end router
 
@@ -803,9 +805,9 @@ const syncRecurringRecord = syncQueue.syncRecurringRecord;
 // computed
 const pageTitle = computed(() => {
   if (isEditing.value) {
-    return formData.value.type === 'cargo' ? 'Editar Cargo' : 'Editar Proveedor';
+    return t(formData.value.type === 'cargo' ? 'recurring.edit.title.editCharge' : 'recurring.edit.title.editSupplier');
   }
-  return formData.value.type === 'cargo' ? 'Nuevo Cargo' : 'Nuevo Proveedor';
+  return t(formData.value.type === 'cargo' ? 'recurring.edit.title.newCharge' : 'recurring.edit.title.newSupplier');
 });
 
 const isCargo = computed(() => formData.value.type === 'cargo');
@@ -917,7 +919,7 @@ function loadRecord(params: { recurringId: string }) {
       popoverMenu.open = false;
       const { toastController } = await import('@ionic/vue');
       const toast = await toastController.create({
-        message: recordStatus.value === 'active' ? 'Cargo reanudado' : 'Cargo pausado',
+        message: recordStatus.value === 'active' ? t('recurring.edit.toast.resumed') : t('recurring.edit.toast.paused'),
         duration: 2000,
         color: recordStatus.value === 'active' ? 'success' : 'warning',
         position: 'bottom',
@@ -1143,7 +1145,7 @@ async function onSupplierFormSaved(payload: SupplierFormPayload) {
     }
 
     const successToast = await toastController.create({
-      message: 'Proveedor creado',
+      message: t('recurring.edit.toast.supplierCreated'),
       duration: 1500,
       color: 'success',
       position: 'bottom',
@@ -1156,7 +1158,7 @@ async function onSupplierFormSaved(payload: SupplierFormPayload) {
     console.error('[RecurringEditPage] onSupplierFormSaved error', err);
     const { toastController } = await import('@ionic/vue');
     const errorToast = await toastController.create({
-      message: 'Error al crear proveedor',
+      message: t('recurring.edit.error.createSupplier'),
       duration: 2000,
       color: 'danger',
       position: 'bottom',

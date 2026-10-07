@@ -12,18 +12,18 @@ SPDX-License-Identifier: AGPL-3.0-only
         <!-- Date navigation -->
         <ion-item lines="none" class="transparent">
           <ion-buttons slot="end">
-            <ion-button title="Retroceder" @click="goBack">
+            <ion-button :title="t('budget.entries.inicioviewcomponent.button1')" @click="goBack">
               <ion-icon :icon="chevronBackOutline"></ion-icon>
             </ion-button>
 
             <ion-button
-              title="Seleccionar fecha"
+              :title="t('budget.entries.inicioviewcomponent.text')"
               @click="openDatePicker({ event: $event })"
             >
               {{ formattedSelectedDate }}
             </ion-button>
 
-            <ion-button title="Avanzar" @click="goForward">
+            <ion-button :title="t('budget.entries.inicioviewcomponent.button2')" @click="goForward">
               <ion-icon :icon="chevronForwardOutline"></ion-icon>
             </ion-button>
           </ion-buttons>
@@ -48,7 +48,7 @@ SPDX-License-Identifier: AGPL-3.0-only
       <ion-col size="12" size-lg="6" class="registro-col">
         <ion-list class="transparent">
           <ion-list-header>
-            <ion-label>Registro</ion-label>
+            <ion-label>{{ t('budget.entries.inicioviewcomponent.label') }}</ion-label>
 
             <ion-button id="add-btn">
               <ion-icon :icon="addOutline"></ion-icon>
@@ -62,12 +62,12 @@ SPDX-License-Identifier: AGPL-3.0-only
             >
               <span class="legend-item">
                 <span class="legend-color success"></span>
-                Ingreso
+                {{ t("budget.entryType.income") }}
               </span>
 
               <span class="legend-item">
                 <span class="legend-color danger"></span>
-                Egreso
+                {{ t("budget.entryType.expense") }}
               </span>
             </div>
 
@@ -98,7 +98,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                         {{ getUnifiedEntryInfo(block.item).name }}:
                         {{ formatCurrency({ value: getUnifiedAccountRemaining(block.item) }) }}
                       </p>
-                      <p v-else>Egreso</p>
+                      <p v-else>{{ t("budget.entryType.expense") }}</p>
                     </ion-label>
                   </ion-item>
                 </template>
@@ -154,6 +154,7 @@ import {
   IonPopover,
   IonContent,
 } from '@ionic/vue';
+import { useLocale } from '@/composables/useLocale';
 import {
   addOutline,
   chevronBackOutline,
@@ -193,6 +194,7 @@ interface UnifiedItem {
 
 // router
 const router = useRouter();
+const { t } = useLocale();
 // end router
 
 // emits

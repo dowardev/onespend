@@ -142,7 +142,7 @@ Configurar en **GitLab → Settings → CI/CD → Variables**. Marcadas **Protec
 | `SSH_USER` | normal | todos | Usuario SSH |
 | `DEPLOY_PATH` | normal | todos | Ruta absoluta del deploy en el server |
 | `APP_KEY` | masked + protected | Laravel | `php artisan key:generate --show` |
-| `VITE_API_URL` | normal | frontends Ionic | URL del backend para el build |
+| `VITE_API_URL` | normal | frontends Ionic | URL del backend para el build (placeholder en Ajustes → Conexiones, el usuario puede sobreescribirla desde la app sin rebuild) |
 | `VITE_SKIP_WAYFINDER` | normal | landing | `"1"` para saltar el plugin Wayfinder en CI |
 
 > **`SSH_KNOWN_HOSTS`**: obtener el fingerprint una vez con

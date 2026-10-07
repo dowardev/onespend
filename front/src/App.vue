@@ -39,6 +39,7 @@ import MainMenu from '@/components/MainMenu.vue';
 import DOMCleanupComponent from '@/components/DOMCleanupComponent.vue';
 import DevModeBanner from '@/components/DevModeBanner.vue';
 import { useAuthStore } from '@/stores/authStore';
+import { useLocale } from '@/composables/useLocale';
 // End Imports
 
 // Controllers
@@ -55,6 +56,7 @@ const appName =
   (import.meta as unknown as { env?: Record<string, string | undefined> }).env?.VITE_APP_NAME ||
   'Menú';
 const router = useRouter();
+const { t } = useLocale();
 
 const toast = reactive({ open: false, message: '', duration: 3000 });
 // End Vars

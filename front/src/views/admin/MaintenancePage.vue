@@ -21,7 +21,7 @@ SPDX-License-Identifier: AGPL-3.0-only
           <ion-col size="12" size-md="6">
             <ion-list>
               <ion-list-header>
-                <ion-label>Herramientas de mantenimiento del sistema</ion-label>
+                <ion-label>{{ t('admin.maintenancepage.label') }}</ion-label>
               </ion-list-header>
             </ion-list>
           </ion-col>
@@ -45,6 +45,7 @@ import {
   IonItem,
   IonLabel,
 } from '@ionic/vue';
+import { useLocale } from '@/composables/useLocale';
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import systemController from '@/controllers/systemConfigController';
@@ -58,6 +59,7 @@ import systemController from '@/controllers/systemConfigController';
 
 // Vars
 const router = useRouter();
+const { t } = useLocale();
 const designMode = computed(() => systemController.getDesignMode());
 
 // End Vars

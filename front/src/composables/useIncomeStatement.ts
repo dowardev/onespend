@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import { computed, type Ref } from 'vue'
+import { useLocale } from '@/composables/useLocale'
 import type { Income } from '@/stores/budgetEntriesStore'
 import type { EntryCategoryRow, IncomeStatementSectionMap, IncomeStatementSection } from '@/db/types'
 
@@ -43,7 +44,12 @@ export interface IncomeStatementResult {
 
 export type CategoryMap = Record<string, number>
 
-const labelMap: Record<string, string> = {
+// The Spanish fallback labels are kept here so the keyword-based
+// categorizer (used when no category id is set) can render something
+// meaningful even if the i18n lookup fails. Live display goes through
+// the translated keys in `statistics.performance.useincomestatement.label.*`
+// via `tLabelFor()` inside the composable.
+const labelFallback: Record<string, string> = {
   salary: 'Salario',
   investments: 'Inversiones',
   other_income: 'Otros ingresos',
@@ -91,7 +97,7 @@ function buildStatementItems(
   groups: CategoryMap,
   keys: string[],
   incomeTotal: number,
-  nameFor: (key: string) => string = (key) => labelMap[key] || key,
+  nameFor: (key: string) => string,
 ): StatementItem[] {
   return keys
     .filter((key) => (groups[key] || 0) > 0)
@@ -110,6 +116,7 @@ export function useIncomeStatement(params: {
   sectionMap?: Ref<IncomeStatementSectionMap>
 }) {
   const { entries, previousEntries, categorize = defaultCategorizeEntries, categories, sectionMap } = params
+  const { t } = useLocale()
 
   // REQ-5: entries with a KNOWN category id are bucketed under that id (section from the
   // live registry, label = current category name). Entries without a category or with an
@@ -174,7 +181,19 @@ export function useIncomeStatement(params: {
     return [...homeFixed, ...custom]
   }
 
-  const nameFor = (key: string): string => categoryNames.get(key) || labelMap[key] || key
+  // LBDS-289: nameFor resolves a category id / keyword to a display
+  // label using (in order) the live category registry, the i18n
+  // `statistics.performance.useincomestatement.label.*` key, the
+  // Spanish fallback, and finally the raw key as a last resort.
+  const nameFor = (key: string): string => {
+    const live = categoryNames.get(key)
+    if (live) return live
+    const i18n = t(`statistics.performance.useincomestatement.label.${key}`)
+    if (i18n && i18n !== `statistics.performance.useincomestatement.label.${key}`) {
+      return i18n
+    }
+    return labelFallback[key] || key
+  }
 
   const statement = computed<IncomeStatementResult>(() => {
     rebuildRegistry()
@@ -204,14 +223,14 @@ export function useIncomeStatement(params: {
     const netResultPercent = incomeTotal > 0 ? Number(((netResult / incomeTotal) * 100).toFixed(1)) : 0
 
     return {
-      incomes: { title: 'Ingresos', items: incomeItems, total: incomeTotal },
-      costOfLife: { title: 'Costo de Vida', items: costOfLifeItems, total: costOfLifeTotal },
+      incomes: { title: t('statistics.performance.useincomestatement.incomes'), items: incomeItems, total: incomeTotal },
+      costOfLife: { title: t('statistics.performance.useincomestatement.costOfLife'), items: costOfLifeItems, total: costOfLifeTotal },
       grossProfit,
       grossProfitPercent,
-      discretionaryExpenses: { title: 'Gastos Discrecionales', items: discretionaryItems, total: discretionaryTotal },
+      discretionaryExpenses: { title: t('statistics.performance.useincomestatement.discretionaryExpenses'), items: discretionaryItems, total: discretionaryTotal },
       operatingSavings,
       operatingSavingsPercent,
-      financialExpenses: { title: 'Gastos Financieros', items: financialItems, total: financialTotal },
+      financialExpenses: { title: t('statistics.performance.useincomestatement.financialExpenses'), items: financialItems, total: financialTotal },
       netResult,
       netResultPercent,
     }

@@ -13,9 +13,10 @@ import { budgetProvidersDb } from '@/db/controllers/budgetProvidersDb';
 import { budgetProviderProductsDb } from '@/db/controllers/budgetProviderProductsDb';
 import { recurringRecordProductsDb } from '@/db/controllers/recurringRecordProductsDb';
 import db from '@/db/OneSpendDB';
-import { syncApiService, AuthExpiredError } from './SyncApiService';
+import { syncApiService, AuthExpiredError, SyncDisabledError } from './SyncApiService';
 import { syncLockService } from './SyncLockService';
 import { conflictResolutionService } from './ConflictResolutionService';
+import { isSyncEnabled, readSyncConfig } from './syncConfig';
 import pendingAttachmentsService from '../pendingAttachmentsService';
 import attachmentService from '../attachmentService';
 import { toApiFormat } from './entityMappers';
@@ -106,6 +107,14 @@ export function partitionChunkIds(params: { chunkItemIds: string[]; succeededIds
 }
 
 const LAST_SYNC_KEY = 'last_sync';
+// LBDS-289: separate client-clock timestamp for UI display. The
+// `last_sync` cursor stores server time (used to query the next
+// incremental pull) and may be hours behind the client's wall clock
+// when the server is in a different timezone or returns a non-UTC
+// ISO-8601 string. The UI must NOT show that skew as 'hace 10h' —
+// we track the client's local time of the last successful sync
+// separately.
+const LAST_SYNC_DISPLAY_KEY = 'last_sync_at';
 
 /**
  * LBDS-276 class 5: monotonic guard for `last_sync`. The old code could
@@ -125,7 +134,13 @@ export function advanceLastSyncMonotonic(params: { candidate: number | null | un
   const prev = prevRaw ? parseInt(prevRaw, 10) : 0;
   const safePrev = Number.isFinite(prev) && prev >= 0 ? prev : 0;
   const next = Math.max(safePrev, c);
-  if (next > safePrev) localStorage.setItem(LAST_SYNC_KEY, String(next));
+  if (next > safePrev) {
+    localStorage.setItem(LAST_SYNC_KEY, String(next));
+    // LBDS-289: stamp the client's wall-clock time alongside the
+    // server cursor so the UI can show 'Synced just now' even when
+    // the server's clock is in a different timezone.
+    localStorage.setItem(LAST_SYNC_DISPLAY_KEY, String(Date.now()));
+  }
 }
 
 /** Inverse of the monotonic guard: returns the parsed stored value. */
@@ -383,6 +398,27 @@ export class SyncQueueService {
   // jamás llega al DLQ). Se limpia cuando una corrida termina bien, de modo
   // que un re-login reanuda los reintentos.
   private syncBlockedByAuth = false;
+
+  // LBDS-289: the F-Droid reviewer asked for offline-first: no HTTP
+  // request fires until the user opts in via Settings. Every sync entry
+  // point (processQueue / processPendingAttachments / pullChanges /
+  // fullSyncAndSave) short-circuits when this gate is closed. The flag
+  // is read from configDb on every entry point rather than cached so a
+  // toggle in Settings takes effect on the very next run.
+  //
+  // Reads of configDb are cheap (IndexedDB cursor) and the entry points
+  // are already gated by `navigator.onLine`, a lock acquire, and the
+  // scheduler's debounce — adding one IndexedDB read on top does not
+  // change the throughput profile.
+  private async isSyncEnabledForRun(): Promise<boolean> {
+    // LBDS-289: gate on both the opt-in flag AND a non-empty server
+    // URL. Without the URL check, scheduled retries / background
+    // processQueue runs can acquire the lock and only fail on the
+    // first API call, surfacing a red banner instead of the /sync
+    // gate card. Matches the UI `syncConfigured` predicate.
+    const cfg = await readSyncConfig();
+    return cfg.enabled && cfg.hasServerUrl;
+  }
 
   // LBDS-287: processPendingAttachments() used to be a side-effect of
   // processQueue()'s post-merge-success block, so a 500 from the merge
@@ -992,6 +1028,13 @@ export class SyncQueueService {
   private pendingDrainInFlight = false;
 
   private async processPendingAttachments() {
+    // LBDS-289: skip the drain (and its HTTP upload) when sync is off.
+    // Local pending attachments stay queued in pendingAttachments — when
+    // the user re-enables sync, the scheduler's first tick picks them up.
+    if (!(await this.isSyncEnabledForRun())) {
+      debug('[SYNC-PQ] pending attachments drain skipped — sync disabled');
+      return;
+    }
     if (this.pendingDrainInFlight) {
       debug('[SYNC-PQ] pending attachments drain already in flight — skipping concurrent call');
       return;
@@ -1048,6 +1091,13 @@ export class SyncQueueService {
       onIssue?.(message);
       debug('[SYNC-ISSUE]', message);
     };
+    // LBDS-289: no HTTP request until the user enables sync in Settings.
+    // Mirrors the offline branch below so the scheduler / debounce / user
+    // tap all see the same shape (returns null, no merge attempted).
+    if (!(await this.isSyncEnabledForRun())) {
+      debug('[SYNC-PQ] skipped — sync disabled in Settings');
+      return null;
+    }
     if (!this._isOnline) {
       return null;
     }
@@ -1351,20 +1401,19 @@ export class SyncQueueService {
         }
       }
 
-      // Si last_sync era '0' (full sync), no avanzar para mantener comportamiento de full sync
-      const beforeSync = localStorage.getItem(LAST_SYNC_KEY) || '0';
-      const wasFullSyncBeforeProcess = beforeSync === '0';
-
+      // LBDS-289: advance last_sync even on the first sync (wasFullSync=true).
+      // Previously the cursor was kept at 0 so the next sync would re-fetch
+      // everything, but that left the menu's 'Never synced' label stuck on
+      // 'Never synced' forever. The cursor is still monotonic; the only
+      // change is that after a successful first sync, last_sync moves to
+      // the server's clock.
       const pushServerTime = normalizeServerTime({ serverTime: finalResult?.serverTime });
       if (allChunksSucceeded && pushServerTime !== null) {
         const serverTime = pushServerTime;
-        // Solo avanzar last_sync si NO era full sync
-        if (!wasFullSyncBeforeProcess) {
-          // LBDS-276 class 5: monotonically advance only. We never rewind to
-          // the client clock (which can sit behind the server) and we never
-          // pick `nowSeconds` over a higher stored value.
-          advanceLastSyncMonotonic({ candidate: serverTime });
-        }
+        // LBDS-276 class 5: monotonically advance only. We never rewind to
+        // the client clock (which can sit behind the server) and we never
+        // pick `nowSeconds` over a higher stored value.
+        advanceLastSyncMonotonic({ candidate: serverTime });
       }
 
       const remainingCount = await syncQueueDb.count();
@@ -1637,6 +1686,11 @@ export class SyncQueueService {
     onChangesSaved?: (changes: Record<string, SyncItemData[]>) => Promise<void>,
     options?: { types?: string[] },
   ): Promise<Record<string, SyncItemData[]>> {
+    // LBDS-289: a pull is an HTTP request too. Skip when sync is off so
+    // the F-Droid reviewer sees zero outbound traffic on a fresh install.
+    if (!(await this.isSyncEnabledForRun())) {
+      throw new SyncDisabledError();
+    }
     if (!this._isOnline) {
       throw new Error('Cannot pull changes while offline');
     }
@@ -1707,14 +1761,13 @@ export class SyncQueueService {
 
 if (Object.keys(allChanges).length > 0) {
           const { failedEntityTypes } = await this.saveChangesToLocalDb(allChanges, onChangesSaved);
-          // Si era full sync (last_sync=0) y trajo cambios, NO avanzar last_sync
-          // Esto permite que el próximo sync también traiga todos los datos
-          if (wasFullSync) {
-            // No avanzamos last_sync, se mantiene en 0
-          } else if (serverTime && failedEntityTypes.length === 0) {
+          if (serverTime && failedEntityTypes.length === 0) {
             // LBDS-276 class 3: prefer the max updated_at actually delivered
             // (a real cursor); fall back to serverTime when no rows came
             // back. The helper is monotonic; `last_sync` never decreases.
+            // LBDS-289: wasFullSync branch removed — after a successful
+            // first sync the cursor MUST advance, otherwise the menu's
+            // 'Never synced' label stays stuck forever.
             advanceLastSyncAfterPull({ serverTime, maxUpdatedAt });
           } else if (failedEntityTypes.length > 0) {
             console.warn(`[SyncQueueService] Not advancing last_sync due to failed entity types: ${failedEntityTypes.join(', ')}`);
@@ -1767,18 +1820,27 @@ if (Object.keys(allChanges).length > 0) {
     if (fullResult.data || fullResult.changes) {
       const changes = fullResult.data || fullResult.changes || {};
       const { failedEntityTypes } = await this.saveChangesToLocalDb(changes, onChangesSaved);
-      // Si era full sync y trajo cambios, NO avanzar last_sync
-      if (wasFullSync) {
-        // No avanzamos last_sync
-      } else if (fullResult.serverTime && failedEntityTypes.length === 0) {
+      if (fullResult.serverTime && failedEntityTypes.length === 0) {
         // LBDS-276 class 5: never decrease `last_sync`. The branch above is
         // the fullSync fallback; the helper is the same one used elsewhere
         // so the timestamp can only move forward.
+        // LBDS-289: wasFullSync branch removed — the cursor must advance on
+        // the first sync too, otherwise the 'Never synced' menu label
+        // stays stuck forever.
         advanceLastSyncMonotonic({ candidate: fullResult.serverTime });
       } else if (failedEntityTypes.length > 0) {
         console.warn(`[SyncQueueService] Not advancing last_sync due to failed entity types: ${failedEntityTypes.join(', ')}`);
       }
       return changes;
+    }
+
+    // LBDS-289: fullSync returned no data (empty server). Still advance
+    // the cursor so the menu's 'Never synced' label can move to
+    // 'Synced just now'. Falls back to client clock if the server didn't
+    // include a serverTime.
+    const fullServerTime = normalizeServerTime({ serverTime: fullResult.serverTime });
+    if (fullServerTime !== null) {
+      advanceLastSyncMonotonic({ candidate: fullServerTime });
     }
 
     return {};
@@ -1853,7 +1915,39 @@ if (Object.keys(allChanges).length > 0) {
   getLastSyncTime(): number {
     if (typeof window === 'undefined') return 0;
     const lastSync = localStorage.getItem(LAST_SYNC_KEY);
-    return lastSync ? parseInt(lastSync, 10) : 0;
+    if (!lastSync) return 0;
+    const parsed = parseInt(lastSync, 10);
+    if (!Number.isFinite(parsed) || parsed <= 0) return 0;
+    // LBDS-289: the cursor is stored as seconds (serverTime / updated_at
+    // come from the backend that way). Normalize to milliseconds before
+    // returning so consumers (SyncStatus) can compare with Date.now()
+    // without ending up with a `now - seconds` of ~1.7e12 — that was
+    // rendering the menu label as 'Sincronizado hace 20710d' because
+    // `diff / 86400000` produced a 5-digit day count.
+    //
+    // F11 (pre-merge review): the auto-detect (`parsed < 1e12 ? *1000
+    // : parsed`) is now a migration aid only — `advanceLastSyncMonotonic`
+    // is the only writer and it stores seconds, so fresh installs always
+    // hit the `* 1000` branch. We keep the detect to gracefully handle
+    // any user upgrading from a pre-LBDS-276 build where the value was
+    // stored as ms. Remove this branch once we are confident no such
+    // installs exist in the wild.
+    return parsed < 1e12 ? parsed * 1000 : parsed;
+  }
+
+  /**
+   * LBDS-289: returns the CLIENT's wall-clock time of the last
+   * successful sync, in milliseconds. This is the value the menu
+   * label should use. Separate from getLastSyncTime() which returns
+   * the server-cursor (used for incremental queries) and may have
+   * any timezone skew.
+   */
+  getLastSyncDisplayTime(): number {
+    if (typeof window === 'undefined') return 0;
+    const raw = localStorage.getItem(LAST_SYNC_DISPLAY_KEY);
+    if (!raw) return 0;
+    const parsed = parseInt(raw, 10);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
   }
 
   async fullSyncAndSave(
@@ -1861,6 +1955,14 @@ if (Object.keys(allChanges).length > 0) {
   ): Promise<void> {
     performanceMonitor.startSyncMeasurement('fullSyncAndSave')
     try {
+      // LBDS-289: fullSyncAndSave is the entry point used by main.ts on
+      // every SSO login. The gate is the same as processQueue / pullChanges
+      // — when sync is off, do nothing and let the user enable it from
+      // Settings when they want to.
+      if (!(await this.isSyncEnabledForRun())) {
+        debug('[fullSyncAndSave] skipped — sync disabled in Settings');
+        return;
+      }
       if (!this._isOnline) {
         throw new Error('Cannot perform full sync while offline');
       }

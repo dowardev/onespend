@@ -12,7 +12,7 @@ SPDX-License-Identifier: AGPL-3.0-only
           <ion-menu-button :mode="designMode" />
         </ion-buttons>
 
-        <ion-title>Cuentas</ion-title>
+        <ion-title>{{ t('accounts.title') }}</ion-title>
 
         <ion-buttons slot="end">
           <ion-button @click="openModal()">
@@ -28,7 +28,7 @@ SPDX-License-Identifier: AGPL-3.0-only
           <ion-col size-xs="12" size-md="10" size-lg="8" size-xl="6" class="accounts__col">
             <ion-list class="transparent">
               <ion-list-header>
-                <ion-label>Lista de cuentas</ion-label>
+                <ion-label>{{ t('suppliers.accounts.accountspage.label') }}</ion-label>
 
                 <ion-button v-if="!showSearch" @click="showSearch = true">
                   <ion-icon :icon="searchOutline"></ion-icon>
@@ -42,11 +42,11 @@ SPDX-License-Identifier: AGPL-3.0-only
                     <ion-searchbar
                       v-model="searchTerm"
                       mode="ios"
-                      placeholder="Buscar cuentas"
+                      :placeholder="t('suppliers.accounts.accountspage.placeholder')"
                       show-clear-button="focus"
                     ></ion-searchbar>
 
-                    <ion-button fill="clear" @click="showSearch = false">Cancelar</ion-button>
+                    <ion-button fill="clear" @click="showSearch = false">{{ t('common.cancel') }}</ion-button>
                   </ion-item>
                 </div>
               </div>
@@ -109,7 +109,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script setup lang="ts">
 // Imports
-import { onMounted, ref, computed, unref, reactive } from 'vue';
+import { onMounted, ref, computed, unref, reactive,  } from 'vue';
+import { useLocale } from '@/composables/useLocale';
 import {
   IonContent,
   IonHeader,
@@ -145,6 +146,8 @@ import AddAccountComponent from './modals/AddAccountComponent.vue';
 // Types
 import type { Account } from '@/stores/accountsStore';
 
+
+const { t } = useLocale();
 interface AccountFormData {
   name: string;
   initialBalance: number;
@@ -193,12 +196,12 @@ function confirmRemoveAccount(params: { id: string | number | null | undefined; 
 function getAlertButtonsAccount() {
   return [
     {
-      text: 'Cancelar',
+      text: t('suppliers.accounts.accountspage.text1'),
       role: 'cancel',
       handler: () => {},
     },
     {
-      text: 'Eliminar',
+      text: t('suppliers.accounts.accountspage.text2'),
       role: 'destructive',
       handler: () => {
         void removeAccountConfirmed();

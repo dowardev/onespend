@@ -7,6 +7,15 @@ WebSite: https://onespend.dowar.xyz
 SourceCode: https://gitlab.com/dowardev/onespend
 IssueTracker: https://gitlab.com/dowardev/onespend/-/issues
 
+# LBDS-289: declare the bundled-server + i18n state so the F-Droid
+# reviewer can verify against the "NonFreeNet" / "TetheredNet" rules
+# without reading the code. Sync is opt-in: the app does NOT connect
+# to a hardcoded server on boot. The user picks the URL in Settings
+# (the bundled default is the author public server, and the user can
+# override it from Ajustes -> Conexiones without rebuilding the APK).
+# UI is primarily Spanish; non-es locales get the full English wrap.
+Description: "OneSpend is an offline-first personal finance manager. (i) Sync is opt-in: the app never connects to a hardcoded server - the user picks the backend URL in Ajustes -> Conexiones (the bundled default is the author's public server, only used if the user enables sync, and overridable in-app without a rebuild). (ii) UI is wrapped for es + en; the language selector is in the side menu."
+
 AutoName: OneSpend
 
 RepoType: git

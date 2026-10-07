@@ -11,7 +11,7 @@ SPDX-License-Identifier: AGPL-3.0-only
         <ion-buttons slot="start">
           <ion-menu-button :mode="designMode"></ion-menu-button>
         </ion-buttons>
-        <ion-title>Personalización</ion-title>
+        <ion-title>{{ t('settings.personalization.title') }}</ion-title>
       </ion-toolbar>
     </ion-header>
 
@@ -23,7 +23,7 @@ SPDX-License-Identifier: AGPL-3.0-only
               <ion-item lines="full">
                 <ion-icon slot="start" :icon="colorPaletteOutline"></ion-icon>
 
-                <ion-label>Tema</ion-label>
+                <ion-label>{{ t('settings.personalization.theme') }}</ion-label>
 
                 <ion-select
                   slot="end"
@@ -31,46 +31,46 @@ SPDX-License-Identifier: AGPL-3.0-only
                   interface="popover"
                   @ion-change="onThemeChange"
                 >
-                  <ion-select-option value="light">Claro</ion-select-option>
-                  <ion-select-option value="dark">Oscuro</ion-select-option>
-                  <ion-select-option value="auto">Automático</ion-select-option>
+                  <ion-select-option value="light">{{ t('settings.personalization.themeOptions.light') }}</ion-select-option>
+                  <ion-select-option value="dark">{{ t('settings.personalization.themeOptions.dark') }}</ion-select-option>
+                  <ion-select-option value="auto">{{ t('settings.personalization.themeOptions.auto') }}</ion-select-option>
                   <ion-select-option value="catppuccin-latte-maroon"
-                    >Catppuccin Latte Maroon</ion-select-option
+                    >{{ t('settings.personalization.themeOptions.catppuccinLatteMaroon') }}</ion-select-option
                   >
                   <ion-select-option value="catppuccin-macchiato-maroon"
-                    >Catppuccin Macchiato Maroon</ion-select-option
+                    >{{ t('settings.personalization.themeOptions.catppuccinMacchiatoMaroon') }}</ion-select-option
                   >
                 </ion-select>
               </ion-item>
 
               <ion-item v-if="theme === 'auto'" lines="full">
                 <ion-icon slot="start" :icon="sunnyOutline"></ion-icon>
-                <ion-label>Modo claro</ion-label>
+                <ion-label>{{ t('settings.personalization.autoLightMode') }}</ion-label>
                 <ion-select
                   slot="end"
                   :value="autoLightTheme"
                   interface="popover"
                   @ion-change="onAutoLightThemeChange"
                 >
-                  <ion-select-option value="light">Claro</ion-select-option>
+                  <ion-select-option value="light">{{ t('settings.personalization.themeOptions.light') }}</ion-select-option>
                   <ion-select-option value="catppuccin-latte-maroon"
-                    >Catppuccin Latte Maroon</ion-select-option
+                    >{{ t('settings.personalization.themeOptions.catppuccinLatteMaroon') }}</ion-select-option
                   >
                 </ion-select>
               </ion-item>
 
               <ion-item v-if="theme === 'auto'" lines="full">
                 <ion-icon slot="start" :icon="moonOutline"></ion-icon>
-                <ion-label>Modo oscuro</ion-label>
+                <ion-label>{{ t('settings.personalization.autoDarkMode') }}</ion-label>
                 <ion-select
                   slot="end"
                   :value="autoDarkTheme"
                   interface="popover"
                   @ion-change="onAutoDarkThemeChange"
                 >
-                  <ion-select-option value="dark">Oscuro</ion-select-option>
+                  <ion-select-option value="dark">{{ t('settings.personalization.themeOptions.dark') }}</ion-select-option>
                   <ion-select-option value="catppuccin-macchiato-maroon"
-                    >Catppuccin Macchiato Maroon</ion-select-option
+                    >{{ t('settings.personalization.themeOptions.catppuccinMacchiatoMaroon') }}</ion-select-option
                   >
                 </ion-select>
               </ion-item>
@@ -105,12 +105,14 @@ import { colorPaletteOutline, sunnyOutline, moonOutline } from 'ionicons/icons';
 
 // Controllers
 import systemController from '@/controllers/systemConfigController';
+import { useLocale } from '@/composables/useLocale';
 // End Controllers
 
 // Components
 // End Components
 
 // Vars
+const { t } = useLocale();
 const designMode = computed(() => systemController.getDesignMode());
 const theme = ref<ThemeMode>('auto');
 const autoLightTheme = ref<ThemeMode>('light');

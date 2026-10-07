@@ -28,7 +28,7 @@ SPDX-License-Identifier: AGPL-3.0-only
           <ion-col size-xs="12" size-md="10" size-lg="8" size-xl="6" class="suppliers__col">
             <ion-list class="transparent">
               <ion-list-header>
-                <ion-label>Lista de proveedores</ion-label>
+                <ion-label>{{ t('suppliers.supplierspage.label') }}</ion-label>
 
                 <ion-button v-if="!showSearch" @click="showSearch = true">
                   <ion-icon :icon="searchOutline"></ion-icon>
@@ -42,11 +42,11 @@ SPDX-License-Identifier: AGPL-3.0-only
                     <ion-searchbar
                       v-model="searchTerm"
                       mode="ios"
-                      placeholder="Buscar proveedores"
+                      :placeholder="t('suppliers.supplierspage.placeholder')"
                       show-clear-button="focus"
                     ></ion-searchbar>
 
-                    <ion-button fill="clear" @click="showSearch = false">Cancelar</ion-button>
+                    <ion-button fill="clear" @click="showSearch = false">{{ t('common.cancel') }}</ion-button>
                   </ion-item>
                 </div>
               </div>
@@ -116,7 +116,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script setup lang="ts">
 // Imports
-import { onMounted, ref, computed, unref, reactive } from 'vue';
+import { onMounted, ref, computed, unref, reactive,  } from 'vue';
+import { useLocale } from '@/composables/useLocale';
 import {
   IonContent,
   IonHeader,
@@ -154,6 +155,8 @@ interface SupplierGroup {
 import systemController from '@/controllers/systemConfigController';
 import suppliersController from '@/controllers/suppliersController';
 import type { Supplier } from '@/controllers/suppliersController';
+
+const { t } = useLocale();
 // End Controllers
 
 // Vars
@@ -197,12 +200,12 @@ function confirmRemoveSupplier(params: { id: string | number | null | undefined;
 function getAlertButtonsSupplier() {
   return [
     {
-      text: 'Cancelar',
+      text: t('suppliers.supplierspage.text1'),
       role: 'cancel',
       handler: () => {},
     },
     {
-      text: 'Eliminar',
+      text: t('suppliers.supplierspage.text2'),
       role: 'destructive',
       handler: () => {
         void removeSupplierConfirmed();

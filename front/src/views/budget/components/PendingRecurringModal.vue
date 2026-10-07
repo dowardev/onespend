@@ -13,7 +13,7 @@ SPDX-License-Identifier: AGPL-3.0-only
             <ion-icon :icon="closeOutline" />
           </ion-button>
         </ion-buttons>
-        <ion-title>Cargos recurrentes pendientes</ion-title>
+        <ion-title>{{ t('budget.components.pendingrecurringmodal.title') }}</ion-title>
       </ion-toolbar>
     </ion-header>
 
@@ -29,20 +29,20 @@ SPDX-License-Identifier: AGPL-3.0-only
             >
               <ion-label>
                 <h2>{{ rec.name }}</h2>
-                <p>{{ rec.type === 'cargo' ? 'Cargo' : 'Provedor' }} · {{ frequencyLabel({ record: rec }) }}</p>
+                <p>{{ rec.type === 'cargo' ? t('common.charge') : t('common.provider') }} · {{ frequencyLabel({ record: rec }) }}</p>
                 <p v-if="rec.amount" small>{{ formatCurrency({ value: rec.amount }) }}</p>
-                <p v-else small>Monto variable</p>
-                <p v-if="rec.autoInsert && rec.time" small>Auto‑inserción a las {{ rec.time }}</p>
+                <p v-else small>{{ t('budget.components.pendingrecurringmodal.variableAmount') }}</p>
+                <p v-if="rec.autoInsert && rec.time" small>{{ t('budget.components.pendingrecurringmodal.autoInsertAt', { time: rec.time }) }}</p>
               </ion-label>
               <ion-button slot="end" fill="clear" color="primary" @click="emit('apply', { record: rec })">
-                Aplicar
+                {{ t('common.apply') }}
               </ion-button>
             </ion-item>
           </template>
 
           <template v-else>
             <ion-item>
-              <ion-label class="ion-text-center">Sin pendientes</ion-label>
+              <ion-label class="ion-text-center">{{ t('budget.components.pendingrecurringmodal.empty') }}</ion-label>
             </ion-item>
           </template>
         </ion-list>
@@ -50,7 +50,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
       <div v-if="records.length >= 2" class="ion-padding">
         <ion-button expand="block" color="primary" @click="emit('applyAll')">
-          Aplicar todos ({{ records.length }})
+          {{ t('budget.components.pendingrecurringmodal.applyAll', { count: records.length }) }}
         </ion-button>
       </div>
     </ion-content>
@@ -58,7 +58,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script setup lang="ts">
-// Imports
+// 1. Imports (ionic/vue/ionicons)
 import {
   IonModal,
   IonHeader,
@@ -76,12 +76,21 @@ import {
 import { closeOutline } from 'ionicons/icons';
 import { formatCurrency } from '@/utils/currency';
 import type { RecurringRecord } from '@/controllers/recurringRecordsController';
-// End Imports
+import { useLocale } from '@/composables/useLocale';
 
-// Components
-// End Components
+// 2. Controllers / Composables
+// (Locale composable imported above)
 
-// Vars
+// 3. Components
+// (none)
+
+// 4. Interface and types imports
+// (none — RecurringRecord imported above)
+
+// 5. Main (props, emits, etc.)
+// (none)
+
+// 6. Vars and const
 const props = defineProps<{
   isOpen: boolean;
   records: RecurringRecord[];
@@ -92,45 +101,61 @@ const emit = defineEmits<{
   (e: 'apply', payload: { record: RecurringRecord }): void;
   (e: 'applyAll'): void;
 }>();
-// End Vars
 
-// Functions
+const { t } = useLocale();
 const weekDayShort = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
 const weekDayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 const ordinalNames = ['', 'Primer', 'Segundo', 'Tercer', 'Cuarto', 'Quinto', 'Sexto', 'Séptimo', 'Octavo'];
 
+// 7. Watch
+// (none)
+
+// 8. Computed
+// (none)
+
+// 9. OnMounted
+// (none)
+
+// 10. Functions (named parameters pattern)
 function frequencyLabel(params: { record: RecurringRecord }) {
   const { record } = params;
   const interval = record.repeatInterval || 1;
   switch (record.repeatFrequency) {
     case 'day':
-      return interval === 1 ? 'Cada día' : `Cada ${interval} días`;
+      return interval === 1
+        ? t('recurring.frequency.daily')
+        : t('recurring.frequency.days', { n: interval });
     case 'week': {
       const days = (record.repeatDays || [])
         .sort((a, b) => a - b)
         .map((d) => weekDayShort[d] || '')
         .filter(Boolean)
         .join(', ');
-      const base = interval === 1 ? 'Cada semana' : `Cada ${interval} semanas`;
+      const base = interval === 1
+        ? t('recurring.frequency.weekly')
+        : t('recurring.frequency.weeks', { n: interval });
       return days ? `${base} - ${days}` : base;
     }
     case 'month':
       if (record.repeatMonthWeekdayMode) {
         const ordinalIdx = record.repeatMonthWeekdayOrdinal ?? 1;
-        const ordinal = ordinalIdx === -1 ? 'Último' : (ordinalNames[ordinalIdx] || 'Primer');
+        const ordinal = ordinalIdx === -1
+          ? t('recurring.frequency.last')
+          : (ordinalNames[ordinalIdx] || t('recurring.frequency.first'));
         const weekday = weekDayNames[record.repeatMonthWeekday ?? 0] || '';
-        return `Cada mes - ${ordinal} ${weekday}`;
+        return t('recurring.frequency.monthWeekday', { ordinal, weekday });
       }
-      return `Cada mes - día ${record.repeatMonthDay || 1}`;
+      return t('recurring.frequency.monthDay', { day: record.repeatMonthDay || 1 });
     case 'year': {
       const m = monthNames[(record.repeatYearMonth || 1) - 1];
       const d = record.repeatYearDay || 1;
-      return interval === 1 ? `Cada año - ${m} ${d}` : `Cada ${interval} años - ${m} ${d}`;
+      return interval === 1
+        ? t('recurring.frequency.yearly', { m, d })
+        : t('recurring.frequency.years', { n: interval, m, d });
     }
     default:
       return '';
   }
 }
-// End Functions
 </script>

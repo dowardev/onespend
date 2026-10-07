@@ -9,7 +9,7 @@ SPDX-License-Identifier: AGPL-3.0-only
   <ion-accordion-group v-if="accordion" expand="inset" class="accounts-accordion">
     <ion-accordion value="accounts" class=shadow1>
       <ion-item slot="header" class="transparent">
-        <ion-label>Cuentas</ion-label>
+        <ion-label>{{ t('budget.components.accountcards.label') }}</ion-label>
         <ion-button slot="end" fill="clear" @click="openModal()">
           <ion-icon :icon="addOutline"></ion-icon>
         </ion-button>
@@ -29,11 +29,11 @@ SPDX-License-Identifier: AGPL-3.0-only
             <ion-card-content>
               <p>
                 <span style="color: var(--ion-color-success)"
-                  >Ingresos: {{ formatCurrency({ value: summary.ingresos }) }}</span
+                  >{{ t("budget.account.incomes") }}: {{ formatCurrency({ value: summary.ingresos }) }}</span
                 >
                 <br />
                 <span style="color: var(--ion-color-danger)"
-                  >Gastos: {{ formatCurrency({ value: summary.egresos }) }}</span
+                  >{{ t("budget.account.expenses") }}: {{ formatCurrency({ value: summary.egresos }) }}</span
                 >
               </p>
             </ion-card-content>
@@ -100,7 +100,7 @@ SPDX-License-Identifier: AGPL-3.0-only
   <template v-else>
       <ion-card class="shadow1">
       <ion-card-header>
-        <ion-card-title>Cuentas</ion-card-title>
+        <ion-card-title>{{ t("budget.account.title") }}</ion-card-title>
         <ion-button slot="end" fill="clear" @click="openModal()">
           <ion-icon :icon="addOutline"></ion-icon>
         </ion-button>
@@ -195,7 +195,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script setup lang="ts">
 // Imports
-import { ref } from 'vue';
+import { ref,  } from 'vue';
+import { useLocale } from '@/composables/useLocale';
 import {
   IonAccordion,
   IonAccordionGroup,
@@ -225,6 +226,8 @@ import AddAccountComponent from '@/views/suppliers/accounts/modals/AddAccountCom
 import type { AccountWithBalance } from '@/utils/budgetTypes';
 import type { Account } from '@/stores/accountsStore';
 
+
+const { t } = useLocale();
 interface Summary {
   label: string;
   color: string | undefined;

@@ -11,26 +11,28 @@ SPDX-License-Identifier: AGPL-3.0-only
         <ion-buttons slot="start">
           <ion-menu-button :mode="designMode"></ion-menu-button>
         </ion-buttons>
-        <ion-title>Mis Finanzas</ion-title>
+        <ion-title>{{ t('statistics.performance.performancepage.title') }}</ion-title>
         <ion-buttons slot="end">
-          <ion-button :disabled="isExporting" aria-label="Exportar a Excel" @click="exportToExcel">
+          <ion-button :disabled="isExporting" :aria-label="t('statistics.performance.performancepage.aria1')" @click="exportToExcel">
             <ion-icon :icon="downloadOutline"></ion-icon>
           </ion-button>
 
-          <ion-button id="help-trigger" fill="clear" aria-label="Ayuda">
+          <ion-button id="help-trigger" fill="clear" :aria-label="t('statistics.performance.performancepage.aria2')">
             <ion-icon :icon="helpCircleOutline" />
           </ion-button>
 
-          <ion-button aria-label="Configuración" @click="goToConfig">
+          <ion-button :aria-label="t('statistics.performance.performancepage.aria3')" @click="goToConfig">
             <ion-icon :icon="settingsOutline"></ion-icon>
           </ion-button>
 
           <ion-popover trigger="help-trigger" trigger-action="click" side="bottom" alignment="end">
             <ion-content class="ion-padding">
               <p class="ion-text-wrap" style="max-width: 280px">
-                <strong>¿Cómo funciona?</strong><br /><br />
-                Haz click en cualquier <strong>título de sección</strong> o
-                <strong>concepto</strong> para ver su descripción y fórmula de cálculo.
+                <strong>{{ t('statistics.performance.performancepage.helpIntro') }}</strong><br /><br />
+                {{ t('statistics.performance.performancepage.helpBody1') }}
+                <strong>{{ t('statistics.performance.performancepage.helpBold1') }}</strong>{{ t('statistics.performance.performancepage.helpBody2') }}
+                <strong>{{ t('statistics.performance.performancepage.helpBold2') }}</strong>
+                {{ t('statistics.performance.performancepage.helpBody3') }}
               </p>
             </ion-content>
           </ion-popover>
@@ -42,10 +44,10 @@ SPDX-License-Identifier: AGPL-3.0-only
         <ion-row>
           <ion-col size="12" style="display: flex; justify-content: center">
             <ion-segment v-model="mainSegment" scrollable>
-              <ion-segment-button value="day">Día</ion-segment-button>
-              <ion-segment-button value="week">Semana</ion-segment-button>
-              <ion-segment-button value="month">Mes</ion-segment-button>
-              <ion-segment-button value="year">Año</ion-segment-button>
+              <ion-segment-button value="day">{{ t('statistics.performance.performancepage.tabDay') }}</ion-segment-button>
+              <ion-segment-button value="week">{{ t('statistics.performance.performancepage.tabWeek') }}</ion-segment-button>
+              <ion-segment-button value="month">{{ t('statistics.performance.performancepage.tabMonth') }}</ion-segment-button>
+              <ion-segment-button value="year">{{ t('statistics.performance.performancepage.tabYear') }}</ion-segment-button>
             </ion-segment>
           </ion-col>
         </ion-row>
@@ -59,7 +61,7 @@ SPDX-License-Identifier: AGPL-3.0-only
         </ion-row>
       </ion-grid>
 
-      <ion-loading :is-open="isExporting" message="Generando Excel..." />
+      <ion-loading :is-open="isExporting" :message="t('statistics.performance.performancepage.text')" />
     </ion-content>
   </ion-page>
 </template>
@@ -84,6 +86,7 @@ import {
   IonPopover,
   onIonViewWillEnter,
 } from '@ionic/vue';
+import { useLocale } from '@/composables/useLocale';
 import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { downloadOutline, settingsOutline, helpCircleOutline } from 'ionicons/icons';
@@ -94,6 +97,7 @@ import type { IncomeStatementResult } from '@/composables/useIncomeStatement';
 import PerformanceComponent from '@/views/statistics/performance/components/PerformanceComponent.vue';
 
 const router = useRouter();
+const { t } = useLocale();
 const statisticsController = new StatisticsController();
 
 const designMode = computed(() => systemController.getDesignMode());

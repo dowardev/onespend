@@ -38,20 +38,20 @@ SPDX-License-Identifier: AGPL-3.0-only
 
       <ion-list>
         <ion-list-header>
-          <ion-label>Resumen</ion-label>
+          <ion-label>{{ t('statistics.performance.components.goalschartmodal.label1') }}</ion-label>
         </ion-list-header>
         <ion-item>
-          <ion-label>Meta mensual</ion-label>
+          <ion-label>{{ t('statistics.performance.components.goalschartmodal.label2') }}</ion-label>
           <ion-note slot="end">{{ formatCurrency(goalAmount) }}</ion-note>
         </ion-item>
         <ion-item>
-          <ion-label>Progreso actual</ion-label>
+          <ion-label>{{ t('statistics.performance.components.goalschartmodal.label3') }}</ion-label>
           <ion-note slot="end" :color="progressPercent >= 100 ? 'success' : 'primary'">
             {{ formatCurrency(currentProgress) }}
           </ion-note>
         </ion-item>
         <ion-item>
-          <ion-label>Faltante</ion-label>
+          <ion-label>{{ t('statistics.performance.components.goalschartmodal.label4') }}</ion-label>
           <ion-note slot="end" :color="remainingAmount <= 0 ? 'success' : 'warning'">
             {{ formatCurrency(remainingAmount) }}
           </ion-note>
@@ -94,6 +94,7 @@ import {
   IonCardContent,
   IonProgressBar,
 } from '@ionic/vue';
+import { useLocale } from '@/composables/useLocale';
 import { closeOutline } from 'ionicons/icons';
 import { computed } from 'vue';
 import {
@@ -108,6 +109,8 @@ import {
 } from 'chart.js';
 import { Doughnut, Bar } from 'vue-chartjs';
 
+
+const { t } = useLocale();
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title);
 
 const props = defineProps<{

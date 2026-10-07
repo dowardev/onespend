@@ -42,7 +42,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
       <ion-list v-if="items.length > 0">
         <ion-list-header>
-          <ion-label>Detalle</ion-label>
+          <ion-label>{{ t('statistics.performance.components.budgetdetailmodal.label') }}</ion-label>
         </ion-list-header>
 
         <ion-item v-for="(item, index) in sortedItems" :key="index" lines="full">
@@ -82,6 +82,7 @@ import {
   IonButton,
   IonIcon,
 } from '@ionic/vue';
+import { useLocale } from '@/composables/useLocale';
 
 import { computed, ref, onMounted } from 'vue';
 import { format } from 'date-fns';
@@ -89,6 +90,8 @@ import { es as esLocale } from 'date-fns/locale';
 
 import { closeOutline, walletOutline } from 'ionicons/icons';
 
+
+const { t } = useLocale();
 interface BudgetItem {
   name: string;
   amount: number;

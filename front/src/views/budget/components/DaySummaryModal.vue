@@ -135,7 +135,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                 <h3>Mayor Ingreso</h3>
 
                 <p v-if="largestIncome">
-                  {{ largestIncome.name || 'Ingreso' }}
+                  {{ largestIncome.name || t('budget.components.daysummarymodal.fallbackTime') }}
                 </p>
               </ion-label>
 
@@ -151,7 +151,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                 <h3>Mayor Gasto</h3>
 
                 <p v-if="largestExpense">
-                  {{ largestExpense.name || 'Gasto' }}
+                  {{ largestExpense.name || t('budget.components.daysummarymodal.fallbackAccount') }}
                 </p>
               </ion-label>
 
@@ -202,7 +202,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref,  } from 'vue';
+import { useLocale } from '@/composables/useLocale';
 import { format } from 'date-fns';
 import { es as esLocale } from 'date-fns/locale';
 import {
@@ -228,10 +229,11 @@ import { closeOutline } from 'ionicons/icons';
 import { formatCurrency } from '@/utils/currency';
 
 const budgetDayStore = useBudgetDay();
+const { t } = useLocale();
 
 function formatTime(params: { timestamp: number }) {
   const { timestamp } = params;
-  if (!timestamp) return '--:--';
+  if (!timestamp) return t('budget.components.daysummarymodal.fallback1');
   return new Date(timestamp).toLocaleTimeString('es-MX', {
     hour: '2-digit',
     minute: '2-digit',
@@ -364,7 +366,7 @@ function resolveProviderName(id: string) {
 }
 
 function resolveAccountName(id: string) {
-  if (id === 'unknown' || id === 'null' || id == null) return 'Sin cuenta';
+  if (id === 'unknown' || id === 'null' || id == null) return t('budget.components.daysummarymodal.fallback2');
   const accounts = accountsController.getAccounts();
   const acc = accounts.find((a) => String(a.id) === String(id));
   return acc ? acc.name : String(id);

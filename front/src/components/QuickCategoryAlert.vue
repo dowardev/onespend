@@ -7,8 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 <template>
   <ion-alert
     :is-open="isOpen"
-    header="Nueva Categoría"
-    sub-header="Elige la sección donde vivirá esta categoría"
+    :header="t('quickcategoryalert.text')"
+    :sub-header="t('quickcategoryalert.subHeader')"
     :inputs="inputs"
     :buttons="buttons"
     @did-dismiss="$emit('didDismiss')"
@@ -17,7 +17,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { IonAlert } from '@ionic/vue';
+import { useLocale } from '@/composables/useLocale';
 
+
+const { t } = useLocale();
 defineProps<{
   isOpen: boolean;
   inputs: Array<Record<string, unknown>>;

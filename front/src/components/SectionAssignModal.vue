@@ -16,12 +16,12 @@ SPDX-License-Identifier: AGPL-3.0-only
             <ion-icon :icon="closeOutline" />
           </ion-button>
         </ion-buttons>
-        <ion-title>Categorías por sección</ion-title>
+        <ion-title>{{ t('components.sectionAssign.title') }}</ion-title>
         <ion-buttons slot="end">
-          <ion-button aria-label="Nueva categoría" @click="openQuickCategoryAlert()">
+          <ion-button :aria-label="t('sectionassignmodal.aria1')" @click="openQuickCategoryAlert()">
             <ion-icon :icon="addOutline" />
           </ion-button>
-          <ion-button aria-label="Guardar" @click="onConfirm">
+          <ion-button :aria-label="t('sectionassignmodal.aria2')" @click="onConfirm">
             <ion-icon :icon="saveOutline" />
           </ion-button>
         </ion-buttons>
@@ -30,7 +30,7 @@ SPDX-License-Identifier: AGPL-3.0-only
         <ion-searchbar
           v-model="searchQuery"
           mode="ios"
-          placeholder="Buscar categoría"
+          :placeholder="t('sectionassignmodal.placeholder1')"
           class="ion-no-padding"
           :debounce="300"
         />
@@ -51,7 +51,7 @@ SPDX-License-Identifier: AGPL-3.0-only
             <ion-select
               slot="end"
               :value="assignments[cat.id] || ''"
-              placeholder="Sin asignar"
+              :placeholder="t('sectionassignmodal.placeholder2')"
               interface="popover"
               :aria-label="'Sección de ' + cat.name"
               :data-test="'section-select-' + cat.id"
@@ -101,11 +101,14 @@ import {
   IonSelectOption,
   IonSearchbar,
 } from '@ionic/vue';
+import { useLocale } from '@/composables/useLocale';
 import { closeOutline, addOutline, saveOutline } from 'ionicons/icons';
 import { ref, computed, watch } from 'vue';
 import QuickCategoryAlert from '@/components/QuickCategoryAlert.vue';
 import { useQuickCategory } from '@/composables/useQuickCategory';
 import type { EntryCategoryRow, IncomeStatementSection, IncomeStatementSectionMap } from '@/db/types';
+
+const { t } = useLocale();
 // end imports
 
 // Props / emits

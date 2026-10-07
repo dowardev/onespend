@@ -17,6 +17,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Line } from 'vue-chartjs'
+import { useLocale } from '@/composables/useLocale';
+const { t } = useLocale();
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -44,7 +46,7 @@ const chartData = computed(() => ({
   labels: props.labels,
   datasets: [
     {
-      label: 'Ingresos',
+      label: t('cashflowchart.income'),
       data: props.ingresosData,
       backgroundColor: 'rgba(75, 192, 192, 0.15)',
       borderColor: 'rgba(75, 192, 192, 1)',
@@ -54,7 +56,7 @@ const chartData = computed(() => ({
       borderWidth: 2,
     },
     {
-      label: 'Egresos',
+      label: t('cashflowchart.expense'),
       data: props.egresosData,
       backgroundColor: 'rgba(255, 99, 132, 0.15)',
       borderColor: 'rgba(255, 99, 132, 1)',

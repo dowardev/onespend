@@ -95,6 +95,16 @@ builds (APK/AAB) from the terminal — no Android Studio required.
 
 See [deploy.md](deploy.md) for shared hosting deployment instructions.
 
+### Sync backend URL is overridable in-app
+
+`VITE_API_URL` is baked into the build as the **placeholder** shown on
+**Ajustes → Conexiones** (route `/settings/connections`). The user can
+paste any other URL and flip the **Sincronización** toggle on without
+rebuilding the APK / web bundle. Sync is opt-in: the app does not make
+any HTTP request to the bundled URL until the user explicitly enables
+it. This lets a single build serve users who self-host, users who use
+the author server, and users who do not sync at all.
+
 ## License
 
 OneSpend is free software: you can redistribute it and/or modify it under the

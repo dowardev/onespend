@@ -155,6 +155,27 @@ cp .env.production.example .env.production
 
 > See [section 2](#2-sso-authentication) to obtain SSO credentials.
 
+### `VITE_API_URL` is overridable from the in-app **Conexiones** menu
+
+`VITE_API_URL` is baked into the bundle as the **placeholder** the app
+shows on the **Conexiones** screen (Settings → Conexiones, route
+`/settings/connections`). Sync is opt-in:
+
+1. The user opens **Ajustes → Conexiones** and flips the **Sincronización** toggle on.
+2. The app shows the URL field pre-filled with the value of
+   `VITE_API_URL` from the build. The user can paste any other URL
+   (their own backend, a staging instance, a friend's self-hosted
+   server) and tap save.
+3. The app then makes HTTP requests to the URL the user actually
+   entered, not the bundled one.
+
+Implication for deploys: you do **not** need to rebuild the APK / web
+bundle every time the backend moves or a new user wants a different
+server. Ship a build with any reachable URL (or your prod one), and
+let the user override it from the menu. An empty `VITE_API_URL` is
+also valid — it produces an empty placeholder, and the user must
+paste a URL before sync can start.
+
 ### 2. Build for Production
 
 ```bash
@@ -263,6 +284,10 @@ Pipeline triggers automatically on tags matching
 | `VITE_SSO_URL`        | SSO API URL (consumed directly by Vite build) | `https://auth.yourdomain.com/api` |
 | `VITE_SSO_FRONTEND_URL` | SSO UI URL (consumed directly by Vite build) | `https://auth.yourdomain.com` |
 | `VITE_SSO_CLIENT_ID`  | SSO client id (consumed directly by Vite build) | `onespend-app` |
+
+> `VITE_API_URL` is a placeholder shown on **Ajustes → Conexiones** in
+> the app. The user can override it from the in-app menu at any time
+> without a rebuild. See [Frontend Deployment](#4-frontend-deployment).
 <!-- markdownlint-enable MD013 -->
 
 ### Trigger
@@ -383,6 +408,20 @@ point to a CDN or a different proxy):
 
 In `--advanced` mode the script re-prompts all four frontend vars, each with
 the value from `back/.env` as the default.
+
+### `VITE_API_URL` is overridable in-app
+
+The `VITE_API_URL` chosen at setup time is **not** hard-wired into the
+client. It only seeds the placeholder on the **Ajustes → Conexiones**
+screen, where the user can paste any other URL and use it for sync.
+This means:
+
+- A user can switch from your public server to a self-hosted one
+  without reinstalling the app.
+- You do not need to rebuild the APK / web bundle for backend
+  migrations; ship the build once and let users retarget.
+- An empty `VITE_API_URL` is valid: the placeholder is empty, and the
+  user must type a URL before sync is enabled.
 
 ### `VITE_SSO_FRONTEND_URL` scheme validation
 
