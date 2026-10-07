@@ -21,7 +21,7 @@ SPDX-License-Identifier: AGPL-3.0-only
     />
       <ion-item>
         <ion-button slot="start" fill="clear" size="small" @click="$emit('cancel')">
-          Cancelar
+          {{ t('common.cancel') }}
         </ion-button>
         <ion-button
           slot="end"
@@ -30,7 +30,7 @@ SPDX-License-Identifier: AGPL-3.0-only
           :disabled="!canApply"
           @click="$emit('apply')"
         >
-          Aplicar
+          {{ t('common.apply') }}
         </ion-button>
       </ion-item>
     </ion-content>
@@ -39,6 +39,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { IonPopover, IonContent, IonDatetime, IonItem, IonButton } from '@ionic/vue';
+import { useLocale } from '@/composables/useLocale';
+
+const { t } = useLocale();
 
 defineProps({
   popoverState: { type: Object, default: () => ({ open: false, event: null }) },

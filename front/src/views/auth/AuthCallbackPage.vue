@@ -9,10 +9,10 @@ SPDX-License-Identifier: AGPL-3.0-only
     <ion-content :fullscreen="true" class="callback-content">
       <div class="callback-container">
         <ion-spinner v-if="loading" name="crescent" class="callback-spinner" />
-        <p v-if="loading">Autenticando...</p>
+        <p v-if="loading">{{ t('auth.callback.message') }}</p>
         <div v-if="error" class="error-container">
           <p class="error-message">{{ error }}</p>
-          <ion-button @click="redirectToSSO">Intentar de nuevo</ion-button>
+          <ion-button @click="redirectToSSO">{{ t('auth.login.retry') }}</ion-button>
         </div>
       </div>
     </ion-content>
@@ -28,9 +28,11 @@ import { getSSOClient } from "@/ssoClientAccessor"
 
 // 2. Controllers / Composables
 import authController from "@/controllers/authController"
+import { useLocale } from "@/composables/useLocale"
 
 // 5. Main
 const router = useRouter()
+const { t } = useLocale()
 const loading = ref(true)
 const error = ref("")
 

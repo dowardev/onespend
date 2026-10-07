@@ -14,7 +14,7 @@ SPDX-License-Identifier: AGPL-3.0-only
           </ion-button>
         </ion-buttons>
 
-        <ion-title>{{ props.supplier ? 'Editar Proveedor' : 'Crear Proveedor' }}</ion-title>
+        <ion-title>{{ props.supplier ? t('suppliers.modals.addsuplierscomponent.editTitle') : t('suppliers.modals.addsuplierscomponent.newTitle') }}</ion-title>
 
         <ion-buttons slot="end">
           <ion-button @click="submitForm">
@@ -46,6 +46,7 @@ import {
   IonTitle,
   IonContent,
 } from '@ionic/vue';
+import { useLocale } from '@/composables/useLocale';
 import { ref } from 'vue';
 import { closeOutline, saveOutline } from 'ionicons/icons';
 
@@ -53,6 +54,8 @@ import SupplierFormComponent from './SupplierFormComponent.vue';
 import type { Supplier } from '@/controllers/suppliersController';
 import type { SupplierFormPayload } from './SupplierFormComponent.vue';
 
+
+const { t } = useLocale();
 const props = defineProps<{ supplier: Supplier | null }>();
 
 const emit = defineEmits<{

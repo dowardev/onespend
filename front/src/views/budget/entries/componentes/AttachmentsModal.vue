@@ -53,7 +53,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
       <ion-list v-if="selectedFiles.length > 0" class="file-list">
         <ion-list-header>
-          <ion-label> Archivos seleccionados ({{ selectedFiles.length }}) </ion-label>
+          <ion-label> {{ t('attachments.selected') }} ({{ selectedFiles.length }}) </ion-label>
         </ion-list-header>
 
         <ion-card class="shadow1">
@@ -79,7 +79,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
       <ion-list v-if="localExistingAttachments.length > 0" class="file-list">
         <ion-list-header>
-          <ion-label> Archivos existentes ({{ localExistingAttachments.length }}) </ion-label>
+          <ion-label> {{ t('attachments.existing') }} ({{ localExistingAttachments.length }}) </ion-label>
         </ion-list-header>
 
         <ion-card class="shadow1">
@@ -128,6 +128,7 @@ import {
   IonText,
   toastController,
 } from '@ionic/vue';
+import { useLocale } from '@/composables/useLocale';
 import {
   closeOutline,
   saveOutline,
@@ -137,6 +138,8 @@ import {
 } from 'ionicons/icons';
 import { ref, watch, computed } from 'vue';
 
+
+const { t } = useLocale();
 interface ExistingAttachment {
   id: number;
   name: string;
@@ -271,7 +274,7 @@ function handleSave() {
 }
 
 function formatFileSize(bytes: number): string {
-  if (bytes === 0) return '0 Bytes';
+  if (bytes === 0) return t('budget.entries.componentes.attachmentsmodal.fallback');
   const k = 1024;
   const sizes = ['Bytes', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));

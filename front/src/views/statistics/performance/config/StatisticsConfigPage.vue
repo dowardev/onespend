@@ -12,13 +12,13 @@ SPDX-License-Identifier: AGPL-3.0-only
           <ion-icon :icon="closeOutline"></ion-icon>
         </ion-button>
       </ion-buttons>
-      <ion-title>Configuración</ion-title>
+      <ion-title>{{ t('statistics.performance.config.statisticsconfigpage.title') }}</ion-title>
     </ion-toolbar>
   </ion-header>
 
   <ion-content>
     <ion-item lines="full">
-      <ion-label>Registra tus gastos</ion-label>
+      <ion-label>{{ t('statistics.performance.config.statisticsconfigpage.label') }}</ion-label>
     </ion-item>
 
     <ion-list class="transparent">
@@ -75,12 +75,15 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script setup lang="ts">
 import { IonItem, IonLabel, IonNote, IonInput, IonGrid, IonRow, IonCol, IonIcon, IonButton } from '@ionic/vue';
+import { useLocale } from '@/composables/useLocale';
 import { computed, reactive, onMounted, defineEmits } from 'vue';
 
 // constrollers
 import systemController from '@/controllers/systemConfigController';
 import { addOutline, trashOutline, closeOutline } from 'ionicons/icons';
 import { statisticsConfigDb } from '@/db/controllers/statisticsConfigDb';
+
+const { t } = useLocale();
 // end constrollers
 
 const serviceItems = computed(() => categories[0].items);

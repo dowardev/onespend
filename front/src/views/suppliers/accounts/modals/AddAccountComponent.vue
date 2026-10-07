@@ -32,7 +32,7 @@ SPDX-License-Identifier: AGPL-3.0-only
         <ion-item class="transparent" lines="none">
           <ion-input
             v-model="form.name"
-            label="Nombre"
+            :label="t('suppliers.accounts.modals.addaccountcomponent.text1')"
             label-placement="floating"
             required
           ></ion-input>
@@ -41,7 +41,7 @@ SPDX-License-Identifier: AGPL-3.0-only
         <ion-item class="transparent" lines="none">
           <ion-input
             v-model.number="form.initialBalance"
-            label="Balance inicial"
+            :label="t('suppliers.accounts.modals.addaccountcomponent.text2')"
             label-placement="floating"
             type="number"
           ></ion-input>
@@ -73,12 +73,15 @@ import {
   IonInput,
   IonAlert,
 } from '@ionic/vue';
+import { useLocale } from '@/composables/useLocale';
 import { reactive, computed, watch, ref } from 'vue';
 import { closeOutline, saveOutline, trashOutline } from 'ionicons/icons';
 import { required, minValue, maxLength, helpers } from '@vuelidate/validators';
 import useVuelidate from '@vuelidate/core';
 import type { Account } from '@/stores/accountsStore';
 
+
+const { t } = useLocale();
 interface AccountPayload {
   name: string;
   initialBalance: number;
@@ -114,9 +117,9 @@ const isFormValid = computed(() => {
   return !v$.value.$invalid;
 });
 const alertButtons = [
-  { text: 'Cancelar', role: 'cancel' },
+  { text: t('suppliers.accounts.modals.addaccountcomponent.alert.cancel'), role: 'cancel' },
   {
-    text: 'Eliminar',
+    text: t('suppliers.accounts.modals.addaccountcomponent.text'),
     role: 'destructive',
     handler: () => {
       if (selectedId.value != null) emit('delete', selectedId.value);

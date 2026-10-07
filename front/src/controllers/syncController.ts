@@ -12,6 +12,7 @@ import type { DeadLetterItem } from '@/db/types';
 import db from '@/db/OneSpendDB';
 import { detectDivergence, type DivergenceReport, type LocalDbLike, type SnapshotServiceLike } from '@/services/sync/SyncDivergenceDetector';
 import { syncApiService } from '@/services/sync/SyncApiService';
+import { isSyncEnabled, readSyncConfig } from '@/services/sync/syncConfig';
 
 /**
  * DLQ items can carry a `data` field that was stored before the queue was
@@ -72,6 +73,12 @@ class SyncController {
   private isSyncing = ref(false);
   private pendingChanges = ref(0);
   private lastSyncTime = ref(0);
+  // LBDS-289: client-clock timestamp of the last successful sync.
+  // Separate from lastSyncTime (server cursor) so the menu label can
+  // show 'Synced just now' even when the server clock is on a
+  // different timezone. Must be a ref so SyncStatus's computed
+  // re-evaluates after a sync.
+  private lastSyncDisplayTime = ref(0);
   private syncError = ref<string | null>(null);
 
   private cleanupOnlineListener: (() => void) | null = null;
@@ -91,6 +98,7 @@ class SyncController {
       this.pendingChanges.value = count;
     });
     this.lastSyncTime.value = syncService.getLastSyncTime();
+    this.lastSyncDisplayTime.value = syncService.getLastSyncDisplayTime();
   }
 
   stop() {
@@ -117,6 +125,17 @@ class SyncController {
     return this.lastSyncTime.value;
   }
 
+  /**
+   * LBDS-289: client-clock timestamp for the menu label. The
+   * SyncQueueService cursor (server time, may be on a different
+   * timezone) stays the source of truth for the next incremental
+   * pull; the UI just wants 'hace un momento' to mean 'hace un
+   * momento for the user, not for the server'.
+   */
+  getLastSyncDisplayTime(): number {
+    return this.lastSyncDisplayTime.value;
+  }
+
   getSyncError() {
     return this.syncError.value;
   }
@@ -130,7 +149,35 @@ class SyncController {
     return this.isOnline.value;
   }
 
+  /**
+   * LBDS-289: short-circuit every user-initiated sync action when the
+   * user has not enabled sync in Settings. Sets `syncError` to a
+   * user-friendly message and returns false so callers can render the
+   * Sync Settings link instead of an unhandled exception. Without this,
+   * pulling the trigger on `Sincronizar ahora` while sync is off would
+   * surface a SyncDisabledError from deep inside the queue.
+   */
+  private async ensureSyncEnabled(): Promise<boolean> {
+    // LBDS-289: gate on BOTH the opt-in flag AND a non-empty server
+    // URL. The flag-only check let background retries (processQueue,
+    // pending attachments drain) start work, acquire the lock, and
+    // only fail on the first API call — which then surfaced as a red
+    // 'Sync is disabled in Settings' banner instead of the /sync gate
+    // card the user sees. The UI uses `syncConfigured` (flag AND url)
+    // for its disabled state, so the gate has to match.
+    const cfg = await readSyncConfig();
+    if (cfg.enabled && cfg.hasServerUrl) return true;
+    // LBDS-289: the action buttons on /sync are disabled when sync is
+    // off, so this branch should not be reachable from normal UI. If
+    // a sync somehow does get triggered (race condition, debug entry
+    // point, scheduled retry with empty URL, etc.) we just bail
+    // without flashing a red banner. The gate card on /sync already
+    // explains the situation.
+    return false;
+  }
+
   async syncNow(): Promise<boolean> {
+    if (!(await this.ensureSyncEnabled())) return false;
     if (!this.refreshOnline()) {
       this.syncError.value = 'Cannot sync while offline';
       return false;
@@ -139,19 +186,23 @@ class SyncController {
     this.isSyncing.value = true;
     this.syncError.value = null;
 
-    // LBDS-276: requeue orphan creates (rows with no `serverId` that the
-    // user created locally but that the sync queue never picked up). This
-    // makes "Sincronizar ahora" complete — previously the primary button
-    // silently did nothing for those rows because the user had to find
-    // `Reparar sincronización` to enqueue them.
-    await syncQueueService.reconstructQueueForUnsyncedCreates();
-
     // LBDS-244: el issue del push es un canal por corrida, no estado global,
     // para que la pull no dependa de que el push haya salido limpio. Se declara
     // fuera del try para que el catch pueda conservarlo si la pull también falla.
     let issue: string | null = null;
 
     try {
+      // LBDS-276: requeue orphan creates (rows with no `serverId` that the
+      // user created locally but that the sync queue never picked up). This
+      // makes "Sincronizar ahora" complete — previously the primary button
+      // silently did nothing for those rows because the user had to find
+      // `Reparar sincronización` to enqueue them.
+      // LBDS-289: this call must be INSIDE the try so the `finally` block
+      // always resets `isSyncing`. Before this fix, if
+      // reconstructQueueForUnsyncedCreates threw, the SyncStatus label
+      // stayed stuck on 'Sincronizando...' forever because `isSyncing = true`
+      // was set BEFORE the try-catch.
+      await syncQueueService.reconstructQueueForUnsyncedCreates();
       await syncService.processQueue({
         onIssue: (message) => { issue = message; },
       });
@@ -163,6 +214,7 @@ class SyncController {
         await this.rebuildBudgetDaySnapshot();
       });
       this.lastSyncTime.value = syncService.getLastSyncTime();
+    this.lastSyncDisplayTime.value = syncService.getLastSyncDisplayTime();
 
       if (issue) {
         this.syncError.value = issue;
@@ -183,6 +235,7 @@ class SyncController {
   }
 
   async pullFromServer() {
+    if (!(await this.ensureSyncEnabled())) return;
     if (!this.refreshOnline()) {
       this.syncError.value = 'Cannot pull while offline';
       return;
@@ -196,6 +249,7 @@ class SyncController {
         await this.rebuildBudgetDaySnapshot();
       });
       this.lastSyncTime.value = syncService.getLastSyncTime();
+    this.lastSyncDisplayTime.value = syncService.getLastSyncDisplayTime();
     } catch (error) {
       this.syncError.value = error instanceof Error ? error.message : 'Pull failed';
     } finally {
@@ -204,6 +258,7 @@ class SyncController {
   }
 
   async fullSyncAndSave() {
+    if (!(await this.ensureSyncEnabled())) return;
     if (!this.refreshOnline()) {
       this.syncError.value = 'Cannot full sync while offline';
       return;
@@ -217,6 +272,7 @@ class SyncController {
         await this.rebuildBudgetDaySnapshot();
       });
       this.lastSyncTime.value = syncService.getLastSyncTime();
+    this.lastSyncDisplayTime.value = syncService.getLastSyncDisplayTime();
       this.pendingChanges.value = await syncService.getQueueCount();
     } catch (error) {
       this.syncError.value = error instanceof Error ? error.message : 'Full sync failed';
@@ -228,6 +284,10 @@ class SyncController {
   async repairSync(params: { onProgress: (p: RepairProgress) => void }): Promise<RepairResult> {
     const { onProgress } = params;
 
+    if (!(await this.ensureSyncEnabled())) {
+      onProgress({ step: 'error', message: 'La sincronización está desactivada', percent: 0 });
+      return { ok: false, created: 0, updated: 0, errors: 1 };
+    }
     if (!this.refreshOnline()) {
       onProgress({ step: 'error', message: 'No se puede reparar sin conexión', percent: 0 });
       return { ok: false, created: 0, updated: 0, errors: 1 };
@@ -260,6 +320,7 @@ class SyncController {
       } else {
         onProgress({ step: 'done', message: 'No se encontraron elementos pendientes', percent: 100 });
         this.lastSyncTime.value = syncService.getLastSyncTime();
+    this.lastSyncDisplayTime.value = syncService.getLastSyncDisplayTime();
         this.pendingChanges.value = await syncService.getQueueCount();
         return { ok: true, created: 0, updated: 0, errors: 0 };
       }
@@ -268,6 +329,7 @@ class SyncController {
       await syncService.pullChanges();
 
       this.lastSyncTime.value = syncService.getLastSyncTime();
+    this.lastSyncDisplayTime.value = syncService.getLastSyncDisplayTime();
       this.pendingChanges.value = await syncService.getQueueCount();
 
       onProgress({
@@ -326,6 +388,7 @@ class SyncController {
     // second sync in a row converges instead of churning.
     await syncService.pullChanges();
     this.lastSyncTime.value = syncService.getLastSyncTime();
+    this.lastSyncDisplayTime.value = syncService.getLastSyncDisplayTime();
     this.pendingChanges.value = await syncService.getQueueCount();
     return { requeued: created };
   }

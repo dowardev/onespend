@@ -10,7 +10,7 @@ SPDX-License-Identifier: AGPL-3.0-only
     <ion-col size="12">
       <ion-card :style="`border: 1px solid var(--ion-color-success)`" class="no-shadow">
         <ion-item lines="none" class="transparent">
-          <ion-label>Ingresos</ion-label>
+          <ion-label>{{ t('budget.components.summarycards.label1') }}</ion-label>
 
           <ion-button fill="clear"><ion-icon :icon="informationCircleOutline" /></ion-button>
         </ion-item>
@@ -27,7 +27,7 @@ SPDX-License-Identifier: AGPL-3.0-only
     <ion-col size="12">
       <ion-card :style="`border: 1px solid var(--ion-color-danger)`" class="no-shadow">
         <ion-item lines="none" class="transparent">
-          <ion-label>Egresos</ion-label>
+          <ion-label>{{ t('budget.components.summarycards.label2') }}</ion-label>
 
           <ion-button fill="clear"><ion-icon :icon="informationCircleOutline" /></ion-button>
         </ion-item>
@@ -58,13 +58,13 @@ SPDX-License-Identifier: AGPL-3.0-only
 
         <ion-list class="transparent">
           <ion-list-header>
-            <ion-label>Resultado</ion-label>
+            <ion-label>{{ t('budget.components.summarycards.label3') }}</ion-label>
           </ion-list-header>
 
           <div class="list-content" style="border: none">
             <!-- cash -->
             <ion-item lines="full">
-              <ion-label>Efectivo</ion-label>
+              <ion-label>{{ t('budget.components.summarycards.label4') }}</ion-label>
               <ion-label slot="end" :color="colorDifferenceEfectivo">{{
                 labelDifferenceEfectivo
               }}</ion-label>
@@ -72,7 +72,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
             <!-- card -->
             <ion-item lines="full">
-              <ion-label>Tarjeta</ion-label>
+              <ion-label>{{ t('budget.components.summarycards.label5') }}</ion-label>
               <ion-label slot="end" :color="colorDifferenceTarjeta">{{
                 labelDifferenceTarjeta
               }}</ion-label>
@@ -86,10 +86,13 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script setup lang="ts">
 import { IonRow, IonCol, IonCard, IonItem, IonLabel, IonButton, IonIcon } from '@ionic/vue';
+import { useLocale } from '@/composables/useLocale';
 import { informationCircleOutline } from 'ionicons/icons';
 import { formatCurrency } from '@/utils/currency';
 import { computed } from 'vue';
 
+
+const { t } = useLocale();
 const props = defineProps<{
   totalIngresosOnly: number | string;
   totalEgresos: number | string;

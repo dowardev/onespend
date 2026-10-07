@@ -11,6 +11,21 @@ import { syncLockService } from '../SyncLockService'
 import pendingAttachmentsService from '../../pendingAttachmentsService'
 import type { SyncQueueItem } from '@/db/types'
 
+// LBDS-289: gate sync ON so the LBDS-244 retry assertions keep their
+// shape; the disabled path is covered by syncDisabledGate.test.ts.
+vi.mock('@/db/controllers/configDb', () => ({
+  configDb: {
+    get: vi.fn(async ({ key }: { key: string }) => {
+      if (key === 'syncEnabled') return true;
+      if (key === 'syncServerUrl') return 'https://example.test';
+      return undefined;
+    }),
+    set: vi.fn(),
+    delete: vi.fn(),
+    getAll: vi.fn(),
+  },
+}))
+
 // LBDS-244: el scheduler de reintentos no debe girar mientras no hay red, y un
 // lock ocupado debe re-chequear la cola hasta que se libere, drenándola.
 interface SchedulerProbe {

@@ -7,20 +7,20 @@ SPDX-License-Identifier: AGPL-3.0-only
 <template>
   <div class="sync-status" :class="{ 'has-pending': pendingChanges > 0, 'is-offline': !isOnline }">
     <ion-icon :icon="syncIcon" :class="{ spinning: isSyncing }"></ion-icon>
-    <span v-if="!isOnline" class="status-text offline">Offline</span>
-    <span v-else-if="isSyncing" class="status-text syncing">Sincronizando...</span>
+    <span v-if="!isOnline" class="status-text offline">{{ t('sync.view.status.offline') }}</span>
+    <span v-else-if="isSyncing" class="status-text syncing">{{ t('sync.view.syncing') }}</span>
     <span v-else-if="pendingChanges > 0" class="status-text pending">
-      {{ pendingChanges }} pendiente{{ pendingChanges !== 1 ? 's' : '' }}
+      {{ pendingChanges }} {{ t('sync.view.status.pending', { count: pendingChanges }) }}
     </span>
     <span v-else-if="lastSyncTime > 0" class="status-text synced">
-      Sincronizado {{ formatTime({ timestamp: lastSyncTime }) }}
+      {{ t('sync.view.status.synced', { time: formatTime({ timestamp: lastSyncTime }) }) }}
     </span>
-    <span v-else class="status-text">Sin sincronizar</span>
+    <span v-else class="status-text">{{ t('sync.view.status.never') }}</span>
   </div>
 </template>
 
 <script setup lang="ts">
-// Imports
+// 1. Imports (ionic/vue/ionicons)
 import { computed } from 'vue';
 import { IonIcon } from '@ionic/vue';
 import {
@@ -30,38 +30,31 @@ import {
   timeOutline,
 } from 'ionicons/icons';
 import { SyncController } from '@/controllers/syncController';
-// End Imports
 
-// Components
+// 2. Controllers / Composables
+import { useLocale } from '@/composables/useLocale';
 
-// End Components
+// 3. Components
+// (none)
 
-// Vars
+// 4. Interface and types imports
+// (none)
+
+// 5. Main (props, emits, etc.)
+// (no props or emits — presentational component)
+
+// 6. Vars and const
 const syncController = SyncController;
-// End Vars
+const { t } = useLocale();
 
-// Functions
-function formatTime(params: { timestamp: number }): string {
-  const { timestamp } = params;
-  const now = Date.now();
-  const diff = now - timestamp;
+// 7. Watch
+// (none)
 
-  if (diff < 60000) return 'ahora';
-  if (diff < 3600000) return `hace ${Math.floor(diff / 60000)}m`;
-  if (diff < 86400000) return `hace ${Math.floor(diff / 3600000)}h`;
-  return `hace ${Math.floor(diff / 86400000)}d`;
-}
-// End Functions
-
-// Life cycle
-
-// End Life cycle
-
-// Computed
+// 8. Computed
 const isOnline = computed(() => syncController.getIsOnline());
 const isSyncing = computed(() => syncController.getIsSyncing());
 const pendingChanges = computed(() => syncController.getPendingChanges());
-const lastSyncTime = computed(() => syncController.getLastSyncTime());
+const lastSyncTime = computed(() => syncController.getLastSyncDisplayTime());
 
 const syncIcon = computed(() => {
   if (!isOnline.value) return cloudOfflineOutline;
@@ -69,10 +62,23 @@ const syncIcon = computed(() => {
   if (pendingChanges.value > 0) return timeOutline;
   return checkmarkCircleOutline;
 });
-// End Computed
 
-// Watch
-// End Watch
+// 9. OnMounted
+// (none)
+
+// 10. Functions (named parameters pattern)
+function formatTime(params: { timestamp: number }): string {
+  const { timestamp } = params;
+  const now = Date.now();
+  const diff = now - timestamp;
+  const minutes = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+  if (diff < 60000) return t('sync.view.status.justNow');
+  if (diff < 3600000) return t('sync.view.status.minutesAgo', { m: minutes });
+  if (diff < 86400000) return t('sync.view.status.hoursAgo', { h: hours });
+  return t('sync.view.status.daysAgo', { d: days });
+}
 </script>
 
 <style scoped>

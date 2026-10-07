@@ -28,7 +28,7 @@ SPDX-License-Identifier: AGPL-3.0-only
         <strong class="popover-title">{{ entry.term }}</strong>
         <p class="popover-desc">{{ entry.definition }}</p>
         <div v-if="entry.formula" class="popover-formula">
-          <strong>Cálculo:</strong>
+          <strong>{{ t('statistics.performance.financialInfo.calculation') }}</strong>
           <code>{{ entry.formula }}</code>
         </div>
       </div>
@@ -43,22 +43,24 @@ let idCounter = 0
 <script setup lang="ts">
 import { computed } from 'vue'
 import { IonPopover } from '@ionic/vue'
-import { financialGlossary } from '@/composables/useFinancialGlossary'
-import type { GlossaryEntry } from '@/composables/useFinancialGlossary'
+import { useGlossary, type GlossaryEntry, type GlossaryKey } from '@/composables/useFinancialGlossary'
+import { useLocale } from '@/composables/useLocale'
 
 const props = defineProps<{
   term: string
   inline?: boolean
 }>()
 
+const { t } = useLocale()
+
 const triggerId = `info-trigger-${++idCounter}`
 
 const entry = computed<GlossaryEntry>(() => {
-  const found = financialGlossary[props.term]
+  const found = useGlossary(props.term as GlossaryKey)
   if (found) return found
   return {
     term: props.term,
-    definition: 'No hay descripción disponible para este término.',
+    definition: t('statistics.performance.financialInfo.noDescription'),
   }
 })
 

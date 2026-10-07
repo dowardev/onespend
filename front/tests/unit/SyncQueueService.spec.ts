@@ -101,6 +101,22 @@ vi.mock('@/services/sync/ConflictResolutionService', () => ({
 }));
 vi.mock('@/services/pendingAttachmentsService', () => ({ default: { getAllPendingAttachments: vi.fn(() => []), base64ToFile: vi.fn(), removePendingAttachment: vi.fn(), hasPendingAttachments: vi.fn(() => false), uploadPendingAttachments: vi.fn(), removeFileFromPending: vi.fn() } }));
 vi.mock('@/services/attachmentService', () => ({ default: vi.fn() }));
+// LBDS-289: SyncQueueService.processQueue now gates on the syncEnabled
+// flag read from configDb. Default the gate to ON so the existing
+// assertions (which assume sync is enabled) still hold; the gate is
+// covered separately by services/sync/__tests__/syncDisabledGate.test.ts.
+vi.mock('@/db/controllers/configDb', () => ({
+  configDb: {
+    get: vi.fn(async ({ key }: { key: string }) => {
+      if (key === 'syncEnabled') return true;
+      if (key === 'syncServerUrl') return 'https://example.test';
+      return undefined;
+    }),
+    set: vi.fn(),
+    delete: vi.fn(),
+    getAll: vi.fn(),
+  },
+}));
 
 describe('SyncQueueService.pullChanges', () => {
   let service: SyncQueueService;

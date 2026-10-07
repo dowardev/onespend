@@ -11,7 +11,7 @@ SPDX-License-Identifier: AGPL-3.0-only
         <ion-buttons slot="start">
           <ion-back-button default-href="/budget"></ion-back-button>
         </ion-buttons>
-        <ion-title>Iniciar Sesión</ion-title>
+        <ion-title>{{ t('auth.login.title') }}</ion-title>
       </ion-toolbar>
     </ion-header>
 
@@ -22,20 +22,20 @@ SPDX-License-Identifier: AGPL-3.0-only
             <div class="auth-container">
               <div class="logo-section">
                 <h1>oneSpend</h1>
-                <p v-if="!showError">Redirigiendo al servidor de autenticación...</p>
-                <p v-else>No se pudo completar el inicio de sesión.</p>
+                <p v-if="!showError">{{ t('auth.login.subtitle') }}</p>
+                <p v-else>{{ t('auth.login.subtitleError') }}</p>
               </div>
 
               <ion-card v-if="showError" color="danger">
                 <ion-card-content>
-                  <p>No se pudo completar el inicio de sesión con SSO. Inténtalo de nuevo.</p>
-                  <ion-button expand="block" @click="handleRetry">Reintentar</ion-button>
+                  <p>{{ t('auth.login.errorTitle') }}</p>
+                  <ion-button expand="block" @click="handleRetry">{{ t('auth.login.retry') }}</ion-button>
                 </ion-card-content>
               </ion-card>
 
               <div v-else class="loading-section">
                 <ion-spinner name="crescent" class="auth-spinner" />
-                <p>Serás redirigido al portal SSO para iniciar sesión.</p>
+                <p>{{ t('auth.login.loading') }}</p>
               </div>
             </div>
           </ion-col>
@@ -66,6 +66,7 @@ import {
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import authController from '@/controllers/authController'
+import { useLocale } from '@/composables/useLocale'
 
 // 2. Controllers / Composables
 // Shared login logic lives in authController; route and router are framework composables.
@@ -73,6 +74,7 @@ import authController from '@/controllers/authController'
 // 5. Main
 const route = useRoute()
 const router = useRouter()
+const { t } = useLocale()
 
 // 6. Vars and const
 const loginFailed = ref(false)

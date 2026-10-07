@@ -33,14 +33,14 @@ SPDX-License-Identifier: AGPL-3.0-only
 
       <ion-list>
         <ion-list-header>
-          <ion-label>Desglose</ion-label>
+          <ion-label>{{ t('statistics.performance.components.budgetexpenseschartmodal.label') }}</ion-label>
         </ion-list-header>
         <ion-item v-for="(entry, index) in entries" :key="index">
-          <ion-label>{{ entry.name || 'Sin nombre' }}</ion-label>
+          <ion-label>{{ entry.name || t('common.unnamed') }}</ion-label>
           <ion-note slot="end">{{ formatCurrency(entry.amount) }}</ion-note>
         </ion-item>
         <ion-item lines="none">
-          <ion-label><strong>Total</strong></ion-label>
+          <ion-label><strong>{{ t('common.total') }}</strong></ion-label>
           <ion-note slot="end"
             ><strong>{{ formatCurrency(totalAmount) }}</strong></ion-note
           >
@@ -68,11 +68,14 @@ import {
   IonCard,
   IonCardContent,
 } from '@ionic/vue';
+import { useLocale } from '@/composables/useLocale';
 import { closeOutline } from 'ionicons/icons';
 import { computed } from 'vue';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import { Pie } from 'vue-chartjs';
 
+
+const { t } = useLocale();
 ChartJS.register(ArcElement, Tooltip, Legend);
 
 interface BudgetEntry {
@@ -119,7 +122,7 @@ const totalAmount = computed(() => {
 });
 
 const chartData = computed(() => ({
-  labels: props.entries.map((entry) => entry.name || 'Sin nombre'),
+  labels: props.entries.map((entry) => entry.name || t('common.unnamed')),
   datasets: [
     {
       data: props.entries.map((entry) => entry.amount || 0),

@@ -24,7 +24,7 @@ SPDX-License-Identifier: AGPL-3.0-only
               <ion-list-header>
                 <ion-label>
                   {{ dlqItems.length }}
-                  {{ dlqItems.length === 1 ? 'elemento fallido' : 'elementos fallidos' }}
+                  {{ dlqItems.length === 1 ? t('sync.view.dlq.itemFailed') : t('sync.view.dlq.itemsFailed') }}
                 </ion-label>
               </ion-list-header>
 
@@ -87,7 +87,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                 <ion-icon slot="start" :icon="refreshCircleOutline" color="primary"></ion-icon>
 
                 <ion-label>
-                  <h3>Reintentar todos</h3>
+                  <h3>{{ t('sync.dlqview.title1') }}</h3>
                 </ion-label>
               </ion-item>
 
@@ -95,7 +95,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                 <ion-icon slot="start" :icon="trashOutline" color="danger"></ion-icon>
 
                 <ion-label>
-                  <h3>Eliminar todos</h3>
+                  <h3>{{ t('sync.dlqview.title2') }}</h3>
                 </ion-label>
               </ion-item>
             </ion-list>
@@ -103,7 +103,7 @@ SPDX-License-Identifier: AGPL-3.0-only
             <div v-else class="empty-state">
               <ion-icon :icon="checkmarkCircleOutline" class="empty-icon"></ion-icon>
 
-              <h2>No hay elementos fallidos</h2>
+              <h2>{{ t('sync.dlqview.title3') }}</h2>
 
               <p>La cola de elementos fallidos está vacía.</p>
             </div>
@@ -137,6 +137,7 @@ import {
   alertController,
   toastController,
 } from '@ionic/vue';
+import { useLocale } from '@/composables/useLocale';
 import { ref, onMounted } from 'vue';
 import {
   alertCircleOutline,
@@ -157,6 +158,8 @@ import { SyncController } from '@/controllers/syncController';
 // 4. Interface and types imports
 import type { DeadLetterItem } from '@/db/types';
 
+
+const { t } = useLocale();
 // 5. Main (props, emits, etc.)
 // (sin props ni emits)
 
@@ -189,7 +192,7 @@ async function handleRetry(params: { item: DeadLetterItem }) {
     await loadDlqItems();
     SyncController.syncNow();
     const toast = await toastController.create({
-      message: 'Elemento reintentado',
+      message: t('sync.dlqview.message1'),
       duration: 2000,
       color: 'success',
     });
@@ -210,15 +213,15 @@ async function handleRetry(params: { item: DeadLetterItem }) {
 
 async function handleRetryAll() {
   const alert = await alertController.create({
-    header: 'Reintentar todos',
+    header: t('sync.dlqview.header1'),
     message: `¿Reintentar ${dlqItems.value.length} elementos?`,
     buttons: [
       {
-        text: 'Cancelar',
+        text: t('sync.dlqview.text1'),
         role: 'cancel',
       },
       {
-        text: 'Reintentar',
+        text: t('sync.dlqview.text2'),
         role: 'confirm',
         handler: async () => {
           isRetrying.value = true;
@@ -227,7 +230,7 @@ async function handleRetryAll() {
             await loadDlqItems();
             SyncController.syncNow();
             const toast = await toastController.create({
-              message: 'Elementos reintentados',
+              message: t('sync.dlqview.message2'),
               duration: 2000,
               color: 'success',
             });
@@ -253,15 +256,15 @@ async function handleRetryAll() {
 
 async function handleClearAll() {
   const alert = await alertController.create({
-    header: 'Eliminar todos',
-    message: '¿Eliminar todos los elementos fallidos? Esta acción no se puede deshacer.',
+    header: t('sync.dlqview.header2'),
+    message: t('sync.dlqview.removeAllMessage'),
     buttons: [
       {
-        text: 'Cancelar',
+        text: t('sync.dlqview.text1'),
         role: 'cancel',
       },
       {
-        text: 'Eliminar',
+        text: t('sync.dlqview.text4'),
         role: 'confirm',
         handler: async () => {
           isRetrying.value = true;
@@ -269,14 +272,14 @@ async function handleClearAll() {
             await SyncController.clearDlq();
             await loadDlqItems();
             const toast = await toastController.create({
-              message: 'Elementos eliminados',
+              message: t('sync.dlqview.message3'),
               duration: 2000,
               color: 'success',
             });
             await toast.present();
           } catch (error) {
             const toast = await toastController.create({
-              message: 'Error al eliminar',
+              message: t('sync.dlqview.message4'),
               duration: 2000,
               color: 'danger',
             });

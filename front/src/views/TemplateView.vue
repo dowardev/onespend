@@ -9,7 +9,7 @@ templa
   <ion-page>
     <ion-header class="ion-no-border" mode="ios">
       <ion-toolvar>
-        <ion-title>Template</ion-title>
+        <ion-title>{{ t('common.template') }}</ion-title>
       </ion-toolvar>
     </ion-header>
 
@@ -31,6 +31,7 @@ templa
 
 <script lang="ts" setup>
 // imports
+import { useLocale } from '@/composables/useLocale';
 // Ejemplo: ionic,vue,ionicons
 // end
 
@@ -48,6 +49,7 @@ templa
 // end main
 
 // vars and const
+const { t } = useLocale();
 // end vars and const
 
 // watch

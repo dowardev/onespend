@@ -26,7 +26,7 @@ SPDX-License-Identifier: AGPL-3.0-only
           <!-- Memory Test -->
           <ion-item>
             <ion-label>
-              <h2>Memory Usage Test</h2>
+              <h3>{{ t('test.performancetestpage.title1') }}</h3>
               <p>Test memory before/after operations</p>
             </ion-label>
             <ion-button slot="end" @click="testMemoryUsage"> Test Memory </ion-button>
@@ -35,7 +35,7 @@ SPDX-License-Identifier: AGPL-3.0-only
           <!-- JSON Cloning Test -->
           <ion-item>
             <ion-label>
-              <h2>JSON Cloning Test</h2>
+              <h3>{{ t('test.performancetestpage.title2') }}</h3>
               <p>Compare JSON.parse vs structuredClone</p>
             </ion-label>
             <ion-button slot="end" @click="testJSONCloning"> Test Cloning </ion-button>
@@ -44,7 +44,7 @@ SPDX-License-Identifier: AGPL-3.0-only
           <!-- Image Compression Test -->
           <ion-item>
             <ion-label>
-              <h2>Image Compression Test</h2>
+              <h3>{{ t('test.performancetestpage.title3') }}</h3>
               <p>Test Base64 image compression</p>
             </ion-label>
             <ion-button slot="end" @click="triggerImageTest"> Test Images </ion-button>
@@ -60,7 +60,7 @@ SPDX-License-Identifier: AGPL-3.0-only
           <!-- Generate Report -->
           <ion-item>
             <ion-label>
-              <h2>Generate Report</h2>
+              <h3>{{ t('test.performancetestpage.title4') }}</h3>
               <p>Show performance comparison</p>
             </ion-label>
             <ion-button slot="end" color="success" @click="generateReport">
@@ -71,7 +71,7 @@ SPDX-License-Identifier: AGPL-3.0-only
           <!-- Clear Metrics -->
           <ion-item>
             <ion-label>
-              <h2>Clear Metrics</h2>
+              <h3>{{ t('test.performancetestpage.title5') }}</h3>
               <p>Reset all test data</p>
             </ion-label>
             <ion-button slot="end" color="danger" @click="clearMetrics"> Clear </ion-button>
@@ -100,15 +100,15 @@ SPDX-License-Identifier: AGPL-3.0-only
         </ion-card-header>
         <ion-card-content>
           <ion-item>
-            <ion-label>Used Memory</ion-label>
+            <ion-label>{{ t('test.performancetestpage.label1') }}</ion-label>
             <ion-note slot="end">{{ formatMemory(memoryStatus.used) }}</ion-note>
           </ion-item>
           <ion-item>
-            <ion-label>Total Memory</ion-label>
+            <ion-label>{{ t('test.performancetestpage.label2') }}</ion-label>
             <ion-note slot="end">{{ formatMemory(memoryStatus.total) }}</ion-note>
           </ion-item>
           <ion-item>
-            <ion-label>Memory Limit</ion-label>
+            <ion-label>{{ t('test.performancetestpage.label3') }}</ion-label>
             <ion-note slot="end">{{ formatMemory(memoryStatus.limit) }}</ion-note>
           </ion-item>
         </ion-card-content>
@@ -118,7 +118,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted,  } from 'vue';
+import { useLocale } from '@/composables/useLocale';
 import {
   IonPage,
   IonHeader,
@@ -141,6 +142,8 @@ import { usePerformanceMonitoring } from '@/utils/performanceMonitor';
 import { registerCleanup, removeTemporaryElements, useDOMCleanup } from '@/utils/domCleanup';
 import systemController from '@/controllers/systemConfigController';
 
+
+const { t } = useLocale();
 const designMode = computed(() => systemController.getDesignMode());
 
 const {

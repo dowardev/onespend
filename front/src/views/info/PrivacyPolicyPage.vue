@@ -11,7 +11,7 @@ SPDX-License-Identifier: AGPL-3.0-only
         <ion-buttons slot="start">
           <ion-menu-button></ion-menu-button>
         </ion-buttons>
-        <ion-title>Política de Privacidad</ion-title>
+        <ion-title>{{ t('privacyPolicy.title') }}</ion-title>
       </ion-toolbar>
     </ion-header>
 
@@ -21,120 +21,99 @@ SPDX-License-Identifier: AGPL-3.0-only
           <ion-col size="12" size-md="8" size-lg="6">
             <ion-card class="shadow1 transparent">
               <ion-card-header>
-                <ion-card-title>Política de Privacidad</ion-card-title>
-                <ion-card-subtitle>Última actualización: 24 de agosto de 2026</ion-card-subtitle>
+                <ion-card-title>{{ t('privacyPolicy.title') }}</ion-card-title>
+                <ion-card-subtitle>{{ t('privacyPolicy.lastUpdated') }}</ion-card-subtitle>
               </ion-card-header>
               <ion-card-content>
-                <p>
-                  OneSpend ("la aplicación") es un gestor de gastos y presupuestos desarrollado por
-                  DowarDev ("nosotros", "nuestro"). Esta política explica qué información maneja la
-                  aplicación y cómo la protegemos.
-                </p>
+                <p>{{ t('privacyPolicy.intro') }}</p>
               </ion-card-content>
             </ion-card>
 
             <ion-card class="shadow1 transparent">
               <ion-card-header>
-                <ion-card-title>1. Información que recopilamos</ion-card-title>
+                <ion-card-title>{{ t('privacyPolicy.sections.dataCollected') }}</ion-card-title>
               </ion-card-header>
               <ion-card-content>
-                <p><strong>Datos de cuenta.</strong> Para sincronizar tus datos entre dispositivos,
-                la aplicación utiliza un servicio de inicio de sesión propio. Recopilamos tu nombre
-                de usuario y dirección de correo electrónico.</p>
-                <p><strong>Datos financieros que ingresás.</strong> Gastos, ingresos, presupuestos,
-                cuentas, proveedores, productos y notas que cargás voluntariamente en la aplicación.</p>
-                <p><strong>Adjuntos.</strong> Imágenes u otros archivos que adjuntes a tus registros
-                (por ejemplo, fotos de productos).</p>
-                <p><strong>No recopilamos:</strong> datos de ubicación, contactos, información de
-                dispositivos con fines publicitarios, ni utilizamos herramientas de análisis de
-                terceros.</p>
+                <p><strong>{{ t('privacyPolicy.sections.dataCollectedAccount') }}.</strong> {{ t('privacyPolicy.sections.dataCollectedAccountBody') }}</p>
+                <p><strong>{{ t('privacyPolicy.sections.dataCollectedFinancial') }}.</strong> {{ t('privacyPolicy.sections.dataCollectedFinancialBody') }}</p>
+                <p><strong>{{ t('privacyPolicy.sections.dataCollectedAttachments') }}.</strong> {{ t('privacyPolicy.sections.dataCollectedAttachmentsBody') }}</p>
+                <p><strong>{{ t('privacyPolicy.sections.dataCollectedNot') }}:</strong> {{ t('privacyPolicy.sections.dataCollectedNotBody') }}</p>
               </ion-card-content>
             </ion-card>
 
             <ion-card class="shadow1 transparent">
               <ion-card-header>
-                <ion-card-title>2. Cómo almacenamos tu información</ion-card-title>
+                <ion-card-title>{{ t('privacyPolicy.sections.storage') }}</ion-card-title>
               </ion-card-header>
               <ion-card-content>
-                <p><strong>En tu dispositivo:</strong> la aplicación funciona sin conexión y guarda
-                tus datos localmente en el almacenamiento de tu dispositivo.</p>
-                <p><strong>En nuestros servidores:</strong> si iniciás sesión, tus datos se
-                sincronizan de forma cifrada con nuestros servidores (dowar.xyz) únicamente para
-                habilitar la sincronización entre tus propios dispositivos y las copias de
-                seguridad.</p>
-                <p><strong>No vendemos ni compartimos</strong> tu información personal con terceros
-                con fines publicitarios o comerciales.</p>
+                <p><strong>{{ t('privacyPolicy.sections.storageLocal') }}:</strong> {{ t('privacyPolicy.sections.storageLocalBody') }}</p>
+                <p><strong>{{ t('privacyPolicy.sections.storageServer') }}:</strong> {{ t('privacyPolicy.sections.storageServerBody') }}</p>
+                <p><strong>{{ t('privacyPolicy.sections.storageNoSell') }}</strong> {{ t('privacyPolicy.sections.storageNoSellBody') }}</p>
               </ion-card-content>
             </ion-card>
 
             <ion-card class="shadow1 transparent">
               <ion-card-header>
-                <ion-card-title>3. Uso de la información</ion-card-title>
+                <ion-card-title>{{ t('privacyPolicy.sections.use') }}</ion-card-title>
               </ion-card-header>
               <ion-card-content>
-                <p>La información se utiliza exclusivamente para:</p>
+                <p>{{ t('privacyPolicy.sections.useBody') }}</p>
                 <ul>
-                  <li>Proveer la funcionalidad de la aplicación (registro de gastos, presupuestos,
-                  estadísticas)</li>
-                  <li>Sincronizar tus datos entre tus dispositivos</li>
-                  <li>Brindarte soporte cuando lo solicites</li>
+                  <li>{{ t('privacyPolicy.sections.useList.functionality') }}</li>
+                  <li>{{ t('privacyPolicy.sections.useList.sync') }}</li>
+                  <li>{{ t('privacyPolicy.sections.useList.support') }}</li>
                 </ul>
               </ion-card-content>
             </ion-card>
 
             <ion-card class="shadow1 transparent">
               <ion-card-header>
-                <ion-card-title>4. Retención y eliminación de datos</ion-card-title>
+                <ion-card-title>{{ t('privacyPolicy.sections.retention') }}</ion-card-title>
               </ion-card-header>
               <ion-card-content>
-                <p>Podés eliminar tus datos locales borrando los registros dentro de la aplicación
-                o desinstalando la aplicación.</p>
-                <p>Para eliminar tu cuenta y todos los datos almacenados en nuestros servidores,
-                contactanos a <strong>vortinext@dowar.xyz</strong> y procesaremos la eliminación en
-                un plazo máximo de 30 días.</p>
+                <p>{{ t('privacyPolicy.sections.retentionBody1') }}</p>
+                <p>{{ t('privacyPolicy.sections.retentionBody2', { email: 'vortinext@dowar.xyz' }) }}</p>
               </ion-card-content>
             </ion-card>
 
             <ion-card class="shadow1 transparent">
               <ion-card-header>
-                <ion-card-title>5. Seguridad</ion-card-title>
+                <ion-card-title>{{ t('privacyPolicy.sections.security') }}</ion-card-title>
               </ion-card-header>
               <ion-card-content>
-                <p>La comunicación entre la aplicación y nuestros servidores utiliza cifrado TLS.
-                El acceso a los servidores está restringido y los datos se almacenan de forma
-                cifrada.</p>
+                <p>{{ t('privacyPolicy.sections.securityBody') }}</p>
               </ion-card-content>
             </ion-card>
 
             <ion-card class="shadow1 transparent">
               <ion-card-header>
-                <ion-card-title>6. Menores de edad</ion-card-title>
+                <ion-card-title>{{ t('privacyPolicy.sections.minors') }}</ion-card-title>
               </ion-card-header>
               <ion-card-content>
-                <p>La aplicación no está dirigida a menores de 13 años y no recopilamos
-                deliberadamente información de ellos.</p>
+                <p>{{ t('privacyPolicy.sections.minorsBody') }}</p>
               </ion-card-content>
             </ion-card>
 
             <ion-card class="shadow1 transparent">
               <ion-card-header>
-                <ion-card-title>7. Cambios a esta política</ion-card-title>
+                <ion-card-title>{{ t('privacyPolicy.sections.changes') }}</ion-card-title>
               </ion-card-header>
               <ion-card-content>
-                <p>Podemos actualizar esta política ocasionalmente. Los cambios se publicarán en
-                esta página con una nueva fecha de actualización.</p>
+                <p>{{ t('privacyPolicy.sections.changesBody') }}</p>
               </ion-card-content>
             </ion-card>
 
             <ion-card class="shadow1 transparent">
               <ion-card-header>
-                <ion-card-title>8. Contacto</ion-card-title>
+                <ion-card-title>{{ t('privacyPolicy.sections.contact') }}</ion-card-title>
               </ion-card-header>
               <ion-card-content>
-                <p>Si tenés preguntas sobre esta política o querés ejercer derechos sobre tus datos
-                (acceso, rectificación, eliminación):</p>
-                <p><strong>DowarDev</strong> — vortinext@dowar.xyz<br />
-                Código fuente: https://gitlab.com/dowardev/onespend</p>
+                <p>{{ t('privacyPolicy.sections.contactBody') }}</p>
+                <p>
+                  <strong>{{ t('privacyPolicy.sections.contactInfo', { company: 'DowarDev', email: 'vortinext@dowar.xyz' }) }}</strong>
+                  <br />
+                  {{ t('privacyPolicy.sections.source', { url: 'https://gitlab.com/dowardev/onespend' }) }}
+                </p>
               </ion-card-content>
             </ion-card>
           </ion-col>
@@ -146,25 +125,50 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script setup lang="ts">
 // 1. Imports (ionic/vue/ionicons)
-import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonGrid, IonRow, IonCol, IonCard, IonCardHeader, IonCardTitle, IonCardSubtitle, IonCardContent, IonButtons, IonMenuButton } from '@ionic/vue';
+import {
+  IonPage,
+  IonHeader,
+  IonToolbar,
+  IonTitle,
+  IonContent,
+  IonGrid,
+  IonRow,
+  IonCol,
+  IonCard,
+  IonCardHeader,
+  IonCardTitle,
+  IonCardSubtitle,
+  IonCardContent,
+  IonButtons,
+  IonMenuButton,
+} from '@ionic/vue';
 
 // 2. Controllers / Composables
+import { useLocale } from '@/composables/useLocale';
 
 // 3. Components
+// (none)
 
 // 4. Interface and types imports
+// (none)
 
 // 5. Main (props, emits, etc.)
+// (no props or emits — page is self-contained)
 
 // 6. Vars and const
+const { t } = useLocale();
 
 // 7. Watch
+// (none)
 
 // 8. Computed
+// (none)
 
 // 9. OnMounted
+// (none)
 
-// 10. Functions
+// 10. Functions (named parameters pattern)
+// (none)
 </script>
 
 <style>

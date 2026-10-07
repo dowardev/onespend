@@ -32,7 +32,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                   <ion-label class="truncate">
                     Proveedor
                     <p class="truncate">
-                      {{ providerName || 'Seleccionar proveedor' }}
+                      {{ providerName || t('common.selectProvider') }}
                     </p>
                   </ion-label>
                 </ion-item>
@@ -44,7 +44,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                   :disabled="!selectedProvider"
                   @click="openReassignFromMenu({ e: $event })"
                 >
-                  <ion-label>Fecha</ion-label>
+                  <ion-label>{{ t('budget.suppliers.providereditpage.label1') }}</ion-label>
                   <ion-label slot="end">{{ toShortDate({ isoDate: reassignPicker.dateISO.value }) }}</ion-label>
                 </ion-item>
               </ion-card>
@@ -53,7 +53,7 @@ SPDX-License-Identifier: AGPL-3.0-only
             <!-- Products section  -->
             <ion-list v-if="selectedProvider" class="ion-padding-start ion-padding-end">
               <ion-list-header>
-                <ion-label>Productos</ion-label>
+                <ion-label>{{ t('budget.suppliers.providereditpage.label2') }}</ion-label>
 
                 <ion-button @click="addTemporaryProduct()">
                   <ion-icon slot="start" :icon="addOutline" />
@@ -111,7 +111,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                   class="transparent"
                 >
                   <ion-input
-                    placeholder="Nombre"
+                    :placeholder="t('budget.suppliers.providereditpage.placeholder1')"
                     :value="product.productName"
                     style="flex: 1; --padding-start: 0"
                     @ion-input="
@@ -126,7 +126,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                   ></ion-input>
                   <ion-input
                     type="number"
-                    placeholder="Precio"
+                    :placeholder="t('budget.suppliers.providereditpage.placeholder2')"
                     :value="product.productPrice || ''"
                     class="input-fluid"
                     style="--input-width: 90px; text-align: end"
@@ -142,7 +142,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                   ></ion-input>
                   <ion-input
                     type="number"
-                    placeholder="Cant"
+                    :placeholder="t('budget.suppliers.providereditpage.placeholder3')"
                     :value="product.quantity || ''"
                     class="input-fluid"
                     style="--input-width: 65px; text-align: end"
@@ -420,6 +420,7 @@ import {
   IonCol,
   IonToast,
 } from '@ionic/vue';
+import { useLocale } from '@/composables/useLocale';
 import {
   closeOutline,
   trashOutline,
@@ -535,6 +536,7 @@ interface SelectProviderData {
 
 // router
 const router = useRouter();
+const { t } = useLocale();
 const route = useRoute();
 // end router
 
@@ -920,7 +922,7 @@ async function onSupplierFormSaved(payload: SupplierFormPayload) {
     }
 
     const successToast = await toastController.create({
-      message: 'Proveedor creado',
+      message: t('budget.suppliers.providereditpage.message'),
       duration: 1500,
       color: 'success',
       position: 'bottom',

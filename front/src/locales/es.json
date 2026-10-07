@@ -1,0 +1,932 @@
+{
+  "_comment": "LBDS-289 (F12): some keys share the same Spanish/English value across namespaces. That is intentional. (a) menu.items.<x> and <x>.title point at the same word but live in different components (menu label vs page header) so the path is meaningful. (b) recurring.<x> and recurring.edit.<x> are the legacy list view vs the edit view; both still exist in the codebase. (c) statistics.performance.useincomestatement.label.<x> and statistics.performance.glossary.<x>.term are read by two different surfaces (chart legend vs popover) and may diverge in future translations. (d) downloads.<x> and info.downloadspage.text<N> are the canonical and inline-text copies; do not delete either.",
+  "common": {
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "back": "Volver",
+    "close": "Cerrar",
+    "yes": "Sí",
+    "no": "No",
+    "ok": "Aceptar",
+    "loading": "Cargando",
+    "menu": "Menú",
+    "language": "Idioma",
+    "template": "Template",
+    "apply": "Aplicar",
+    "charge": "Cargo",
+    "provider": "Provedor",
+    "search": "Buscar",
+    "total": "Total",
+    "requirements": "Requisitos:",
+    "selectAccount": "Seleccionar cuenta",
+    "select": "Seleccionar",
+    "selectProvider": "Seleccionar proveedor",
+    "unnamed": "Sin nombre"
+  },
+  "recurring": {
+    "section": {
+      "info": "Información",
+      "date": "Fecha",
+      "details": "Mas detalles",
+      "products": "Productos",
+      "suppliers": "Proveedores"
+    },
+    "field": {
+      "name": "Nombre",
+      "type": "Tipo",
+      "entryType": "Tipo de entrada",
+      "frequency": "Frecuencia",
+      "every": "Cada",
+      "day": "Día",
+      "dayOfMonth": "Día del mes",
+      "dayOfWeek": "Día de la semana",
+      "startDate": "Fecha de inicio",
+      "endDate": "Fecha de fin (opcional)",
+      "autoInsert": "Auto-insertar",
+      "notesPlaceholder": "Agregar notas...",
+      "searchSupplierPlaceholder": "Buscar proveedor"
+    },
+    "type": {
+      "cargo": "Cargo"
+    },
+    "entryType": {
+      "income": "Ingreso"
+    },
+    "frequency": {
+      "day": "Día",
+      "week": "Semana",
+      "month": "Mes",
+      "year": "Año",
+      "weekdayMode": "Día de semana",
+      "fixedDayMode": "Día fijo",
+      "daily": "Cada día",
+      "days": "Cada {n} días",
+      "weekly": "Cada semana",
+      "weeks": "Cada {n} semanas",
+      "last": "Último",
+      "first": "Primer",
+      "monthWeekday": "Cada mes - {ordinal} {weekday}",
+      "monthDay": "Cada mes - día {day}",
+      "yearly": "Cada año - {m} {d}",
+      "years": "Cada {n} años - {m} {d}"
+    },
+    "title": {
+      "editCharge": "Editar Cargo",
+      "editSupplier": "Editar Proveedor",
+      "newCharge": "Nuevo Cargo",
+      "newSupplier": "Nuevo Proveedor",
+      "selectSupplier": "Seleccionar Proveedor",
+      "createSupplier": "Crear Proveedor"
+    },
+    "validation": {
+      "nameRequired": "El nombre es obligatorio",
+      "frequencyRequired": "La frecuencia es obligatoria"
+    },
+    "distribution": {
+      "header": "Distribución por Cuenta",
+      "itemNamePlaceholder": "Nombre",
+      "itemPricePlaceholder": "Precio",
+      "itemQtyPlaceholder": "Cant"
+    },
+    "toast": {
+      "resumed": "Cargo reanudado",
+      "paused": "Cargo pausado",
+      "supplierCreated": "Proveedor creado"
+    },
+    "error": {
+      "createSupplier": "Error al crear proveedor"
+    },
+    "recurringpage": {
+      "label": "Cargos Recurrentes",
+      "placeholder": "Buscar",
+      "cancelButton": "Cancelar",
+      "deleteButton": "Eliminar",
+      "testDataToast": "Datos de prueba insertados",
+      "title": "Cargos Recurrentes",
+      "empty": "No hay cargos recurrentes"
+    },
+    "edit": {
+      "section": {
+        "info": "Información",
+        "date": "Fecha",
+        "details": "Más detalles",
+        "products": "Productos",
+        "suppliers": "Proveedores"
+      },
+      "field": {
+        "name": "Nombre",
+        "namePlaceholder": "Nombre del cargo recurrente",
+        "type": "Tipo",
+        "entryType": "Tipo de entrada",
+        "frequency": "Frecuencia",
+        "every": "Cada",
+        "day": "Día",
+        "dayOfMonth": "Día del mes",
+        "dayOfWeek": "Día de la semana",
+        "startDate": "Fecha de inicio",
+        "endDate": "Fecha de fin",
+        "autoInsert": "Auto-insertar",
+        "notesPlaceholder": "Agregar notas...",
+        "searchSupplierPlaceholder": "Buscar proveedor"
+      },
+      "type": {
+        "cargo": "Cargo",
+        "provider": "Proveedor"
+      },
+      "entryType": {
+        "income": "Ingreso",
+        "expense": "Egreso"
+      },
+      "frequency": {
+        "day": "Día",
+        "week": "Semana",
+        "month": "Mes",
+        "year": "Año",
+        "weekdayMode": "Día de semana",
+        "fixedDayMode": "Día fijo"
+      },
+      "title": {
+        "editCharge": "Editar Cargo",
+        "editSupplier": "Editar Proveedor",
+        "newCharge": "Nuevo Cargo",
+        "newSupplier": "Nuevo Proveedor",
+        "selectSupplier": "Seleccionar proveedor",
+        "createSupplier": "Crear proveedor"
+      },
+      "validation": {
+        "nameRequired": "El nombre es requerido",
+        "frequencyRequired": "La frecuencia es requerida"
+      },
+      "distribution": {
+        "header": "Distribución",
+        "itemNamePlaceholder": "Nombre",
+        "itemPricePlaceholder": "Precio",
+        "itemQtyPlaceholder": "Cantidad"
+      },
+      "toast": {
+        "resumed": "Cargo reanudado",
+        "paused": "Cargo pausado",
+        "supplierCreated": "Proveedor creado"
+      },
+      "error": {
+        "createSupplier": "Error al crear proveedor"
+      }
+    },
+    "action": {
+      "pause": "Pausar",
+      "resume": "Reanudar"
+    },
+    "status": {
+      "paused": "Pausado",
+      "active": "Activo"
+    }
+  },
+  "home": {
+    "title": "Inicio",
+    "placeholder": {
+      "heading": "Ready to create an app?",
+      "bodyBefore": "Start with Ionic",
+      "link": "UI Components"
+    }
+  },
+  "menu": {
+    "sections": {
+      "statistics": "Estadisticas",
+      "admin": "Administracion",
+      "extras": "Extras"
+    },
+    "items": {
+      "login": "Iniciar Sesión",
+      "register": "Registrarse",
+      "budget": "Presupuesto",
+      "history": "Historial",
+      "suppliers": "Provedores",
+      "recurring": "Cargos Recurrentes",
+      "accounts": "Cuentas",
+      "sync": "Sincronización",
+      "cashFlow": "Flujo de Caja",
+      "performance": "Rendimiento",
+      "maintenance": "Mantenimiento",
+      "personalization": "Personalización",
+      "syncSettings": "Conexiones",
+      "performanceTest": "Pruebas Rendimiento",
+      "downloads": "Descargas",
+      "privacy": "Privacidad"
+    },
+    "logout": {
+      "header": "Cerrar Sesión",
+      "message": "¿Estás seguro de que quieres cerrar sesión?",
+      "button": "Cerrar Sesión"
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "Iniciar Sesión",
+      "subtitle": "Redirigiendo al servidor de autenticación...",
+      "subtitleError": "No se pudo completar el inicio de sesión.",
+      "loading": "Serás redirigido al portal SSO para iniciar sesión.",
+      "errorTitle": "No se pudo completar el inicio de sesión con SSO. Inténtalo de nuevo.",
+      "retry": "Reintentar"
+    },
+    "register": {
+      "title": "Registrarse",
+      "subtitle": "Redirigiendo al registro SSO...",
+      "subtitleError": "No se pudo completar el registro.",
+      "loading": "Serás redirigido al portal SSO para crear tu cuenta.",
+      "errorTitle": "No se pudo completar el registro con SSO. Inténtalo de nuevo.",
+      "retry": "Reintentar"
+    },
+    "callback": {
+      "title": "Iniciando sesión",
+      "message": "Procesando autenticación…"
+    }
+  },
+  "sync": {
+    "view": {
+      "title": "Sincronización",
+      "statusHeader": "Estado de sincronización",
+      "status": {
+        "offline": "Sin conexión",
+        "pending": "pendientes",
+        "synced": "Sincronizado {time}",
+        "never": "Sin sincronizar",
+        "justNow": "ahora",
+        "minutesAgo": "hace {m}m",
+        "hoursAgo": "hace {h}h",
+        "daysAgo": "hace {d}d"
+      },
+      "connection": "Conexión",
+      "syncing": "Sincronizando...",
+      "change_one": "cambio",
+      "change_other": "cambios",
+      "clearQueue": "Limpiar cola",
+      "statusText": {
+        "online": "En línea",
+        "offline": "Fuera de línea"
+      },
+      "actions": {
+        "syncNow": "Sincronizar ahora",
+        "pullFromServer": "Bajar del servidor",
+        "fullSync": "Sincronización completa",
+        "repair": "Reparar sincronización",
+        "configure": "Configurar sincronización"
+      },
+      "summary": {
+        "pending": "Cambios pendientes",
+        "lastSync": "Última sincronización",
+        "never": "Nunca",
+        "conflicts": "Conflictos"
+      },
+      "errors": {
+        "disabled": {
+          "header": "Sincronización deshabilitada",
+          "message": "Activa la sincronización en ajustes",
+          "detail": "Para usar esta función, primero activá la sincronización.",
+          "button": "Ir a ajustes",
+          "cancel": "Cancelar"
+        },
+        "offline": {
+          "header": "Sin conexión",
+          "message": "No hay conexión a internet",
+          "detail": "Verificá tu conexión y reintentá.",
+          "button": "Reintentar",
+          "cancel": "Cancelar"
+        },
+        "pullOffline": {
+          "header": "No se puede sincronizar",
+          "message": "Sin conexión: no se puede sincronizar desde el servidor",
+          "button": "Reintentar",
+          "cancel": "Cancelar"
+        },
+        "fullOffline": {
+          "header": "Sincronización completa no disponible",
+          "message": "La sincronización completa requiere conexión",
+          "button": "Reintentar"
+        },
+        "generic": "Error de sincronización"
+      },
+      "fixProblems": "Solucionar problemas de sincronización",
+      "fixProblemsBody": "Actualiza, sincroniza y repara en un solo paso",
+      "advanced": "Opciones avanzadas",
+      "forceSync": "Forzar sincronización completa",
+      "forceSyncBody": "Re-sube todo al servidor",
+      "repair": "Reparar sincronización",
+      "repairBody": "Compara tu base local con el servidor",
+      "refreshStatus": "Actualizar estado",
+      "refreshing": "Actualizando...",
+      "refreshStatusBody": "Vuelve a leer la cola y los conflictos",
+      "failedItems": "Elementos fallidos",
+      "element_one": "elemento",
+      "element_other": "elementos",
+      "inDlq": "en cola de fallidos",
+      "diagnoseDivergence": "Diagnóstico de divergencias",
+      "diagnoseChecking": "Comparando local vs servidor...",
+      "diagnoseBody": "Detecta filas que el servidor no recibió, id de categoría pendientes, etc.",
+      "repairDivergence": "Reparar divergencias",
+      "repairDivergenceRunning": "Re-encadenando filas huérfanas y sincronizando...",
+      "repairDivergenceBody": "Re-encadena filas que el servidor nunca recibió y baja lo que falte",
+      "divergenceServerUnreachable": "No se pudo contactar al servidor. La repair corre en local; el diagnóstico requiere red.",
+      "divergenceNone": "Sin divergencias detectadas — local y servidor coinciden.",
+      "divergenceDevDetail": "Detalle completo vía",
+      "inConsole": "en la consola",
+      "activeConflicts": "Conflictos activos",
+      "disabled": {
+        "title": "Sincronización desactivada",
+        "body": "Activa la sincronización en Conexiones para empezar a respaldar tus datos.",
+        "goToSettings": "Ir a Conexiones"
+      },
+      "dlq": {
+        "itemFailed": "elemento fallido",
+        "itemsFailed": "elementos fallidos"
+      }
+    },
+    "settings": {
+      "title": "Ajustes de sincronización",
+      "header": "Configura cuándo y contra qué servidor sincronizar",
+      "enableLabel": "Activar sincronización",
+      "enableDescription": "Desactivado: la app no se conecta al servidor (recomendado para F-Droid).",
+      "serverUrlLabel": "URL del servidor",
+      "urlPlaceholder": "https://",
+      "urlInvalid": "La URL debe empezar con http:// o https:// (o quedar vacía para desactivar).",
+      "footer": "Dejar la URL vacía desactiva la sincronización incluso con el interruptor encendido."
+    },
+    "dlqview": {
+      "retryAllHeader": "Reintentar todos",
+      "removeAllHeader": "Eliminar todos",
+      "emptyMessage": "No hay elementos fallidos",
+      "removeItemMessage": "¿Eliminar este elemento?",
+      "removeAllMessage": "¿Eliminar todos los elementos?",
+      "removeConfirmMessage": "Confirmar eliminación",
+      "retriedAllMessage": "Todos los elementos se reintentaron",
+      "retryAllButton": "Reintentar todos",
+      "removeAllButton": "Eliminar todos",
+      "retryOneButton": "Reintentar",
+      "removeOneButton": "Eliminar"
+    },
+    "syncview": {
+      "title": "Sesión requerida",
+      "text1": "Cancelar",
+      "text2": "Eliminar",
+      "text3": "Cancelar",
+      "text4": "Continuar",
+      "text5": "Entendido, reparar",
+      "text6": "Solucionar",
+      "message1": "Cola de sincronización limpiada",
+      "message2": "Estado actualizado",
+      "message3": "No se pudo actualizar el estado",
+      "message4": "Conflicto resuelto: se aplicó tu versión",
+      "message5": "Conflicto resuelto: se aceptó la versión del servidor",
+      "message6": "Error en reparación. Revisa la conexión e intenta de nuevo.",
+      "message7": "Sincronización solucionada",
+      "header": "Esto forzará una sincronización completa con el servidor. ¿Continuar?",
+      "alert": {
+        "cancel": "Cancelar"
+      },
+      "sessionRequired": "Sesión requerida"
+    }
+  },
+  "settings": {
+    "personalization": {
+      "title": "Personalización",
+      "theme": "Tema",
+      "themeOptions": {
+        "light": "Claro",
+        "dark": "Oscuro",
+        "auto": "Automático",
+        "catppuccinLatteMaroon": "Catppuccin Latte Maroon",
+        "catppuccinMacchiatoMaroon": "Catppuccin Macchiato Maroon"
+      },
+      "autoLightMode": "Modo claro",
+      "autoDarkMode": "Modo oscuro"
+    },
+    "maintenance": {
+      "title": "Mantenimiento",
+      "header": "Herramientas de mantenimiento del sistema"
+    },
+    "language": {
+      "title": "Idioma",
+      "system": "Idioma del sistema",
+      "es": "Español",
+      "en": "English"
+    },
+    "connections": {
+      "invalidUrl": "La URL no es válida. Revisá el formato (ej: https://...)."
+    }
+  },
+  "privacy": {
+    "title": "Privacidad",
+    "intro": "Tu privacidad es importante. OneSpend almacena tus datos localmente y solo se sincronizan con nuestros servidores cuando vos lo decidís.",
+    "dataTitle": "Datos que recopilamos",
+    "dataBody": "Cuando activás la sincronización, los datos que registres (cuentas, presupuestos, proveedores, etc.) se cifran y se sincronizan con nuestros servidores para que puedas acceder desde otros dispositivos.",
+    "analyticsTitle": "Analítica",
+    "analyticsBody": "No usamos servicios de analítica de terceros ni rastreamos tu actividad dentro de la app.",
+    "contactTitle": "Contacto",
+    "contactBody": "Si querés eliminar tu cuenta y todos los datos asociados, escribinos a vortinext@dowar.xyz y procesaremos la eliminación en menos de 30 días."
+  },
+  "privacyPolicy": {
+    "title": "Política de Privacidad",
+    "lastUpdated": "Última actualización: 24 de agosto de 2026",
+    "intro": "OneSpend (\"la aplicación\") es un gestor de gastos y presupuestos desarrollado por DowarDev (\"nosotros\", \"nuestro\"). Esta política explica qué información maneja la aplicación y cómo la protegemos.",
+    "sections": {
+      "dataCollected": "1. Información que recopilamos",
+      "dataCollectedAccount": "Datos de cuenta",
+      "dataCollectedAccountBody": "Para sincronizar tus datos entre dispositivos, la aplicación utiliza un servicio de inicio de sesión propio. Recopilamos tu nombre de usuario y dirección de correo electrónico.",
+      "dataCollectedFinancial": "Datos financieros que ingresás",
+      "dataCollectedFinancialBody": "Gastos, ingresos, presupuestos, cuentas, proveedores, productos y notas que cargás voluntariamente en la aplicación.",
+      "dataCollectedAttachments": "Adjuntos",
+      "dataCollectedAttachmentsBody": "Imágenes u otros archivos que adjuntes a tus registros (por ejemplo, fotos de productos).",
+      "dataCollectedNot": "No recopilamos",
+      "dataCollectedNotBody": "datos de ubicación, contactos, información de dispositivos con fines publicitarios, ni utilizamos herramientas de análisis de terceros.",
+      "storage": "2. Cómo almacenamos tu información",
+      "storageLocal": "En tu dispositivo",
+      "storageLocalBody": "la aplicación funciona sin conexión y guarda tus datos localmente en el almacenamiento de tu dispositivo.",
+      "storageServer": "En nuestros servidores",
+      "storageServerBody": "si iniciás sesión, tus datos se sincronizan de forma cifrada con nuestros servidores (dowar.xyz) únicamente para habilitar la sincronización entre tus propios dispositivos y las copias de seguridad.",
+      "storageNoSell": "No vendemos ni compartimos",
+      "storageNoSellBody": "tu información personal con terceros con fines publicitarios o comerciales.",
+      "use": "3. Uso de la información",
+      "useBody": "La información se utiliza exclusivamente para:",
+      "useList": {
+        "functionality": "Proveer la funcionalidad de la aplicación (registro de gastos, presupuestos, estadísticas)",
+        "sync": "Sincronizar tus datos entre tus dispositivos",
+        "support": "Brindarte soporte cuando lo solicites"
+      },
+      "retention": "4. Retención y eliminación de datos",
+      "retentionBody1": "Podés eliminar tus datos locales borrando los registros dentro de la aplicación o desinstalando la aplicación.",
+      "retentionBody2": "Para eliminar tu cuenta y todos los datos almacenados en nuestros servidores, contactanos a {email} y procesaremos la eliminación en un plazo máximo de 30 días.",
+      "security": "5. Seguridad",
+      "securityBody": "La comunicación entre la aplicación y nuestros servidores utiliza cifrado TLS. El acceso a los servidores está restringido y los datos se almacenan de forma cifrada.",
+      "minors": "6. Menores de edad",
+      "minorsBody": "La aplicación no está dirigida a menores de 13 años y no recopilamos deliberadamente información de ellos.",
+      "changes": "7. Cambios a esta política",
+      "changesBody": "Podemos actualizar esta política ocasionalmente. Los cambios se publicarán en esta página con una nueva fecha de actualización.",
+      "contact": "8. Contacto",
+      "contactBody": "Si tenés preguntas sobre esta política o querés ejercer derechos sobre tus datos (acceso, rectificación, eliminación):",
+      "contactInfo": "{company} — {email}",
+      "source": "Código fuente: {url}"
+    }
+  },
+  "downloads": {
+    "title": "Descargas",
+    "intro": "OneSpend está disponible para múltiples plataformas.",
+    "chooseHint": "Elegí tu plataforma",
+    "chooseHintBody": "Seleccioná una opción para ver requisitos y descarga",
+    "androidTitle": "Móvil",
+    "androidBody": "Tiendas de Android",
+    "googlePlay": "Google Play",
+    "googlePlayPlatform": "Android",
+    "googlePlayStatus": "Próximamente",
+    "googlePlayRequirements": "Requisitos:",
+    "googlePlayRequirementsBody": "Android 7.0 (Nougat) o superior · ~30 MB de espacio",
+    "iosTitle": "iOS",
+    "iosBody": "Próximamente",
+    "desktopTitle": "Escritorio",
+    "desktopBody": "Windows, macOS, Linux",
+    "desktopStatus": "Próximamente",
+    "webTitle": "Web",
+    "webBody": "Navegador + instalable",
+    "pwa": "PWA (Web)",
+    "pwaBody": "Navegador + instalable",
+    "pwaAvailable": "Disponible",
+    "pwaRequirements": "Requisitos:",
+    "pwaRequirementsBody": "Chrome, Edge o Safari actual · funciona offline",
+    "pwaOpen": "Abrir",
+    "linux": "Linux",
+    "linuxBody": "AppImage · DEB · OBS · Flathub · AUR",
+    "linuxStatus": "Próximamente",
+    "windows": "Windows",
+    "windowsBody": "Instalador · 64 bits",
+    "windowsNsis": "Instalador NSIS (.exe)",
+    "windowsNsisBody": "Instalador · 64 bits",
+    "winget": "Winget",
+    "wingetBody": "Instalación por terminal · sin cuenta",
+    "uptodown": "Uptodown",
+    "uptodownBody": "Descarga directa · sin cuenta",
+    "macos": "macOS",
+    "macosBody": "Apple Silicon e Intel",
+    "macosDmg": "Instalador (.dmg)",
+    "macosDmgBody": "macOS · Apple Silicon e Intel",
+    "linuxAppImage": "AppImage",
+    "linuxAppImageBody": "Universal — funciona en cualquier distribución, sin instalar",
+    "linuxDeb": "DEB",
+    "linuxDebBody": "Debian · Ubuntu · Mint",
+    "linuxObs": "OBS (Open Build Service)",
+    "linuxObsBody": "Repositorio · openSUSE · Fedora",
+    "linuxFlathub": "Flathub",
+    "linuxFlathubBody": "Flatpak · sandboxeado",
+    "linuxAur": "AUR",
+    "linuxAurBody": "Arch Linux · paquete -bin",
+    "comingSoon": "Próximamente",
+    "available": "Disponible",
+    "androidHuawei": "Android · Huawei",
+    "fdroidSubtitle": "Android · libre y de código abierto",
+    "uptodownSubtitle": "Android · tienda alternativa",
+    "fdroidNote": "Tienda de aplicaciones libre y de código abierto: sin cuenta, sin publicidad y con verificación independiente de cada versión.",
+    "uptodownNote": "Tienda alternativa de aplicaciones: descarga directa del APK, sin cuenta y sin publicidad.",
+    "macosSubtitle": "macOS · Apple Silicon e Intel"
+  },
+  "accounts": {
+    "title": "Cuentas"
+  },
+  "budget": {
+    "account": {
+      "title": "Cuentas",
+      "incomes": "Ingresos",
+      "expenses": "Gastos",
+      "selectAccount": "Seleccionar Cuenta",
+      "newAccount": "Nueva Cuenta"
+    },
+    "entryType": {
+      "income": "Ingreso",
+      "expense": "Egreso"
+    },
+    "entry": {
+      "provider": "Proveedor"
+    },
+    "agenda": {
+      "historialview": {
+        "aria": "Buscar",
+        "text": "Filtrar por fecha",
+        "placeholder": "Buscar por nombre, cuenta o proveedor"
+      }
+    },
+    "components": {
+      "deleteconfirmalert": {
+        "text": "Confirmar eliminación"
+      },
+      "notesmodal": {
+        "placeholder": "Escribe las notas aquí..."
+      },
+      "quickaccountalert": {
+        "text": "Nueva Cuenta"
+      },
+      "detailssection": {
+        "label1": "Detalles",
+        "label2": "Adjuntos",
+        "text": "Notas",
+        "placeholder": "Agregar notas..."
+      },
+      "summarycards": {
+        "label1": "Ingresos",
+        "label2": "Egresos",
+        "label3": "Resultado",
+        "label4": "Efectivo",
+        "label5": "Tarjeta"
+      },
+      "accountcards": {
+        "label": "Cuentas"
+      },
+      "accountdistributionpicker": {
+        "text": "Cantidad"
+      },
+      "daysummarymodal": {
+        "fallbackTime": "--:--",
+        "fallbackAccount": "Sin cuenta"
+      },
+      "pendingrecurringmodal": {
+        "title": "Cargos recurrentes pendientes",
+        "variableAmount": "Monto variable",
+        "autoInsertAt": "Se inserta automáticamente a las {time}",
+        "empty": "No hay cargos recurrentes pendientes",
+        "applyAll": "Aplicar todos ({count})"
+      }
+    },
+    "entries": {
+      "inicioviewcomponent": {
+        "button1": "Retroceder",
+        "text": "Seleccionar fecha",
+        "button2": "Avanzar",
+        "label": "Registro"
+      },
+      "entryeditpage": {
+        "text1": "Tipo",
+        "label1": "Categoría",
+        "text2": "Nombre",
+        "placeholder": "Pepito",
+        "label2": "Fecha",
+        "text3": "Cuentas",
+        "label3": "Reasignar fecha"
+      }
+    },
+    "suppliers": {
+      "providereditpage": {
+        "label1": "Fecha",
+        "label2": "Productos",
+        "placeholder1": "Nombre",
+        "placeholder2": "Precio",
+        "placeholder3": "Cant"
+      }
+    },
+    "budgetview": {
+      "clearDayHeader": "Vaciar día",
+      "clearDayMessage": "¿Eliminar todas las entradas de este día?",
+      "clearDayConfirm": "Vaciar",
+      "autoCreateError": "Error creando cuentas automáticamente"
+    }
+  },
+  "admin": {
+    "maintenancepage": {
+      "label": "Herramientas de mantenimiento del sistema"
+    }
+  },
+  "statistics": {
+    "cashflow": {
+      "cashflow": {
+        "label1": "30 días",
+        "label2": "90 días",
+        "label3": "1 año"
+      },
+      "title": "Flujo de Caja",
+      "incomes": "Ingresos",
+      "expenses": "Egresos"
+    },
+    "performance": {
+      "components": {
+        "budgetexpenseschartmodal": {
+          "label": "Desglose"
+        },
+        "budgetincomeschartmodal": {
+          "label": "Desglose"
+        },
+        "expenseschartmodal": {
+          "label": "Desglose"
+        },
+        "goalschartmodal": {
+          "label1": "Resumen",
+          "label2": "Meta mensual",
+          "label3": "Progreso actual",
+          "label4": "Faltante"
+        },
+        "incomeschartmodal": {
+          "label": "Desglose"
+        },
+        "budgetdetailmodal": {
+          "label": "Detalle"
+        },
+        "performancecomponent": {
+          "label1": "Utilidad Bruta",
+          "label2": "Ahorro Operativo",
+          "label3": "Resultado Neto",
+          "label4": "Ingresos",
+          "label5": "Costo de Vida",
+          "label6": "Utilidad Bruta",
+          "label7": "Resultado Neto"
+        }
+      },
+      "config": {
+        "statisticsconfigpage": {
+          "label": "Registra tus gastos",
+          "title": "Configuración"
+        },
+        "performanceconfigpage": {
+          "label": "Organizá tus categorías por sección",
+          "title": "Configuración de Performance"
+        }
+      },
+      "performancepage": {
+        "title": "Mis Finanzas",
+        "helpIntro": "Visualizá tu rendimiento",
+        "helpBody1": "Cambiá entre Día, Semana, Mes o Año para ver tendencias.",
+        "helpBold1": "Tocá los números",
+        "helpBody2": " para ver el desglose por categoría.",
+        "helpBold2": "Mantené presionado",
+        "helpBody3": " un valor para ver la comparativa con el periodo anterior.",
+        "tabDay": "Día",
+        "tabWeek": "Semana",
+        "tabMonth": "Mes",
+        "tabYear": "Año",
+        "exportExcel": "Exportar a Excel",
+        "help": "Ayuda",
+        "config": "Configuración",
+        "generatingExcel": "Generando Excel..."
+      },
+      "performancecomponent": {
+        "prevPeriod": "Periodo anterior",
+        "nextPeriod": "Periodo siguiente",
+        "selectDate": "Seleccionar fecha",
+        "totalPrefix": "Total {section}",
+        "emptySection": "Sin entradas en {section}",
+        "add": "Agregar",
+        "infoAbout": "Información sobre {section}",
+        "positive": "Subió {value}",
+        "negative": "Bajó {value}",
+        "vsPrev": "vs periodo anterior",
+        "comparisonTitle": "Comparativa vs periodo anterior",
+        "increase": "Aumento",
+        "decrease": "Disminución",
+        "increaseOf": "Aumento de {value}",
+        "decreaseOf": "Disminución de {value}",
+        "infoOn": "Información sobre",
+        "today": "Hoy",
+        "labelGrossProfit": "Beneficio bruto",
+        "labelOperatingSavings": "Ahorro operativo",
+        "labelNetResult": "Resultado neto",
+        "labelIncomes": "Ingresos",
+        "labelCostOfLife": "Costo de vida",
+        "labelDiscretionaryExpenses": "Gastos discrecionales",
+        "labelFinancialExpenses": "Gastos financieros"
+      },
+      "useincomestatement": {
+        "incomes": "Ingresos",
+        "costOfLife": "Costo de vida",
+        "discretionaryExpenses": "Gastos discrecionales",
+        "financialExpenses": "Gastos financieros",
+        "label": {
+          "salary": "Salario",
+          "investments": "Inversiones",
+          "other_income": "Otros ingresos",
+          "housing": "Vivienda",
+          "food": "Alimentación",
+          "transport": "Transporte",
+          "health": "Salud",
+          "entertainment": "Entretenimiento",
+          "other": "Otros",
+          "financial": "Intereses y comisiones"
+        }
+      },
+      "budgetIncomes": {
+        "title": "Ingresos Budget"
+      },
+      "expenses": {
+        "title": "Gastos por Categoría"
+      },
+      "incomes": {
+        "title": "Ingresos por Fuente"
+      },
+      "financialInfo": {
+        "calculation": "Cálculo:",
+        "noDescription": "No hay descripción disponible para este término."
+      },
+      "glossary": {
+        "grossProfit": {
+          "term": "Utilidad Bruta",
+          "definition": "Beneficio generado después de cubrir los gastos esenciales del periodo.",
+          "formula": "Ingresos totales − Costo de Vida"
+        },
+        "operatingSavings": {
+          "term": "Ahorro Operativo",
+          "definition": "Monto disponible después de gastos variables no esenciales.",
+          "formula": "Utilidad Bruta − Gastos Discrecionales"
+        },
+        "netResult": {
+          "term": "Resultado Neto",
+          "definition": "Resultado final del periodo tras considerar todos los gastos, incluyendo financieros.",
+          "formula": "Ahorro Operativo − Gastos Financieros"
+        },
+        "incomes": {
+          "term": "Ingresos",
+          "definition": "Todo el dinero que entra en el periodo: salarios, inversiones y otros ingresos.",
+          "formula": "Salario + Inversiones + Otros ingresos"
+        },
+        "costOfLife": {
+          "term": "Costo de Vida",
+          "definition": "Gastos necesarios para el día a día: vivienda, alimentación, transporte y salud.",
+          "formula": "Vivienda + Alimentación + Transporte + Salud"
+        },
+        "discretionaryExpenses": {
+          "term": "Gastos Discrecionales",
+          "definition": "Gastos no esenciales como entretenimiento y otros consumos optativos.",
+          "formula": "Entretenimiento + Otros"
+        },
+        "financialExpenses": {
+          "term": "Gastos Financieros",
+          "definition": "Intereses, comisiones bancarias y costos relacionados con deudas y préstamos.",
+          "formula": "Suma de todas las transacciones categorizadas como financieras"
+        },
+        "salary": {
+          "term": "Salario",
+          "definition": "Ingresos por nómina, sueldos o salarios del trabajo principal."
+        },
+        "investments": {
+          "term": "Inversiones",
+          "definition": "Rendimientos de inversiones, dividendos o rentas por propiedades."
+        },
+        "otherIncome": {
+          "term": "Otros ingresos",
+          "definition": "Ingresos que no encajan en salario ni inversiones."
+        },
+        "housing": {
+          "term": "Vivienda",
+          "definition": "Gastos de renta, hipoteca, mantenimiento de casa o departamento."
+        },
+        "food": {
+          "term": "Alimentación",
+          "definition": "Gastos en supermercado, despensa, restaurantes y comida en general."
+        },
+        "transport": {
+          "term": "Transporte",
+          "definition": "Gasolina, Uber, taxi, camión, transporte público y relacionados."
+        },
+        "health": {
+          "term": "Salud",
+          "definition": "Consultas médicas, medicamentos, seguros de salud y farmacia."
+        },
+        "entertainment": {
+          "term": "Entretenimiento",
+          "definition": "Cine, Netflix, Spotify, juegos y cualquier gasto de ocio."
+        },
+        "interestAndFees": {
+          "term": "Intereses y comisiones",
+          "definition": "Intereses de tarjetas de crédito, comisiones bancarias y costos financieros."
+        },
+        "other": {
+          "term": "Otros",
+          "definition": "Gastos o ingresos que no encajan en ninguna categoría anterior."
+        }
+      }
+    }
+  },
+  "suppliers": {
+    "accounts": {
+      "modals": {
+        "addaccountcomponent": {
+          "text1": "Nombre",
+          "text2": "Balance inicial"
+        }
+      },
+      "accountspage": {
+        "label": "Lista de cuentas",
+        "placeholder": "Buscar cuentas"
+      }
+    },
+    "modals": {
+      "supplierformcomponent": {
+        "text": "Nombre",
+        "label": "Productos",
+        "placeholder": "Buscar productos"
+      },
+      "addsuplierscomponent": {
+        "editTitle": "Editar Proveedor",
+        "newTitle": "Crear Proveedor"
+      }
+    },
+    "supplierspage": {
+      "label": "Lista de proveedores",
+      "placeholder": "Buscar proveedores"
+    }
+  },
+  "test": {
+    "performancetestpage": {
+      "title1": "Memory Usage Test",
+      "title2": "JSON Cloning Test",
+      "title3": "Image Compression Test",
+      "title4": "Generate Report",
+      "title5": "Clear Metrics",
+      "label1": "Used Memory",
+      "label2": "Total Memory",
+      "label3": "Memory Limit"
+    }
+  },
+  "info": {
+    "downloadspage": {
+      "text1": "Google Play",
+      "text2": "AppGallery",
+      "text3": "F-Droid",
+      "text4": "Uptodown",
+      "text5": "Linux",
+      "text6": "Windows",
+      "text7": "macOS"
+    }
+  },
+  "categorypickermodal": {
+    "aria": "Nueva categoría",
+    "placeholder": "Buscar categoría"
+  },
+  "quickcategoryalert": {
+    "subHeader": "Elige la sección donde vivirá esta categoría"
+  },
+  "sectionassignmodal": {
+    "aria1": "Nueva categoría",
+    "aria2": "Guardar",
+    "placeholder1": "Buscar categoría",
+    "placeholder2": "Sin asignar"
+  },
+  "devmodebanner": {
+    "unknownVersion": "OneSpend en desarrollo activo",
+    "stable": "OneSpend v{version} estable",
+    "development": "OneSpend en desarrollo activo · v{version}"
+  },
+  "cashflowchart": {
+    "income": "Ingresos",
+    "expense": "Gastos"
+  },
+  "components": {
+    "categoryPicker": {
+      "title": "Seleccionar Categoría"
+    },
+    "sectionAssign": {
+      "title": "Categorías por sección"
+    }
+  },
+  "views": {
+    "agenda": {
+      "title": "Historial"
+    }
+  },
+  "attachments": {
+    "selected": "Archivos seleccionados",
+    "existing": "Archivos existentes"
+  }
+}

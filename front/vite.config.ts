@@ -116,5 +116,6 @@ export default defineConfig(({ command }) => ({
     globals: true,
     environment: 'jsdom',
     exclude: [...configDefaults.exclude, 'tests/e2e-playwright/**'],
+    setupFiles: ['./src/test-setup.ts'],
   },
 }));

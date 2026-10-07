@@ -8,6 +8,18 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 ## [Unreleased]
 
+## [v0.78.0] - 2026-10-06
+
+### Added
+
+- Sync is now opt-in and the server URL is overridable from a new **Ajustes → Conexiones** screen. The bundled URL only seeds the placeholder; users on self-hosted instances no longer need a custom build to point at their own server (LBDS-289).
+- Full Spanish + English UI: every user-visible string now has a translation, and the language can be switched from the side menu. On the very first launch (no user pick, no persisted override), the app detects the language from `navigator.language` via `detectSystemLocale()` (`es-*` → Spanish, anything else → English, per the F-Droid reviewer's policy) and persists the result in `configDb`. The financial glossary and the income-statement section labels also follow the active language (LBDS-289).
+
+### Changed
+
+- "Ajustes de sincronización" is now "Conexiones" in the side menu and the underlying route moved accordingly (LBDS-289).
+- The sync page shows a clear "Sincronización desactivada" gate card (with a button to **Conexiones**) when the user has not enabled sync, instead of letting them trigger a request that would fail. The form is dimmed and the action buttons are disabled in that state (LBDS-289).
+
 ### Fixed
 
 - Synchronization no longer stays stuck showing pending changes forever.
@@ -15,6 +27,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 - Budget entries can now be deleted from the edit page without reappearing after the confirmation (LBDS-279).
 - Attachment deletes now go through the sync queue alongside every other change, so deleting attachments offline (or with a flaky connection) no longer fails: the delete is queued, retried with backoff, and either drains when the connection comes back or moves to the failed-items list after enough retries. The file on the server is cleaned up as part of the delete (LBDS-280).
 - Adjuntos pendientes ya no se quedan varados cuando falla el sync. Si el guardado de un registro se completa pero la subida del adjunto tropieza con un 500, un 401, una caída de red o un cierre de sesión, la subida se reintenta sola al recuperar la conexión, al volver al primer plano, o al hacer un nuevo sync — y al re-loguearse los uploads pendientes se reanudan junto con los cambios de datos (LBDS-287).
+- Several sync bugs: the `last_sync` cursor no longer gets stuck on the first sync, the status no longer shows "Sincronizando..." forever after an error, the "Sincronizado hace 20710 días" wrong-unit display is gone (server cursor and UI clock are now separate), and the sync gate no longer lets a scheduled retry acquire the lock when the URL is empty (LBDS-289).
+- The user section in the side menu now survives a page reload, so users no longer see an empty menu after refresh while their SSO session is still valid (LBDS-289).
+- The financial glossary (the popover that explains accounting terms on the performance page) and the income-statement labels render in the user's language instead of always Spanish (LBDS-289).
 
 ## [v0.77.0] - 2026-09-18
 

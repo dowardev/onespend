@@ -4,8 +4,37 @@
 
 import { getToken } from './tokenStorage';
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
+import { resolveApiBaseUrl, readSyncConfig } from './sync/syncConfig';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8001';
+// LBDS-289: the API URL is no longer a build-time constant. Every public
+// function reads it through `resolveApiBaseUrl()` so the user's Settings
+// choice (and the disabled flag) are honored at request time. The
+// build-time env var is only used as a placeholder in the Settings UI —
+// when the URL is empty or sync is off, the service throws
+// SyncDisabledError and never touches the network.
+
+// SyncDisabledError shape matches the one SyncApiService throws — callers
+// (SyncQueueService.processPendingAttachments) catch it the same way.
+export class SyncDisabledError extends Error {
+  constructor() {
+    super('Sync is disabled in Settings');
+    this.name = 'SyncDisabledError';
+  }
+}
+
+async function requireApiBaseUrl(): Promise<string> {
+  const url = await resolveApiBaseUrl();
+  if (!url) throw new SyncDisabledError();
+  return url;
+}
+
+// Convenience guard for callers that want a "can I upload at all?" check
+// without doing the network round-trip — used by the SyncSettingsPage to
+// surface whether attachments are reachable from the saved URL.
+export async function canSyncAttachments(): Promise<boolean> {
+  const cfg = await readSyncConfig();
+  return cfg.enabled && cfg.hasServerUrl;
+}
 
 export interface AttachmentData {
   id: number;
@@ -47,8 +76,9 @@ async function handleResponse<T>(response: Response): Promise<T> {
 }
 
 export async function listAttachments(entrySyncId: string): Promise<AttachmentListResponse> {
+  const apiBaseUrl = await requireApiBaseUrl();
   const headers = await getHeaders();
-  const response = await fetch(`${API_URL}/api/budget-entries/${entrySyncId}/attachments`, {
+  const response = await fetch(`${apiBaseUrl}/api/budget-entries/${entrySyncId}/attachments`, {
     method: 'GET',
     headers,
   });
@@ -60,6 +90,7 @@ export async function uploadAttachments(
   files: File[],
   timeoutMs = 120000,
 ): Promise<AttachmentUploadResponse> {
+  const apiBaseUrl = await requireApiBaseUrl();
   const headers = await getHeaders();
   const formData = new FormData();
   files.forEach((file) => {
@@ -67,7 +98,7 @@ export async function uploadAttachments(
   });
 
   const response = await fetchWithTimeout({
-    url: `${API_URL}/api/budget-entries/${entrySyncId}/attachments`,
+    url: `${apiBaseUrl}/api/budget-entries/${entrySyncId}/attachments`,
     options: { method: 'POST', headers, body: formData },
     timeoutMs,
   });
@@ -75,8 +106,9 @@ export async function uploadAttachments(
 }
 
 export async function listProviderAttachments(providerSyncId: string): Promise<AttachmentListResponse> {
+  const apiBaseUrl = await requireApiBaseUrl();
   const headers = await getHeaders();
-  const response = await fetch(`${API_URL}/api/budget-providers/${providerSyncId}/attachments`, {
+  const response = await fetch(`${apiBaseUrl}/api/budget-providers/${providerSyncId}/attachments`, {
     method: 'GET',
     headers,
   });
@@ -88,6 +120,7 @@ export async function uploadProviderAttachments(
   files: File[],
   timeoutMs = 120000,
 ): Promise<AttachmentUploadResponse> {
+  const apiBaseUrl = await requireApiBaseUrl();
   const headers = await getHeaders();
   const formData = new FormData();
   files.forEach((file) => {
@@ -95,7 +128,7 @@ export async function uploadProviderAttachments(
   });
 
   const response = await fetchWithTimeout({
-    url: `${API_URL}/api/budget-providers/${providerSyncId}/attachments`,
+    url: `${apiBaseUrl}/api/budget-providers/${providerSyncId}/attachments`,
     options: { method: 'POST', headers, body: formData },
     timeoutMs,
   });
@@ -103,8 +136,9 @@ export async function uploadProviderAttachments(
 }
 
 export async function downloadAttachment(attachmentId: number): Promise<Blob> {
+  const apiBaseUrl = await requireApiBaseUrl();
   const headers = await getHeaders();
-  const response = await fetch(`${API_URL}/api/attachments/${attachmentId}/download`, {
+  const response = await fetch(`${apiBaseUrl}/api/attachments/${attachmentId}/download`, {
     method: 'GET',
     headers,
   });
@@ -115,8 +149,9 @@ export async function downloadAttachment(attachmentId: number): Promise<Blob> {
 }
 
 export async function deleteAttachment(attachmentId: number): Promise<void> {
+  const apiBaseUrl = await requireApiBaseUrl();
   const headers = await getHeaders();
-  const response = await fetch(`${API_URL}/api/attachments/${attachmentId}`, {
+  const response = await fetch(`${apiBaseUrl}/api/attachments/${attachmentId}`, {
     method: 'DELETE',
     headers,
   });
@@ -128,8 +163,9 @@ export async function deleteAttachment(attachmentId: number): Promise<void> {
 
 export async function deleteAttachments(ids: number[]): Promise<void> {
   if (ids.length === 0) return;
+  const apiBaseUrl = await requireApiBaseUrl();
   const headers = await getHeaders();
-  const response = await fetch(`${API_URL}/api/attachments/batch-delete`, {
+  const response = await fetch(`${apiBaseUrl}/api/attachments/batch-delete`, {
     method: 'POST',
     headers: { ...headers, 'Content-Type': 'application/json' },
     body: JSON.stringify({ ids }),
