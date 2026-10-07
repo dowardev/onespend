@@ -15,7 +15,7 @@ SPDX-License-Identifier: AGPL-3.0-only
         </ion-buttons>
         <ion-title>Notas - {{ providerName }}</ion-title>
         <ion-buttons slot="end">
-          <ion-button @click="$emit('save')">Guardar</ion-button>
+          <ion-button @click="$emit('save')">{{ t('common.save') }}</ion-button>
         </ion-buttons>
       </ion-toolbar>
     </ion-header>
@@ -25,7 +25,7 @@ SPDX-License-Identifier: AGPL-3.0-only
         <ion-item lines="none">
           <ion-textarea
             :model-value="notes"
-            placeholder="Escribe las notas aquí..."
+            :placeholder="t('budget.components.notesmodal.placeholder')"
             auto-grow
             :rows="10"
             @ion-input="onNotesInput"
@@ -51,7 +51,10 @@ import {
   IonItem,
   IonTextarea,
 } from '@ionic/vue';
+import { useLocale } from '@/composables/useLocale';
 import { closeOutline } from 'ionicons/icons';
+
+const { t } = useLocale();
 // End Imports
 
 // Components

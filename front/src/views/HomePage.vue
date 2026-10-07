@@ -8,26 +8,26 @@ SPDX-License-Identifier: AGPL-3.0-only
   <ion-page>
     <ion-header :translucent="true">
       <ion-toolbar>
-        <ion-title>Blank</ion-title>
+        <ion-title>{{ t('home.title') }}</ion-title>
       </ion-toolbar>
     </ion-header>
 
     <ion-content :fullscreen="true">
       <ion-header collapse="condense">
         <ion-toolbar>
-          <ion-title size="large">Blank</ion-title>
+          <ion-title size="large">{{ t('home.title') }}</ion-title>
         </ion-toolbar>
       </ion-header>
 
       <div id="container">
-        <strong>Ready to create an app?</strong>
+        <strong>{{ t('home.placeholder.heading') }}</strong>
         <p>
-          Start with Ionic
+          {{ t('home.placeholder.bodyBefore') }}
           <a
             target="_blank"
             rel="noopener noreferrer"
             href="https://ionicframework.com/docs/components"
-            >UI Components</a
+            >{{ t('home.placeholder.link') }}</a
           >
         </p>
       </div>
@@ -36,7 +36,29 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script setup lang="ts">
+// 1. Imports (ionic/vue/ionicons)
 import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar } from '@ionic/vue';
+
+// 2. Controllers / Composables
+import { useLocale } from '@/composables/useLocale';
+
+// 5. Main (props, emits, etc.)
+// (no props or emits — page is self-contained)
+
+// 6. Vars and const
+const { t } = useLocale();
+
+// 7. Watch
+// (none)
+
+// 8. Computed
+// (none)
+
+// 9. OnMounted
+// (none)
+
+// 10. Functions (named parameters pattern)
+// (none)
 </script>
 
 <style scoped>

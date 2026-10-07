@@ -11,13 +11,13 @@ SPDX-License-Identifier: AGPL-3.0-only
         <ion-buttons slot="start">
           <ion-menu-button :mode="designMode"></ion-menu-button>
         </ion-buttons>
-        <ion-title>Historial</ion-title>
+        <ion-title>{{ t('views.agenda.title') }}</ion-title>
         <ion-buttons slot="end">
-          <ion-button aria-label="Buscar" :color="showSearch ? 'primary' : undefined" @click="toggleSearch">
+          <ion-button :aria-label="t('budget.agenda.historialview.aria')" :color="showSearch ? 'primary' : undefined" @click="toggleSearch">
             <ion-icon :icon="searchOutline"></ion-icon>
           </ion-button>
           <ion-button
-            aria-label="Filtrar por fecha"
+            :aria-label="t('budget.agenda.historialview.text')"
             :color="dateFilter ? 'primary' : undefined"
             @click="openDatePicker($event)"
           >
@@ -33,7 +33,7 @@ SPDX-License-Identifier: AGPL-3.0-only
             <ion-searchbar
               v-model="searchTerm"
               mode="ios"
-              placeholder="Buscar por nombre, cuenta o proveedor"
+              :placeholder="t('budget.agenda.historialview.placeholder')"
               show-clear-button="focus"
             ></ion-searchbar>
           </div>
@@ -109,10 +109,10 @@ SPDX-License-Identifier: AGPL-3.0-only
                           <p>
                             {{
                               item.entryType === 'ingreso'
-                                ? 'Ingreso'
+                                ? t('budget.entryType.income')
                                 : item.type === 'provider'
-                                  ? 'Proveedor'
-                                  : 'Egreso'
+                                  ? t('budget.entry.provider')
+                                  : t('budget.entryType.expense')
                             }}
                           </p>
                         </ion-label>
@@ -188,6 +188,7 @@ import {
   IonChip,
   IonSearchbar,
 } from '@ionic/vue';
+import { useLocale } from '@/composables/useLocale';
 import { computed, ref, watch, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { format } from 'date-fns';
@@ -210,6 +211,7 @@ import DatePickerPopover from '@/views/budget/components/DatePickerPopover.vue';
 
 // 5. Main
 const router = useRouter();
+const { t } = useLocale();
 const budgetDay = useBudgetDay();
 
 // 6. Vars and const

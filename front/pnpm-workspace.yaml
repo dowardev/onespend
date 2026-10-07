@@ -1,9 +1,12 @@
 allowBuilds:
+  '@openrouter/sdk': true
   core-js: true
   cypress: true
   electron: true
   esbuild: true
   vue-demi: true
+  '@biomejs/js-api': true
+  lingo.dev: true
 minimumReleaseAgeExclude:
   - '@dowardev/sso-client@0.2.0'
   - '@dowardev/sso-client@0.2.1'

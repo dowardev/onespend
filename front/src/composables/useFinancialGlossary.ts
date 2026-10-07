@@ -2,90 +2,56 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
+import { useLocale } from '@/composables/useLocale'
+
 export interface GlossaryEntry {
   term: string
   definition: string
   formula?: string
 }
 
-export const financialGlossary: Record<string, GlossaryEntry> = {
-  'Utilidad Bruta': {
-    term: 'Utilidad Bruta',
-    definition: 'Beneficio generado después de cubrir los gastos esenciales del periodo.',
-    formula: 'Ingresos totales − Costo de Vida',
-  },
-  'Ahorro Operativo': {
-    term: 'Ahorro Operativo',
-    definition: 'Monto disponible después de gastos variables no esenciales.',
-    formula: 'Utilidad Bruta − Gastos Discrecionales',
-  },
-  'Resultado Neto': {
-    term: 'Resultado Neto',
-    definition: 'Resultado final del periodo tras considerar todos los gastos, incluyendo financieros.',
-    formula: 'Ahorro Operativo − Gastos Financieros',
-  },
-  Ingresos: {
-    term: 'Ingresos',
-    definition: 'Todo el dinero que entra en el periodo: salarios, inversiones y otros ingresos.',
-    formula: 'Salario + Inversiones + Otros ingresos',
-  },
-  'Costo de Vida': {
-    term: 'Costo de Vida',
-    definition: 'Gastos necesarios para el día a día: vivienda, alimentación, transporte y salud.',
-    formula: 'Vivienda + Alimentación + Transporte + Salud',
-  },
-  'Gastos Discrecionales': {
-    term: 'Gastos Discrecionales',
-    definition: 'Gastos no esenciales como entretenimiento y otros consumos optativos.',
-    formula: 'Entretenimiento + Otros',
-  },
-  'Gastos Financieros': {
-    term: 'Gastos Financieros',
-    definition: 'Intereses, comisiones bancarias y costos relacionados con deudas y préstamos.',
-    formula: 'Suma de todas las transacciones categorizadas como financieras',
-  },
-  Salario: {
-    term: 'Salario',
-    definition: 'Ingresos por nómina, sueldos o salarios del trabajo principal.',
-  },
-  Inversiones: {
-    term: 'Inversiones',
-    definition: 'Rendimientos de inversiones, dividendos o rentas por propiedades.',
-  },
-  'Otros ingresos': {
-    term: 'Otros ingresos',
-    definition: 'Ingresos que no encajan en salario ni inversiones.',
-  },
-  Vivienda: {
-    term: 'Vivienda',
-    definition: 'Gastos de renta, hipoteca, mantenimiento de casa o departamento.',
-  },
-  Alimentación: {
-    term: 'Alimentación',
-    definition: 'Gastos en supermercado, despensa, restaurantes y comida en general.',
-  },
-  Transporte: {
-    term: 'Transporte',
-    definition: 'Gasolina, Uber, taxi, camión, transporte público y relacionados.',
-  },
-  Salud: {
-    term: 'Salud',
-    definition: 'Consultas médicas, medicamentos, seguros de salud y farmacia.',
-  },
-  Entretenimiento: {
-    term: 'Entretenimiento',
-    definition: 'Cine, Netflix, Spotify, juegos y cualquier gasto de ocio.',
-  },
-  'Intereses y comisiones': {
-    term: 'Intereses y comisiones',
-    definition: 'Intereses de tarjetas de crédito, comisiones bancarias y costos financieros.',
-  },
-  Otros: {
-    term: 'Otros',
-    definition: 'Gastos o ingresos que no encajan en ninguna categoría anterior.',
-  },
-}
+// Slugs the rest of the app uses to look up glossary entries. Keep this
+// list in sync with the `statistics.performance.glossary.*` keys in
+// src/locales/{es,en}.json. The lookup `useGlossary` translates the
+// slug into a fully-localized entry via vue-i18n.
+export type GlossaryKey =
+  | 'grossProfit'
+  | 'operatingSavings'
+  | 'netResult'
+  | 'incomes'
+  | 'costOfLife'
+  | 'discretionaryExpenses'
+  | 'financialExpenses'
+  | 'salary'
+  | 'investments'
+  | 'otherIncome'
+  | 'housing'
+  | 'food'
+  | 'transport'
+  | 'health'
+  | 'entertainment'
+  | 'interestAndFees'
+  | 'other'
 
-export function useGlossary(termKey: string): GlossaryEntry | undefined {
-  return financialGlossary[termKey]
+/**
+ * Look up a glossary entry by its slug. Returns a fully-translated
+ * entry, or undefined if the slug is unknown. The Spanish display
+ * name is kept as the locale fallback so callers that have not been
+ * migrated yet still get something reasonable.
+ */
+export function useGlossary(termKey: GlossaryKey): GlossaryEntry | undefined {
+  const { t } = useLocale()
+  const base = `statistics.performance.glossary.${termKey}`
+  // The locale files declare {term, definition, formula?} per slug.
+  // vue-i18n returns the key itself when the path is unknown, so we
+  // guard with a non-empty value check.
+  const term = t(`${base}.term`)
+  if (!term || term === `${base}.term`) return undefined
+  const definition = t(`${base}.definition`)
+  const formula = t(`${base}.formula`)
+  return {
+    term,
+    definition,
+    formula: formula && formula !== `${base}.formula` ? formula : undefined,
+  }
 }

@@ -9,7 +9,7 @@ SPDX-License-Identifier: AGPL-3.0-only
     <ion-item lines="full" class="transparent">
       <ion-input
         v-model="form.name"
-        label="Nombre"
+        :label="t('suppliers.modals.supplierformcomponent.text')"
         label-placement="floating"
         required
       ></ion-input>
@@ -21,7 +21,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
   <ion-list v-if="!showNewProductFields" class="transparent suppliers__products-list">
     <ion-list-header>
-      <ion-label>Productos</ion-label>
+      <ion-label>{{ t('suppliers.modals.supplierformcomponent.label') }}</ion-label>
 
       <ion-button :disabled="showProductSearch" expand="full" @click="toggleProductSearch">
         <ion-icon :icon="searchOutline" />
@@ -45,7 +45,7 @@ SPDX-License-Identifier: AGPL-3.0-only
           <ion-searchbar
             v-model="productSearchTerm"
             mode="ios"
-            placeholder="Buscar productos"
+            :placeholder="t('suppliers.modals.supplierformcomponent.placeholder')"
             show-clear-button="focus"
           ></ion-searchbar>
 
@@ -174,6 +174,7 @@ import {
   IonNote,
   toastController,
 } from '@ionic/vue';
+import { useLocale } from '@/composables/useLocale';
 import { reactive, ref, computed, watch, onBeforeUnmount, toRaw } from 'vue';
 import { addOutline, closeOutline, saveOutline, searchOutline, trashOutline } from 'ionicons/icons';
 import { useVuelidate } from '@vuelidate/core';
@@ -182,6 +183,8 @@ import { required, maxLength } from '@vuelidate/validators';
 import type { Supplier } from '@/controllers/suppliersController';
 import { getToken } from '@/services/tokenStorage';
 
+
+const { t } = useLocale();
 export interface SupplierFormProduct {
   name: string;
   price: number;
@@ -462,7 +465,7 @@ function onSubmit() {
   if (!form.products || form.products.length === 0) {
     showNewProductFields.value = true;
     presentToast({
-      message: 'Debes agregar al menos un producto',
+      message: t('suppliers.modals.supplierformcomponent.message'),
       duration: 2000,
       color: 'warning',
       position: 'bottom',

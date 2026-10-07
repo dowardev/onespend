@@ -14,6 +14,7 @@ import AccountsPage from '@/views/suppliers/accounts/AccountsPage.vue';
 import StatisticsConfigPage from '@/views/statistics/performance/config/StatisticsConfigPage.vue';
 import MaintenancePage from '@/views/admin/MaintenancePage.vue';
 import PersonalizationPage from '@/views/admin/PersonalizationPage.vue';
+import SyncSettingsPage from '@/views/settings/SyncSettingsPage.vue';
 import SyncView from '@/views/sync/SyncView.vue';
 import DLQView from '@/views/sync/DLQView.vue';
 import LoginView from '@/views/auth/LoginView.vue';
@@ -120,6 +121,11 @@ const routes: Array<RouteRecordRaw> = [
     path: '/admin/personalization',
     name: 'PersonalizationPage',
     component: PersonalizationPage,
+  },
+  {
+    path: '/settings/connections',
+    name: 'SyncSettingsPage',
+    component: SyncSettingsPage,
   },
   {
     path: '/admin/maintenance',

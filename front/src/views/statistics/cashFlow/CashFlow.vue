@@ -11,7 +11,7 @@ SPDX-License-Identifier: AGPL-3.0-only
         <ion-buttons slot="start">
           <ion-menu-button :mode="designMode"></ion-menu-button>
         </ion-buttons>
-        <ion-title>Flujo de Caja</ion-title>
+        <ion-title>{{ t('statistics.cashflow.title') }}</ion-title>
       </ion-toolbar>
     </ion-header>
 
@@ -27,21 +27,21 @@ SPDX-License-Identifier: AGPL-3.0-only
                     :outline="cf.rangeDays.value !== 30"
                     @click="cf.setRange({ days: 30 })"
                   >
-                    <ion-label>30 días</ion-label>
+                    <ion-label>{{ t('statistics.cashflow.cashflow.label1') }}</ion-label>
                   </ion-chip>
                   <ion-chip
                     :color="cf.rangeDays.value === 90 ? 'primary' : undefined"
                     :outline="cf.rangeDays.value !== 90"
                     @click="cf.setRange({ days: 90 })"
                   >
-                    <ion-label>90 días</ion-label>
+                    <ion-label>{{ t('statistics.cashflow.cashflow.label2') }}</ion-label>
                   </ion-chip>
                   <ion-chip
                     :color="cf.rangeDays.value === 365 ? 'primary' : undefined"
                     :outline="cf.rangeDays.value !== 365"
                     @click="cf.setRange({ days: 365 })"
                   >
-                    <ion-label>1 año</ion-label>
+                    <ion-label>{{ t('statistics.cashflow.cashflow.label3') }}</ion-label>
                   </ion-chip>
                 </div>
               </ion-col>
@@ -51,7 +51,7 @@ SPDX-License-Identifier: AGPL-3.0-only
               <ion-col size="6" size-sm="3">
                 <ion-card class="metric-card ingresos-card shadow1">
                   <ion-card-content>
-                    <ion-label class="metric-label">Ingresos</ion-label>
+                    <ion-label class="metric-label">{{ t('statistics.cashflow.incomes') }}</ion-label>
                     <ion-text color="success" class="metric-value">{{
                       cf.formatCurrency(cf.summary.value?.totalIngresos ?? 0)
                     }}</ion-text>
@@ -62,7 +62,7 @@ SPDX-License-Identifier: AGPL-3.0-only
               <ion-col size="6" size-sm="3">
                 <ion-card class="metric-card egresos-card shadow1">
                   <ion-card-content>
-                    <ion-label class="metric-label">Egresos</ion-label>
+                    <ion-label class="metric-label">{{ t('statistics.cashflow.expenses') }}</ion-label>
                     <ion-text color="danger" class="metric-value">{{
                       cf.formatCurrency(cf.summary.value?.totalEgresos ?? 0)
                     }}</ion-text>
@@ -136,6 +136,7 @@ import {
   IonCardContent,
   IonText,
 } from '@ionic/vue';
+import { useLocale } from '@/composables/useLocale';
 
 import { onMounted, computed } from 'vue';
 import { useCashFlow } from '@/composables/useCashFlow';
@@ -143,6 +144,7 @@ import systemController from '@/controllers/systemConfigController';
 import CashFlowChart from '@/components/CashFlowChart.vue';
 
 const cf = useCashFlow();
+const { t } = useLocale();
 const designMode = computed(() => systemController.getDesignMode());
 
 onMounted(() => {

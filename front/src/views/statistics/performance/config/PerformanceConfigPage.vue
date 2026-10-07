@@ -11,7 +11,7 @@ SPDX-License-Identifier: AGPL-3.0-only
         <ion-buttons slot="start">
           <ion-back-button default-href="/statistics/performance"></ion-back-button>
         </ion-buttons>
-        <ion-title>Configuración de Performance</ion-title>
+        <ion-title>{{ t('statistics.performance.config.performanceconfigpage.title') }}</ion-title>
       </ion-toolbar>
     </ion-header>
 
@@ -21,9 +21,9 @@ SPDX-License-Identifier: AGPL-3.0-only
           <ion-col size="12" size-md="8" size-lg="6">
             <ion-card class="shadow1 ion-margin-top">
               <ion-item lines="full" class="transparent">
-                <ion-label>Organizá tus categorías por sección</ion-label>
+                <ion-label>{{ t('statistics.performance.config.performanceconfigpage.label') }}</ion-label>
                 <ion-button slot="end" fill="clear" @click="openSectionPicker()">
-                  Editar
+                  {{ t('common.edit') }}
                 </ion-button>
               </ion-item>
               <ion-card-content>
@@ -72,12 +72,15 @@ import {
   IonNote,
   IonBackButton,
 } from '@ionic/vue';
+import { useLocale } from '@/composables/useLocale';
 import { ref, onMounted } from 'vue';
 
 // Import utils
 import { entryCategoriesDb } from '@/db/controllers/entryCategoriesDb';
 import type { EntryCategoryRow, IncomeStatementSection, IncomeStatementSectionMap } from '@/db/types';
 import SectionAssignModal from '@/components/SectionAssignModal.vue';
+
+const { t } = useLocale();
 // end imports
 
 // Vars

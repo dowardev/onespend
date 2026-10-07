@@ -11,7 +11,7 @@ SPDX-License-Identifier: AGPL-3.0-only
         <ion-buttons slot="start">
           <ion-back-button default-href="/budget"></ion-back-button>
         </ion-buttons>
-        <ion-title>Registrarse</ion-title>
+        <ion-title>{{ t('auth.register.title') }}</ion-title>
       </ion-toolbar>
     </ion-header>
 
@@ -22,20 +22,20 @@ SPDX-License-Identifier: AGPL-3.0-only
             <div class="auth-container">
               <div class="logo-section">
                 <h1>oneSpend</h1>
-                <p v-if="!showError">Redirigiendo al registro SSO...</p>
-                <p v-else>No se pudo completar el registro.</p>
+                <p v-if="!showError">{{ t('auth.register.subtitle') }}</p>
+                <p v-else>{{ t('auth.register.subtitleError') }}</p>
               </div>
 
               <ion-card v-if="showError" color="danger">
                 <ion-card-content>
-                  <p>No se pudo completar el registro con SSO. Inténtalo de nuevo.</p>
-                  <ion-button expand="block" @click="handleRetry">Reintentar</ion-button>
+                  <p>{{ t('auth.register.errorTitle') }}</p>
+                  <ion-button expand="block" @click="handleRetry">{{ t('auth.register.retry') }}</ion-button>
                 </ion-card-content>
               </ion-card>
 
               <div v-else class="loading-section">
                 <ion-spinner name="crescent" class="auth-spinner" />
-                <p>Serás redirigido al portal SSO para crear tu cuenta.</p>
+                <p>{{ t('auth.register.loading') }}</p>
               </div>
             </div>
           </ion-col>
@@ -65,11 +65,13 @@ import {
 } from '@ionic/vue'
 import { computed, onMounted, ref } from 'vue'
 import authController from '@/controllers/authController'
+import { useLocale } from '@/composables/useLocale'
 
 // 2. Controllers / Composables
 // Shared register logic lives in authController.
 
 // 6. Vars and const
+const { t } = useLocale()
 const registerFailed = ref(false)
 
 // 8. Computed

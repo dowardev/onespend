@@ -158,7 +158,12 @@ export function useSsoNativeReturn() {
         console.warn('[sso-native] Could not clear local data on logout return:', clearError)
       }
       try {
-        useAuthStore().logout()
+        // LBDS-289: logout() is now async so the IndexedDB delete
+        // is awaited and the loggedOut latch closes the race with
+        // the hydration IIFE. We do not need to block the rest of
+        // the SSO return flow on the delete — the in-memory state
+        // is already cleared synchronously.
+        void useAuthStore().logout()
       } catch (storeError) {
         console.warn('[sso-native] Could not reset auth store on logout return:', storeError)
       }

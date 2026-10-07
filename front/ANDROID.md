@@ -31,6 +31,14 @@ Environment variables
   match and a client stores a single value, so the web client cannot authorise the
   app. Without it the build warns and falls back to `VITE_SSO_CLIENT_ID`, and
   sign-in then fails on the device with a redirect_uri mismatch.
+- `VITE_API_URL` (in `front/.env.production`) — the backend URL bundled into the
+  APK. This value is **only** the placeholder shown on **Ajustes → Conexiones**
+  (Settings → Conexiones, route `/settings/connections`). Sync is opt-in: the
+  app does not make any HTTP request to the bundled URL until the user flips
+  the **Sincronización** toggle on AND confirms the URL. A user can paste any
+  other URL (their own server, a friend's self-hosted one) and the app will
+  sync to that target instead. You do not need to rebuild the APK every time
+  the backend moves.
 
 Build the debug APK
 - Build the web assets and sync them into the Android project:

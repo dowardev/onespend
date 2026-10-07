@@ -4,14 +4,45 @@
 
 import { getToken } from '../tokenStorage';
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
+import { resolveApiBaseUrl } from './syncConfig';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8001';
+// LBDS-289: the API URL is no longer a build-time constant. Every method
+// reads it through `resolveApiBaseUrl()` so the user's Settings choice
+// (and the disabled flag) are honored at request time. The build-time
+// env URL is only used as a placeholder in the Settings UI — when the
+// URL is empty or sync is off, the service refuses to touch the network
+// instead of silently falling back to the bundled server.
 
 export class AuthExpiredError extends Error {
   constructor() {
     super('Authentication expired');
     this.name = 'AuthExpiredError';
   }
+}
+
+/**
+ * LBDS-289: thrown by every SyncApiService method when the user has not
+ * enabled sync in Settings (or has cleared the URL). Callers should
+ * catch it and skip the HTTP work — the queue is intentionally drained
+ * with no work done so the offline queue stays intact.
+ */
+export class SyncDisabledError extends Error {
+  constructor() {
+    super('Sync is disabled in Settings');
+    this.name = 'SyncDisabledError';
+  }
+}
+
+/**
+ * LBDS-289: reads the current API base URL from syncConfig. Throws
+ * `SyncDisabledError` when sync is off or the URL is empty so each
+ * SyncApiService method can fail closed before touching `fetch`. The
+ * throw is the same shape callers already handle for `AuthExpiredError`.
+ */
+async function requireApiBaseUrl(): Promise<string> {
+  const url = await resolveApiBaseUrl();
+  if (!url) throw new SyncDisabledError();
+  return url;
 }
 
 export class SyncApiService {
@@ -57,6 +88,7 @@ export class SyncApiService {
 
   async merge(params: { data: Record<string, unknown[]>; timeoutMs?: number; async?: boolean }): Promise<Response> {
     const { data, timeoutMs = 30000, async = false } = params;
+    const apiBaseUrl = await requireApiBaseUrl();
     const headers = await this.getAuthHeaders();
     if (async) {
       (headers as Record<string, string>)['X-Async-Merge'] = 'true';
@@ -64,7 +96,7 @@ export class SyncApiService {
     this.activeAbortController = new AbortController();
     try {
       return this.request({
-        url: `${API_URL}/api/sync/merge`,
+        url: `${apiBaseUrl}/api/sync/merge`,
         options: {
           method: 'POST',
           headers,
@@ -80,9 +112,10 @@ export class SyncApiService {
 
   async resolveConflict(params: { body: Record<string, unknown>; timeoutMs?: number }): Promise<Response> {
     const { body, timeoutMs = 15000 } = params;
+    const apiBaseUrl = await requireApiBaseUrl();
     const headers = await this.getAuthHeaders();
     return this.request({
-      url: `${API_URL}/api/sync/resolve-conflict`,
+      url: `${apiBaseUrl}/api/sync/resolve-conflict`,
       options: {
         method: 'POST',
         headers,
@@ -94,6 +127,7 @@ export class SyncApiService {
 
   async getChanges(params: { lastSync: string; cursor?: string | null; limit?: number; types?: string[] }): Promise<Response> {
     const { lastSync, cursor, limit = 200, types } = params;
+    const apiBaseUrl = await requireApiBaseUrl();
     const headers = await this.getAuthHeaders();
     const searchParams = new URLSearchParams({ last_sync: lastSync, limit: String(limit) });
     if (cursor) searchParams.set('cursor', cursor);
@@ -101,7 +135,7 @@ export class SyncApiService {
     this.activeAbortController = new AbortController();
     try {
       return this.request({
-        url: `${API_URL}/api/sync/changes?${searchParams}`,
+        url: `${apiBaseUrl}/api/sync/changes?${searchParams}`,
         options: { method: 'GET', headers },
         timeoutMs: 30000,
         signal: this.activeAbortController.signal,
@@ -113,6 +147,7 @@ export class SyncApiService {
 
   async fullSync(params: { types?: string[]; since?: number; etag?: string | null } = {}): Promise<Response> {
     const { types, since, etag } = params;
+    const apiBaseUrl = await requireApiBaseUrl();
     const headers = await this.getAuthHeaders();
     if (etag) {
       (headers as Record<string, string>)['If-None-Match'] = etag;
@@ -125,7 +160,7 @@ export class SyncApiService {
       searchParams.set('since', String(since));
     }
     const queryString = searchParams.toString();
-    const url = queryString ? `${API_URL}/api/sync/full?${queryString}` : `${API_URL}/api/sync/full`;
+    const url = queryString ? `${apiBaseUrl}/api/sync/full?${queryString}` : `${apiBaseUrl}/api/sync/full`;
     this.activeAbortController = new AbortController();
     try {
       return this.request({
@@ -141,9 +176,10 @@ export class SyncApiService {
 
   async resolveConflictsBatch(params: { resolutions: Array<{ entity_type: string; entity_id: string; resolution: string; client_data?: Record<string, unknown> }>; timeoutMs?: number }): Promise<Response> {
     const { resolutions, timeoutMs = 30000 } = params;
+    const apiBaseUrl = await requireApiBaseUrl();
     const headers = await this.getAuthHeaders();
     return this.request({
-      url: `${API_URL}/api/sync/resolve-conflicts-batch`,
+      url: `${apiBaseUrl}/api/sync/resolve-conflicts-batch`,
       options: {
         method: 'POST',
         headers,
@@ -155,13 +191,14 @@ export class SyncApiService {
 
   async getActiveConflicts(params: { entityType?: string; timeoutMs?: number } = {}): Promise<Response> {
     const { entityType, timeoutMs = 15000 } = params;
+    const apiBaseUrl = await requireApiBaseUrl();
     const headers = await this.getAuthHeaders();
     const searchParams = new URLSearchParams();
     if (entityType) searchParams.set('entity_type', entityType);
     const queryString = searchParams.toString();
     const url = queryString
-      ? `${API_URL}/api/sync/active-conflicts?${queryString}`
-      : `${API_URL}/api/sync/active-conflicts`;
+      ? `${apiBaseUrl}/api/sync/active-conflicts?${queryString}`
+      : `${apiBaseUrl}/api/sync/active-conflicts`;
     return this.request({
       url,
       options: { method: 'GET', headers },
@@ -171,9 +208,10 @@ export class SyncApiService {
 
   async getResolvedConflicts(params: { timeoutMs?: number } = {}): Promise<Response> {
     const { timeoutMs = 15000 } = params;
+    const apiBaseUrl = await requireApiBaseUrl();
     const headers = await this.getAuthHeaders();
     return this.request({
-      url: `${API_URL}/api/sync/conflicts`,
+      url: `${apiBaseUrl}/api/sync/conflicts`,
       options: { method: 'GET', headers },
       timeoutMs,
     });
@@ -181,9 +219,10 @@ export class SyncApiService {
 
   async mergeStatus(params: { jobId: number; timeoutMs?: number }): Promise<Response> {
     const { jobId, timeoutMs = 15000 } = params;
+    const apiBaseUrl = await requireApiBaseUrl();
     const headers = await this.getAuthHeaders();
     return this.request({
-      url: `${API_URL}/api/sync/merge-status/${jobId}`,
+      url: `${apiBaseUrl}/api/sync/merge-status/${jobId}`,
       options: { method: 'GET', headers },
       timeoutMs,
     });

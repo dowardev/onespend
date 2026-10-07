@@ -73,18 +73,18 @@ SPDX-License-Identifier: AGPL-3.0-only
   <!-- Period navigation -->
   <ion-list v-if="!isLoading" class="ion-padding-horizontal">
     <ion-item lines="none" class="ion-no-padding">
-      <ion-button slot="start" fill="clear" aria-label="Período anterior" @click="handlePrevPeriod">
+      <ion-button slot="start" fill="clear" :aria-label="t('statistics.performance.performancecomponent.prevPeriod')" @click="handlePrevPeriod">
         <ion-icon :icon="chevronBackOutline" />
       </ion-button>
       <ion-button
         fill="clear"
-        aria-label="Seleccionar fecha"
+        :aria-label="t('statistics.performance.performancecomponent.selectDate')"
         style="font-weight: 600; font-size: 0.95rem"
         @click="onMainDateClick($event)"
       >
         {{ dateLabel }}
       </ion-button>
-      <ion-button slot="end" fill="clear" aria-label="Período siguiente" @click="handleNextPeriod">
+      <ion-button slot="end" fill="clear" :aria-label="t('statistics.performance.performancecomponent.nextPeriod')" @click="handleNextPeriod">
         <ion-icon :icon="chevronForwardOutline" />
       </ion-button>
     </ion-item>
@@ -114,14 +114,14 @@ SPDX-License-Identifier: AGPL-3.0-only
             <template v-if="section.items.length > 0">
               <IncomeStatementRow v-for="item in section.items" :key="item.name" :item="item" />
               <ion-item lines="full" class="section-separator">
-                <ion-label class="separator-label">Total {{ section.title }}</ion-label>
+                <ion-label class="separator-label">{{ t('statistics.performance.performancecomponent.totalPrefix', { section: section.title }) }}</ion-label>
                 <ion-label slot="end" class="separator-amount">{{ fmt(section.total) }}</ion-label>
               </ion-item>
             </template>
             <ion-item v-else lines="full" class="empty-section">
               <ion-icon slot="start" :icon="fileTrayOutline" color="medium" />
               <ion-label color="medium">
-                <p>Sin {{ section.title.toLowerCase() }} en este periodo</p>
+                <p>{{ t('statistics.performance.performancecomponent.emptySection', { section: section.title.toLowerCase() }) }}</p>
               </ion-label>
               <ion-button
                 slot="end"
@@ -130,13 +130,13 @@ SPDX-License-Identifier: AGPL-3.0-only
                 color="primary"
                 @click="handleEmptyAction(section)"
               >
-                Agregar
+                {{ t('statistics.performance.performancecomponent.add') }}
               </ion-button>
               <FinancialInfoPopover :term="section.title">
                 <template #trigger>
                   <ion-icon
                     :icon="helpCircleOutline"
-                    :aria-label="'Información sobre ' + section.title"
+                    :aria-label="t('statistics.performance.performancecomponent.infoAbout', { section: section.title })"
                     color="medium"
                     size="small"
                   />
@@ -167,7 +167,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                     <ion-label
                       class="summary-percent"
                       :color="cards[idx].amount >= 0 ? 'success' : 'danger'"
-                      :aria-label="`${cards[idx].amount >= 0 ? 'Positivo' : 'Negativo'}: ${cards[idx].percent}%`"
+                      :aria-label="t(cards[idx].amount >= 0 ? 'statistics.performance.performancecomponent.positive' : 'statistics.performance.performancecomponent.negative', { value: cards[idx].percent + '%' })"
                     >
                       {{ cards[idx].percent }}%
                     </ion-label>
@@ -176,7 +176,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                     <ion-label
                       class="summary-amount"
                       :color="cards[idx].amount >= 0 ? 'success' : 'danger'"
-                      :aria-label="`${cards[idx].amount >= 0 ? 'Positivo' : 'Negativo'}: ${fmt(cards[idx].amount)}`"
+                      :aria-label="t(cards[idx].amount >= 0 ? 'statistics.performance.performancecomponent.positive' : 'statistics.performance.performancecomponent.negative', { value: fmt(cards[idx].amount) })"
                     >
                       {{ fmt(cards[idx].amount) }}
                     </ion-label>
@@ -187,12 +187,12 @@ SPDX-License-Identifier: AGPL-3.0-only
                   lines="none"
                   class="transparent ion-no-padding"
                 >
-                  <ion-label class="comparison-label">vs periodo anterior</ion-label>
+                  <ion-label class="comparison-label">{{ t('statistics.performance.performancecomponent.vsPrev') }}</ion-label>
                   <ion-label
                     slot="end"
                     class="comparison-value"
                     :color="(cards[idx].diff ?? 0) >= 0 ? 'success' : 'danger'"
-                    :aria-label="`${(cards[idx].diff ?? 0) >= 0 ? 'Incremento' : 'Disminución'} de ${fmt(cards[idx].diff ?? 0)}`"
+                    :aria-label="t((cards[idx].diff ?? 0) >= 0 ? 'statistics.performance.performancecomponent.increaseOf' : 'statistics.performance.performancecomponent.decreaseOf', { value: fmt(cards[idx].diff ?? 0) })"
                   >
                     <ion-icon
                       :icon="(cards[idx].diff ?? 0) >= 0 ? trendingUpOutline : trendingDownOutline"
@@ -212,7 +212,7 @@ SPDX-License-Identifier: AGPL-3.0-only
   <!-- Period Comparison -->
   <ion-list v-if="!isLoading && comparison && comparisonRows.length > 0" class="comparison-section">
     <ion-list-header>
-      <ion-label>Comparativa vs periodo anterior</ion-label>
+      <ion-label>{{ t('statistics.performance.performancecomponent.comparisonTitle') }}</ion-label>
     </ion-list-header>
 
     <ion-item v-for="row in comparisonRows" :key="row.key" lines="full">
@@ -232,7 +232,7 @@ SPDX-License-Identifier: AGPL-3.0-only
         slot="end"
         class="cmp-diff"
         :color="row.diff >= 0 ? 'success' : 'danger'"
-        :aria-label="`${row.diff >= 0 ? 'Incremento' : 'Disminución'}: ${row.diffPercent}%`"
+        :aria-label="t(row.diff >= 0 ? 'statistics.performance.performancecomponent.increase' : 'statistics.performance.performancecomponent.decrease', { value: row.diffPercent + '%' })"
       >
         <ion-icon :icon="row.diff >= 0 ? trendingUpOutline : trendingDownOutline" size="small" />
         {{ row.diff >= 0 ? '+' : '' }}{{ row.diffPercent }}%
@@ -263,7 +263,7 @@ SPDX-License-Identifier: AGPL-3.0-only
           size="small"
           @click="handleResetToToday()"
         >
-          Hoy
+          {{ t('statistics.performance.performancecomponent.today') }}
         </ion-button>
       </ion-item>
     </ion-content>
@@ -301,6 +301,7 @@ import {
 } from 'ionicons/icons';
 import { useRouter } from 'vue-router';
 import { computed, onMounted, watch, toRef, ref } from 'vue';
+import { useLocale } from '@/composables/useLocale';
 import { format } from 'date-fns';
 import { parseLocalDate, formatLocalDate } from '@/utils/date';
 import { usePeriodRange, type PeriodType } from '@/composables/usePeriodRange';
@@ -320,6 +321,7 @@ const props = defineProps<{
 const periodRef = toRef(props, 'period');
 
 const router = useRouter();
+const { t } = useLocale();
 const { weekStartDay, load: loadConfig } = usePeriodConfig();
 const {
   referenceDate,
@@ -363,19 +365,19 @@ const cards = computed<Record<number, CardData>>(() => {
   const c = comparison.value;
   return {
     1: {
-      label: 'Utilidad Bruta',
+      label: t('statistics.performance.components.performancecomponent.label1'),
       amount: s.grossProfit,
       percent: s.grossProfitPercent,
       diff: c ? s.grossProfit - c.grossProfit : null,
     },
     2: {
-      label: 'Ahorro Operativo',
+      label: t('statistics.performance.components.performancecomponent.label2'),
       amount: s.operatingSavings,
       percent: s.operatingSavingsPercent,
       diff: c ? s.operatingSavings - c.operatingSavings : null,
     },
     3: {
-      label: 'Resultado Neto',
+      label: t('statistics.performance.components.performancecomponent.label3'),
       amount: s.netResult,
       percent: s.netResultPercent,
       diff: c ? s.netResult - c.netResult : null,
@@ -404,7 +406,7 @@ const comparisonRows = computed<ComparisonRow[]>(() => {
   return [
     {
       key: 'incomes',
-      label: 'Ingresos',
+      label: t('statistics.performance.components.performancecomponent.label4'),
       current: s.incomes.total,
       previous: p.incomesTotal,
       diff: s.incomes.total - p.incomesTotal,
@@ -412,7 +414,7 @@ const comparisonRows = computed<ComparisonRow[]>(() => {
     },
     {
       key: 'costOfLife',
-      label: 'Costo de Vida',
+      label: t('statistics.performance.components.performancecomponent.label5'),
       current: s.costOfLife.total,
       previous: p.costOfLifeTotal,
       diff: s.costOfLife.total - p.costOfLifeTotal,
@@ -420,7 +422,7 @@ const comparisonRows = computed<ComparisonRow[]>(() => {
     },
     {
       key: 'grossProfit',
-      label: 'Utilidad Bruta',
+      label: t('statistics.performance.components.performancecomponent.label1'),
       current: s.grossProfit,
       previous: p.grossProfit,
       diff: s.grossProfit - p.grossProfit,
@@ -428,7 +430,7 @@ const comparisonRows = computed<ComparisonRow[]>(() => {
     },
     {
       key: 'netResult',
-      label: 'Resultado Neto',
+      label: t('statistics.performance.components.performancecomponent.label3'),
       current: s.netResult,
       previous: p.netResult,
       diff: s.netResult - p.netResult,

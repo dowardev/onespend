@@ -13,7 +13,7 @@ SPDX-License-Identifier: AGPL-3.0-only
             <ion-icon :icon="closeOutline"></ion-icon>
           </ion-button>
         </ion-buttons>
-        <ion-title>Gastos por Categoría</ion-title>
+        <ion-title>{{ t('statistics.performance.expenses.title') }}</ion-title>
       </ion-toolbar>
     </ion-header>
     <ion-content>
@@ -33,14 +33,14 @@ SPDX-License-Identifier: AGPL-3.0-only
 
       <ion-list>
         <ion-list-header>
-          <ion-label>Desglose</ion-label>
+          <ion-label>{{ t('statistics.performance.components.expenseschartmodal.label') }}</ion-label>
         </ion-list-header>
         <ion-item v-for="(category, index) in categories" :key="index">
           <ion-label>{{ category.name }}</ion-label>
           <ion-note slot="end">{{ formatCurrency(category.amount) }}</ion-note>
         </ion-item>
         <ion-item lines="none">
-          <ion-label><strong>Total</strong></ion-label>
+          <ion-label><strong>{{ t('common.total') }}</strong></ion-label>
           <ion-note slot="end"
             ><strong>{{ formatCurrency(totalAmount) }}</strong></ion-note
           >
@@ -68,11 +68,14 @@ import {
   IonCard,
   IonCardContent,
 } from '@ionic/vue';
+import { useLocale } from '@/composables/useLocale';
 import { closeOutline } from 'ionicons/icons';
 import { computed } from 'vue';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import { Pie } from 'vue-chartjs';
 
+
+const { t } = useLocale();
 ChartJS.register(ArcElement, Tooltip, Legend);
 
 interface CategoryData {

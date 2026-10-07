@@ -22,7 +22,7 @@ SPDX-License-Identifier: AGPL-3.0-only
           @click="navigate({ path: '/login' })"
         >
           <ion-icon slot="start" :icon="logInOutline"></ion-icon>
-          <ion-label>Iniciar Sesión</ion-label>
+          <ion-label>{{ t('menu.items.login') }}</ion-label>
         </ion-item>
 
         <ion-item
@@ -33,7 +33,7 @@ SPDX-License-Identifier: AGPL-3.0-only
           @click="navigate({ path: '/register' })"
         >
           <ion-icon slot="start" :icon="personAddOutline"></ion-icon>
-          <ion-label>Registrarse</ion-label>
+          <ion-label>{{ t('menu.items.register') }}</ion-label>
         </ion-item>
       </div>
 
@@ -60,7 +60,7 @@ SPDX-License-Identifier: AGPL-3.0-only
             @click="navigate({ name: 'BudgetView' })"
           >
             <ion-icon slot="start" :icon="walletOutline"></ion-icon>
-            <ion-label>Presupuesto</ion-label>
+            <ion-label>{{ t('menu.items.budget') }}</ion-label>
           </ion-item>
 
           <ion-item
@@ -71,7 +71,7 @@ SPDX-License-Identifier: AGPL-3.0-only
             @click="navigate({ name: 'BudgetHistorial' })"
           >
             <ion-icon slot="start" :icon="calendarOutline"></ion-icon>
-            <ion-label>Historial</ion-label>
+            <ion-label>{{ t('menu.items.history') }}</ion-label>
           </ion-item>
 
           <ion-item
@@ -82,7 +82,7 @@ SPDX-License-Identifier: AGPL-3.0-only
             @click="navigate({ name: 'SuppliersPage' })"
           >
             <ion-icon slot="start" :icon="businessOutline"></ion-icon>
-            <ion-label>Provedores</ion-label>
+            <ion-label>{{ t('menu.items.suppliers') }}</ion-label>
           </ion-item>
 
           <ion-item
@@ -93,7 +93,7 @@ SPDX-License-Identifier: AGPL-3.0-only
             @click="navigate({ name: 'RecurringPage' })"
           >
             <ion-icon slot="start" :icon="repeatOutline"></ion-icon>
-            <ion-label>Cargos Recurrentes</ion-label>
+            <ion-label>{{ t('menu.items.recurring') }}</ion-label>
           </ion-item>
 
           <ion-item
@@ -104,7 +104,7 @@ SPDX-License-Identifier: AGPL-3.0-only
             @click="navigate({ name: 'AccountsPage' })"
           >
             <ion-icon slot="start" :icon="layersOutline"></ion-icon>
-            <ion-label>Cuentas</ion-label>
+            <ion-label>{{ t('menu.items.accounts') }}</ion-label>
           </ion-item>
 
           <ion-item
@@ -115,7 +115,7 @@ SPDX-License-Identifier: AGPL-3.0-only
             @click="navigate({ path: '/sync' })"
           >
             <ion-icon slot="start" :icon="syncOutline"></ion-icon>
-            <ion-label>Sincronización</ion-label>
+            <ion-label>{{ t('menu.items.sync') }}</ion-label>
             <ion-badge v-if="conflictCount > 0" slot="end" data-cy="menu-conflict-badge" color="danger">{{
               conflictCount
             }}</ion-badge>
@@ -128,7 +128,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
       <ion-list>
         <ion-list-header>
-          <ion-label>Estadisticas</ion-label>
+          <ion-label>{{ t('menu.sections.statistics') }}</ion-label>
         </ion-list-header>
 
         <div>
@@ -140,7 +140,7 @@ SPDX-License-Identifier: AGPL-3.0-only
             @click="navigate({ name: 'CashFlow' })"
           >
             <ion-icon slot="start" :icon="trendingUpOutline"></ion-icon>
-            <ion-label>Flujo de Caja</ion-label>
+            <ion-label>{{ t('menu.items.cashFlow') }}</ion-label>
           </ion-item>
 
           <ion-item
@@ -151,14 +151,14 @@ SPDX-License-Identifier: AGPL-3.0-only
             @click="navigate({ name: 'StatisticsPerformance' })"
           >
             <ion-icon slot="start" :icon="speedometerOutline"></ion-icon>
-            <ion-label>Rendimiento</ion-label>
+            <ion-label>{{ t('menu.items.performance') }}</ion-label>
           </ion-item>
         </div>
       </ion-list>
 
       <ion-list>
         <ion-list-header>
-          <ion-label>Administracion</ion-label>
+          <ion-label>{{ t('menu.sections.admin') }}</ion-label>
         </ion-list-header>
 
         <div>
@@ -171,7 +171,7 @@ v-if="isUserAdmin"
             @click="navigate({ name: 'MaintenancePage' })"
           >
             <ion-icon slot="start" :icon="constructOutline"></ion-icon>
-            <ion-label>Mantenimiento</ion-label>
+            <ion-label>{{ t('menu.items.maintenance') }}</ion-label>
           </ion-item>
 
           <ion-item
@@ -182,7 +182,18 @@ v-if="isUserAdmin"
             @click="navigate({ name: 'PersonalizationPage' })"
           >
             <ion-icon slot="start" :icon="colorPaletteOutline"></ion-icon>
-            <ion-label>Personalización</ion-label>
+            <ion-label>{{ t('menu.items.personalization') }}</ion-label>
+          </ion-item>
+
+          <ion-item
+            button
+            lines="none"
+            :class="{ 'menu-active': isSyncSettings }"
+            :aria-current="isSyncSettings ? 'page' : undefined"
+            @click="navigate({ name: 'SyncSettingsPage' })"
+          >
+            <ion-icon slot="start" :icon="settingsOutline"></ion-icon>
+            <ion-label>{{ t('menu.items.syncSettings') }}</ion-label>
           </ion-item>
 
           <ion-item
@@ -194,46 +205,67 @@ v-if="isUserAdmin"
             @click="navigate({ name: 'PerformanceTest' })"
           >
             <ion-icon slot="start" :icon="speedometerOutline"></ion-icon>
-            <ion-label>Pruebas Rendimiento</ion-label>
+            <ion-label>{{ t('menu.items.performanceTest') }}</ion-label>
           </ion-item>
         </div>
       </ion-list>
 
-          <ion-list>
-            <ion-list-header>
-              <ion-label>Extras</ion-label>
-            </ion-list-header>
+      <ion-list>
+        <ion-list-header>
+          <ion-label>{{ t('settings.language.title') }}</ion-label>
+        </ion-list-header>
 
-            <div>
-              <ion-item
-                button
-                lines="none"
-                :class="{ 'menu-active': isDownloads }"
-                :aria-current="isDownloads ? 'page' : undefined"
-                @click="navigate({ name: 'DownloadsPage' })"
-              >
-                <ion-icon slot="start" :icon="downloadOutline"></ion-icon>
-                <ion-label>Descargas</ion-label>
-              </ion-item>
+        <div>
+          <ion-item lines="none" data-cy="menu-language-selector">
+            <ion-icon slot="start" :icon="globeOutline"></ion-icon>
+            <ion-select
+              :value="currentLocale"
+              interface="popover"
+              data-cy="menu-language-select"
+              @ion-change="onLanguageChange"
+            >
+              <ion-select-option value="es">{{ t('settings.language.es') }}</ion-select-option>
+              <ion-select-option value="en">{{ t('settings.language.en') }}</ion-select-option>
+            </ion-select>
+          </ion-item>
+        </div>
+      </ion-list>
 
-              <ion-item
-                button
-                lines="none"
-                :class="{ 'menu-active': isPrivacyPolicy }"
-                :aria-current="isPrivacyPolicy ? 'page' : undefined"
-                @click="navigate({ name: 'PrivacyPolicyPage' })"
-              >
-                <ion-icon slot="start" :icon="shieldCheckmarkOutline"></ion-icon>
-                <ion-label>Privacidad</ion-label>
-              </ion-item>
-            </div>
-          </ion-list>
+      <ion-list>
+        <ion-list-header>
+          <ion-label>{{ t('menu.sections.extras') }}</ion-label>
+        </ion-list-header>
+
+        <div>
+          <ion-item
+            button
+            lines="none"
+            :class="{ 'menu-active': isDownloads }"
+            :aria-current="isDownloads ? 'page' : undefined"
+            @click="navigate({ name: 'DownloadsPage' })"
+          >
+            <ion-icon slot="start" :icon="downloadOutline"></ion-icon>
+            <ion-label>{{ t('menu.items.downloads') }}</ion-label>
+          </ion-item>
+
+          <ion-item
+            button
+            lines="none"
+            :class="{ 'menu-active': isPrivacyPolicy }"
+            :aria-current="isPrivacyPolicy ? 'page' : undefined"
+            @click="navigate({ name: 'PrivacyPolicyPage' })"
+          >
+            <ion-icon slot="start" :icon="shieldCheckmarkOutline"></ion-icon>
+            <ion-label>{{ t('menu.items.privacy') }}</ion-label>
+          </ion-item>
+        </div>
+      </ion-list>
     </ion-content>
   </ion-menu>
 </template>
 
 <script setup lang="ts">
-// Imports
+// 1. Imports (ionic/vue/ionicons)
 import {
   IonMenu,
   IonHeader,
@@ -247,6 +279,8 @@ import {
   IonListHeader,
   IonIcon,
   IonButton,
+  IonSelect,
+  IonSelectOption,
   menuController,
   alertController,
 } from '@ionic/vue';
@@ -262,6 +296,7 @@ import {
   speedometerOutline,
   constructOutline,
   colorPaletteOutline,
+  settingsOutline,
   logInOutline,
   personAddOutline,
   personCircleOutline,
@@ -269,38 +304,46 @@ import {
   trendingUpOutline,
   shieldCheckmarkOutline,
   downloadOutline,
+  globeOutline,
 } from 'ionicons/icons';
 import SyncStatus from './SyncStatus.vue';
-// End Imports
 
-// Controllers
+// 2. Controllers / Composables
 import authController from '@/controllers/authController';
 import { SyncController } from '@/controllers/syncController';
 import { conflictResolutionService } from '@/services/sync/ConflictResolutionService';
-// End Controllers
+import { useLocale } from '@/composables/useLocale';
+import type { AppLocale } from '@/i18n';
 
-// Components
+// 3. Components
+// (SyncStatus imported above)
 
-// Vars
+// 4. Interface and types imports
+// (none — AppLocale imported above)
+
+// 5. Main (props, emits, etc.)
+const appName =
+  (import.meta as unknown as { env?: Record<string, string | undefined> }).env?.VITE_APP_NAME ||
+  'Menú';
 const emit = defineEmits<{
   (e: 'navigate', params: { path?: string; name?: string }): void;
   (e: 'dismissMigration'): void;
 }>();
 
+// 6. Vars and const
 const menuRef = ref();
 const route = useRoute();
+const { t, locale: i18nLocale, setLocale: setI18nLocale, setOverride } = useLocale();
 
 const syncController = SyncController;
 const pendingChanges = computed(() => syncController.getPendingChanges());
 const conflictCount = ref(0);
 
-const appName =
-  (import.meta as unknown as { env?: Record<string, string | undefined> }).env?.VITE_APP_NAME ||
-  'Menú';
+// 7. Watch
+// (none)
 
-// End Vars
-
-// Computed
+// 8. Computed
+const currentLocale = computed<AppLocale>(() => i18nLocale.value);
 const isBudget = computed(() => route.path === '/budget');
 const isHistorial = computed(() => route.path.startsWith('/budget/historial'));
 const isSuppliers = computed(() => route.path === '/suppliers');
@@ -311,39 +354,42 @@ const isStatisticsCashFlow = computed(() => route.path === '/statistics/cash-flo
 const isStatisticsPerformance = computed(() => route.path === '/statistics/performance');
 const isAdmin = computed(() => route.path.startsWith('/admin/maintenance'));
 const isPersonalization = computed(() => route.path === '/admin/personalization');
+const isSyncSettings = computed(() => route.path === '/settings/connections');
 const isPerformanceTest = computed(() => route.path === '/test/performance');
 const isPrivacyPolicy = computed(() => route.path === '/privacy-policy');
 const isDownloads = computed(() => route.path === '/downloads');
-
 const isLogin = computed(() => route.path === '/login');
 const isRegister = computed(() => route.path === '/register');
-
 const isAuthenticated = computed(() => authController.getIsAuthenticated());
 const isUserAdmin = computed(() => authController.getIsAdmin());
 const userName = computed(() => authController.getUserName());
 
-// End Computed
-
-// Life cycle
+// 9. OnMounted
 onMounted(async () => {
   await authController.checkAuth();
   conflictCount.value = await conflictResolutionService.getStore().getCount();
 });
 
-// End Life cycle
+// 10. Functions (named parameters pattern)
+async function onLanguageChange(params: { detail: { value: string } }): Promise<void> {
+  const { detail } = params;
+  const value = detail.value;
+  if (value !== 'es' && value !== 'en') return;
+  setI18nLocale(value);
+  await setOverride(value);
+}
 
-// Functions
 async function handleLogout() {
   const alert = await alertController.create({
-    header: 'Cerrar Sesión',
-    message: '¿Estás seguro de que quieres cerrar sesión?',
+    header: t('menu.logout.header'),
+    message: t('menu.logout.message'),
     buttons: [
       {
-        text: 'Cancelar',
+        text: t('common.cancel'),
         role: 'cancel',
       },
       {
-        text: 'Cerrar Sesión',
+        text: t('menu.logout.button'),
         role: 'confirm',
         handler: () => {
           // Fire-and-forget: the alert must close immediately. Awaiting
@@ -385,7 +431,6 @@ async function navigate(params: { path?: string; name?: string }) {
   }
   emit('navigate', params);
 }
-// End Functions
 </script>
 
 <style>

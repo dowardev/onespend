@@ -17,6 +17,7 @@ vi.mock('@/services/syncService', () => ({
     onOnlineChange: vi.fn(() => vi.fn()),
     getQueueCount: vi.fn(async () => 0),
     getLastSyncTime: vi.fn(() => 0),
+    getLastSyncDisplayTime: vi.fn(() => 0),
     processQueue: vi.fn(),
     pullChanges: vi.fn(),
     getConflicts: vi.fn(),

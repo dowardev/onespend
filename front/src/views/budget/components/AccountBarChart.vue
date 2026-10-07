@@ -11,11 +11,14 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue';
+import { computed, onMounted,  } from 'vue';
+import { useLocale } from '@/composables/useLocale';
 import { Bar } from 'vue-chartjs';
 import type { ChartData, ChartOptions } from 'chart.js';
 import { useChart } from '@/composables/useChart';
 
+
+const { t } = useLocale();
 // Initialize chart dependencies
 const { loadChartDependencies, isLoaded } = useChart();
 onMounted(() => {
@@ -38,14 +41,14 @@ const chartData = computed<ChartData<'bar'>>(() => ({
   labels: [''],
   datasets: [
     {
-      label: 'Ingresos',
+      label: t('budget.components.accountbarchart.label1'),
       data: [props.ingresos],
       backgroundColor: 'rgba(45, 213, 91, 0.7)',
       borderColor: 'rgba(45, 213, 91, 1)',
       borderWidth: 1,
     },
     {
-      label: 'Egresos',
+      label: t('budget.components.accountbarchart.label2'),
       data: [props.egresos],
       backgroundColor: 'rgba(197, 0, 15, 0.7)',
       borderColor: 'rgba(197, 0, 15, 1)',

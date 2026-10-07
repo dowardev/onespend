@@ -13,7 +13,7 @@ SPDX-License-Identifier: AGPL-3.0-only
           <ion-menu-button :mode="designMode" />
         </ion-buttons>
 
-        <ion-title>Cargos Recurrentes</ion-title>
+        <ion-title>{{ t('recurring.recurringpage.title') }}</ion-title>
 
         <ion-buttons slot="end">
           <ion-button v-if="isDev" @click="seedTestData()">
@@ -34,7 +34,7 @@ SPDX-License-Identifier: AGPL-3.0-only
           <ion-col size-xs="12" size-md="10" size-lg="8" size-xl="6" class="recurring__col">
             <ion-list class="transparent">
               <ion-list-header>
-                <ion-label>Cargos Recurrentes</ion-label>
+                <ion-label>{{ t('recurring.recurringpage.label') }}</ion-label>
 
                 <ion-button v-if="!showSearch" @click="showSearch = true">
                   <ion-icon :icon="searchOutline"></ion-icon>
@@ -48,11 +48,11 @@ SPDX-License-Identifier: AGPL-3.0-only
                     <ion-searchbar
                       v-model="searchTerm"
                       mode="ios"
-                      placeholder="Buscar"
+                      :placeholder="t('recurring.recurringpage.placeholder')"
                       show-clear-button="focus"
                     ></ion-searchbar>
 
-                    <ion-button fill="clear" @click="showSearch = false">Cancelar</ion-button>
+                    <ion-button fill="clear" @click="showSearch = false">{{ t('common.cancel') }}</ion-button>
                   </ion-item>
                 </div>
               </div>
@@ -88,13 +88,13 @@ SPDX-License-Identifier: AGPL-3.0-only
                         :color="record.status === 'paused' ? 'warning' : 'success'"
                         style="margin-right: 8px"
                       >
-                        {{ record.status === 'paused' ? 'Pausado' : 'Activo' }}
+                        {{ record.status === 'paused' ? t('recurring.status.paused') : t('recurring.status.active') }}
                       </ion-badge>
                       <ion-button
                         v-if="record.status === 'active' || record.status === 'paused'"
                         slot="end"
                         fill="clear"
-                        :aria-label="record.status === 'active' ? 'Pausar' : 'Reanudar'"
+                        :aria-label="record.status === 'active' ? t('recurring.action.pause') : t('recurring.action.resume')"
                         @click.stop="toggleRecord({ record })"
                       >
                         <ion-icon
@@ -114,7 +114,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                 </template>
 
                 <ion-item v-if="filteredRecords.length === 0" class="transparent">
-                  <ion-label class="ion-text-center">No hay cargos recurrentes</ion-label>
+                  <ion-label class="ion-text-center">{{ t('recurring.recurringpage.empty') }}</ion-label>
                 </ion-item>
               </div>
             </ion-list>
@@ -138,7 +138,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script setup lang="ts">
 // Imports
-import { ref, computed, reactive } from 'vue';
+import { ref, computed, reactive,  } from 'vue';
+import { useLocale } from '@/composables/useLocale';
 import {
   onIonViewWillEnter,
   IonContent,
@@ -191,6 +192,7 @@ import { syncQueue } from '@/services/syncQueue';
 import { useRouter } from 'vue-router';
 import { format } from 'date-fns';
 const router = useRouter();
+const { t } = useLocale();
 // End Main
 
 // Vars and const
@@ -274,12 +276,12 @@ const groupedRecords = computed(() => {
 
 const deleteAlertButtons = computed(() => [
   {
-    text: 'Cancelar',
+    text: t('recurring.recurringpage.cancelButton'),
     role: 'cancel',
     handler: () => {},
   },
   {
-    text: 'Eliminar',
+    text: t('recurring.recurringpage.deleteButton'),
     role: 'destructive',
     handler: () => {
       void removeConfirmed();
@@ -528,7 +530,7 @@ async function seedTestData() {
   await loadRecords();
 
   const toast = await toastController.create({
-    message: 'Datos de prueba insertados',
+    message: t('recurring.recurringpage.testDataToast'),
     duration: 2000,
     position: 'bottom',
     color: 'success',

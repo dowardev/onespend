@@ -26,7 +26,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                     <ion-select
                       v-model="entryData.entryType"
                       interface="popover"
-                      label="Tipo"
+                      :label="t('budget.entries.entryeditpage.text1')"
                       label-placement="stacked"
                     >
                       <ion-select-option value="ingreso">Ingreso</ion-select-option>
@@ -35,18 +35,18 @@ SPDX-License-Identifier: AGPL-3.0-only
                   </ion-item>
 
                   <ion-item lines="full" class="transparent" button data-cy="category-selector" @click="openCategoryPicker()">
-                    <ion-label>Categoría</ion-label>
+                    <ion-label>{{ t('budget.entries.entryeditpage.label1') }}</ion-label>
                     <ion-label slot="end" class="ion-text-end" color="medium">
-                      {{ selectedCategoryName || 'Seleccionar' }}
+                      {{ selectedCategoryName || t('common.select') }}
                     </ion-label>
                   </ion-item>
 
                   <ion-item class="transparent" lines="full">
                     <ion-input
                       v-model="entryData.name"
-                      label="Nombre"
+                      :label="t('budget.entries.entryeditpage.text2')"
                       label-placement="floating"
-                      placeholder="Pepito"
+                      :placeholder="t('budget.entries.entryeditpage.placeholder')"
                       data-cy="entry-name-input"
                     />
                   </ion-item>
@@ -56,7 +56,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                     </div>
 
                   <ion-item lines="full" class="transparent" button @click="entryDatePicker.openPopover({ e: $event })">
-                    <ion-label>Fecha</ion-label>
+                    <ion-label>{{ t('budget.entries.entryeditpage.label2') }}</ion-label>
                     <ion-label slot="end">{{ toShortDate({ isoDate: entryDatePicker.dateISO.value }) }}</ion-label>
                   </ion-item>
 
@@ -69,7 +69,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
               <AccountDistributionPicker
                 :items="entryItems"
-                header-label="Cuentas"
+                :header-label="t('budget.entries.entryeditpage.text3')"
                 @add-item="addEntryItem"
                 @remove-item="removeEntryItem"
                 @update-item-amount="updateItemAmount"
@@ -121,11 +121,11 @@ SPDX-License-Identifier: AGPL-3.0-only
     >
       <ion-content>
         <ion-item button @click="handleReassignFromPopover">
-          <ion-label>Reasignar fecha</ion-label>
+          <ion-label>{{ t('budget.entries.entryeditpage.label3') }}</ion-label>
         </ion-item>
         <ion-item button @click="handleDeleteFromPopover">
           <ion-icon slot="start" :icon="trashOutline" color="danger" />
-          <ion-label color="danger">Eliminar</ion-label>
+          <ion-label color="danger">{{ t('common.delete') }}</ion-label>
         </ion-item>
       </ion-content>
     </ion-popover>
@@ -173,6 +173,7 @@ import {
   IonPopover,
   toastController,
 } from '@ionic/vue';
+import { useLocale } from '@/composables/useLocale';
 import { trashOutline } from 'ionicons/icons';
 import { computed, ref, onMounted, reactive, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
@@ -205,6 +206,7 @@ import type { EntryCategoryRow } from '@/db/types';
 
 // router
 const router = useRouter();
+const { t } = useLocale();
 const route = useRoute();
 // end router
 
@@ -338,7 +340,7 @@ async function loadEntry(entryId: string) {
   if (!entry) {
     const { toastController } = await import('@ionic/vue');
     const toast = await toastController.create({
-      message: 'No se encontró la entrada',
+      message: t('budget.entries.entryeditpage.message'),
       duration: 3000,
     });
     await toast.present();

@@ -27,6 +27,21 @@ import { syncApiService } from '../SyncApiService'
 import { syncLockService } from '../SyncLockService'
 import type { SyncQueueItem } from '@/db/types'
 
+// LBDS-289: gate sync ON so the LBDS-287 drain assertions keep their
+// shape; the disabled path is covered by syncDisabledGate.test.ts.
+vi.mock('@/db/controllers/configDb', () => ({
+  configDb: {
+    get: vi.fn(async ({ key }: { key: string }) => {
+      if (key === 'syncEnabled') return true;
+      if (key === 'syncServerUrl') return 'https://example.test';
+      return undefined;
+    }),
+    set: vi.fn(),
+    delete: vi.fn(),
+    getAll: vi.fn(),
+  },
+}))
+
 // LBDS-287 regression: processQueue used to call processPendingAttachments
 // inside the try, so a throw from the merge loop (HTTP 500, lock
 // collision, etc.) skipped the upload drain and stranded the pending

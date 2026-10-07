@@ -16,9 +16,9 @@ SPDX-License-Identifier: AGPL-3.0-only
             <ion-icon :icon="closeOutline" />
           </ion-button>
         </ion-buttons>
-        <ion-title>Seleccionar Categoría</ion-title>
+        <ion-title>{{ t('components.categoryPicker.title') }}</ion-title>
         <ion-buttons slot="end">
-          <ion-button aria-label="Nueva categoría" @click="openQuickCategoryAlert()">
+          <ion-button :aria-label="t('categorypickermodal.aria')" @click="openQuickCategoryAlert()">
             <ion-icon :icon="addOutline" />
           </ion-button>
         </ion-buttons>
@@ -27,7 +27,7 @@ SPDX-License-Identifier: AGPL-3.0-only
         <ion-searchbar
           v-model="searchQuery"
           mode="ios"
-          placeholder="Buscar categoría"
+          :placeholder="t('categorypickermodal.placeholder')"
           class="ion-no-padding"
           :debounce="300"
         />
@@ -93,11 +93,14 @@ import {
   IonSearchbar,
   IonCard,
 } from '@ionic/vue';
+import { useLocale } from '@/composables/useLocale';
 import { closeOutline, addOutline, checkmarkCircleOutline } from 'ionicons/icons';
 import { ref, computed, watch } from 'vue';
 import QuickCategoryAlert from '@/components/QuickCategoryAlert.vue';
 import { useQuickCategory } from '@/composables/useQuickCategory';
 import type { EntryCategoryRow } from '@/db/types';
+
+const { t } = useLocale();
 // end imports
 
 // Props / emits

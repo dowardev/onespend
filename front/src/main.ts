@@ -7,6 +7,8 @@ import App from './App.vue';
 import router from './router';
 
 import { IonicVue } from '@ionic/vue';
+import { i18n, detectSystemLocale } from './i18n';
+import { configDb } from './db/controllers/configDb';
 
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/vue/css/core.css';
@@ -94,7 +96,10 @@ ssoClient.onAuthStateChange((state) => {
       email: state.user.email || '',
       isAdmin: Boolean((state.user as { is_admin?: boolean }).is_admin),
     });
-    // Trigger initial sync after login
+    // LBDS-289: fullSyncAndSave no-ops when sync is disabled in Settings,
+    // so a fresh install (F-Droid) does not fire a single HTTP request on
+    // login until the user explicitly opts in. The SSO token is still
+    // kept — auth is local, only data sync is opt-in.
     syncService.fullSyncAndSave(async () => {
       try {
         const dayStore = useBudgetDayStore();
@@ -104,7 +109,11 @@ ssoClient.onAuthStateChange((state) => {
       }
     }).catch(console.error);
   } else {
-    authStore.logout();
+    // LBDS-289: logout() is now async (awaits IndexedDB delete and
+    // latches the loggedOut flag). The synchronous in-memory clear
+    // happens before this call returns its Promise, so the rest of
+    // the boot path is unaffected.
+    void authStore.logout();
   }
 });
 
@@ -128,11 +137,29 @@ function logBreakpoint() {
   console.log(`Ionic Breakpoint: ${getIonicBreakpoint()} (width: ${window.innerWidth}px)`);
 }
 
-const app = createApp(App).use(IonicVue).use(router).use(pinia);
+// LBDS-289: resolve the initial locale from the user's override (stored
+// in configDb under `languageOverride`) or, when there is no override,
+// from `navigator.language`. Must run before the app mounts so the very
+// first paint already shows the chosen language — otherwise the
+// Spanish defaults flash for a frame on every cold start.
+async function resolveInitialLocale(): Promise<'es' | 'en'> {
+  const stored = await configDb.get({ key: 'languageOverride' });
+  if (stored === 'es' || stored === 'en') return stored;
+  return detectSystemLocale();
+}
+
+const app = createApp(App).use(IonicVue).use(router).use(pinia).use(i18n);
 
 // Mount-first: the app is offline-first (local Dexie data), so first paint must
 // never wait on the external SSO. Auth resolution runs in parallel below.
-void router.isReady().then(() => {
+void router.isReady().then(async () => {
+  // Locale is read from IndexedDB before mount so the first render
+  // already uses the right language. The promise is awaited
+  // synchronously here (no `void`): a single frame of the wrong
+  // language on a fresh install is enough to make the app feel
+  // broken on non-es devices.
+  const initialLocale = await resolveInitialLocale();
+  i18n.global.locale.value = initialLocale;
   app.mount('#app');
   logBreakpoint();
 

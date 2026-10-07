@@ -27,6 +27,22 @@ import pendingAttachmentsService from '@/services/pendingAttachmentsService'
 import { syncApiService } from '../SyncApiService'
 import { syncLockService } from '../SyncLockService'
 
+// LBDS-289: SyncQueueService gates on syncEnabled read from configDb.
+// Default the gate ON so the LBDS-287 assertions keep their shape; the
+// disabled path is covered by syncDisabledGate.test.ts.
+vi.mock('@/db/controllers/configDb', () => ({
+  configDb: {
+    get: vi.fn(async ({ key }: { key: string }) => {
+      if (key === 'syncEnabled') return true;
+      if (key === 'syncServerUrl') return 'https://example.test';
+      return undefined;
+    }),
+    set: vi.fn(),
+    delete: vi.fn(),
+    getAll: vi.fn(),
+  },
+}))
+
 interface DrainProbe {
   processPendingAttachments(): Promise<void>
   pendingDrainInFlight: boolean

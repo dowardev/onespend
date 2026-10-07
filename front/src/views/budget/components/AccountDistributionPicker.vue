@@ -32,8 +32,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 
         <ion-item lines="full" class="transparent" :class="{ 'ion-invalid ion-touched': forceValidation && !getAccountIdValue(item.accountId) }" button data-cy="entry-account-selector" @click="openAccountModal({ index: realIndex(displayIdx) })">
           <ion-label>
-            Cuenta
-            <p>{{ getAccountName({ accountId: item.accountId }) || 'Seleccionar cuenta' }}</p>
+            {{ t("budget.account.title") }}
+            <p>{{ getAccountName({ accountId: item.accountId }) || t('common.selectAccount') }}</p>
           </ion-label>
         </ion-item>
 
@@ -41,7 +41,7 @@ SPDX-License-Identifier: AGPL-3.0-only
           <ion-input
             :model-value="item.amount"
             data-cy="entry-amount-input"
-            label="Cantidad"
+            :label="t('budget.components.accountdistributionpicker.text')"
             label-placement="floating"
             type="number"
             placeholder="0"
@@ -65,7 +65,7 @@ SPDX-License-Identifier: AGPL-3.0-only
             <ion-icon :icon="closeOutline" />
           </ion-button>
         </ion-buttons>
-        <ion-title>Seleccionar Cuenta</ion-title>
+        <ion-title>{{ t("budget.account.selectAccount") }}</ion-title>
         <ion-buttons slot="end">
           <ion-button @click="openQuickAccountAlert({ targetIndex: selectedAccountIndex })">
             <ion-icon :icon="addOutline" />
@@ -123,7 +123,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
   <ion-alert
     :is-open="showQuickAccountAlert"
-    header="Nueva Cuenta"
+    :header="t('budget.account.newAccount')"
     :inputs="quickAccountInputs"
     :buttons="quickAccountButtons"
     @did-dismiss="showQuickAccountAlert = false"
@@ -159,12 +159,15 @@ import {
   IonAlert,
   IonToast,
 } from '@ionic/vue';
+import { useLocale } from '@/composables/useLocale';
 import { addOutline, closeOutline } from 'ionicons/icons';
 import { ref, computed, watch } from 'vue';
 import { isAmountInvalid, isAmountTouched, getAmountError } from '@/utils/amountValidation';
 import accountsController, { type Account } from '@/controllers/accountsController';
 import { useQuickAccount } from '@/composables/useQuickAccount';
 
+
+const { t } = useLocale();
 export interface DistributionItem {
   amount: number | string;
   accountId: string | number | { id: string | number } | null;
