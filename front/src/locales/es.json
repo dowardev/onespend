@@ -520,7 +520,6 @@
     "linuxAurBody": "Arch Linux · paquete -bin",
     "comingSoon": "Próximamente",
     "available": "Disponible",
-    "androidHuawei": "Android · Huawei",
     "fdroidSubtitle": "Android · libre y de código abierto",
     "uptodownSubtitle": "Android · tienda alternativa",
     "fdroidNote": "Tienda de aplicaciones libre y de código abierto: sin cuenta, sin publicidad y con verificación independiente de cada versión.",
@@ -882,7 +881,6 @@
   "info": {
     "downloadspage": {
       "text1": "Google Play",
-      "text2": "AppGallery",
       "text3": "F-Droid",
       "text4": "Uptodown",
       "text5": "Linux",

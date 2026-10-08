@@ -8,6 +8,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 ## [Unreleased]
 
+### Changed
+- The Downloads page no longer lists AppGallery (OneSpend is not being published there). The Uptodown entry for Android is now Available — tapping the download button opens the official Uptodown page.
+
 ## [v0.78.0] - 2026-10-06
 
 ### Added

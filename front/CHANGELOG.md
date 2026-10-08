@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Downloads page: removed the AppGallery accordion (OneSpend will not be published in AppGallery); the Uptodown entry now shows the `available` badge and its download button opens `https://onespend.en.uptodown.com/android` in a new tab via `openUptodown()` in `front/src/views/info/DownloadsPage.vue`.
+
 ## [v0.78.0] - 2026-10-06
 
 ### Added

@@ -75,43 +75,6 @@ SPDX-License-Identifier: AGPL-3.0-only
                   </div>
                 </ion-accordion>
 
-                <!-- App Gallery -->
-                <ion-accordion value="app-gallery">
-                  <ion-item slot="header" lines="none" class="transparent">
-                    <svg
-                      slot="start"
-                      class="brand-icon"
-                      viewBox="0 0 24 24"
-                      role="img"
-                      :aria-label="t('info.downloadspage.text2')"
-                    >
-                      <path
-                        d="M6.734 0C1.804 0 0 1.803 0 6.733v10.535C0 22.198 1.803 24 6.734 24h10.529C22.193 24 24 22.197 24 17.268V6.733C24 1.803 22.197 0 17.266 0zM8 4h.565A3.439 3.439 0 0 0 12 7.435 3.439 3.439 0 0 0 15.435 4H16c0 2.206-1.794 4-4 4S8 6.206 8 4zm6.468 8h.52l.713 2.16.696-2.158h.66l-1.092 3.14h-.532l-.714-2.063-.714 2.063h-.528l-1.095-3.14h.678l.694 2.158zm6.236 0h.629v3.138h-.629zM2.666 12h.638v1.267h1.439V12h.637v3.142h-.637v-1.276h-1.44v1.276h-.637zm5.668 0h.637v1.772c0 .9-.496 1.417-1.36 1.417-.856 0-1.347-.507-1.347-1.39v-1.797H6.9v1.775c0 .524.255.805.719.805.46 0 .714-.273.714-.784zm2.344 0h.563l1.378 3.14h-.668l-.282-.654H10.23l-.286.654h-.651zm6.893.002h2.312v.572H18.2v.643h1.16v.573H18.2v.777h1.744v.573H17.57zm-6.623.793-.48 1.124h.964z"
-                        fill="#CE0E2D"
-                      />
-                    </svg>
-
-                    <ion-label>
-                      <h3>{{ t('info.downloadspage.text2') }}</h3>
-                      <p>{{ t('downloads.androidHuawei') }}</p>
-                    </ion-label>
-
-                    <ion-badge slot="end" color="success">{{ t('downloads.available') }}</ion-badge>
-                  </ion-item>
-
-                  <div slot="content" class="ac-content">
-                    <ion-item class="transparent">
-                      <ion-label>
-                        <h3>{{ t('common.requirements') }}</h3>
-                        <p>Android 7.0 (Nougat) o superior · ~30 MB de espacio</p>
-                      </ion-label>
-                      <ion-button slot="end" fill="clear">
-                        <ion-icon :icon="downloadOutline"></ion-icon>
-                      </ion-button>
-                    </ion-item>
-                  </div>
-                </ion-accordion>
-
                 <!-- F-Droid -->
                 <ion-accordion value="f-droid">
                   <ion-item slot="header" lines="none" class="transparent">
@@ -169,7 +132,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                       <p>{{ t('downloads.uptodownSubtitle') }}</p>
                     </ion-label>
 
-                    <ion-badge slot="end" color="medium">{{ t('downloads.comingSoon') }}</ion-badge>
+                    <ion-badge slot="end" color="success">{{ t('downloads.available') }}</ion-badge>
                   </ion-item>
 
                   <div slot="content" class="ac-content">
@@ -180,7 +143,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                         <p>Android 7.0 (Nougat) o superior · ~30 MB de espacio</p>
                       </ion-label>
 
-                      <ion-button slot="end" fill="clear" disabled>
+                      <ion-button slot="end" fill="clear" @click="openUptodown">
                         <ion-icon :icon="downloadOutline"></ion-icon>
                       </ion-button>
                     </ion-item>
@@ -497,6 +460,10 @@ const { t } = useLocale();
 function openPwa() {
   // Install from wherever the app is currently served
   window.open(window.location.origin, '_blank', 'noopener');
+}
+
+function openUptodown() {
+  window.open('https://onespend.en.uptodown.com/android', '_blank', 'noopener');
 }
 // End Functions
 </script>
