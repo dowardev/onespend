@@ -350,7 +350,10 @@
       "serverUrlLabel": "URL del servidor",
       "urlPlaceholder": "https://",
       "urlInvalid": "La URL debe empezar con http:// o https:// (o quedar vacía para desactivar).",
-      "footer": "Dejar la URL vacía desactiva la sincronización incluso con el interruptor encendido."
+      "footer": "Dejar la URL vacía desactiva la sincronización incluso con el interruptor encendido.",
+      "ssoHeader": "Servidor SSO",
+      "ssoServerUrlLabel": "URL del servidor SSO",
+      "ssoFrontendUrlLabel": "URL del panel SSO"
     },
     "dlqview": {
       "retryAllHeader": "Reintentar todos",

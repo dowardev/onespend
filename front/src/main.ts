@@ -55,13 +55,50 @@ useSuppliersStore();
 
 // SSO Client
 import { SSOClient } from '@dowardev/sso-client';
+import {
+  getSsoBaseUrl,
+  getSsoFrontendUrl,
+  defaultSsoBaseUrl,
+  defaultSsoFrontendUrl,
+} from './services/sso/ssoConfig';
+// LBDS-295: resolve SSO URLs from configDb at boot so self-hosters
+// can point login at their own SSO without rebuilding the APK. The
+// VITE constants stay as the build-time default (used when the row is
+// missing, empty, or malformed — see `ssoConfig.ts`). Top-level
+// await is fine here: main.ts is an ES module executed by Vite before
+// any consumer can import @/ssoClientAccessor or @/controllers/authController,
+// and configDb reads against Dexie resolve in a few ms in practice.
+//
+// T-01 (pre-merge review): if configDb fails to open (e.g. Dexie
+// migration pending, IndexedDB permission, schema upgrade error), the
+// module-level await would otherwise throw before `createApp` runs and
+// crash the entire app boot with no UI. Fall back to the env-var
+// defaults — the same path a fresh install takes when configDb has no
+// rows yet — so the app still starts and login still works against the
+// bundled server. The user can re-open Settings later and the row will
+// be read normally once the DB is healthy.
+let ssoBaseUrl: string
+let ssoFrontendUrl: string
+try {
+  ;[ssoBaseUrl, ssoFrontendUrl] = await Promise.all([
+    getSsoBaseUrl(),
+    getSsoFrontendUrl(),
+  ])
+} catch (configDbError) {
+  console.warn(
+    '[main] Could not read SSO URLs from configDb; falling back to the env-var defaults:',
+    configDbError,
+  )
+  ssoBaseUrl = defaultSsoBaseUrl()
+  ssoFrontendUrl = defaultSsoFrontendUrl()
+}
 const ssoClient = new SSOClient({
-  ssoUrl: import.meta.env.VITE_SSO_URL,
-  ssoFrontendUrl: import.meta.env.VITE_SSO_FRONTEND_URL,
+  ssoUrl: ssoBaseUrl,
+  ssoFrontendUrl: ssoFrontendUrl,
   clientId: import.meta.env.VITE_SSO_CLIENT_ID,
   apiBaseUrl: import.meta.env.VITE_API_URL,
-});
-export { ssoClient };
+})
+export { ssoClient }
 
 setSSOClient(ssoClient);
 

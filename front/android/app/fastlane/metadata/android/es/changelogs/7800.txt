@@ -1,0 +1,4 @@
+v0.78.0
+• La sincronización ahora es opcional y apunta a un servidor que elegís en Ajustes → Conexiones (por defecto, el servidor público del autor).
+• Selector de idioma (Español / Inglés) en el menú lateral.
+• Sincronización más confiable: el estado ya no se queda trabado, la cola se vacía tras un fallo pasajero, los adjuntos se eliminan correctamente, y la sección de usuario del menú lateral ya no desaparece al recargar.

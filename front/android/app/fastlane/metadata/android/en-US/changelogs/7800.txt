@@ -1,0 +1,4 @@
+v0.78.0
+• Sync is now opt-in and points to a server you pick in Settings → Connections (default is the author's public server).
+• Language selector (Spanish / English) in the side menu.
+• More reliable sync: status no longer gets stuck, the queue drains after a transient failure, attachments delete cleanly, and the user section in the side menu no longer disappears on reload.

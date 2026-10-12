@@ -14,7 +14,20 @@ IssueTracker: https://gitlab.com/dowardev/onespend/-/issues
 # (the bundled default is the author public server, and the user can
 # override it from Ajustes -> Conexiones without rebuilding the APK).
 # UI is primarily Spanish; non-es locales get the full English wrap.
-Description: "OneSpend is an offline-first personal finance manager. (i) Sync is opt-in: the app never connects to a hardcoded server - the user picks the backend URL in Ajustes -> Conexiones (the bundled default is the author's public server, only used if the user enables sync, and overridable in-app without a rebuild). (ii) UI is wrapped for es + en; the language selector is in the side menu."
+#
+# LBDS-295 (mezinster #2): append the Default servers block so
+# reviewers and end users see exactly what the build is pointing at
+# before any user override. Both the sync URL and the SSO URLs are
+# overridable in Settings -> Connections.
+Description: |-
+  OneSpend is an offline-first personal finance manager. (i) Sync is opt-in: the app never connects to a hardcoded server - the user picks the backend URL in Ajustes -> Conexiones (the bundled default is the author's public server, only used if the user enables sync, and overridable in-app without a rebuild). (ii) UI is wrapped for es + en; the language selector is in the side menu.
+
+  **Default servers** — the build ships with these defaults, which you can override in `Settings → Connections` after install:
+
+  * Sync server: `https://onespend-back.dowar.xyz`
+  * SSO server: `https://auth.dowar.xyz/api` (login panel: `https://auth-panel.dowar.xyz`)
+
+  The author maintains these as a public service for anyone who does not want to self-host. To use a self-hosted sync server and/or SSO, change the URLs in the Connections screen (no rebuild needed). The SSO source is public at `https://gitlab.com/dowardev/sso`.
 
 AutoName: OneSpend
 
