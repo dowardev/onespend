@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **SSO endpoint override in Conexiones** — the SSO server URL and the SSO login-panel URL are now user-configurable fields under the existing `Ajustes → Conexiones` screen, alongside the sync server URL introduced in LBDS-289. Self-hosters can point the login flow at their own SSO without rebuilding the APK. The build-time `VITE_SSO_URL` / `VITE_SSO_FRONTEND_URL` env vars seed the placeholders; saving a value persists it in `configDb` and overrides the bundled default; clearing the field falls back to the env default. The `SSOClient` is now built with the resolved URLs at boot (LBDS-295, mezinster #1).
+- `front/src/services/sso/ssoConfig.ts` — new resolver module mirroring the `syncConfig` pattern. `getSsoBaseUrl()` / `getSsoFrontendUrl()` read `configDb` first, fall back to the env-var defaults, and log a generic warning (no echo of the raw persisted value) when the row is missing, empty, malformed, or uses a non-http(s) scheme.
+
+### Changed
+- `front/src/main.ts` constructs the `SSOClient` after the resolver has resolved the URLs, so the client is always pointing at the user's URL by the time `init()` runs. A top-level try/catch around the resolver falls back to the env-var defaults if `configDb` fails to open at boot, so a Dexie error no longer blocks the app from starting.
+
+### Fixed
+- The Android WebView no longer queries `content-autofill.googleapis.com` on fresh install: `front/android/app/src/main/res/layout/activity_main.xml` sets `android:importantForAutofill="no"` on the WebView host layout. This is the same finding visheh10 raised for v0.77.0; the F-Droid static reviewer (mezinster) re-raised it for v0.78.0 (LBDS-295, mezinster #4).
+- F-Droid metadata: `7800.txt` (the v0.78.0 user-visible changelog on F-Droid) is now present in both `en-US` and `es`; the F-Droid build no longer warns about a missing changelog for the new version.
+- F-Droid `com.dowardev.onespend.yml` `Description` now declares the default servers (sync + SSO + login panel) in a "Default servers" paragraph and points at the public SSO source, so reviewers and end users see exactly what the build is pointing at before any user override (LBDS-295, mezinster #2).
+
 ### Changed
 - Downloads page: removed the AppGallery accordion (OneSpend will not be published in AppGallery); the Uptodown entry now shows the `available` badge and its download button opens `https://onespend.en.uptodown.com/android` in a new tab via `openUptodown()` in `front/src/views/info/DownloadsPage.vue`.
 

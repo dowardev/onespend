@@ -8,6 +8,14 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 ## [Unreleased]
 
+### Cambiado
+- **Ajustes → Conexiones**: además de la URL del servidor de sync, ahora se pueden configurar la URL del servidor SSO y la URL del panel de login SSO. Los valores que vienen del build (VITE_SSO_URL, VITE_SSO_FRONTEND_URL) sólo aparecen como placeholder; guardar otra URL la persiste y se usa en el próximo login. Dejar el campo vacío vuelve al valor del build. Los self-hosters ya no necesitan un APK propio para apuntar el login a su propio SSO (LBDS-295, respuesta a la review de mezinster en el MR de F-Droid).
+
+### Corregido
+- El WebView de Android ya no consulta `content-autofill.googleapis.com` al instalar la app fresca (LBDS-295, respuesta a mezinster en el MR de F-Droid).
+- La descripción del paquete en F-Droid ahora declara los servidores por defecto (sync + SSO) y apunta al código fuente del SSO, así los reviewers y usuarios ven exactamente a qué apunta el build antes de cualquier override (LBDS-295, respuesta a mezinster en el MR de F-Droid).
+- F-Droid: el changelog `7800.txt` ya existe en `en-US` y `es`, así que el build de F-Droid no avisa más por changelog faltante para la nueva versión (LBDS-295, respuesta a mezinster en el MR de F-Droid).
+
 ### Changed
 - The Downloads page no longer lists AppGallery (OneSpend is not being published there). The Uptodown entry for Android is now Available — tapping the download button opens the official Uptodown page.
 

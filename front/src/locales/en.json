@@ -350,7 +350,10 @@
       "serverUrlLabel": "Server URL",
       "urlPlaceholder": "https://",
       "urlInvalid": "The URL must start with http:// or https:// (or be left empty to disable).",
-      "footer": "Leaving the URL empty disables sync even if the toggle is on."
+      "footer": "Leaving the URL empty disables sync even if the toggle is on.",
+      "ssoHeader": "SSO server",
+      "ssoServerUrlLabel": "SSO server URL",
+      "ssoFrontendUrlLabel": "SSO login panel URL"
     },
     "dlqview": {
       "retryAllHeader": "Retry all",

@@ -67,6 +67,67 @@ SPDX-License-Identifier: AGPL-3.0-only
                 </ion-label>
               </ion-item>
 
+              <!-- LBDS-295: SSO endpoint inputs. Mirror the sync URL
+                   pattern: persist on blur, validate http/https, show
+                   the same warning style on invalid input. The VITE
+                   defaults are shown as placeholders so the user can
+                   see what was bundled before changing it. -->
+              <ion-item-divider>
+                <ion-label>{{ t('sync.settings.ssoHeader') }}</ion-label>
+              </ion-item-divider>
+
+              <ion-item lines="full">
+                <ion-icon slot="start" :icon="globeOutline"></ion-icon>
+
+                <ion-label position="stacked">{{ t('sync.settings.ssoServerUrlLabel') }}</ion-label>
+
+                <ion-input
+                  v-model="ssoServerUrlDraft"
+                  type="url"
+                  inputmode="url"
+                  :placeholder="defaultSsoBaseUrl()"
+                  data-cy="sso-server-url-input"
+                  @ion-blur="onSsoServerUrlBlur"
+                ></ion-input>
+              </ion-item>
+
+              <ion-item
+                v-if="!ssoServerUrlValid"
+                lines="none"
+                data-cy="sso-server-url-error"
+              >
+                <ion-icon slot="start" :icon="alertCircleOutline" color="danger"></ion-icon>
+                <ion-label color="danger">
+                  <p>{{ t('sync.settings.urlInvalid') }}</p>
+                </ion-label>
+              </ion-item>
+
+              <ion-item lines="full">
+                <ion-icon slot="start" :icon="globeOutline"></ion-icon>
+
+                <ion-label position="stacked">{{ t('sync.settings.ssoFrontendUrlLabel') }}</ion-label>
+
+                <ion-input
+                  v-model="ssoFrontendUrlDraft"
+                  type="url"
+                  inputmode="url"
+                  :placeholder="defaultSsoFrontendUrl()"
+                  data-cy="sso-frontend-url-input"
+                  @ion-blur="onSsoFrontendUrlBlur"
+                ></ion-input>
+              </ion-item>
+
+              <ion-item
+                v-if="!ssoFrontendUrlValid"
+                lines="none"
+                data-cy="sso-frontend-url-error"
+              >
+                <ion-icon slot="start" :icon="alertCircleOutline" color="danger"></ion-icon>
+                <ion-label color="danger">
+                  <p>{{ t('sync.settings.urlInvalid') }}</p>
+                </ion-label>
+              </ion-item>
+
               <ion-item lines="none">
                 <ion-icon slot="start" :icon="informationCircleOutline"></ion-icon>
                 <ion-label>
@@ -94,6 +155,7 @@ import {
   IonList,
   IonListHeader,
   IonItem,
+  IonItemDivider,
   IonLabel,
   IonInput,
   IonIcon,
@@ -107,6 +169,7 @@ import { ref, computed, onMounted } from 'vue';
 import {
   syncOutline,
   serverOutline,
+  globeOutline,
   alertCircleOutline,
   informationCircleOutline,
 } from 'ionicons/icons';
@@ -121,6 +184,15 @@ import {
   setSyncServerUrl,
   isValidSyncServerUrl,
 } from '@/services/sync/syncConfig';
+import {
+  getSsoBaseUrl,
+  getSsoFrontendUrl,
+  setSsoServerUrl,
+  setSsoFrontendUrl,
+  isValidSsoServerUrl,
+  defaultSsoBaseUrl,
+  defaultSsoFrontendUrl,
+} from '@/services/sso/ssoConfig';
 
 // 4. Interface and types imports
 // (none)
@@ -131,6 +203,8 @@ import {
 // 6. Vars and const
 const enabled = ref(false);
 const serverUrlDraft = ref('');
+const ssoServerUrlDraft = ref('');
+const ssoFrontendUrlDraft = ref('');
 
 // 7. Watch
 // (none)
@@ -138,11 +212,17 @@ const serverUrlDraft = ref('');
 // 8. Computed
 const designMode = computed(() => systemConfigController.getDesignMode());
 const urlValid = computed(() => isValidSyncServerUrl({ url: serverUrlDraft.value }));
+const ssoServerUrlValid = computed(() => isValidSsoServerUrl({ url: ssoServerUrlDraft.value }));
+const ssoFrontendUrlValid = computed(() =>
+  isValidSsoServerUrl({ url: ssoFrontendUrlDraft.value }),
+);
 
 // 9. OnMounted
 onMounted(async () => {
   enabled.value = await isSyncEnabled();
   serverUrlDraft.value = await getSyncServerUrl();
+  ssoServerUrlDraft.value = await getSsoBaseUrl();
+  ssoFrontendUrlDraft.value = await getSsoFrontendUrl();
 });
 
 const { t } = useLocale();
@@ -154,7 +234,7 @@ async function onToggleChange(event: { detail: { checked: boolean } }): Promise<
   await setSyncEnabled({ enabled: checked });
 }
 
-async function onServerUrlBlur() {
+async function onServerUrlBlur(): Promise<void> {
   if (!urlValid.value) {
     // F9 (pre-merge review): if the user typed something but the URL
     // is not parseable, surface a non-blocking toast so the silent
@@ -169,6 +249,36 @@ async function onServerUrlBlur() {
     return;
   }
   await setSyncServerUrl({ url: serverUrlDraft.value });
+}
+
+// LBDS-295: the SSO URL blur handlers follow the same pattern as
+// onServerUrlBlur. Saving '' is intentional (ssoConfig treats empty
+// as "use the env-var default", not as opt-out — login is always
+// required to be reachable).
+async function onSsoServerUrlBlur(): Promise<void> {
+  if (!ssoServerUrlValid.value) {
+    const toast = await toastController.create({
+      message: t('settings.connections.invalidUrl'),
+      duration: 3000,
+      color: 'warning',
+    });
+    await toast.present();
+    return;
+  }
+  await setSsoServerUrl({ url: ssoServerUrlDraft.value });
+}
+
+async function onSsoFrontendUrlBlur(): Promise<void> {
+  if (!ssoFrontendUrlValid.value) {
+    const toast = await toastController.create({
+      message: t('settings.connections.invalidUrl'),
+      duration: 3000,
+      color: 'warning',
+    });
+    await toast.present();
+    return;
+  }
+  await setSsoFrontendUrl({ url: ssoFrontendUrlDraft.value });
 }
 </script>
 
