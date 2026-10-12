@@ -229,9 +229,11 @@ To add a third locale (e.g. Portuguese):
 1. Create `front/src/locales/pt.json` with the same key tree as
    `es.json` (English fallback covers any missing key via
    `fallbackLocale` in `i18n.ts`).
-2. Register the locale in `front/src/locales/index.ts` and in
-   `front/src/i18n.ts` (`messages`, `availableLocales`, and the
-   `resolveInitialLocale` switch if you want a non-Spanish default).
+2. Register the locale in `front/src/i18n.ts`: add the import at the
+   top, add the entry to the `messages` object, and (if you want a
+   non-Spanish default) update `detectSystemLocale()` and the
+   `defaultLocale` / `fallbackLocale` options of `createI18n` so the
+   first-launch heuristic and the persistence path still work.
 3. Add the `Idioma` / `Português` entry in `MainMenu.vue` so the user
    can pick it from the side menu.
 4. Regenerate `en.json` / `pt.json` translations with `lingo.dev run`

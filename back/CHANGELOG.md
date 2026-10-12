@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.79.0] - 2026-10-11
+
+No backend changes in this release. The version bump tracks the frontend (SSO endpoint override in Conexiones, LBDS-295) and the F-Droid release-side changes.
+
+## [v0.78.0] - 2026-10-06
+
+### Added
+
+- New `AttachmentProcessor` wired into the sync pipeline (`back/app/Services/Sync/Processors/AttachmentProcessor.php`) so attachment deletes follow the same queue + ack contract as the other entity types, instead of being a side effect of the merge (LBDS-280).
+- Tests: `OrchestratorAttachmentDeleteTest` (orchestrator routing) and `AttachmentProcessorTest` (processor contract) (LBDS-280).
+
+### Changed
+
+- `AbstractEntityProcessor` exposes the hooks the new `AttachmentProcessor` needs (deleted-row sentinel + delete-ack path) (LBDS-280).
+- `SyncController::merge` acknowledges attachment deletes with the same `sync_id` + `skipped` semantics as the rest of the entities (LBDS-280, mirrors LBDS-244).
+- `SyncOrchestratorService` and `SyncServiceProvider` register the attachment processor alongside the other entity processors (LBDS-280).
+- Build toolchain moved to mise-managed PHP 8.4 (`back/mise.toml`, `PHP_PREBUILT_STATIC=true`).
 
 ## [v0.77.0] - 2026-09-18
 

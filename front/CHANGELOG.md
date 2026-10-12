@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.79.0] - 2026-10-11
+
 ### Added
 - **SSO endpoint override in Conexiones** — the SSO server URL and the SSO login-panel URL are now user-configurable fields under the existing `Ajustes → Conexiones` screen, alongside the sync server URL introduced in LBDS-289. Self-hosters can point the login flow at their own SSO without rebuilding the APK. The build-time `VITE_SSO_URL` / `VITE_SSO_FRONTEND_URL` env vars seed the placeholders; saving a value persists it in `configDb` and overrides the bundled default; clearing the field falls back to the env default. The `SSOClient` is now built with the resolved URLs at boot (LBDS-295, mezinster #1).
 - `front/src/services/sso/ssoConfig.ts` — new resolver module mirroring the `syncConfig` pattern. `getSsoBaseUrl()` / `getSsoFrontendUrl()` read `configDb` first, fall back to the env-var defaults, and log a generic warning (no echo of the raw persisted value) when the row is missing, empty, malformed, or uses a non-http(s) scheme.

@@ -51,8 +51,6 @@ Troubleshooting
   makensis -VERSION
   mono --version
 
-Files changed
-- package.json: added electron scripts and devDependencies + electron-builder "build" configuration.
-
-This file was created to document how to run and build the desktop Electron application for this project.
+For the canonical list of `electron:*`, `build:*` and `icons` scripts see
+`front/package.json` under the `scripts` and `build` keys.
 

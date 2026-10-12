@@ -8,6 +8,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 ## [Unreleased]
 
+## [v0.79.0] - 2026-10-11
+
 ### Cambiado
 - **Ajustes → Conexiones**: además de la URL del servidor de sync, ahora se pueden configurar la URL del servidor SSO y la URL del panel de login SSO. Los valores que vienen del build (VITE_SSO_URL, VITE_SSO_FRONTEND_URL) sólo aparecen como placeholder; guardar otra URL la persiste y se usa en el próximo login. Dejar el campo vacío vuelve al valor del build. Los self-hosters ya no necesitan un APK propio para apuntar el login a su propio SSO (LBDS-295, respuesta a la review de mezinster en el MR de F-Droid).
 

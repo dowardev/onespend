@@ -49,7 +49,7 @@ cd front && pnpm run format
 # Frontend unit tests
 cd front && pnpm run test:unit
 
-# Frontend e2e tests
+# Frontend e2e tests (Playwright)
 cd front && pnpm run test:e2e
 
 # Backend tests
@@ -60,6 +60,10 @@ cd front && pnpm run electron:dev
 
 # Electron (production build)
 cd front && pnpm run build && pnpm run electron:build
+
+# Frontend i18n translation workflow (lingo.dev)
+cd front && pnpm run i18n:translate    # run lingo.dev to sync locale files
+cd front && pnpm run i18n:check       # verify locales are in sync (no edits)
 ```
 
 ## Backend Setup
@@ -86,11 +90,12 @@ php artisan serve
   - Middleware: `sso.auth`, `sso.user`
   - *(Legacy Sanctum+Breeze removido — LBDS-119)*
 - **Dominio:** Control de gastos/presupuestos (budget/expense tracking)
-- `app/Models/` — Account, BudgetEntry, BudgetEntryGroup, BudgetProvider, BudgetProviderProduct, Income, Supplier, SupplierProduct, SyncMetadata, Template, Attachment
-- `app/Http/Controllers/` — Auth (SSO), AttachmentController, SyncController
-- `routes/api.php` — Sync API (changes, merge, full, resolve-conflict) + Attachments CRUD
+- `app/Models/` — Account, Attachment, BudgetEntry, BudgetEntryGroup, BudgetProvider, BudgetProviderProduct, MergeJob, RecurringRecord, RecurringRecordProduct, Supplier, SupplierProduct, SyncMetadata, User
+- `app/Http/Controllers/` — AccountController, AttachmentController, BudgetEntryController, BudgetEntryGroupController, BudgetProviderController, BudgetProviderProductController, HealthController, MetricsController, RecurringRecordController, RecurringRecordProductController, SupplierController, SupplierProductController, SyncController
+- `routes/api.php` — REST API (`accounts`, `budget-entries`, `budget-entry-groups`, `budget-providers`, `budget-provider-products`, `suppliers`, `supplier-products`, `recurring-records`, `recurring-record-products`) + Sync API (`/sync/changes`, `/sync/merge`, `/sync/full`, `/sync/resolve-conflict`, `/sync/resolve-conflicts-batch`, `/sync/conflicts`, `/sync/active-conflicts`, `/sync/merge-status/{jobId}`, `/sync/health`) + Attachments CRUD (`/budget-entries/{id}/attachments`, `/budget-providers/{id}/attachments`, `/attachments/{id}/download`, `DELETE /attachments/{id}`, `/attachments/batch-delete`) + Metrics (`/metrics`)
 - `routes/auth.php` — SSO auth routes
 - **Colas:** database driver (dev) / sync (producción en hosting compartido)
+- **Schedule (cron):** data cleanup 3 AM, sync monitor cada 10 min (configurado en `routes/console.php`; requiere `* * * * * cd back && php artisan schedule:run`)
 
 ### Frontend (`front/`)
 - **Ionic 8** + **Vue 3** con Composition API
@@ -100,12 +105,19 @@ php artisan serve
   - Desktop (Electron 33 con cross-platform builds: Linux, Windows, Mac, RPM)
 - **Pinia** para estado
 - **Chart.js** + vue-chartjs para gráficos
-- **Offline-first:** API Sync con resolución de conflictos
+- **i18n:** `vue-i18n` 9 con locales `es` (default) y `en`; selector en el menú lateral (`Menu → Idioma`) persiste la elección en `configDb`. Config en `front/src/i18n.ts`, mensajes en `front/src/locales/{es,en}.json`. La primera vez (sin override persistido) se llama `detectSystemLocale()` que resuelve `es-*` a `es` y cualquier otro a `en` (política del reviewer de F-Droid).
+- **Sync opt-in (LBDS-289):** la pantalla **Ajustes → Conexiones** (ruta `/settings/connections`) tiene un toggle `Sincronización` y un campo `URL del servidor`. El build-time `VITE_API_URL` solo aparece como placeholder; el usuario puede pegar otra URL y la app sincroniza contra esa. Sync solo se activa con toggle ON + URL no vacía.
+- **Override de SSO (LBDS-295):** además de la URL del servidor de sync, en la misma pantalla **Conexiones** se puede configurar `URL del servidor SSO` (`VITE_SSO_URL`) y `URL del panel de login` (`VITE_SSO_FRONTEND_URL`). El resolver vive en `front/src/services/sso/ssoConfig.ts` y persiste en `configDb` (`ssoServerUrl`, `ssoFrontendUrl`); el env var del build es el fallback.
+- **Android build-only env var:** `SSO_CLIENT_ID_NATIVE` (en `front/.env.production`) es OBLIGATORIO distinto del web (`VITE_SSO_CLIENT_ID`) porque el SSO valida `redirect_url` por match exacto y la app usa custom scheme `com.dowardev.onespend://auth/callback`. `pnpm run build:native` lo lee; sin él el build warn-ea y cae al client web, lo que falla el sign-in en device.
+- **Offline-first:** API Sync con resolución de conflictos, queue con ack y DLQ (LBDS-244), drain de adjuntos en `finally` del merge con backoff exponencial (LBDS-287), attachment deletes encolados (LBDS-280), detector de divergencias local↔server (LBDS-276).
+- **Performance/Glossary/Income (LBDS-210, LBDS-228):** página de configuración de performance (`/statistics/performance/config`) con mapeo categoría→sección; glossary financiero (`useFinancialGlossary`) e income statement labels (`useIncomeStatement.labelMap`) consumen `vue-i18n` para seguir el idioma activo.
 - `src/controllers/` — Controladores de negocio
-- `src/composables/` — Composables Vue
+- `src/composables/` — Composables Vue (lógica reactiva compartida: `useAttachments`, `useDatePicker`, `useSync`, `useEntryLoader`, etc.)
 - `src/stores/` — Pinia stores
-- `src/services/` — Servicios API
+- `src/services/` — Servicios API (HTTP, sync, SSO, etc.)
+- `src/db/` — Capa Dexie (IndexedDB): `configDb` (configuración persistida), `syncQueueDb`, `attachmentsDb`, migrations client-side
 - `src/migrations/` — Migraciones client-side (offline storage)
+- `src/locales/` — Mensajes `vue-i18n` (`es.json`, `en.json`)
 - `src/views/` — Vistas organizadas por feature
 
 ## Testing

@@ -99,9 +99,9 @@ Current build block:
 
 | Field | Value |
 | ----- | ----- |
-| `versionName` | `0.76.4` (`"version"` in `front/package.json`) |
-| `versionCode` | `7604` (`"versionCode"` in `front/package.json`) |
-| `commit` | `07132cdf905de528681e897641225f185ca5ce5e` — full SHA, never a tag |
+| `versionName` | `0.79.0` (`"version"` in `front/package.json`) |
+| `versionCode` | `7900` (`"versionCode"` in `front/package.json`) |
+| `commit` | `f43930894c0bac0ac303843d78f41d28c3014af5` — full SHA, never a tag |
 
 The recipe pins the **full commit hash** on purpose: a tag can be moved, a hash
 cannot, and the buildserver needs an immutable revision.
