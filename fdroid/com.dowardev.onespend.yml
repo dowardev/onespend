@@ -6,6 +6,7 @@ AuthorEmail: gonzalo@dowar.xyz
 WebSite: https://onespend.dowar.xyz
 SourceCode: https://gitlab.com/dowardev/onespend
 IssueTracker: https://gitlab.com/dowardev/onespend/-/issues
+
 AutoName: OneSpend
 Description: |-
   OneSpend is an offline-first personal finance manager. (i) Sync is opt-in: the app never connects to a hardcoded server - the user picks the backend URL in Ajustes -> Conexiones (the bundled default is the author's public server, only used if the user enables sync, and overridable in-app without a rebuild). (ii) UI is wrapped for es + en; the language selector is in the side menu.
