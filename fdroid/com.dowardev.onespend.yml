@@ -6,19 +6,7 @@ AuthorEmail: gonzalo@dowar.xyz
 WebSite: https://onespend.dowar.xyz
 SourceCode: https://gitlab.com/dowardev/onespend
 IssueTracker: https://gitlab.com/dowardev/onespend/-/issues
-
-# LBDS-289: declare the bundled-server + i18n state so the F-Droid
-# reviewer can verify against the "NonFreeNet" / "TetheredNet" rules
-# without reading the code. Sync is opt-in: the app does NOT connect
-# to a hardcoded server on boot. The user picks the URL in Settings
-# (the bundled default is the author public server, and the user can
-# override it from Ajustes -> Conexiones without rebuilding the APK).
-# UI is primarily Spanish; non-es locales get the full English wrap.
-#
-# LBDS-295 (mezinster #2): append the Default servers block so
-# reviewers and end users see exactly what the build is pointing at
-# before any user override. Both the sync URL and the SSO URLs are
-# overridable in Settings -> Connections.
+AutoName: OneSpend
 Description: |-
   OneSpend is an offline-first personal finance manager. (i) Sync is opt-in: the app never connects to a hardcoded server - the user picks the backend URL in Ajustes -> Conexiones (the bundled default is the author's public server, only used if the user enables sync, and overridable in-app without a rebuild). (ii) UI is wrapped for es + en; the language selector is in the side menu.
 
@@ -29,16 +17,14 @@ Description: |-
 
   The author maintains these as a public service for anyone who does not want to self-host. To use a self-hosted sync server and/or SSO, change the URLs in the Connections screen (no rebuild needed). The SSO source is public at `https://gitlab.com/dowardev/sso`.
 
-AutoName: OneSpend
-
 RepoType: git
 Repo: https://gitlab.com/dowardev/onespend.git
 Binaries: https://gitlab.com/dowardev/onespend/-/releases/v%v/downloads/onespend-%v.apk
 
 Builds:
-  - versionName: 0.78.0
-    versionCode: 7800
-    commit: d40236471a720f9e963262857dc31fdd7586c503
+  - versionName: 0.79.0
+    versionCode: 7900
+    commit: f43930894c0bac0ac303843d78f41d28c3014af5
     subdir: front/android/app
     sudo:
       - echo "deb https://deb.debian.org/debian forky main" > /etc/apt/sources.list.d/forky.list
@@ -65,5 +51,5 @@ AllowedAPKSigningKeys: c6d2961a958ea23a36925ea818e0605b28c9f8e60f84f0432c7e68ee5
 AutoUpdateMode: Version
 UpdateCheckMode: Tags ^v[\d.]+$
 UpdateCheckData: front/package.json|"versionCode":\s*(\d+)|.|"version":\s*"([\d.]+)"
-CurrentVersion: 0.78.0
-CurrentVersionCode: 7800
+CurrentVersion: 0.79.0
+CurrentVersionCode: 7900
