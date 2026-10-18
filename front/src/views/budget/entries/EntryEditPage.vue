@@ -222,7 +222,7 @@ const entryData = ref({
   date: '',
 });
 
-const entryNotes = ref('');
+const entryNotes = ref<string | undefined>(undefined);
 const entrySyncId = ref<string | null>(null);
 const categoryId = ref<string | null>(null);
 const entryCategories = ref<EntryCategoryRow[]>([]);
@@ -356,7 +356,11 @@ async function loadEntry(entryId: string) {
     date: entryAny.date || '',
   };
 
-  entryNotes.value = entryAny.notes || '';
+  // LBDS-275 F1: preserve the absence of notes as `undefined` instead of
+  // coercing to `''`, so `toApiFormat` can omit the key from the push payload
+  // when the row never had a note. Coercing to `''` would let the first edit
+  // of a pre-fix row silently wipe any server-side note the row might carry.
+  entryNotes.value = entryAny.notes;
   categoryId.value = entryAny.category ?? null;
   entrySyncId.value = entryAny.sync_id || null;
 
@@ -577,6 +581,10 @@ async function handleSave() {
       accountId: payload.accountId,
       groups: payload.groups,
       category: payload.category,
+      // LBDS-275: notes must travel on the create path. The form already
+      // builds the note into the payload, but the controller's addIngreso /
+      // addEgreso used to ignore it, so the row was written without notes.
+      notes: payload.notes,
     };
     if (payload.date) {
       entryDataAny.date = payload.date;

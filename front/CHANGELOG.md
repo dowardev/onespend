@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- `notes` field on budget entries saved and synced end-to-end: `BudgetEntryRow.notes` is declared on the row type, `toBudgetEntryRow` and `mapEntryRow` preserve it, `addIngreso` / `addEgreso` accept `notes` on create, and the live pull mapper (`mapServerItemToRow`) restores it from the server payload. The sync push (`toApiFormat('budget_entry')`) and pull (`fromApiFormat('budget_entry')`) carry the field. The form preserves the absence of a note as `undefined` (no `notes: ''` wipe on the first edit of a pre-fix row) and the notes textarea enforces a 2000-char limit to match the server validation (LBDS-275).
+
 ## [v0.79.0] - 2026-10-11
 
 ### Added

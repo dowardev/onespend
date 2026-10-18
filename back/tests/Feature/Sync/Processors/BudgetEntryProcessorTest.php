@@ -335,4 +335,96 @@ class BudgetEntryProcessorTest extends TestCase
         ], $this->user->id);
         $this->assertCount(0, BudgetEntryGroup::where('budget_entry_id', $entry->id)->get());
     }
+
+    // LBDS-275: the entry form collected a free-form note per budget entry,
+    // but no column / fillable entry existed, so the note was lost on save.
+    // The migration adds the column and the model's $fillable accepts it;
+    // these tests pin both the create and the update paths so a regression
+    // anywhere in the chain (processor, fillable, migration) is caught here.
+    public function test_process_creates_entity_with_notes(): void
+    {
+        $syncId = 'test-be-notes-create-1';
+
+        $result = $this->processor->create([
+            [
+                'id' => $syncId,
+                'name' => 'Entry With Note',
+                'amount' => 42.50,
+                'date' => '2026-10-12',
+                'entry_type' => 'egreso',
+                'payment_type' => 'cash',
+                'account_id' => (string) $this->account->sync_id,
+                'notes' => 'Pagué en efectivo, dejar recibo',
+                'status' => 'active',
+            ],
+        ], $this->user->id);
+
+        $this->assertCount(1, $result);
+        $this->assertDatabaseHas('budget_entries', [
+            'sync_id' => $syncId,
+            'notes' => 'Pagué en efectivo, dejar recibo',
+        ]);
+    }
+
+    public function test_process_creates_entity_without_notes(): void
+    {
+        $syncId = 'test-be-notes-create-empty-1';
+
+        $result = $this->processor->create([
+            [
+                'id' => $syncId,
+                'name' => 'Entry Without Note',
+                'amount' => 20.00,
+                'date' => '2026-10-12',
+                'entry_type' => 'egreso',
+                'payment_type' => 'cash',
+                'account_id' => (string) $this->account->sync_id,
+                'status' => 'active',
+            ],
+        ], $this->user->id);
+
+        $this->assertCount(1, $result);
+        $entry = BudgetEntry::where('sync_id', $syncId)->first();
+        $this->assertNotNull($entry);
+        $this->assertNull($entry->notes);
+    }
+
+    public function test_process_updates_entity_notes(): void
+    {
+        $syncId = 'test-be-notes-update-1';
+
+        $this->processor->create([
+            [
+                'id' => $syncId,
+                'name' => 'Entry To Annotate',
+                'amount' => 100.00,
+                'date' => '2026-10-12',
+                'entry_type' => 'egreso',
+                'payment_type' => 'cash',
+                'account_id' => (string) $this->account->sync_id,
+                'status' => 'active',
+            ],
+        ], $this->user->id);
+
+        $this->processor->update([
+            [
+                'id' => $syncId,
+                'notes' => 'Nota agregada en un update posterior',
+            ],
+        ], $this->user->id);
+
+        $this->assertDatabaseHas('budget_entries', [
+            'sync_id' => $syncId,
+            'notes' => 'Nota agregada en un update posterior',
+        ]);
+
+        // Clearing the note back to null also has to land in the DB.
+        $this->processor->update([
+            ['id' => $syncId, 'notes' => null],
+        ], $this->user->id);
+
+        $entry = BudgetEntry::where('sync_id', $syncId)->first();
+        $this->assertNotNull($entry);
+        $this->assertNull($entry->notes);
+    }
 }

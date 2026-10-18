@@ -32,6 +32,14 @@ export function toApiFormat(entityType: SyncEntityType, row: Record<string, any>
         supplier_id: row.supplierId,
         supplier_name: row.supplierName,
         category: row.category ?? undefined,
+        // LBDS-275: notes must travel in the push payload so the server can
+        // store it (the back column was added in migration 2026_10_12_000000).
+        // LBDS-275 F1: do NOT coerce to `undefined` here — leaving the value
+        // as-is lets `undefined` (no note) be dropped from the JSON payload
+        // and `''` (user cleared) be sent as empty string. This prevents the
+        // first edit of a pre-fix row from silently wiping any server-side
+        // note the row might carry.
+        notes: row.notes,
         // LBDS-276: the server persists _from_recurring_id (migration
         // 2026_05_26_000002, fillable in BudgetEntry::$fillable, validated
         // in BudgetEntrySyncRequest). The pull mapper was already reading
@@ -185,6 +193,11 @@ export function fromApiFormat(entityType: SyncEntityType, item: Record<string, a
         supplierId: item.supplier_id ? String(item.supplier_id) : null,
         supplierName: item.supplier_name ? String(item.supplier_name) : '',
         category: item.category != null ? String(item.category) : undefined,
+        // LBDS-275: notes must travel in the pull payload so the local row
+        // receives the note the server stored. Server sends `notes` as a
+        // nullable string (matches the push mapper); a missing field stays
+        // undefined so the row's notes remain unset instead of becoming ''.
+        notes: item.notes != null ? String(item.notes) : undefined,
         groups: Array.isArray(item.groups)
           ? item.groups.map((g: any) => ({
               sync_id: g.sync_id || g.id,

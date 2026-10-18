@@ -19,6 +19,11 @@ class BudgetEntrySyncRequest extends FormRequest
             'payment_type' => 'required|in:cash,digital',
             'entry_type' => 'required|in:ingreso,egreso',
             'category' => 'nullable|string|max:100',
+            // LBDS-275: notes thread end-to-end. Nullable free-form text;
+            // the front sends it as `notes` (camelCase) and the API name
+            // is also `notes`, so no preprocessing is needed in the
+            // BudgetEntryProcessor.
+            'notes' => 'nullable|string|max:2000',
             'account_id' => 'nullable|string|max:100',
             'supplier_id' => 'nullable|string|max:100',
             'supplier_name' => 'nullable|string|max:255',
