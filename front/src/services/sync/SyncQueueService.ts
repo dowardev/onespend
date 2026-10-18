@@ -235,6 +235,13 @@ export async function mapServerItemToRow(params: {
       // device-local join through entryCategories; the diagnostic detector
       // reports dangling ids.
       r.category = i.category != null ? String(i.category) : (base.category ?? undefined);
+      // LBDS-275: notes must travel in the live pull path. Without this, a
+      // server response that carries `notes` (or even one that doesn't) would
+      // silently drop the local note on bulkPut, so reopen-after-update
+      // would show the field empty even though the local Dexie write looked
+      // correct. Mirrors the pattern of `category` / `_fromRecurringId`:
+      // take the server value when present, fall back to the local base.
+      r.notes = i.notes != null ? String(i.notes) : (base.notes ?? undefined);
       // LBDS-276 class 2: `_from_recurring_id` is server-persisted (migration
       // 2026_05_26_000002; fillable in BudgetEntry::$fillable) but the live
       // pull mapper did not read it. Resolves the recurring → entry link.

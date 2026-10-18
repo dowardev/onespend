@@ -49,6 +49,13 @@ export function toBudgetEntryRow(entry: any): BudgetEntryRow {
     supplierId: entry.supplierId != null ? str(entry.supplierId) : (entry.supplier_id != null ? str(entry.supplier_id) : null),
     supplierName: str(entry.supplierName || entry.supplier_name) || undefined,
     category: entry.category != null ? str(entry.category) : undefined,
+    // LBDS-275: notes must be preserved through toBudgetEntryRow so the row
+    // survives the write path (the previous mapper dropped it here).
+    // LBDS-275 F4: do NOT coerce via `str()` — `BudgetEntryRow.notes` is
+    // already typed `string | undefined`, and silent string coercion would
+    // mask a future type change on the server side. Pass the value through
+    // as-is; the `!= null` guard keeps `undefined` and `null` from leaking.
+    notes: entry.notes != null ? entry.notes : undefined,
     fromRecurringId: entry._fromRecurringId ?? entry.from_recurring_id ?? null,
     providerGroupId: entry._fromProviderGroupId != null ? str(entry._fromProviderGroupId) : null,
     providerName: str(entry._providerName || entry.provider_name) || undefined,

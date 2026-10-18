@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- `notes` field on budget entries: migration `2026_10_12_000000_add_notes_to_budget_entries_table` adds the nullable `text` column, `BudgetEntry::$fillable` accepts it, and `BudgetEntrySyncRequest` validates `nullable|string|max:2000`. `BudgetEntryProcessor` stores the note on create + update (including clearing back to `null`), and the new `BudgetEntryProcessorTest` cases pin the round-trip (LBDS-275).
+
 ## [v0.79.0] - 2026-10-11
 
 No backend changes in this release. The version bump tracks the frontend (SSO endpoint override in Conexiones, LBDS-295) and the F-Droid release-side changes.

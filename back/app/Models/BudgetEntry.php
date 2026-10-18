@@ -27,6 +27,7 @@ class BudgetEntry extends Model
         'payment_type',
         'entry_type',
         'category',
+        'notes',
         'account_id',
         'supplier_id',
         'supplier_name',

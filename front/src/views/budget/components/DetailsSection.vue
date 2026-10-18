@@ -21,6 +21,7 @@ SPDX-License-Identifier: AGPL-3.0-only
           :placeholder="t('budget.components.detailssection.placeholder')"
           :auto-grow="true"
           :rows="3"
+          :maxlength="2000"
           @update:model-value="$emit('update:notes', $event)"
         />
       </ion-item>
@@ -52,7 +53,11 @@ import type { AttachmentData } from '@/services/attachmentService';
 
 const { t } = useLocale();
 defineProps<{
-  notes: string;
+  // LBDS-275 F1: notes can be `undefined` when the row never had one
+  // (preserved as such through the form to avoid sending `notes: ''` in
+  // the sync payload). The parent passes `undefined`, the textarea treats
+  // it as empty.
+  notes?: string;
   listClass?: string;
   showAttachmentsModal: boolean;
   pendingAttachments: File[];

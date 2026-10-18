@@ -26,6 +26,11 @@ export interface BudgetEntryRow {
   supplierId?: string | number | null
   supplierName?: string
   category?: string
+  // LBDS-275: notes field on budget entries. Was collected in the entry form
+  // (EntryEditPage) but never declared on the row type nor preserved by
+  // toBudgetEntryRow, so it disappeared the moment the row hit Dexie. Threaded
+  // end-to-end with the matching back column (migration 2026_10_12_000000).
+  notes?: string
   fromRecurringId?: string | null
   providerGroupId?: string | null
   providerName?: string

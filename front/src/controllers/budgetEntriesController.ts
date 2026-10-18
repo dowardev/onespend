@@ -64,8 +64,12 @@ class BudgetEntriesController {
     date?: string;
     _fromRecurringId?: string;
     category?: string;
+    // LBDS-275: notes must be carried on the create path. Previously the
+    // entry form collected the note but the controller's fixed param list
+    // dropped it, so the row was written without notes.
+    notes?: string;
   }) {
-    const { name = '', amount = 0, paymentType = 'cash' as PaymentType, accountId = null, groups = [], date, _fromRecurringId, category } = params;
+    const { name = '', amount = 0, paymentType = 'cash' as PaymentType, accountId = null, groups = [], date, _fromRecurringId, category, notes } = params;
     const dayStore = useBudgetDayStore();
     const entryDate = date || dayStore.selectedDate;
 
@@ -82,6 +86,7 @@ class BudgetEntriesController {
       createdAt: Date.now(),
       _fromRecurringId,
       category,
+      notes,
     };
 
     return this.addEntry({ entry });
@@ -96,8 +101,12 @@ class BudgetEntriesController {
     date?: string;
     _fromRecurringId?: string;
     category?: string;
+    // LBDS-275: notes must be carried on the create path. Previously the
+    // entry form collected the note but the controller's fixed param list
+    // dropped it, so the row was written without notes.
+    notes?: string;
   }) {
-    const { name = '', amount = 0, paymentType = 'cash' as PaymentType, accountId = null, groups = [], date, _fromRecurringId, category } = params;
+    const { name = '', amount = 0, paymentType = 'cash' as PaymentType, accountId = null, groups = [], date, _fromRecurringId, category, notes } = params;
     const dayStore = useBudgetDayStore();
     const entryDate = date || dayStore.selectedDate;
 
@@ -114,6 +123,7 @@ class BudgetEntriesController {
       createdAt: Date.now(),
       _fromRecurringId,
       category,
+      notes,
     };
 
     return this.addEntry({ entry });

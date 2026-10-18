@@ -27,6 +27,9 @@ export interface Income {
   supplierId?: string;
   supplierName?: string;
   category?: string;
+  // LBDS-275: notes must travel with the Income shape so the entry form
+  // (EntryEditPage.loadEntry) can hydrate the notes field from the row.
+  notes?: string;
   _providerName?: string;
   _supplierId?: string | number;
   _fromProviderGroupId?: string | number;
@@ -48,6 +51,10 @@ export function mapEntryRow(row: BudgetEntryRow): Income {
     supplierId: row.supplierId as string,
     supplierName: row.supplierName,
     category: row.category != null ? String(row.category) : undefined,
+    // LBDS-275: copy notes from the row so useEntryLoader.loadEntryFromDb
+    // returns the notes the user typed. Without this, the entry form's
+    // `entryAny.notes` was always undefined and re-saves wiped the note.
+    notes: row.notes != null ? String(row.notes) : undefined,
     _providerName: row.providerName ?? row.supplierName ?? undefined,
     _fromRecurringId: row.fromRecurringId ?? undefined,
     createdAt: row.createdAt || Date.now(),
