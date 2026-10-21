@@ -15,6 +15,22 @@ class ConflictDetector
     {
         $fillable = $processor->getCachedFillable();
         $relevantData = array_intersect_key($data, array_flip($fillable));
+
+        // LBDS-273: null values are left out of the hash. A field the
+        // client did not send and a field the server stores as null have
+        // to hash the same, or every push of a row that does not carry the
+        // field raises a phantom conflict: the server's row includes the
+        // column (as null) while a client that predates the field omits
+        // the key entirely, and `array_intersect_key` keeps the server's
+        // version but not the client's.
+        //
+        // This is safe to do here rather than in the fillable filter: the
+        // filter also feeds the write path, where a null MUST be written
+        // (that is how a field gets cleared). The stored field_hash is
+        // never compared against a recomputed one, so changing what goes
+        // into it does not invalidate the hashes already on disk.
+        $relevantData = array_filter($relevantData, fn ($value) => $value !== null);
+
         array_walk($relevantData, function (&$v) {
             if (is_numeric($v)) {
                 $v = (string) ((float) $v);

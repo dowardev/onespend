@@ -95,7 +95,7 @@ async function auditPage(page: Page, route: string): Promise<AuditResult> {
     if (lower.includes(hint.toLowerCase()) && !spanish.includes(hint)) spanish.push(hint);
   }
   const rawKeys = Array.from(new Set(text.match(/[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*){2,}/gi) ?? []))
-    .filter((s) => KEY_PATH_RE.test(s) && !/\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}/.test(s));
+    .filter((s) => KEY_PATH_RE.test(s) && !/\d{1,2}[/-]\d{1,2}[/-]\d{2,4}/.test(s));
   return { spanish, rawKeys, text };
 }
 

@@ -58,6 +58,14 @@ class RecurringRecordProcessor extends AbstractEntityProcessor
             unset($item[$camel]);
         }
 
+        // LBDS-273: an empty string for `category` means "no category", the
+        // same way it does for the budget entries' `time`. Storing it as an
+        // empty string would make the local row carry a falsy-but-present
+        // category, which reads differently from "unset" on the roundtrip.
+        if (array_key_exists('category', $item) && $item['category'] === '') {
+            $item['category'] = null;
+        }
+
         return $item;
     }
 

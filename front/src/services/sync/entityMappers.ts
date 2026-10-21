@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import type { SyncEntityType } from '@/db/types';
+import { normalizeTime } from '@/utils/timeFormat';
 
 type DataMap = Record<string, unknown>;
 
@@ -40,6 +41,20 @@ export function toApiFormat(entityType: SyncEntityType, row: Record<string, any>
         // first edit of a pre-fix row from silently wiping any server-side
         // note the row might carry.
         notes: row.notes,
+        // LBDS-273 (GitLab #13): mirror of recurring `time` push. The
+        // value is normalized to the canonical zero-padded "HH:MM" so the
+        // client and the server compute the SAME conflict-detection field
+        // hash over it: the server stores the value in a MySQL TIME column
+        // and reads it back zero-padded ("9:00" -> "09:00"), so an
+        // unnormalized "9:00" would make the two hashes differ and raise
+        // a phantom conflict on every push of that row.
+        //
+        // The key is always present (null when there is no time) on
+        // purpose. The server's field hash includes a nullable column when
+        // the column is present in the row, so a payload that omits the key
+        // hashes differently from one that sends it as null — which the
+        // server would read as a conflict.
+        time: normalizeTime(row.time) ?? null,
         // LBDS-276: the server persists _from_recurring_id (migration
         // 2026_05_26_000002, fillable in BudgetEntry::$fillable, validated
         // in BudgetEntrySyncRequest). The pull mapper was already reading
@@ -122,6 +137,12 @@ export function toApiFormat(entityType: SyncEntityType, row: Record<string, any>
         end_date: row.endDate,
         estimated: row.estimated,
         items: row.items,
+        // LBDS-273 (GitLab #13): mirror of BudgetEntryRow `category` push
+        // pattern. The key is always present (null when there is no
+        // category) so the server's field hash sees the same shape the
+        // stored row has. An empty string means "no category" and is
+        // normalized to null, the same way the server treats it.
+        category: row.category != null && row.category !== '' ? String(row.category) : null,
         notes: row.notes,
         status: row.status,
         products: (row.products ?? []).map((p: any) => ({
@@ -198,6 +219,11 @@ export function fromApiFormat(entityType: SyncEntityType, item: Record<string, a
         // nullable string (matches the push mapper); a missing field stays
         // undefined so the row's notes remain unset instead of becoming ''.
         notes: item.notes != null ? String(item.notes) : undefined,
+        // LBDS-273 (GitLab #13): mirror the LBDS-275 notes pull pattern
+        // and normalize the back's "HH:MM:SS" MySQL TIME response to the
+        // canonical zero-padded "HH:MM", so the value stored in Dexie is
+        // identical to what the server's field hash is computed over.
+        time: normalizeTime(item.time),
         groups: Array.isArray(item.groups)
           ? item.groups.map((g: any) => ({
               sync_id: g.sync_id || g.id,
@@ -287,6 +313,12 @@ export function fromApiFormat(entityType: SyncEntityType, item: Record<string, a
         startDate: item.start_date,
         endDate: item.end_date,
         estimated: item.estimated,
+        // LBDS-273 (GitLab #13): mirror of BudgetEntryRow `category` pull
+        // pattern. Stores the category id (string, not FK) so the
+        // contract stays device-local; the Dexie `entryCategories` table
+        // is the source of truth and the sync payload only carries the id.
+        // An empty string means "no category" and is normalized to null.
+        category: item.category != null && item.category !== '' ? String(item.category) : null,
         notes: item.notes,
         status: item.status,
         products: Array.isArray(item.products)

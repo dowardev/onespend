@@ -427,4 +427,385 @@ class BudgetEntryProcessorTest extends TestCase
         $this->assertNotNull($entry);
         $this->assertNull($entry->notes);
     }
+
+    // LBDS-273 (GitLab #13): mirror the `time` column that recurring_records
+    // already has. The column is nullable (D2: optional) and stored as
+    // HH:MM. These tests pin the create-with-time, create-without-time
+    // and update-time paths so a regression in the migration, the model's
+    // $fillable or the SyncRequest's date_format rule is caught here.
+    public function test_process_creates_entity_with_time(): void
+    {
+        $syncId = 'test-be-time-create-1';
+
+        $result = $this->processor->create([
+            [
+                'id' => $syncId,
+                'name' => 'Entry With Time',
+                'amount' => 30.00,
+                'date' => '2026-10-18',
+                'entry_type' => 'egreso',
+                'payment_type' => 'cash',
+                'account_id' => (string) $this->account->sync_id,
+                'time' => '14:30',
+                'status' => 'active',
+            ],
+        ], $this->user->id);
+
+        $this->assertCount(1, $result);
+        $this->assertDatabaseHas('budget_entries', [
+            'sync_id' => $syncId,
+            'time' => '14:30:00',
+        ]);
+    }
+
+    public function test_process_creates_entity_without_time(): void
+    {
+        $syncId = 'test-be-time-create-empty-1';
+
+        $result = $this->processor->create([
+            [
+                'id' => $syncId,
+                'name' => 'Entry Without Time',
+                'amount' => 15.00,
+                'date' => '2026-10-18',
+                'entry_type' => 'egreso',
+                'payment_type' => 'cash',
+                'account_id' => (string) $this->account->sync_id,
+                'status' => 'active',
+            ],
+        ], $this->user->id);
+
+        $this->assertCount(1, $result);
+        $entry = BudgetEntry::where('sync_id', $syncId)->first();
+        $this->assertNotNull($entry);
+        $this->assertNull($entry->time);
+    }
+
+    public function test_process_updates_entity_time(): void
+    {
+        $syncId = 'test-be-time-update-1';
+
+        $this->processor->create([
+            [
+                'id' => $syncId,
+                'name' => 'Entry To Time',
+                'amount' => 25.00,
+                'date' => '2026-10-18',
+                'entry_type' => 'egreso',
+                'payment_type' => 'cash',
+                'account_id' => (string) $this->account->sync_id,
+                'status' => 'active',
+            ],
+        ], $this->user->id);
+
+        $this->processor->update([
+            [
+                'id' => $syncId,
+                'time' => '09:15',
+            ],
+        ], $this->user->id);
+
+        $this->assertDatabaseHas('budget_entries', [
+            'sync_id' => $syncId,
+            'time' => '09:15:00',
+        ]);
+
+        // Clearing time back to null also has to land in the DB (D2: optional).
+        $this->processor->update([
+            ['id' => $syncId, 'time' => null],
+        ], $this->user->id);
+
+        $entry = BudgetEntry::where('sync_id', $syncId)->first();
+        $this->assertNotNull($entry);
+        $this->assertNull($entry->time);
+    }
+
+    // LBDS-273 (F7): edge cases of the `time` field.
+    //
+    // The column is a MySQL TIME, so the database stores "14:30:00" while
+    // the wire format (and the local row) is "HH:MM". The model accessor
+    // normalizes on read; these tests pin that contract, the empty-string
+    // handling, and the single-digit hour that PHP's H:i format accepts.
+
+    public function test_process_stores_single_digit_hour_time(): void
+    {
+        $syncId = 'test-be-time-single-digit-1';
+
+        $this->processor->create([
+            [
+                'id' => $syncId,
+                'name' => 'Entry At Nine',
+                'amount' => 10.00,
+                'date' => '2026-10-18',
+                'entry_type' => 'egreso',
+                'payment_type' => 'cash',
+                'account_id' => (string) $this->account->sync_id,
+                'time' => '9:00',
+                'status' => 'active',
+            ],
+        ], $this->user->id);
+
+        $entry = BudgetEntry::where('sync_id', $syncId)->first();
+        $this->assertNotNull($entry);
+        // MySQL zero-pads the hour when it stores a TIME, so the raw value
+        // is "09:00:00" and the accessor returns "09:00". Both shapes are
+        // accepted by the back's H:i validation, and the client-side pull
+        // normalizer keeps whatever padding the server sent.
+        $this->assertSame('09:00:00', $entry->getRawOriginal('time'));
+        $this->assertSame('09:00', $entry->time);
+    }
+
+    public function test_time_accessor_normalizes_mysql_time_to_hh_mm(): void
+    {
+        $syncId = 'test-be-time-accessor-1';
+
+        $this->processor->create([
+            [
+                'id' => $syncId,
+                'name' => 'Entry For Accessor',
+                'amount' => 20.00,
+                'date' => '2026-10-18',
+                'entry_type' => 'egreso',
+                'payment_type' => 'cash',
+                'account_id' => (string) $this->account->sync_id,
+                'time' => '14:30',
+                'status' => 'active',
+            ],
+        ], $this->user->id);
+
+        $entry = BudgetEntry::where('sync_id', $syncId)->first();
+        $this->assertNotNull($entry);
+
+        // Raw DB value is the MySQL TIME shape...
+        $this->assertSame('14:30:00', $entry->getRawOriginal('time'));
+        // ...and the model accessor is what the API and the conflict
+        // detector see: "HH:MM", so the field hash matches the one the
+        // client computes over its "HH:MM" local value.
+        $this->assertSame('14:30', $entry->time);
+        $this->assertSame('14:30', $entry->toArray()['time']);
+    }
+
+    public function test_process_treats_empty_time_as_null(): void
+    {
+        $syncId = 'test-be-time-empty-1';
+
+        $this->processor->create([
+            [
+                'id' => $syncId,
+                'name' => 'Entry With Empty Time',
+                'amount' => 30.00,
+                'date' => '2026-10-18',
+                'entry_type' => 'egreso',
+                'payment_type' => 'cash',
+                'account_id' => (string) $this->account->sync_id,
+                'time' => '',
+                'status' => 'active',
+            ],
+        ], $this->user->id);
+
+        $entry = BudgetEntry::where('sync_id', $syncId)->first();
+        $this->assertNotNull($entry);
+        // An empty string means "no time" — it must not be stored as a
+        // zero time, and it must not blow up the validation either.
+        $this->assertNull($entry->time);
+    }
+
+    public function test_no_false_conflict_when_client_omits_time(): void
+    {
+        $syncId = 'test-be-no-false-conflict-time-1';
+
+        $this->processor->create([
+            [
+                'id' => $syncId,
+                'name' => 'Entry Without Time',
+                'amount' => 50.00,
+                'date' => '2026-10-18',
+                'entry_type' => 'egreso',
+                'payment_type' => 'cash',
+                'account_id' => (string) $this->account->sync_id,
+                'status' => 'active',
+            ],
+        ], $this->user->id);
+
+        // The client always sends the `time` key (null when the entry has
+        // no time) so the payload hashes the same way the stored row does.
+        // A payload that OMITS the key hashes differently from the stored
+        // row (which carries a null time), and that used to raise a
+        // phantom conflict on every push of an entry without a time.
+        $result = $this->processor->detectConflicts([
+            [
+                'id' => $syncId,
+                'name' => 'Entry Without Time',
+                'amount' => 50.00,
+                'date' => '2026-10-18',
+                'entry_type' => 'egreso',
+                'payment_type' => 'cash',
+                'account_id' => (string) $this->account->sync_id,
+                'time' => null,
+                'status' => 'active',
+                'updated_at' => now()->timestamp,
+            ],
+        ], $this->user->id);
+
+        $this->assertCount(0, $result['conflicts']);
+    }
+
+    public function test_no_false_conflict_when_client_predates_the_time_field(): void
+    {
+        $syncId = 'test-be-no-false-conflict-old-client-1';
+
+        $this->processor->create([
+            [
+                'id' => $syncId,
+                'name' => 'Entry For Old Client',
+                'amount' => 50.00,
+                'date' => '2026-10-18',
+                'entry_type' => 'egreso',
+                'payment_type' => 'cash',
+                'account_id' => (string) $this->account->sync_id,
+                'status' => 'active',
+            ],
+        ], $this->user->id);
+
+        // A client build that predates the `time` field does not send the
+        // key at all. The stored row carries a null time, so the two field
+        // hashes still have to match — otherwise every push from an older
+        // client would raise a phantom conflict on the entries that do not
+        // use a time.
+        $result = $this->processor->detectConflicts([
+            [
+                'id' => $syncId,
+                'name' => 'Entry For Old Client',
+                'amount' => 50.00,
+                'date' => '2026-10-18',
+                'entry_type' => 'egreso',
+                'payment_type' => 'cash',
+                'account_id' => (string) $this->account->sync_id,
+                'status' => 'active',
+                'updated_at' => now()->timestamp,
+            ],
+        ], $this->user->id);
+
+        $this->assertCount(0, $result['conflicts']);
+    }
+
+    public function test_no_false_conflict_for_single_digit_hour(): void
+    {
+        $syncId = 'test-be-no-false-conflict-single-digit-1';
+
+        $this->processor->create([
+            [
+                'id' => $syncId,
+                'name' => 'Entry At Nine',
+                'amount' => 50.00,
+                'date' => '2026-10-18',
+                'entry_type' => 'egreso',
+                'payment_type' => 'cash',
+                'account_id' => (string) $this->account->sync_id,
+                'time' => '9:00',
+                'status' => 'active',
+            ],
+        ], $this->user->id);
+
+        // MySQL zero-pads the hour ("9:00" is stored as "09:00:00"), and the
+        // accessor returns the canonical "09:00". The client normalizes to
+        // the same shape before pushing, so the two hashes match and the
+        // second push of the row does not raise a phantom conflict.
+        $result = $this->processor->detectConflicts([
+            [
+                'id' => $syncId,
+                'name' => 'Entry At Nine',
+                'amount' => 50.00,
+                'date' => '2026-10-18',
+                'entry_type' => 'egreso',
+                'payment_type' => 'cash',
+                'account_id' => (string) $this->account->sync_id,
+                'time' => '09:00',
+                'status' => 'active',
+                'updated_at' => now()->timestamp,
+            ],
+        ], $this->user->id);
+
+        $this->assertCount(0, $result['conflicts']);
+    }
+
+    public function test_batch_update_applies_time_to_every_item(): void
+    {
+        $first = 'test-be-batch-time-1';
+        $second = 'test-be-batch-time-2';
+
+        foreach ([$first, $second] as $syncId) {
+            $this->processor->create([
+                [
+                    'id' => $syncId,
+                    'name' => 'Entry',
+                    'amount' => 50.00,
+                    'date' => '2026-10-18',
+                    'entry_type' => 'egreso',
+                    'payment_type' => 'cash',
+                    'account_id' => (string) $this->account->sync_id,
+                    'time' => '09:00',
+                    'status' => 'active',
+                ],
+            ], $this->user->id);
+        }
+
+        // Both items carry the `time` key, so the batch update applies it
+        // to both. (The bulk update derives the column set from the FIRST
+        // item of the batch, so an item that omitted the key used to lose
+        // its time change silently.)
+        $this->processor->update([
+            [
+                'id' => $first,
+                'name' => 'Entry One',
+                'amount' => 50.00,
+                'date' => '2026-10-18',
+                'entry_type' => 'egreso',
+                'payment_type' => 'cash',
+                'account_id' => (string) $this->account->sync_id,
+                'time' => '18:45',
+                'status' => 'active',
+            ],
+            [
+                'id' => $second,
+                'name' => 'Entry Two',
+                'amount' => 50.00,
+                'date' => '2026-10-18',
+                'entry_type' => 'egreso',
+                'payment_type' => 'cash',
+                'account_id' => (string) $this->account->sync_id,
+                'time' => '20:00',
+                'status' => 'active',
+            ],
+        ], $this->user->id);
+
+        $this->assertSame('18:45', BudgetEntry::where('sync_id', $first)->first()->time);
+        $this->assertSame('20:00', BudgetEntry::where('sync_id', $second)->first()->time);
+    }
+
+    public function test_process_drops_malformed_time(): void
+    {
+        $syncId = 'test-be-time-malformed-1';
+
+        $this->processor->create([
+            [
+                'id' => $syncId,
+                'name' => 'Entry With Garbage Time',
+                'amount' => 50.00,
+                'date' => '2026-10-18',
+                'entry_type' => 'egreso',
+                'payment_type' => 'cash',
+                'account_id' => (string) $this->account->sync_id,
+                'time' => '99:99',
+                'status' => 'active',
+            ],
+        ], $this->user->id);
+
+        // A value that is not a usable time of day is dropped rather than
+        // stored: MySQL would silently coerce it to a zero time in
+        // non-strict mode, and the user would see "00:00" on the entry.
+        $entry = BudgetEntry::where('sync_id', $syncId)->first();
+        $this->assertNotNull($entry);
+        $this->assertNull($entry->time);
+    }
 }

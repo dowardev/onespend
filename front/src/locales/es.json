@@ -120,6 +120,7 @@
         "namePlaceholder": "Nombre del cargo recurrente",
         "type": "Tipo",
         "entryType": "Tipo de entrada",
+        "category": "Categoría",
         "frequency": "Frecuencia",
         "every": "Cada",
         "day": "Día",
@@ -608,6 +609,7 @@
         "text2": "Nombre",
         "placeholder": "Pepito",
         "label2": "Fecha",
+        "labelTime": "Hora",
         "text3": "Cuentas",
         "label3": "Reasignar fecha"
       }

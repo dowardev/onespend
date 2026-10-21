@@ -106,6 +106,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 
                         <ion-label>
                           {{ item.name }}
+                          <p v-if="item.time" data-cy="entry-time">
+                            {{ formatEntryTime(item) }}
+                          </p>
                           <p>
                             {{
                               item.entryType === 'ingreso'
@@ -124,8 +127,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                             {{ formatCurrency({ value: item.runningBalance }) }}
                           </p>
                           <p v-else>Sin cuenta</p>
-                        </ion-label>
-                      </ion-item>
+                        </ion-label>                      </ion-item>
                     </ion-card>
                   </template>
                 </template>
@@ -200,6 +202,7 @@ import systemController from '@/controllers/systemConfigController';
 import { dataMediator } from '@/services/dataMediator';
 import { mapEntryRow, type Income } from '@/stores/budgetEntriesStore';
 import { formatCurrency, calcProviderProductsTotal } from '@/utils/currency';
+import { entryTimestamp } from '@/utils/entryTimestamp';
 import { calendarOutline, searchOutline, closeOutline } from 'ionicons/icons';
 import { useBudgetDay } from '@/composables/useBudgetDay';
 import { useDatePicker } from '@/composables/useDatePicker';
@@ -255,6 +258,9 @@ interface AgendaUnifiedItem {
   providerName?: string;
   amount: number;
   date: string;
+  // LBDS-273: optional HH:MM time of day for budget entries. Providers
+  // (which are a different entity) never carry one.
+  time?: string;
   type: 'entry' | 'provider';
   entryType?: 'ingreso' | 'egreso';
   accountId?: string | number | null;
@@ -298,6 +304,8 @@ const dayBlocks = computed<DayBlock[]>(() => {
       providerName: e._providerName || e.supplierName || undefined,
       amount: e.amount || 0,
       date: e.date,
+      // LBDS-273: carry the entry's time so the list can render it.
+      time: e.time,
       type: 'entry' as const,
       entryType: e.entryType,
       accountId: e.accountId ?? null,
@@ -429,6 +437,19 @@ const dayBlocks = computed<DayBlock[]>(() => {
 // 9. OnMounted
 
 // 10. Functions
+// LBDS-273 (GitLab #13): render the entry's time of day in the list. Uses
+// the shared `entryTimestamp` helper so the "date + time" combination lives
+// in one place instead of being re-derived at every render site.
+function formatEntryTime(item: AgendaUnifiedItem): string {
+  if (!item.time || !item.date) return '';
+  const timestamp = entryTimestamp({ date: item.date, time: item.time });
+  // `entryTimestamp` returns an Invalid Date for a malformed date, and
+  // date-fns throws a RangeError on one — which would break the whole list
+  // render. Skip the time instead.
+  if (Number.isNaN(timestamp.getTime())) return '';
+  return format(timestamp, 'HH:mm');
+}
+
 function handleDayClick(date: string) {
   budgetDay.setSelectedDate(date);
   router.push('/budget');

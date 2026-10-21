@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Optional time of day on budget entries and optional category on recurring charges: `BudgetEntryRow.time` and `RecurringRecordRow.category` are declared on the row types, `toBudgetEntryRow` / `mapEntryRow` preserve them, and `addIngreso` / `addEgreso` carry `time` on the create path. The live pull path (`mapServerItemToRow`) restores `budget_entry.time` (normalizing the server's `HH:MM:SS` to `HH:MM`) and `recurring_record.category`; the push mapper (`toApiFormat`) sends both. The entry form gets a time picker (same popover as the date, commits on Apply, defaults to the current time for a new entry), the recurring form gets a category picker reusing `CategoryPickerModal`, and the Historial list shows the time when the entry has one. A recurring charge with `autoInsert` propagates its category to the entry it generates (LBDS-273).
+
 ### Fixed
 - `notes` field on budget entries saved and synced end-to-end: `BudgetEntryRow.notes` is declared on the row type, `toBudgetEntryRow` and `mapEntryRow` preserve it, `addIngreso` / `addEgreso` accept `notes` on create, and the live pull mapper (`mapServerItemToRow`) restores it from the server payload. The sync push (`toApiFormat('budget_entry')`) and pull (`fromApiFormat('budget_entry')`) carry the field. The form preserves the absence of a note as `undefined` (no `notes: ''` wipe on the first edit of a pre-fix row) and the notes textarea enforces a 2000-char limit to match the server validation (LBDS-275).
 

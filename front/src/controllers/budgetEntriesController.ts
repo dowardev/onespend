@@ -68,8 +68,12 @@ class BudgetEntriesController {
     // entry form collected the note but the controller's fixed param list
     // dropped it, so the row was written without notes.
     notes?: string;
+    // LBDS-273: optional HH:MM time of day. Same reasoning as `notes`:
+    // the controller's fixed param list used to drop it, so the row was
+    // written without the time the user picked in the form.
+    time?: string;
   }) {
-    const { name = '', amount = 0, paymentType = 'cash' as PaymentType, accountId = null, groups = [], date, _fromRecurringId, category, notes } = params;
+    const { name = '', amount = 0, paymentType = 'cash' as PaymentType, accountId = null, groups = [], date, _fromRecurringId, category, notes, time } = params;
     const dayStore = useBudgetDayStore();
     const entryDate = date || dayStore.selectedDate;
 
@@ -87,6 +91,7 @@ class BudgetEntriesController {
       _fromRecurringId,
       category,
       notes,
+      time,
     };
 
     return this.addEntry({ entry });
@@ -105,8 +110,12 @@ class BudgetEntriesController {
     // entry form collected the note but the controller's fixed param list
     // dropped it, so the row was written without notes.
     notes?: string;
+    // LBDS-273: optional HH:MM time of day. Same reasoning as `notes`:
+    // the controller's fixed param list used to drop it, so the row was
+    // written without the time the user picked in the form.
+    time?: string;
   }) {
-    const { name = '', amount = 0, paymentType = 'cash' as PaymentType, accountId = null, groups = [], date, _fromRecurringId, category, notes } = params;
+    const { name = '', amount = 0, paymentType = 'cash' as PaymentType, accountId = null, groups = [], date, _fromRecurringId, category, notes, time } = params;
     const dayStore = useBudgetDayStore();
     const entryDate = date || dayStore.selectedDate;
 
@@ -124,6 +133,7 @@ class BudgetEntriesController {
       _fromRecurringId,
       category,
       notes,
+      time,
     };
 
     return this.addEntry({ entry });

@@ -42,10 +42,64 @@ class BudgetEntryProcessor extends AbstractEntityProcessor
             $item['supplier_id'] = $item['supplierId'];
         }
 
+        // LBDS-273: the sync payload may carry an empty string for `time`
+        // (a client that clears the field without dropping the key). The
+        // `nullable` rule only accepts null, so an empty string would fail
+        // validation with a 422 and take the whole batch down. Laravel's
+        // ConvertEmptyStringsToNull middleware is not active on this
+        // stack, so normalize it here.
+        //
+        // The value is also canonicalized to the zero-padded "HH:MM" the
+        // model's accessor produces, so the value the server hashes over
+        // (and the value it hands back on a pull) is byte-identical to
+        // the one the client sends. A value that is not a usable time of
+        // day is dropped rather than stored, so a malformed payload cannot
+        // poison the row.
+        if (array_key_exists('time', $item)) {
+            $item['time'] = $this->normalizeTime($item['time']);
+        }
+
         unset($item['paymentType'], $item['entryType'], $item['supplierName'],
             $item['supplierId'], $item['accountId']);
 
         return $item;
+    }
+
+    /**
+     * LBDS-273: canonical "HH:MM" for the stored time, or null when the
+     * value is not a usable time of day (empty string, garbage, an
+     * out-of-range hour or minute).
+     *
+     * The rule has to match the client's `front/src/utils/timeFormat.ts`
+     * `normalizeTime` and the model's `BudgetEntry::getTimeAttribute`
+     * character for character: the client and the server have to agree on
+     * the exact string they hash, or the field hash differs and the row
+     * raises a phantom conflict on every push.
+     */
+    private function normalizeTime(mixed $value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        $parts = explode(':', trim((string) $value));
+        if (count($parts) < 2) {
+            return null;
+        }
+
+        $hours = trim($parts[0]);
+        $minutes = trim($parts[1]);
+        if (! preg_match('/^\d{1,2}$/', $hours) || ! preg_match('/^\d{1,2}$/', $minutes)) {
+            return null;
+        }
+
+        $hourValue = (int) $hours;
+        $minuteValue = (int) $minutes;
+        if ($hourValue > 23 || $minuteValue > 59) {
+            return null;
+        }
+
+        return sprintf('%02d:%02d', $hourValue, $minuteValue);
     }
 
     protected function postprocessCreate(array $created, int $userId): void
