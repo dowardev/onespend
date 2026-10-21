@@ -30,6 +30,10 @@ export interface Income {
   // LBDS-275: notes must travel with the Income shape so the entry form
   // (EntryEditPage.loadEntry) can hydrate the notes field from the row.
   notes?: string;
+  // LBDS-273 (GitLab #13): optional HH:MM mirror of recurring `time` so
+  // the entry form can hydrate the time field from the row via
+  // useEntryLoader.loadEntryFromDb.
+  time?: string;
   _providerName?: string;
   _supplierId?: string | number;
   _fromProviderGroupId?: string | number;
@@ -55,6 +59,10 @@ export function mapEntryRow(row: BudgetEntryRow): Income {
     // returns the notes the user typed. Without this, the entry form's
     // `entryAny.notes` was always undefined and re-saves wiped the note.
     notes: row.notes != null ? String(row.notes) : undefined,
+    // LBDS-273 (GitLab #13): copy time from the row so the entry form's
+    // `entryAny.time` is hydrated on edit. Without this, re-editing an
+    // existing entry loses the time on first save.
+    time: row.time != null ? String(row.time) : undefined,
     _providerName: row.providerName ?? row.supplierName ?? undefined,
     _fromRecurringId: row.fromRecurringId ?? undefined,
     createdAt: row.createdAt || Date.now(),

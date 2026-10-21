@@ -20,6 +20,7 @@ import { isSyncEnabled, readSyncConfig } from './syncConfig';
 import pendingAttachmentsService from '../pendingAttachmentsService';
 import attachmentService from '../attachmentService';
 import { toApiFormat } from './entityMappers';
+import { normalizeTime } from '@/utils/timeFormat';
 import { performanceMonitor } from '@/utils/performanceMonitor';
 import type {
   SupplierRow,
@@ -242,6 +243,17 @@ export async function mapServerItemToRow(params: {
       // correct. Mirrors the pattern of `category` / `_fromRecurringId`:
       // take the server value when present, fall back to the local base.
       r.notes = i.notes != null ? String(i.notes) : (base.notes ?? undefined);
+      // LBDS-273: `time` must be restored in the LIVE pull path (this
+      // mapper), not only in entityMappers.fromApiFormat — the latter is
+      // not what the merge/upsert flow uses. The server stores a MySQL
+      // TIME and returns "HH:MM:SS"; the local row (and the sync push
+      // payload) use the canonical zero-padded "HH:MM", so normalize here.
+      // Normalizing matters for the roundtrip in two ways: the next push
+      // sends the local value, and the back computes the conflict-detection
+      // field hash over the value it receives — if the client sent "9:00"
+      // and the server stored "09:00", the two hashes would differ and
+      // every push of that row would raise a phantom conflict.
+      r.time = normalizeTime(i.time) ?? (base.time ?? undefined);
       // LBDS-276 class 2: `_from_recurring_id` is server-persisted (migration
       // 2026_05_26_000002; fillable in BudgetEntry::$fillable) but the live
       // pull mapper did not read it. Resolves the recurring → entry link.
@@ -346,6 +358,15 @@ export async function mapServerItemToRow(params: {
       // LBDS-275-class field (notes on recurring_record). Server persists
       // `notes`; pull mapper previously dropped it for new rows.
       r.notes = i.notes != null ? String(i.notes) : (base.notes ?? undefined);
+      // LBDS-273: `category` must be restored in the LIVE pull path (this
+      // mapper). The id is device-local (the Dexie `entryCategories` table
+      // is the source of truth) and the sync payload carries only the id,
+      // so a pull has to carry it back or the recurring loses its category
+      // on every other device. An empty string means "no category" and is
+      // normalized to null, the same way the server treats it.
+      r.category = i.category != null && i.category !== ''
+        ? String(i.category)
+        : (base.category ?? undefined);
       r.status = String(i.status ?? base.status ?? 'active');
       r.startDate = i.start_date ?? base.startDate ?? '';
       r.endDate = i.end_date ?? base.endDate ?? null;

@@ -8,6 +8,7 @@ vi.mock('@/db/controllers/budgetEntriesDb', () => ({
   budgetEntriesDb: {
     getBySyncId: vi.fn(),
     delete: vi.fn(),
+    add: vi.fn(),
   },
 }))
 
@@ -15,6 +16,13 @@ vi.mock('@/services/syncQueue', () => ({
   syncQueue: {
     syncEntry: vi.fn(),
   },
+}))
+
+// LBDS-273: the create path reads the selected date from the budget-day
+// store, which needs an active Pinia. The tests always pass an explicit
+// `date`, so the store only has to exist.
+vi.mock('@/stores/budgetDayStore', () => ({
+  useBudgetDayStore: () => ({ selectedDate: '2026-10-18' }),
 }))
 
 // Mutable mock store so each test can set the date-filtered `entries`.
@@ -150,5 +158,54 @@ describe('BudgetEntriesController.removeEntry (LBDS-279)', () => {
 
     await expect(budgetEntriesController.removeEntry({ id: 'uuid-dl-err' }))
       .rejects.toThrow('IndexedDB locked')
+  })
+})
+
+// LBDS-273 (GitLab #13): the create path must carry the optional `time`
+// through to the Dexie row. The controller's fixed param list used to drop
+// it, so a time picked in the entry form never reached storage.
+describe('BudgetEntriesController create path — time (LBDS-273)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockStore.entries = []
+    vi.mocked(budgetEntriesDb.add).mockResolvedValue(undefined as any)
+    vi.mocked(syncQueue.syncEntry).mockResolvedValue(undefined as any)
+  })
+
+  it('persists the time on addIngreso', async () => {
+    await budgetEntriesController.addIngreso({
+      name: 'Café',
+      amount: 5,
+      date: '2026-10-18',
+      time: '14:30',
+    })
+
+    expect(budgetEntriesDb.add).toHaveBeenCalledTimes(1)
+    const added = vi.mocked(budgetEntriesDb.add).mock.calls[0][0] as any
+    expect(added.entry.time).toBe('14:30')
+  })
+
+  it('persists the time on addEgreso', async () => {
+    await budgetEntriesController.addEgreso({
+      name: 'Café',
+      amount: 5,
+      date: '2026-10-18',
+      time: '14:30',
+    })
+
+    expect(budgetEntriesDb.add).toHaveBeenCalledTimes(1)
+    const added = vi.mocked(budgetEntriesDb.add).mock.calls[0][0] as any
+    expect(added.entry.time).toBe('14:30')
+  })
+
+  it('leaves the time undefined when the form sent none', async () => {
+    await budgetEntriesController.addEgreso({
+      name: 'Café',
+      amount: 5,
+      date: '2026-10-18',
+    })
+
+    const added = vi.mocked(budgetEntriesDb.add).mock.calls[0][0] as any
+    expect(added.entry.time).toBeUndefined()
   })
 })

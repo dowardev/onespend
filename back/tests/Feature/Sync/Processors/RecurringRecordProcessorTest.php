@@ -242,4 +242,101 @@ class RecurringRecordProcessorTest extends TestCase
         $this->assertCount(1, $result['conflicts']);
         $this->assertEquals($syncId, $result['conflicts'][0]['sync_id']);
     }
+
+    // LBDS-273 (GitLab #13): mirror the `category` column that budget_entries
+    // already has. Stores a category id (string, not FK) so the contract
+    // stays device-local. These tests pin the create-with-category,
+    // create-without-category and update-category paths so a regression in
+    // the migration, the model's $fillable or the SyncRequest rule is
+    // caught here.
+    public function test_process_creates_entity_with_category(): void
+    {
+        $syncId = 'test-rr-category-create-1';
+
+        $result = $this->processor->create([
+            [
+                'id' => $syncId,
+                'name' => 'Recurring With Category',
+                'type' => 'cargo',
+                'entry_type' => 'egreso',
+                'amount' => 200,
+                'category' => 'streaming',
+                'repeat_frequency' => 'month',
+                'repeat_interval' => 1,
+                'start_date' => '2026-01-01',
+                'status' => 'active',
+            ],
+        ], $this->user->id);
+
+        $this->assertCount(1, $result);
+        $this->assertDatabaseHas('recurring_records', [
+            'sync_id' => $syncId,
+            'category' => 'streaming',
+        ]);
+    }
+
+    public function test_process_creates_entity_without_category(): void
+    {
+        $syncId = 'test-rr-category-create-empty-1';
+
+        $result = $this->processor->create([
+            [
+                'id' => $syncId,
+                'name' => 'Recurring Without Category',
+                'type' => 'cargo',
+                'entry_type' => 'egreso',
+                'amount' => 50,
+                'repeat_frequency' => 'month',
+                'repeat_interval' => 1,
+                'start_date' => '2026-01-01',
+                'status' => 'active',
+            ],
+        ], $this->user->id);
+
+        $this->assertCount(1, $result);
+        $record = RecurringRecord::where('sync_id', $syncId)->first();
+        $this->assertNotNull($record);
+        $this->assertNull($record->category);
+    }
+
+    public function test_process_updates_entity_category(): void
+    {
+        $syncId = 'test-rr-category-update-1';
+
+        $this->processor->create([
+            [
+                'id' => $syncId,
+                'name' => 'Recurring To Categorize',
+                'type' => 'cargo',
+                'entry_type' => 'egreso',
+                'amount' => 25,
+                'repeat_frequency' => 'month',
+                'repeat_interval' => 1,
+                'start_date' => '2026-01-01',
+                'status' => 'active',
+            ],
+        ], $this->user->id);
+
+        $this->processor->update([
+            [
+                'id' => $syncId,
+                'category' => 'groceries',
+            ],
+        ], $this->user->id);
+
+        $this->assertDatabaseHas('recurring_records', [
+            'sync_id' => $syncId,
+            'category' => 'groceries',
+        ]);
+
+        // Clearing category back to null also has to land in the DB
+        // (D2-equivalent: optional).
+        $this->processor->update([
+            ['id' => $syncId, 'category' => null],
+        ], $this->user->id);
+
+        $record = RecurringRecord::where('sync_id', $syncId)->first();
+        $this->assertNotNull($record);
+        $this->assertNull($record->category);
+    }
 }

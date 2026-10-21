@@ -15,7 +15,9 @@ SPDX-License-Identifier: AGPL-3.0-only
     <ion-content class="ion-padding">
     <ion-datetime
       :model-value="tempPickerDateISO"
-      presentation="date"
+      :presentation="presentation"
+      :locale="locale"
+      :hour-cycle="hourCycle"
       style="background: transparent; width: 100%"
       @update:model-value="$emit('update:temp-picker-date-iso', $event)"
     />
@@ -47,6 +49,19 @@ defineProps({
   popoverState: { type: Object, default: () => ({ open: false, event: null }) },
   tempPickerDateISO: { type: String, default: null },
   canApply: { type: Boolean, default: false },
+  // LBDS-273 (GitLab #13): accept 'date' (default, pre-existing) or 'time'
+  // so the same popover can host both the date and the time pickers in
+  // EntryEditPage. The component is still named DatePickerPopover for
+  // backwards compat (3 call sites in EntryEditPage), but the prop makes
+  // it a date-or-time picker. Restricted to the two values we actually
+  // use so Vue's runtime prop type matches ion-datetime's `presentation`
+  // prop (which is a literal union, not free-form string).
+  presentation: { type: String as () => 'date' | 'time', default: 'date' },
+  // LBDS-273: the time picker uses a 24h cycle (es-AR convention) instead of
+  // ion-datetime's default 12h with a.m./p.m. column. Only meaningful when
+  // presentation="time"; the date picker ignores it.
+  hourCycle: { type: String as () => 'h12' | 'h23' | 'h24', default: 'h12' },
+  locale: { type: String, default: 'en-US' },
 });
 
 defineEmits<{

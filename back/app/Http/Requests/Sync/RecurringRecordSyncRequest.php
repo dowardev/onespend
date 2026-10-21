@@ -28,6 +28,15 @@ class RecurringRecordSyncRequest extends FormRequest
             'repeat_year_month' => 'nullable|integer|min:1|max:12',
             'repeat_year_day' => 'nullable|integer|min:1|max:31',
             'time' => 'nullable|date_format:H:i',
+            // LBDS-273 (GitLab #13): mirror the budget_entries `category`
+            // rule. Nullable, string id only (no FK constraint, device-local
+            // contract — the Dexie `entryCategories` table is the source of
+            // truth).
+            //
+            // NOTE: this class is not wired into any route — the live sync
+            // push is validated by `StoreRecurringRecordRequest`. The rule
+            // is kept here for parity but currently never runs.
+            'category' => 'nullable|string|max:100',
             'auto_insert' => 'nullable|boolean',
             'start_date' => 'required|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',

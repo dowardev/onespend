@@ -24,6 +24,13 @@ class RecurringRecord extends Model
         'repeat_month_weekday_ordinal', 'repeat_year_month', 'repeat_year_day',
         'time', 'auto_insert', 'start_date', 'end_date', 'estimated',
         'items', 'notes', 'status', 'deleted_at',
+        // LBDS-273 (GitLab #13): mirror the `category` column that
+        // budget_entries already has. Stores the category id (string, not
+        // FK) so the contract stays device-local; the Dexie `entryCategories`
+        // table is the source of truth, the sync payload only carries the
+        // id. Nullable so legacy rows and the "no category" UX continue to
+        // work and so the auto-inserted entry can opt-out by inheritance.
+        'category',
     ];
 
     protected $casts = [

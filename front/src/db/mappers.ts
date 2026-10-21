@@ -56,6 +56,13 @@ export function toBudgetEntryRow(entry: any): BudgetEntryRow {
     // mask a future type change on the server side. Pass the value through
     // as-is; the `!= null` guard keeps `undefined` and `null` from leaking.
     notes: entry.notes != null ? entry.notes : undefined,
+    // LBDS-273 (GitLab #13): optional HH:MM mirror of recurring `time`.
+    // Same `!= null` guard as notes (no silent string coercion) so a
+    // future server-side type change is caught by TypeScript. The pull
+    // mapper (entityMappers.fromApiFormat) already normalizes the back's
+    // "HH:MM:SS" MySQL TIME response to "HH:MM", so what arrives here
+    // is already in the storage format.
+    time: entry.time != null ? entry.time : undefined,
     fromRecurringId: entry._fromRecurringId ?? entry.from_recurring_id ?? null,
     providerGroupId: entry._fromProviderGroupId != null ? str(entry._fromProviderGroupId) : null,
     providerName: str(entry._providerName || entry.provider_name) || undefined,

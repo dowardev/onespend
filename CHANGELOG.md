@@ -8,6 +8,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 ## [Unreleased]
 
+### Added
+- Budget entries can now record the time of day of a transaction, and recurring charges can be tagged with a category. The time is optional — existing entries keep working unchanged — and the category picker is the same one the entries already use, so the same categories apply to both. A recurring charge tagged with a category passes it on to the entries it generates automatically (LBDS-273).
+
 ### Fixed
 - Notes typed on a budget entry now persist and sync across devices. The free-form note field on the entry form is saved locally, included in the sync payload, stored on the server, and restored when the entry is reopened, so the note survives save → reload → sync round-trip (LBDS-275).
 

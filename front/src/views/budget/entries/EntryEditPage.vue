@@ -64,6 +64,13 @@ SPDX-License-Identifier: AGPL-3.0-only
                       <span v-if="v$.date?.required?.$invalid">La fecha es obligatoria</span>
                     </div>
 
+                  <ion-item lines="full" class="transparent" button data-cy="entry-time-trigger" @click="openTimePicker({ e: $event })">
+                    <ion-label>{{ t('budget.entries.entryeditpage.labelTime', 'Hora') }}</ion-label>
+                    <ion-label slot="end" class="ion-text-end" color="medium">
+                      {{ entryTime || t('common.select') }}
+                    </ion-label>
+                  </ion-item>
+
                 </ion-card>
               </ion-list>
 
@@ -112,6 +119,20 @@ SPDX-License-Identifier: AGPL-3.0-only
       @apply="confirmEntryDate"
       @update:temp-picker-date-iso="entryDatePicker.tempPickerDateISO.value = $event"
     />
+
+  <!-- LBDS-273: time picker popover (same component, presentation="time"). -->
+  <DatePickerPopover
+    :popover-state="timePickerPopover"
+    :temp-picker-date-iso="timeTemp"
+    :can-apply="true"
+    presentation="time"
+    locale="es-ES"
+    hour-cycle="h24"
+    @did-dismiss="timePickerPopover.open = false"
+    @cancel="timePickerPopover.open = false"
+    @apply="confirmTime"
+    @update:temp-picker-date-iso="timeTemp = $event ? String($event).slice(11, 16) : ''"
+  />
 
     <!-- options popover -->
     <ion-popover
@@ -246,6 +267,36 @@ const deleteConfirm = useDeleteConfirm({
 const reassignPicker = useDatePicker();
 const entryDatePicker = useDatePicker();
 
+// LBDS-273 (GitLab #13): optional HH:MM mirror of the recurring `time`
+// column. Empty string = no time set; the save path coerces '' to
+// undefined so the mapper drops the key from the push payload. The
+// load path populates from `entryAny.time` (already normalized to
+// HH:MM by entityMappers.fromApiFormat).
+const entryTime = ref<string>('');
+
+// LBDS-273: popover state for the time picker. Same pattern as the
+// date picker's `useDatePicker()`, but inline (the date composable
+// doesn't support a `presentation` prop). The popover uses direct
+// binding on `entryTime` (no temp value) — time selection is atomic,
+// there's no calendar navigation to cancel.
+const timePickerPopover = reactive({ open: false, event: null as Event | null });
+const timeTemp = ref<string>('');
+
+function openTimePicker(params: { e: Event }) {
+  // LBDS-273: seed the temp with the current value so the picker opens
+  // on the currently-set time. On Apply, confirmTime copies timeTemp
+  // back into entryTime. On Cancel/Dismiss, timeTemp is discarded and
+  // entryTime stays untouched — matches the date picker's UX.
+  timeTemp.value = entryTime.value;
+  timePickerPopover.event = params.e;
+  timePickerPopover.open = true;
+}
+
+function confirmTime() {
+  entryTime.value = timeTemp.value;
+  timePickerPopover.open = false;
+}
+
 const reassignDate = ref<string | null>(null);
 
 const optionsPopoverState = reactive({
@@ -311,6 +362,11 @@ onMounted(async () => {
       ? selectedDate.slice(0, 10) + 'T00:00:00'
       : format(new Date(), 'yyyy-MM-dd') + 'T00:00:00';
     entryDatePicker.setDate({ date: dateStr });
+    // LBDS-273: default the time to "now" for new entries. Edit flow
+    // leaves it untouched so `loadEntry` can populate from the row.
+    // The user can still clear it by tapping the trigger and dismissing
+    // the popover without picking.
+    entryTime.value = format(new Date(), 'HH:mm');
   }
 
   if (queryType === 'ingreso' || queryType === 'egreso') {
@@ -363,6 +419,9 @@ async function loadEntry(entryId: string) {
   entryNotes.value = entryAny.notes;
   categoryId.value = entryAny.category ?? null;
   entrySyncId.value = entryAny.sync_id || null;
+  // LBDS-273: hydrate the time from the loaded entry. `entryAny.time` is
+  // already normalized to HH:MM by entityMappers.fromApiFormat on pull.
+  entryTime.value = entryAny.time ?? '';
 
   function normalizeAccountId(accountId: unknown): { id: string | number } | null {
     if (!accountId) return null;
@@ -552,6 +611,9 @@ async function handleSave() {
           groups: payload.groups,
           notes: payload.notes,
           category: payload.category,
+          // LBDS-273: optional time. Empty string → undefined so the
+          // mapper drops the key from the push payload.
+          time: entryTime.value || undefined,
         } as any,
       });
       const { reassignEntry } = await import('@/composables/useReassignEntry');
@@ -571,6 +633,9 @@ async function handleSave() {
           groups: payload.groups,
           notes: payload.notes,
           category: payload.category,
+          // LBDS-273: optional time. Empty string → undefined so the
+          // mapper drops the key from the push payload.
+          time: entryTime.value || undefined,
         } as any,
       });
     }
@@ -585,6 +650,9 @@ async function handleSave() {
       // builds the note into the payload, but the controller's addIngreso /
       // addEgreso used to ignore it, so the row was written without notes.
       notes: payload.notes,
+      // LBDS-273: optional time. Empty string → undefined so the mapper
+      // drops the key from the push payload.
+      time: entryTime.value || undefined,
     };
     if (payload.date) {
       entryDataAny.date = payload.date;

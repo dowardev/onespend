@@ -52,6 +52,14 @@ export interface RecurringRecord {
   repeatYearMonth?: number;
   repeatYearDay?: number;
   time?: string;
+  // LBDS-273 (GitLab #13): mirror the `category` column that
+  // `BudgetEntryRow` already has. Stores a category id (string, not FK)
+  // so the contract stays device-local; the Dexie `entryCategories`
+  // table is the source of truth and the sync payload only carries the
+  // id. Adding it to the shared `RecurringRecord` interface removes the
+  // need for intersection types / local extensions in consumers
+  // (RecurringEditPage, recurringProcessor).
+  category?: string;
   autoInsert: boolean;
   startDate: string;
   endDate?: string | null;

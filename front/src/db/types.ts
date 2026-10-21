@@ -20,6 +20,14 @@ export interface BudgetEntryRow {
   name: string
   amount: number
   date: string
+  // LBDS-273 (GitLab #13): optional HH:MM mirror of the recurring
+  // `time` column. Nullable so legacy rows and the daily "no specific
+  // time" UX keep working; the helper `front/src/utils/entryTimestamp.ts`
+  // combines `date + (time ?? '00:00')` for any consumer that needs the
+  // full instant. Most consumers (Historial grouping, today badge, day
+  // close, sync payload) keep reading `date` as YYYY-MM-DD — no migration
+  // of the existing `date` consumers is required by this ticket.
+  time?: string
   paymentType?: string
   entryType: string
   accountId?: string | number | null
@@ -150,6 +158,14 @@ export interface RecurringRecordRow {
   estimated?: number
   items?: unknown[]
   notes?: string
+  // LBDS-273 (GitLab #13): mirror the `category` column that
+  // `BudgetEntryRow` already has (LBDS-210). Stores a category id
+  // (string, not FK) so the contract stays device-local; the Dexie
+  // `entryCategories` table is the source of truth and the sync
+  // payload only carries the id. Nullable so legacy recurring rows
+  // and the "no category" UX keep working. The auto-inserted entry
+  // inherits this value via `recurringProcessor.ts` (D3: heredar).
+  category?: string
   version?: number
   status: string
   products?: RecurringRecordProductRow[]

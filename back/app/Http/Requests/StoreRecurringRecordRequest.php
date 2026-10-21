@@ -33,6 +33,11 @@ class StoreRecurringRecordRequest extends FormRequest
             'repeat_year_month' => 'nullable|integer|min:1|max:12',
             'repeat_year_day' => 'nullable|integer|min:1|max:31',
             'time' => 'nullable|string',
+            // LBDS-273: optional category id (device-local, not an FK — the
+            // client owns the category dictionary). Lenient on purpose, for
+            // the same reason as the `time` rule: an empty string means
+            // "no category" and must not be rejected.
+            'category' => 'nullable|string|max:100',
             'auto_insert' => 'nullable|boolean',
             'start_date' => 'required|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',

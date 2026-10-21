@@ -147,6 +147,7 @@ async function runProcess(dateStr?: string): Promise<void> {
               accountId: record.accountId,
               date: targetDateStr,
               _fromRecurringId: syncId,
+              category: record.category,
             });
           } else {
             await budgetEntriesController.addEgreso({
@@ -155,6 +156,7 @@ async function runProcess(dateStr?: string): Promise<void> {
               accountId: record.accountId,
               date: targetDateStr,
               _fromRecurringId: syncId,
+              category: record.category,
             });
           }
         } else {

@@ -65,6 +65,13 @@ SPDX-License-Identifier: AGPL-3.0-only
                   </ion-select>
                 </ion-item>
 
+                <ion-item lines="full" class="transparent" button @click="openCategoryPicker">
+                  <ion-label>{{ t('recurring.edit.field.category') }}</ion-label>
+                  <ion-label slot="end" class="ion-text-end" color="medium">
+                    {{ selectedCategoryName || t('common.select') }}
+                  </ion-label>
+                </ion-item>
+
                 <ion-item v-if="isCargo" lines="full" class="transparent">
                   <ion-select
                     v-model="formData.entryType"
@@ -569,6 +576,16 @@ SPDX-License-Identifier: AGPL-3.0-only
     />
 
     <!-- end alerts -->
+
+    <!-- category picker modal -->
+    <CategoryPickerModal
+      :is-open="showCategoryPicker"
+      :categories="entryCategories"
+      :selected-id="categoryId"
+      @select="onCategorySelect"
+      @dismiss="showCategoryPicker = false"
+    />
+    <!-- end category picker modal -->
   </ion-page>
 </template>
 
@@ -633,6 +650,8 @@ import type {
   RecurringProduct,
   RecurringItem,
 } from '@/controllers/recurringRecordsController';
+import { entryCategoriesDb } from '@/db/controllers/entryCategoriesDb';
+import type { EntryCategoryRow } from '@/db/types';
 // end imports
 
 // components
@@ -640,6 +659,7 @@ import AccountDistributionPicker from '@/views/budget/components/AccountDistribu
 import DatePickerPopover from '@/views/budget/components/DatePickerPopover.vue';
 import DeleteConfirmAlert from '@/views/budget/components/DeleteConfirmAlert.vue';
 import SupplierFormComponent from '@/views/suppliers/modals/SupplierFormComponent.vue';
+import CategoryPickerModal from '@/components/CategoryPickerModal.vue';
 // end components
 
 // interface and types imports
@@ -694,6 +714,10 @@ const formData = ref({
   products: [] as RecurringProduct[],
   items: [{ amount: '', accountId: null }] as RecurringItem[],
 });
+
+const categoryId = ref<string | null>(null);
+const entryCategories = ref<EntryCategoryRow[]>([]);
+const showCategoryPicker = ref(false);
 
 const itemsValidator = (items: RecurringItem[]) => {
   return items.every((item) => {
@@ -810,6 +834,11 @@ const pageTitle = computed(() => {
   return t(formData.value.type === 'cargo' ? 'recurring.edit.title.newCharge' : 'recurring.edit.title.newSupplier');
 });
 
+const selectedCategoryName = computed(() => {
+  if (!categoryId.value) return '';
+  return entryCategories.value.find((c) => c.id === categoryId.value)?.name || '';
+});
+
 const isCargo = computed(() => formData.value.type === 'cargo');
 const isProvedor = computed(() => formData.value.type === 'provedor');
 
@@ -831,10 +860,17 @@ watch(
     }
   },
 );
+
+watch(() => formData.value.entryType, () => {
+  categoryId.value = null;
+});
 // end watch
 
 // onMounted
 onMounted(async () => {
+  await entryCategoriesDb.ensureSeeded();
+  entryCategories.value = await entryCategoriesDb.getAll();
+
   const today = format(new Date(), 'yyyy-MM-dd');
   startDatePicker.setDate({ date: today });
       if (!isEditing.value) {
@@ -902,6 +938,8 @@ function loadRecord(params: { recurringId: string }) {
       ? found.items.map((i: RecurringItem) => ({ ...i }))
       : [{ amount: '', accountId: null }];
 
+    categoryId.value = (found as any).category ?? null;
+
     if (found.startDate) {
       startDatePicker.setDate({ date: found.startDate });
     }
@@ -942,7 +980,7 @@ async function handleSave() {
       ? data.items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0)
       : 0;
 
-  const recordData: Omit<RecurringRecord, 'id' | 'sync_id' | 'createdAt' | 'status'> = {
+  const recordData: Omit<RecurringRecord, 'id' | 'sync_id' | 'createdAt' | 'status'> & { category?: string } = {
     type: data.type,
     entryType: data.entryType,
     name: data.name,
@@ -999,6 +1037,7 @@ async function handleSave() {
           }))
         : undefined,
     notes: data.notes || undefined,
+    category: categoryId.value ?? undefined,
   };
 
   try {
@@ -1030,6 +1069,15 @@ function confirmStartDate() {
 
 function confirmEndDate() {
   endDatePicker.applyDate();
+}
+
+function openCategoryPicker() {
+  showCategoryPicker.value = true;
+}
+
+function onCategorySelect(category: EntryCategoryRow) {
+  categoryId.value = category.id;
+  showCategoryPicker.value = false;
 }
 
 function openTimePicker(params: { e: Event }) {

@@ -120,6 +120,7 @@
         "namePlaceholder": "Nombre del cargo recurrente",
         "type": "Tipo",
         "entryType": "Tipo de entrada",
+        "category": "Category",
         "frequency": "Frecuencia",
         "every": "Cada",
         "day": "Día",
@@ -603,13 +604,14 @@
         "label": "Registro"
       },
       "entryeditpage": {
-        "text1": "Tipo",
-        "label1": "Categoría",
-        "text2": "Nombre",
+        "text1": "Type",
+        "label1": "Category",
+        "text2": "Name",
         "placeholder": "Pepito",
-        "label2": "Fecha",
-        "text3": "Cuentas",
-        "label3": "Reasignar fecha"
+        "label2": "Date",
+        "labelTime": "Time",
+        "text3": "Accounts",
+        "label3": "Reassign date"
       }
     },
     "suppliers": {

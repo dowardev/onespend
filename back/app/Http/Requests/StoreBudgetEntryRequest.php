@@ -27,6 +27,14 @@ class StoreBudgetEntryRequest extends FormRequest
             'supplier_id' => 'nullable|string',
             'supplier_name' => 'nullable|string|max:255',
             'status' => 'nullable|string|in:active,inactive',
+            // LBDS-273: optional HH:MM time of day. The rule is deliberately
+            // lenient (no `date_format`): the column is a MySQL TIME, the
+            // model accessor normalizes whatever comes back to "HH:MM", and
+            // a strict format here would reject the empty string a client
+            // sends to clear the field. The matching
+            // `BudgetEntrySyncRequest` rule is inert (that class is not
+            // wired into any route).
+            'time' => 'nullable|string|max:5',
             'groups' => 'nullable|array',
             'groups.*.account_id' => 'nullable|integer',
             'groups.*.amount' => 'required|numeric|min:0',
