@@ -802,6 +802,7 @@ class BudgetEntryProcessorTest extends TestCase
                 'entry_type' => 'egreso',
                 'payment_type' => 'cash',
                 'account_id' => (string) $this->account->sync_id,
+                'notes' => 'Nota que el cliente no manda',
                 'status' => 'active',
             ],
         ], $this->user->id);
@@ -852,11 +853,13 @@ class BudgetEntryProcessorTest extends TestCase
             'notes' => 'Nota nueva del cliente',
         ]);
 
-        // The item that carries no note is written as null (the payload is
-        // a full snapshot), so it does not inherit a stale value either.
+        // GitLab #16 (F1): the first item did not carry the `notes` key,
+        // which on the client means "don't touch the note" (only an
+        // explicit null clears it). Its server-side note has to survive
+        // the batch update instead of being wiped to NULL.
         $entry = BudgetEntry::where('sync_id', $withoutNote)->first();
         $this->assertNotNull($entry);
-        $this->assertNull($entry->notes);
+        $this->assertSame('Nota que el cliente no manda', $entry->notes);
     }
 
     public function test_process_drops_malformed_time(): void

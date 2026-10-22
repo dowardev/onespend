@@ -300,10 +300,7 @@ abstract class AbstractEntityProcessor implements SyncProcessorInterface
         // item of the batch only, so a column that a later item carried
         // (e.g. `notes`) was silently dropped from the UPDATE whenever the
         // first item did not have it. The set is now the union of the keys
-        // of every item in the batch, and an item that does not carry a
-        // column is written as NULL (the payload is a full snapshot, so an
-        // absent column means "no value" — that is also how a field gets
-        // cleared).
+        // of every item in the batch.
         $columns = [];
         foreach ($bulkData as $itemData) {
             foreach (array_keys($itemData) as $col) {
@@ -318,9 +315,24 @@ abstract class AbstractEntityProcessor implements SyncProcessorInterface
         foreach ($columns as $col) {
             $whenClauses = [];
             foreach ($allSyncIds as $syncId) {
+                // GitLab #16 (F1): an item that does not carry the column
+                // at all is NOT written. The client's contract is that an
+                // absent key means "don't touch this field" (only an
+                // explicit null clears it — see
+                // front/src/services/sync/entityMappers.ts), so the item
+                // falls through to the ELSE branch and keeps the value
+                // the server already has. Writing NULL here would wipe
+                // server-side data whenever conflict detection let a
+                // diverging item through.
+                if (! array_key_exists($col, $bulkData[$syncId])) {
+                    continue;
+                }
                 $whenClauses[] = 'WHEN ? THEN ?';
                 $bindings[] = $syncId;
-                $bindings[] = $bulkData[$syncId][$col] ?? null;
+                $bindings[] = $bulkData[$syncId][$col];
+            }
+            if (empty($whenClauses)) {
+                continue;
             }
             $setParts[] = "`{$col}` = CASE `sync_id` ".implode(' ', $whenClauses)." ELSE `{$col}` END";
         }
