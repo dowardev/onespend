@@ -639,7 +639,11 @@ async function handleSave() {
         } as any,
       });
     }
-  } else if (totalAmount > 0) {
+  } else {
+    // GitLab #16 (P1): the `totalAmount > 0` guard was dead code — the
+    // `itemsValid` vuelidate rule already guarantees every item has an
+    // amount > 0 and an account, so `totalAmount` is > 0 by the time the
+    // save reaches this point. The create path now runs unconditionally.
     const entryDataAny: any = {
       name: payload.name,
       amount: payload.amount,
