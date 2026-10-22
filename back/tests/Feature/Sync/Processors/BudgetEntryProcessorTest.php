@@ -751,9 +751,9 @@ class BudgetEntryProcessorTest extends TestCase
         }
 
         // Both items carry the `time` key, so the batch update applies it
-        // to both. (The bulk update derives the column set from the FIRST
-        // item of the batch, so an item that omitted the key used to lose
-        // its time change silently.)
+        // to both. (Before GitLab #16 the bulk update derived the column
+        // set from the FIRST item of the batch only, so an item that
+        // omitted the key used to lose its time change silently.)
         $this->processor->update([
             [
                 'id' => $first,
@@ -781,6 +781,85 @@ class BudgetEntryProcessorTest extends TestCase
 
         $this->assertSame('18:45', BudgetEntry::where('sync_id', $first)->first()->time);
         $this->assertSame('20:00', BudgetEntry::where('sync_id', $second)->first()->time);
+    }
+
+    // GitLab #16 (P2): the bulk update used to derive the SET column list
+    // from the FIRST item of the batch only. A column that a later item
+    // carried (here `notes`) was silently dropped from the UPDATE, so the
+    // later item's note never reached the DB. The column set is now the
+    // union of every item's keys.
+    public function test_batch_update_applies_notes_to_every_item(): void
+    {
+        $withoutNote = 'test-be-batch-notes-1';
+        $withNote = 'test-be-batch-notes-2';
+
+        $this->processor->create([
+            [
+                'id' => $withoutNote,
+                'name' => 'Entry Without Note',
+                'amount' => 10.00,
+                'date' => '2026-10-20',
+                'entry_type' => 'egreso',
+                'payment_type' => 'cash',
+                'account_id' => (string) $this->account->sync_id,
+                'notes' => 'Nota que el cliente no manda',
+                'status' => 'active',
+            ],
+        ], $this->user->id);
+
+        $this->processor->create([
+            [
+                'id' => $withNote,
+                'name' => 'Entry With Note',
+                'amount' => 20.00,
+                'date' => '2026-10-20',
+                'entry_type' => 'egreso',
+                'payment_type' => 'cash',
+                'account_id' => (string) $this->account->sync_id,
+                'notes' => 'Nota original del servidor',
+                'status' => 'active',
+            ],
+        ], $this->user->id);
+
+        // The FIRST item of the batch does not carry the `notes` key; the
+        // second one does. Before the fix, the `notes` column was not part
+        // of the SET list at all and the second item kept its old note.
+        $this->processor->update([
+            [
+                'id' => $withoutNote,
+                'name' => 'Entry Without Note',
+                'amount' => 10.00,
+                'date' => '2026-10-20',
+                'entry_type' => 'egreso',
+                'payment_type' => 'cash',
+                'account_id' => (string) $this->account->sync_id,
+                'status' => 'active',
+            ],
+            [
+                'id' => $withNote,
+                'name' => 'Entry With Note',
+                'amount' => 20.00,
+                'date' => '2026-10-20',
+                'entry_type' => 'egreso',
+                'payment_type' => 'cash',
+                'account_id' => (string) $this->account->sync_id,
+                'notes' => 'Nota nueva del cliente',
+                'status' => 'active',
+            ],
+        ], $this->user->id);
+
+        $this->assertDatabaseHas('budget_entries', [
+            'sync_id' => $withNote,
+            'notes' => 'Nota nueva del cliente',
+        ]);
+
+        // GitLab #16 (F1): the first item did not carry the `notes` key,
+        // which on the client means "don't touch the note" (only an
+        // explicit null clears it). Its server-side note has to survive
+        // the batch update instead of being wiped to NULL.
+        $entry = BudgetEntry::where('sync_id', $withoutNote)->first();
+        $this->assertNotNull($entry);
+        $this->assertSame('Nota que el cliente no manda', $entry->notes);
     }
 
     public function test_process_drops_malformed_time(): void
