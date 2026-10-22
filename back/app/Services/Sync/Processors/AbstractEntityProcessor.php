@@ -295,8 +295,22 @@ abstract class AbstractEntityProcessor implements SyncProcessorInterface
 
         $allSyncIds = array_keys($bulkData);
         $table = (new $modelClass)->getTable();
-        $first = reset($bulkData);
-        $columns = array_keys($first);
+
+        // GitLab #16 (P2): the column set used to be taken from the FIRST
+        // item of the batch only, so a column that a later item carried
+        // (e.g. `notes`) was silently dropped from the UPDATE whenever the
+        // first item did not have it. The set is now the union of the keys
+        // of every item in the batch, and an item that does not carry a
+        // column is written as NULL (the payload is a full snapshot, so an
+        // absent column means "no value" — that is also how a field gets
+        // cleared).
+        $columns = [];
+        foreach ($bulkData as $itemData) {
+            foreach (array_keys($itemData) as $col) {
+                $columns[$col] = true;
+            }
+        }
+        $columns = array_keys($columns);
 
         $setParts = [];
         $bindings = [];
