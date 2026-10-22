@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - `notes` field on budget entries: migration `2026_10_12_000000_add_notes_to_budget_entries_table` adds the nullable `text` column, `BudgetEntry::$fillable` accepts it, and `BudgetEntrySyncRequest` validates `nullable|string|max:2000`. `BudgetEntryProcessor` stores the note on create + update (including clearing back to `null`), and the new `BudgetEntryProcessorTest` cases pin the round-trip (LBDS-275).
+- `AbstractEntityProcessor::bulkUpdateByCase` derives the `SET` column list from the union of the keys of every item in the batch instead of the first item only, so a column carried by a later item (e.g. `notes`) is no longer silently dropped from the `UPDATE`. An item that does not carry a column keeps the value the server already has (the client contract: an absent key means "don't touch this field", only an explicit `null` clears it). Pinned by `BudgetEntryProcessorTest::test_batch_update_applies_notes_to_every_item` (GitLab #16).
 
 ## [v0.79.0] - 2026-10-11
 

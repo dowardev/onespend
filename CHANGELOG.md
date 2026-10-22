@@ -13,6 +13,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 ### Fixed
 - Notes typed on a budget entry now persist and sync across devices. The free-form note field on the entry form is saved locally, included in the sync payload, stored on the server, and restored when the entry is reopened, so the note survives save → reload → sync round-trip (LBDS-275).
+- Syncing several records at once no longer drops a field (such as the note on an entry) when the first record of the batch did not have that field: every record now gets the fields it actually sent, and the ones it did not send keep their previous value (GitLab #16).
 
 ## [v0.79.0] - 2026-10-11
 
