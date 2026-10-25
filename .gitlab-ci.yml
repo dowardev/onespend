@@ -120,6 +120,36 @@ frontend_test:
   script:
     - pnpm run test:unit
 
+# The Playwright suite (front/tests/e2e-playwright) drives a real browser against
+# a vite dev server, so it needs the browser image and the matching browser
+# revision — the alpine node image used by the other frontend jobs cannot run it.
+frontend_e2e:
+  stage: test
+  image: mcr.microsoft.com/playwright:v1.61.0-noble
+  extends:
+    - .frontend_setup
+  # Unlike the other jobs, this one also runs on merge requests: the suite is
+  # the only signal an e2e regression can give before a release, and the
+  # repository's pipelines otherwise only exist for tags.
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+(-(alpha|beta|rc|dryrun)\.\d+)?$/'
+  # Not a gate yet: the suite is still stabilising, and a red e2e must not block
+  # a merge or a release for an unrelated change. It is a separate job (not part
+  # of frontend_test) because the suite is serial by design and takes minutes.
+  allow_failure: true
+  script:
+    # The image ships the browsers of its own Playwright version; install the
+    # revision that the pinned @playwright/test expects.
+    - pnpm exec playwright install chromium
+    - pnpm run test:e2e
+  artifacts:
+    when: always
+    paths:
+      - front/playwright-report/
+      - front/test-results/
+    expire_in: 1 week
+
 backend_build:
   stage: build
   image: composer:2.8

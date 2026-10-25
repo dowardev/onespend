@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import { test, expect, type Page } from '@playwright/test'
+import { enableSync } from './helpers/syncConfig'
 
 // The queue is acknowledged per entity type: the client sends everything it has
 // queued under `data.<entityType>` and only drops an item once its id comes back
@@ -82,9 +83,13 @@ test('creates an entry, edits it immediately, and leaves no stuck items in the q
 
   await page.goto('/budget', { waitUntil: 'domcontentloaded' })
 
+  // Sync is opt-in (LBDS-289): with sync off nothing is ever pushed, so the
+  // queue could not drain no matter what the server answered.
+  await enableSync(page)
+
   // Boot also runs background work, so the budget view takes a moment to be usable.
   const addButton = page.locator('#add-btn')
-  await expect(addButton).toBeVisible({ timeout: 30000 })
+  await expect(addButton).toBeVisible({ timeout: 60000 })
 
   const originalName = `Test Entry ${Date.now()}`
   const editedName = `Edited ${originalName}`

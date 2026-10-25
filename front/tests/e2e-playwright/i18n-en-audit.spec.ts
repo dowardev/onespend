@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page, type BrowserContext } from '@playwright/test';
 
 // Spanish words / short phrases the app must NOT render in English mode.
 // The list is checked both inside the main content AND inside the
@@ -44,7 +44,7 @@ const SPANISH_HINTS_CASE_INSENSITIVE = [
 const KEY_PATH_RE = /\b(?:sync|i18n|recurring|menu|home|auth|settings|privacy|downloads|common|budget|suppliers|statistics|accounts|admin|info|categorypickermodal|quickcategoryalert|sectionassignmodal|devmodebanner|cashflowchart|components|views)\.[a-z][a-z0-9_]*(?:\.[a-z0-9_]+){1,}/i;
 
 async function setEnglishLocale(page: Page): Promise<void> {
-  await page.goto('/');
+  await page.goto('/', { timeout: 120000 });
   await page.waitForLoadState('domcontentloaded');
   await page.waitForTimeout(1000);
   await page.keyboard.press('Escape').catch(() => {});
@@ -74,8 +74,26 @@ interface AuditResult {
   text: string;
 }
 
+/**
+ * Audits one route in its own page.
+ *
+ * The audit walks 13 routes, and reusing a single page for all of them made
+ * chromium run out of resources (net::ERR_INSUFFICIENT_RESOURCES) halfway
+ * through the list. A fresh page per route keeps the renderer small; the
+ * language override lives in configDb, so the new page still starts in the
+ * locale the audit set up.
+ */
+async function auditRoute(context: BrowserContext, route: string): Promise<AuditResult> {
+  const page = await context.newPage();
+  try {
+    return await auditPage(page, route);
+  } finally {
+    await page.close().catch(() => undefined);
+  }
+}
+
 async function auditPage(page: Page, route: string): Promise<AuditResult> {
-  await page.goto(route, { waitUntil: 'domcontentloaded', timeout: 30000 });
+  await page.goto(route, { waitUntil: 'domcontentloaded', timeout: 120000 });
   await page.waitForTimeout(2000);
   await page.keyboard.press('Escape').catch(() => {});
   await page.waitForTimeout(500);
@@ -116,11 +134,13 @@ const ROUTES = [
 ];
 
 test('i18n audit: English mode shows no raw keys and no Spanish on main pages', async ({ page }) => {
-  test.setTimeout(300000);
+  // The audit walks 13 routes (each one a full page load plus a menu
+  // snapshot), so it needs more than the default budget on a loaded machine.
+  test.setTimeout(900000);
   await setEnglishLocale(page);
   const failures: string[] = [];
   for (const p of ROUTES) {
-    const result = await auditPage(page, p.route);
+    const result = await auditRoute(page.context(), p.route);
     if (result.spanish.length > 0) {
       failures.push(`[${p.label}] Spanish words: ${result.spanish.join(', ')}`);
     }
@@ -134,10 +154,11 @@ test('i18n audit: English mode shows no raw keys and no Spanish on main pages', 
 });
 
 test('i18n audit: Spanish mode shows no raw keys', async ({ page }) => {
-  test.setTimeout(300000);
+  // Same as above: 13 routes with a full page load each.
+  test.setTimeout(900000);
   const failures: string[] = [];
   for (const p of ROUTES) {
-    const result = await auditPage(page, p.route);
+    const result = await auditRoute(page.context(), p.route);
     if (result.rawKeys.length > 0) {
       failures.push(`[${p.label}] Raw keys: ${result.rawKeys.join(', ')}`);
     }

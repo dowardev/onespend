@@ -10,7 +10,7 @@ import { test, expect } from '@playwright/test'
 test('end-date picker can be modified on a new recurring record', async ({ page }) => {
   // New recurring record form.
   await page.goto('/recurring/edit')
-  await page.waitForSelector('ion-content', { timeout: 30000 })
+  await page.waitForSelector('ion-content', { timeout: 60000 })
   await page.waitForTimeout(800)
   console.log('URL:', page.url())
   const allItems = await page.locator('ion-item').allInnerTexts().catch(() => [] as string[])
@@ -20,14 +20,14 @@ test('end-date picker can be modified on a new recurring record', async ({ page 
 
   // Locate the "Fecha de fin" item and read its current (default = today) display.
   const endDateItem = page.locator('ion-item', { hasText: 'Fecha de fin' }).first()
-  await expect(endDateItem, 'end-date item should render').toBeVisible({ timeout: 30000 })
+  await expect(endDateItem, 'end-date item should render').toBeVisible({ timeout: 60000 })
   const before = (await endDateItem.innerText()).replace(/\s+/g, ' ').trim()
   console.log('--- ENDDATE BEFORE ---', before)
 
   // Open the picker.
   await endDateItem.click()
   const dt = page.locator('ion-datetime:visible').first()
-  await expect(dt, 'datetime picker should open').toBeVisible({ timeout: 10000 })
+  await expect(dt, 'datetime picker should open').toBeVisible({ timeout: 30000 })
 
   // Select a future date the way a user would (ionChange is what ion-datetime emits).
   await dt.evaluate((el) => {

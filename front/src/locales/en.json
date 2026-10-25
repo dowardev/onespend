@@ -23,7 +23,8 @@
     "selectAccount": "Select account",
     "select": "Select",
     "selectProvider": "Select provider",
-    "unnamed": "Unnamed"
+    "unnamed": "Unnamed",
+    "today": "Today"
   },
   "recurring": {
     "section": {
@@ -101,44 +102,121 @@
     "recurringpage": {
       "label": "Recurring Charges",
       "placeholder": "Search",
-      "cancelButton": "Cancelar",
-      "deleteButton": "Eliminar",
+      "cancelButton": "Cancel",
+      "deleteButton": "Delete",
       "testDataToast": "Datos de prueba insertados",
       "title": "Recurring Charges",
-      "empty": "No recurring charges"
+      "empty": "No recurring charges",
+      "type": {
+        "charge": "Charge",
+        "provider": "Provider"
+      },
+      "freq": {
+        "day": {
+          "single": "Every day",
+          "multiple": "Every {n} days"
+        },
+        "week": {
+          "single": "Every week",
+          "multiple": "Every {n} weeks"
+        },
+        "month": {
+          "day": "Every month - day {day}",
+          "weekday": "Every month - {ordinal} {weekday}"
+        },
+        "year": {
+          "single": "Every year",
+          "multiple": "Every {n} years",
+          "withDate": "{base} - {month} {day}"
+        }
+      },
+      "weekdayShort": {
+        "0": "S",
+        "1": "M",
+        "2": "T",
+        "3": "W",
+        "4": "T",
+        "5": "F",
+        "6": "S"
+      },
+      "weekdayFull": {
+        "0": "Sunday",
+        "1": "Monday",
+        "2": "Tuesday",
+        "3": "Wednesday",
+        "4": "Thursday",
+        "5": "Friday",
+        "6": "Saturday"
+      },
+      "month": {
+        "1": "January",
+        "2": "February",
+        "3": "March",
+        "4": "April",
+        "5": "May",
+        "6": "June",
+        "7": "July",
+        "8": "August",
+        "9": "September",
+        "10": "October",
+        "11": "November",
+        "12": "December"
+      },
+      "ordinal": {
+        "1": "First",
+        "2": "Second",
+        "3": "Third",
+        "4": "Fourth",
+        "5": "Fifth",
+        "6": "Sixth",
+        "7": "Seventh",
+        "8": "Eighth",
+        "last": "Last"
+      },
+      "toast": {
+        "paused": "Charge paused",
+        "resumed": "Charge resumed"
+      },
+      "deleteAlertHeader": "Delete recurring charge",
+      "deleteAlertMessage": "Delete {name}?"
     },
     "edit": {
       "section": {
         "info": "Información",
-        "date": "Fecha",
-        "details": "Más detalles",
-        "products": "Productos",
-        "suppliers": "Proveedores"
+        "date": "Date",
+        "details": "More details",
+        "products": "Products",
+        "suppliers": "Suppliers"
       },
       "field": {
-        "name": "Nombre",
-        "namePlaceholder": "Nombre del cargo recurrente",
+        "name": "Name",
+        "namePlaceholder": "Name of the recurring charge",
         "type": "Tipo",
         "entryType": "Tipo de entrada",
         "category": "Category",
-        "frequency": "Frecuencia",
+        "frequency": "Frequency",
         "every": "Cada",
         "day": "Día",
         "dayOfMonth": "Día del mes",
         "dayOfWeek": "Día de la semana",
-        "startDate": "Fecha de inicio",
-        "endDate": "Fecha de fin",
+        "startDate": "Start date",
+        "endDate": "End date",
         "autoInsert": "Auto-insertar",
-        "notesPlaceholder": "Agregar notas...",
-        "searchSupplierPlaceholder": "Buscar proveedor"
+        "notesPlaceholder": "Add notes...",
+        "searchSupplierPlaceholder": "Search supplier",
+        "supplier": "Supplier",
+        "ordinal": "Occurrence",
+        "month": "Month",
+        "time": "Time",
+        "notes": "Notes"
       },
       "type": {
-        "cargo": "Cargo",
-        "provider": "Proveedor"
+        "cargo": "Charge",
+        "provider": "Provider"
       },
       "entryType": {
-        "income": "Ingreso",
-        "expense": "Egreso"
+        "income": "Income",
+        "expense": "Expense"
       },
       "frequency": {
         "day": "Día",
@@ -149,30 +227,74 @@
         "fixedDayMode": "Día fijo"
       },
       "title": {
-        "editCharge": "Editar Cargo",
-        "editSupplier": "Editar Proveedor",
-        "newCharge": "Nuevo Cargo",
-        "newSupplier": "Nuevo Proveedor",
-        "selectSupplier": "Seleccionar proveedor",
-        "createSupplier": "Crear proveedor"
+        "editCharge": "Edit charge",
+        "editSupplier": "Edit supplier",
+        "newCharge": "New charge",
+        "newSupplier": "New supplier",
+        "selectSupplier": "Select supplier",
+        "createSupplier": "Create supplier"
       },
       "validation": {
-        "nameRequired": "El nombre es requerido",
-        "frequencyRequired": "La frecuencia es requerida"
+        "nameRequired": "Name is required",
+        "frequencyRequired": "Frequency is required",
+        "startDateRequired": "Start date is required",
+        "itemsValid": "All items must have a valid amount and assigned account"
       },
       "distribution": {
         "header": "Distribución",
-        "itemNamePlaceholder": "Nombre",
-        "itemPricePlaceholder": "Precio",
-        "itemQtyPlaceholder": "Cantidad"
+        "itemNamePlaceholder": "Name",
+        "itemPricePlaceholder": "Price",
+        "itemQtyPlaceholder": "Quantity"
       },
       "toast": {
-        "resumed": "Cargo reanudado",
-        "paused": "Cargo pausado",
+        "resumed": "Charge resumed",
+        "paused": "Charge paused",
         "supplierCreated": "Proveedor creado"
       },
       "error": {
-        "createSupplier": "Error al crear proveedor"
+        "createSupplier": "Error creating the supplier"
+      },
+      "confirmDelete": "Are you sure you want to delete this recurring record?",
+      "weekday": {
+        "short": {
+          "0": "S",
+          "1": "M",
+          "2": "T",
+          "3": "W",
+          "4": "T",
+          "5": "F",
+          "6": "S"
+        },
+        "full": {
+          "0": "Sunday",
+          "1": "Monday",
+          "2": "Tuesday",
+          "3": "Wednesday",
+          "4": "Thursday",
+          "5": "Friday",
+          "6": "Saturday"
+        }
+      },
+      "month": {
+        "1": "January",
+        "2": "February",
+        "3": "March",
+        "4": "April",
+        "5": "May",
+        "6": "June",
+        "7": "July",
+        "8": "August",
+        "9": "September",
+        "10": "October",
+        "11": "November",
+        "12": "December"
+      },
+      "ordinal": {
+        "1": "First",
+        "2": "Second",
+        "3": "Third",
+        "4": "Fourth",
+        "last": "Last"
       }
     },
     "action": {
@@ -359,7 +481,7 @@
     "dlqview": {
       "retryAllHeader": "Retry all",
       "removeAllHeader": "Remove all",
-      "emptyMessage": "No failed items",
+      "emptyMessage": "The failed items queue is empty.",
       "removeItemMessage": "Remove this item?",
       "removeAllMessage": "Remove all items?",
       "removeConfirmMessage": "Confirm removal",
@@ -367,26 +489,75 @@
       "retryAllButton": "Retry all",
       "removeAllButton": "Remove all",
       "retryOneButton": "Retry",
-      "removeOneButton": "Remove"
+      "removeOneButton": "Remove",
+      "title": "Failed items queue",
+      "title1": "Retry all",
+      "title2": "Remove all",
+      "message1": "Item retried",
+      "message2": "All items retried",
+      "message3": "Queue cleared",
+      "message4": "Could not clear the queue",
+      "header1": "Retry all",
+      "header2": "Remove all",
+      "text1": "Cancel",
+      "text2": "Retry",
+      "text4": "Remove",
+      "attemptSingle": "attempt",
+      "attemptMultiple": "attempts",
+      "aria": {
+        "hideDetail": "Hide detail of {entity}",
+        "showDetail": "Show detail of {entity}",
+        "retry": "Retry {entity}"
+      },
+      "emptyTitle": "No failed items",
+      "retryAllMessage": "Retry {count} items?",
+      "errorGeneric": "Failed to retry",
+      "errorRetry": "Failed to retry: {msg}",
+      "entity": {
+        "account": "Accounts",
+        "budget": "Budgets",
+        "budget_entry": "Budget entries",
+        "budget_entry_group": "Budget entry groups",
+        "budget_provider": "Budget providers",
+        "budget_provider_product": "Budget provider products",
+        "entry": "Entries",
+        "income": "Income",
+        "recurring_record": "Recurring records",
+        "recurring_record_product": "Recurring products",
+        "supplier": "Suppliers",
+        "supplier_product": "Supplier products",
+        "template": "Templates"
+      },
+      "operation": {
+        "create": "Create",
+        "update": "Update",
+        "delete": "Delete"
+      },
+      "time": {
+        "secondsAgo": "a few seconds ago",
+        "minutesAgo": "{m}m ago",
+        "hoursAgo": "{h}h ago",
+        "daysAgo": "{d}d ago"
+      }
     },
     "syncview": {
-      "title": "Sesión requerida",
-      "text1": "Cancelar",
-      "text2": "Eliminar",
-      "text3": "Cancelar",
+      "title": "Session required",
+      "text1": "Cancel",
+      "text2": "Delete",
+      "text3": "Cancel",
       "text4": "Continuar",
-      "text5": "Entendido, reparar",
+      "text5": "Got it, repair",
       "text6": "Solucionar",
-      "message1": "Cola de sincronización limpiada",
-      "message2": "Estado actualizado",
-      "message3": "No se pudo actualizar el estado",
-      "message4": "Conflicto resuelto: se aplicó tu versión",
-      "message5": "Conflicto resuelto: se aceptó la versión del servidor",
-      "message6": "Error en reparación. Revisa la conexión e intenta de nuevo.",
-      "message7": "Sincronización solucionada",
-      "header": "Esto forzará una sincronización completa con el servidor. ¿Continuar?",
+      "message1": "Sync queue cleared",
+      "message2": "Status updated",
+      "message3": "Could not update the status",
+      "message4": "Conflict resolved: your version was applied",
+      "message5": "Conflict resolved: the server version was accepted",
+      "message6": "Repair error. Check the connection and try again.",
+      "message7": "Sync fixed",
+      "header": "This forces a full sync with the server. Continue?",
       "alert": {
-        "cancel": "Cancelar"
+        "cancel": "Cancel"
       },
       "sessionRequired": "Session required"
     }
@@ -539,7 +710,8 @@
       "incomes": "Income",
       "expenses": "Expenses",
       "selectAccount": "Select Account",
-      "newAccount": "New Account"
+      "newAccount": "New Account",
+      "initialBalance": "Initial"
     },
     "entryType": {
       "income": "Income",
@@ -550,9 +722,13 @@
     },
     "agenda": {
       "historialview": {
-        "aria": "Buscar",
-        "text": "Filtrar por fecha",
-        "placeholder": "Buscar por nombre, cuenta o proveedor"
+        "aria": "Search",
+        "text": "Filter by date",
+        "placeholder": "Search by name, account or supplier",
+        "noResults": "No results for the search or the filter",
+        "emptyResults": "No entries in the history",
+        "clearFilters": "Clear filters",
+        "goToBudget": "Go to budget"
       }
     },
     "components": {
@@ -560,29 +736,30 @@
         "text": "Confirmar eliminación"
       },
       "notesmodal": {
-        "placeholder": "Escribe las notas aquí..."
+        "placeholder": "Write the notes here..."
       },
       "quickaccountalert": {
-        "text": "Nueva Cuenta"
+        "text": "New account"
       },
       "detailssection": {
-        "label1": "Detalles",
+        "label1": "Details",
         "label2": "Adjuntos",
-        "text": "Notas",
-        "placeholder": "Agregar notas..."
+        "text": "Notes",
+        "placeholder": "Add notes..."
       },
       "summarycards": {
-        "label1": "Ingresos",
+        "label1": "Income",
         "label2": "Egresos",
-        "label3": "Resultado",
+        "label3": "Result",
         "label4": "Efectivo",
         "label5": "Tarjeta"
       },
       "accountcards": {
-        "label": "Cuentas"
+        "label": "Accounts",
+        "empty": "No accounts created"
       },
       "accountdistributionpicker": {
-        "text": "Cantidad"
+        "text": "Quantity"
       },
       "daysummarymodal": {
         "fallbackTime": "--:--",
@@ -599,9 +776,12 @@
     "entries": {
       "inicioviewcomponent": {
         "button1": "Retroceder",
-        "text": "Seleccionar fecha",
+        "text": "Select date",
         "button2": "Avanzar",
-        "label": "Registro"
+        "label": "Registro",
+        "emptyMessage": "Press the \"+\" button to add a new income",
+        "registro": "Entry",
+        "providers": "Providers"
       },
       "entryeditpage": {
         "text1": "Type",
@@ -616,10 +796,10 @@
     },
     "suppliers": {
       "providereditpage": {
-        "label1": "Fecha",
-        "label2": "Productos",
-        "placeholder1": "Nombre",
-        "placeholder2": "Precio",
+        "label1": "Date",
+        "label2": "Products",
+        "placeholder1": "Name",
+        "placeholder2": "Price",
         "placeholder3": "Cant"
       }
     },
@@ -627,12 +807,15 @@
       "clearDayHeader": "Clear day",
       "clearDayMessage": "Delete all entries for this day?",
       "clearDayConfirm": "Clear",
-      "autoCreateError": "Error auto-creating accounts"
+      "autoCreateError": "Error auto-creating accounts",
+      "title": "Budget",
+      "clearDayLabel": "Clear day",
+      "message": "No accounts available"
     }
   },
   "admin": {
     "maintenancepage": {
-      "label": "Herramientas de mantenimiento del sistema"
+      "label": "System maintenance tools"
     }
   },
   "statistics": {
@@ -658,7 +841,7 @@
           "label": "Desglose"
         },
         "goalschartmodal": {
-          "label1": "Resumen",
+          "label1": "Summary",
           "label2": "Meta mensual",
           "label3": "Progreso actual",
           "label4": "Faltante"
@@ -670,13 +853,13 @@
           "label": "Detalle"
         },
         "performancecomponent": {
-          "label1": "Utilidad Bruta",
-          "label2": "Ahorro Operativo",
-          "label3": "Resultado Neto",
-          "label4": "Ingresos",
-          "label5": "Costo de Vida",
-          "label6": "Utilidad Bruta",
-          "label7": "Resultado Neto"
+          "label1": "Gross profit",
+          "label2": "Operating savings",
+          "label3": "Net result",
+          "label4": "Income",
+          "label5": "Cost of living",
+          "label6": "Gross profit",
+          "label7": "Net result"
         }
       },
       "config": {
@@ -686,7 +869,8 @@
         },
         "performanceconfigpage": {
           "label": "Organize your categories by section",
-          "title": "Performance Configuration"
+          "title": "Performance Configuration",
+          "description": "The section defines which Income Statement block a category goes into. It only changes the order of your numbers in that view — your data stays the same."
         }
       },
       "performancepage": {
@@ -744,7 +928,11 @@
           "entertainment": "Entertainment",
           "other": "Other",
           "financial": "Interest and fees"
-        }
+        },
+        "incomes": "Income",
+        "costOfLife": "Cost of living",
+        "discretionaryExpenses": "Discretionary expenses",
+        "financialExpenses": "Financial expenses"
       },
       "budgetIncomes": {
         "title": "Budget Income"
@@ -763,7 +951,7 @@
         "grossProfit": {
           "term": "Gross Profit",
           "definition": "Profit generated after covering essential period expenses.",
-          "formula": "Total income − Cost of Living"
+          "formula": "Total income − Cost of living"
         },
         "operatingSavings": {
           "term": "Operating Savings",
@@ -842,20 +1030,23 @@
     "accounts": {
       "modals": {
         "addaccountcomponent": {
-          "text1": "Nombre",
+          "text1": "Name",
           "text2": "Balance inicial"
         }
       },
       "accountspage": {
-        "label": "Lista de cuentas",
-        "placeholder": "Buscar cuentas"
+        "label": "Account list",
+        "placeholder": "Search accounts",
+        "deleteConfirm": "Delete account {name}?",
+        "text1": "Cancel",
+        "text2": "Delete"
       }
     },
     "modals": {
       "supplierformcomponent": {
-        "text": "Nombre",
-        "label": "Productos",
-        "placeholder": "Buscar productos"
+        "text": "Name",
+        "label": "Products",
+        "placeholder": "Search products"
       },
       "addsuplierscomponent": {
         "editTitle": "Edit Supplier",
@@ -863,8 +1054,12 @@
       }
     },
     "supplierspage": {
-      "label": "Lista de proveedores",
-      "placeholder": "Buscar proveedores"
+      "label": "Supplier list",
+      "placeholder": "Search suppliers",
+      "title": "Suppliers",
+      "deleteConfirm": "Delete supplier {name}?",
+      "text1": "Cancel",
+      "text2": "Delete"
     }
   },
   "test": {
@@ -890,17 +1085,17 @@
     }
   },
   "categorypickermodal": {
-    "aria": "Nueva categoría",
-    "placeholder": "Buscar categoría"
+    "aria": "New category",
+    "placeholder": "Search category"
   },
   "quickcategoryalert": {
     "subHeader": "Choose the section where this category will live"
   },
   "sectionassignmodal": {
-    "aria1": "Nueva categoría",
-    "aria2": "Guardar",
-    "placeholder1": "Buscar categoría",
-    "placeholder2": "Sin asignar"
+    "aria1": "New category",
+    "aria2": "Save",
+    "placeholder1": "Search category",
+    "placeholder2": "Unassigned"
   },
   "devmodebanner": {
     "unknownVersion": "OneSpend in active development",

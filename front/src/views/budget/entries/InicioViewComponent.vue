@@ -106,7 +106,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
               <template v-else>
                 <div class="ion-padding">
-                  <ion-label>Pulsa el botón "+" para agregar un nuevo ingreso</ion-label>
+                  <ion-label>{{ t('budget.entries.inicioviewcomponent.emptyMessage') }}</ion-label>
                 </div>
               </template>
             </div>
@@ -128,11 +128,11 @@ SPDX-License-Identifier: AGPL-3.0-only
       <ion-list lines="none">
         <ion-item button @click="handleRegistroClick">
           <ion-icon slot="start" :icon="documentTextOutline"></ion-icon>
-          <ion-label>Registro</ion-label>
+          <ion-label>{{ t('budget.entries.inicioviewcomponent.registro') }}</ion-label>
         </ion-item>
         <ion-item button @click="handleProveedoresClick">
           <ion-icon slot="start" :icon="peopleOutline"></ion-icon>
-          <ion-label>Proveedores</ion-label>
+          <ion-label>{{ t('budget.entries.inicioviewcomponent.providers') }}</ion-label>
         </ion-item>
       </ion-list>
     </ion-content>

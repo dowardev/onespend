@@ -12,7 +12,7 @@ SPDX-License-Identifier: AGPL-3.0-only
           <ion-menu-button :mode="designMode"></ion-menu-button>
         </ion-buttons>
 
-        <ion-title>Presupuesto </ion-title>
+        <ion-title>{{ t('budget.budgetview.title') }}</ion-title>
 
         <ion-buttons slot="end">
           <ion-button v-if="pendingRecurringRecords.length > 0" @click="showPendingModal = true">
@@ -65,7 +65,7 @@ SPDX-License-Identifier: AGPL-3.0-only
           ></ion-datetime>
           <ion-item>
             <ion-button slot="end" fill="clear" color="primary" size="small" @click="goToToday">
-              Hoy
+              {{ t('common.today') }}
             </ion-button>
           </ion-item>
         </ion-content>
@@ -80,7 +80,7 @@ SPDX-License-Identifier: AGPL-3.0-only
         <ion-content>
           <ion-item button @click="confirmClearDay">
             <ion-icon slot="start" :icon="trashOutline" color="danger"></ion-icon>
-            <ion-label>Vaciar día</ion-label>
+            <ion-label>{{ t('budget.budgetview.clearDayLabel') }}</ion-label>
           </ion-item>
         </ion-content>
       </ion-popover>

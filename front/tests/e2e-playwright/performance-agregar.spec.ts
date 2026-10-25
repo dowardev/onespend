@@ -29,13 +29,13 @@ test('Performance empty section: Agregar navigates and help explains the concept
   await expect(
     page.locator('.info-popover').filter({ visible: true }).first(),
     'concept info popover should open',
-  ).toContainText('Todo el dinero que entra en el periodo', { timeout: 10000 })
+  ).toContainText('Todo el dinero que entra en el periodo', { timeout: 30000 })
 
   // Dismiss the popover, then "Agregar" navigates to the budget entry form.
   await page.keyboard.press('Escape')
   await page.waitForTimeout(300)
   await addBtn.click()
-  await expect(page).toHaveURL(/\/budget\/entry\/new/, { timeout: 10000 })
+  await expect(page).toHaveURL(/\/budget\/entry\/new/, { timeout: 30000 })
 })
 
 test('empty section Agregar carries entryType + date query params (REQ-6)', async ({ page }) => {
@@ -58,7 +58,7 @@ test('empty section Agregar carries entryType + date query params (REQ-6)', asyn
   const costBtn = page.locator('ion-item.empty-section', { hasText: 'Costo de Vida' }).getByRole('button', {
     name: 'Agregar',
   })
-  await expect(costBtn).toBeVisible({ timeout: 30000 })
+  await expect(costBtn).toBeVisible({ timeout: 60000 })
   await costBtn.click()
   await expect(page).toHaveURL(/\/budget\/entry\/new\?entryType=egreso&date=\d{4}-\d{2}-\d{2}/, {
     timeout: 10000,

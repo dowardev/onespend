@@ -12,7 +12,7 @@ SPDX-License-Identifier: AGPL-3.0-only
           <ion-back-button default-href="/sync"></ion-back-button>
         </ion-buttons>
 
-        <ion-title>Cola de elementos fallidos</ion-title>
+        <ion-title>{{ t('sync.dlqview.title') }}</ion-title>
       </ion-toolbar>
     </ion-header>
 
@@ -39,7 +39,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                     </h3>
 
                     <p>
-                      {{ item.errorCount }} {{ item.errorCount === 1 ? 'intento' : 'intentos' }} ·
+                      {{ item.errorCount }} {{ item.errorCount === 1 ? t('sync.dlqview.attemptSingle') : t('sync.dlqview.attemptMultiple') }} ·
                       {{ formatRelative({ timestamp: item.failedAt }) }}
                     </p>
 
@@ -57,8 +57,10 @@ SPDX-License-Identifier: AGPL-3.0-only
                     fill="clear"
                     color="medium"
                     :aria-label="
-                      (expandedKey === (item.id ?? item.entityId) ? 'Ocultar detalle de ' : 'Ver detalle de ') +
-                      getEntityLabel({ entity: item.entityType })
+                      (expandedKey === (item.id ?? item.entityId)
+                        ? t('sync.dlqview.aria.hideDetail', { entity: getEntityLabel({ entity: item.entityType }) })
+                        : t('sync.dlqview.aria.showDetail', { entity: getEntityLabel({ entity: item.entityType }) })
+                      )
                     "
                     @click="toggleDetail({ key: item.id ?? item.entityId })"
                   >
@@ -72,7 +74,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                     slot="end"
                     fill="clear"
                     color="primary"
-                    :aria-label="'Reintentar ' + getEntityLabel({ entity: item.entityType })"
+                    :aria-label="t('sync.dlqview.aria.retry', { entity: getEntityLabel({ entity: item.entityType }) })"
                     :disabled="isRetrying"
                     @click="handleRetry({ item })"
                   >
@@ -103,9 +105,9 @@ SPDX-License-Identifier: AGPL-3.0-only
             <div v-else class="empty-state">
               <ion-icon :icon="checkmarkCircleOutline" class="empty-icon"></ion-icon>
 
-              <h2>{{ t('sync.dlqview.title3') }}</h2>
+              <h2>{{ t('sync.dlqview.emptyTitle') }}</h2>
 
-              <p>La cola de elementos fallidos está vacía.</p>
+              <p>{{ t('sync.dlqview.emptyMessage') }}</p>
             </div>
           </ion-col>
         </ion-row>
@@ -199,9 +201,9 @@ async function handleRetry(params: { item: DeadLetterItem }) {
     await toast.present();
   } catch (error) {
     console.error('[DLQView] handleRetry failed:', error);
-    const msg = error instanceof Error ? error.message : 'Error al reintentar';
+    const msg = error instanceof Error ? error.message : t('sync.dlqview.errorGeneric');
     const toast = await toastController.create({
-      message: `Error al reintentar: ${msg}`,
+      message: t('sync.dlqview.errorRetry', { msg }),
       duration: 4000,
       color: 'danger',
     });
@@ -214,7 +216,7 @@ async function handleRetry(params: { item: DeadLetterItem }) {
 async function handleRetryAll() {
   const alert = await alertController.create({
     header: t('sync.dlqview.header1'),
-    message: `¿Reintentar ${dlqItems.value.length} elementos?`,
+    message: t('sync.dlqview.retryAllMessage', { count: dlqItems.value.length }),
     buttons: [
       {
         text: t('sync.dlqview.text1'),
@@ -237,9 +239,9 @@ async function handleRetryAll() {
             await toast.present();
           } catch (error) {
             console.error('[DLQView] handleRetryAll failed:', error);
-            const msg = error instanceof Error ? error.message : 'Error al reintentar';
+            const msg = error instanceof Error ? error.message : t('sync.dlqview.errorGeneric');
             const toast = await toastController.create({
-              message: `Error al reintentar: ${msg}`,
+              message: t('sync.dlqview.errorRetry', { msg }),
               duration: 4000,
               color: 'danger',
             });
@@ -301,41 +303,25 @@ function toggleDetail(params: { key: string | number }) {
 
 function getEntityLabel(params: { entity: string }) {
   const { entity } = params;
-  const labels: Record<string, string> = {
-    account: 'Cuentas',
-    budget: 'Presupuestos',
-    budget_entry: 'Entradas de gasto',
-    budget_entry_group: 'Grupos de entradas',
-    budget_provider: 'Proveedores del presupuesto',
-    budget_provider_product: 'Productos de proveedores',
-    entry: 'Entradas',
-    income: 'Ingresos',
-    recurring_record: 'Registros recurrentes',
-    recurring_record_product: 'Productos recurrentes',
-    supplier: 'Proveedores',
-    supplier_product: 'Productos de proveedores',
-    template: 'Plantillas',
-  };
-  return labels[entity] || entity;
+  const key = `sync.dlqview.entity.${entity}`;
+  const translated = t(key);
+  return translated !== key ? translated : entity;
 }
 
 function getOperationLabel(params: { operation: string }) {
   const { operation } = params;
-  const labels: Record<string, string> = {
-    create: 'Crear',
-    update: 'Actualizar',
-    delete: 'Eliminar',
-  };
-  return labels[operation] || operation;
+  const key = `sync.dlqview.operation.${operation}`;
+  const translated = t(key);
+  return translated !== key ? translated : operation;
 }
 
 function formatRelative(params: { timestamp: number }) {
   const { timestamp } = params;
   const diff = Date.now() - timestamp;
-  if (diff < 60000) return 'hace unos segundos';
-  if (diff < 3600000) return `hace ${Math.floor(diff / 60000)} min`;
-  if (diff < 86400000) return `hace ${Math.floor(diff / 3600000)} h`;
-  return `hace ${Math.floor(diff / 86400000)} días`;
+  if (diff < 60000) return t('sync.dlqview.time.secondsAgo');
+  if (diff < 3600000) return t('sync.dlqview.time.minutesAgo', { m: Math.floor(diff / 60000) });
+  if (diff < 86400000) return t('sync.dlqview.time.hoursAgo', { h: Math.floor(diff / 3600000) });
+  return t('sync.dlqview.time.daysAgo', { d: Math.floor(diff / 86400000) });
 }
 </script>
 

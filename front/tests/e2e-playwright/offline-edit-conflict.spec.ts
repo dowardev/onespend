@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import { test, expect, type Page, type BrowserContext } from '@playwright/test'
+import { enableSync } from './helpers/syncConfig'
 
 const CONFLICT_SYNC_ID = 'offline-conflict-001'
 
@@ -41,11 +42,14 @@ async function mockExternalCalls(page: Page) {
 }
 
 async function navigateAndWait(page: Page, url: string) {
-  await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45000 })
+  await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 120000 })
   await page.waitForFunction(() => {
     const w = window as Record<string, unknown>
     return typeof w.__devDb !== 'undefined'
-  }, { timeout: 15000 })
+  }, { timeout: 30000 })
+  // Sync is opt-in (LBDS-289): resolving a conflict calls the server, and the
+  // API refuses every call while sync is off.
+  await enableSync(page)
 }
 
 async function injectConflict(page: Page, conflictType: string) {
@@ -86,15 +90,15 @@ test.describe('Offline Edit Conflict', () => {
     await navigateAndWait(pageB, '/budget')
 
     await injectConflict(pageA, 'concurrent_edit')
-    await pageA.goto('/sync', { waitUntil: 'domcontentloaded', timeout: 45000 })
-    await pageA.waitForFunction(() => (window as Record<string, unknown>).__devDb !== undefined, { timeout: 15000 })
+    await pageA.goto('/sync', { waitUntil: 'domcontentloaded', timeout: 120000 })
+    await pageA.waitForFunction(() => (window as Record<string, unknown>).__devDb !== undefined, { timeout: 30000 })
 
-    await expect(pageA.locator('[data-cy="conflicts-card"]')).toBeVisible({ timeout: 10000 })
+    await expect(pageA.locator('[data-cy="conflicts-card"]')).toBeVisible({ timeout: 30000 })
     await expect(pageA.locator('[data-cy="conflict-count-badge"]')).toContainText('1')
     await pageA.locator('[data-cy="conflict-badge"]').first().click()
-    await expect(pageA.locator('[data-cy="conflict-modal"]')).toBeVisible({ timeout: 10000 })
+    await expect(pageA.locator('[data-cy="conflict-modal"]')).toBeVisible({ timeout: 30000 })
     await pageA.locator('[data-cy="resolve-client-btn"]').click()
-    await expect(pageA.getByText('Conflicto resuelto')).toBeVisible({ timeout: 15000 })
+    await expect(pageA.getByText('Conflicto resuelto')).toBeVisible({ timeout: 30000 })
 
     const count = await pageA.evaluate(async () => {
       const devDb = (window as Record<string, unknown>).__devDb as { getConflictCount(): Promise<number> } | undefined
@@ -116,14 +120,14 @@ test.describe('Offline Edit Conflict', () => {
     await navigateAndWait(pageB, '/budget')
 
     await injectConflict(pageA, 'concurrent_edit')
-    await pageA.goto('/sync', { waitUntil: 'domcontentloaded', timeout: 45000 })
-    await pageA.waitForFunction(() => (window as Record<string, unknown>).__devDb !== undefined, { timeout: 15000 })
+    await pageA.goto('/sync', { waitUntil: 'domcontentloaded', timeout: 120000 })
+    await pageA.waitForFunction(() => (window as Record<string, unknown>).__devDb !== undefined, { timeout: 30000 })
 
-    await expect(pageA.locator('[data-cy="conflicts-card"]')).toBeVisible({ timeout: 10000 })
+    await expect(pageA.locator('[data-cy="conflicts-card"]')).toBeVisible({ timeout: 30000 })
     await pageA.locator('[data-cy="conflict-badge"]').first().click()
-    await expect(pageA.locator('[data-cy="conflict-modal"]')).toBeVisible({ timeout: 10000 })
+    await expect(pageA.locator('[data-cy="conflict-modal"]')).toBeVisible({ timeout: 30000 })
     await pageA.locator('[data-cy="resolve-server-btn"]').click()
-    await expect(pageA.getByText('Conflicto resuelto')).toBeVisible({ timeout: 15000 })
+    await expect(pageA.getByText('Conflicto resuelto')).toBeVisible({ timeout: 30000 })
 
     await contextA.close()
     await contextB.close()
@@ -135,17 +139,17 @@ test.describe('Offline Edit Conflict', () => {
 
     await navigateAndWait(page, '/budget')
     await injectConflict(page, 'concurrent_edit')
-    await page.goto('/sync', { waitUntil: 'domcontentloaded', timeout: 45000 })
-    await page.waitForFunction(() => (window as Record<string, unknown>).__devDb !== undefined, { timeout: 15000 })
+    await page.goto('/sync', { waitUntil: 'domcontentloaded', timeout: 120000 })
+    await page.waitForFunction(() => (window as Record<string, unknown>).__devDb !== undefined, { timeout: 30000 })
 
-    await expect(page.locator('[data-cy="conflicts-card"]')).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('[data-cy="conflicts-card"]')).toBeVisible({ timeout: 30000 })
     await page.locator('[data-cy="conflict-badge"]').first().click()
     await page.locator('[data-cy="resolve-client-btn"]').click()
-    await expect(page.getByText('Conflicto resuelto')).toBeVisible({ timeout: 15000 })
+    await expect(page.getByText('Conflicto resuelto')).toBeVisible({ timeout: 30000 })
 
-    await page.reload({ waitUntil: 'domcontentloaded', timeout: 45000 })
-    await page.waitForFunction(() => (window as Record<string, unknown>).__devDb !== undefined, { timeout: 15000 })
-    await expect(page.locator('[data-cy="conflicts-card"]')).not.toBeVisible({ timeout: 10000 })
+    await page.reload({ waitUntil: 'domcontentloaded', timeout: 120000 })
+    await page.waitForFunction(() => (window as Record<string, unknown>).__devDb !== undefined, { timeout: 30000 })
+    await expect(page.locator('[data-cy="conflicts-card"]')).not.toBeVisible({ timeout: 30000 })
   })
 
   test('same-context: concurrent_edit conflict across two browser pages', async ({ browser }) => {
@@ -163,12 +167,12 @@ test.describe('Offline Edit Conflict', () => {
 
     await injectConflict(pageA, 'concurrent_edit')
 
-    await pageA.goto('/sync', { waitUntil: 'domcontentloaded', timeout: 45000 })
-    await pageA.waitForFunction(() => (window as Record<string, unknown>).__devDb !== undefined, { timeout: 15000 })
-    await expect(pageA.locator('[data-cy="conflicts-card"]')).toBeVisible({ timeout: 10000 })
+    await pageA.goto('/sync', { waitUntil: 'domcontentloaded', timeout: 120000 })
+    await pageA.waitForFunction(() => (window as Record<string, unknown>).__devDb !== undefined, { timeout: 30000 })
+    await expect(pageA.locator('[data-cy="conflicts-card"]')).toBeVisible({ timeout: 30000 })
 
-    await pageB.goto('/sync', { waitUntil: 'domcontentloaded', timeout: 45000 })
-    await pageB.waitForFunction(() => (window as Record<string, unknown>).__devDb !== undefined, { timeout: 15000 })
+    await pageB.goto('/sync', { waitUntil: 'domcontentloaded', timeout: 120000 })
+    await pageB.waitForFunction(() => (window as Record<string, unknown>).__devDb !== undefined, { timeout: 30000 })
 
     const countA = await pageA.evaluate(async () => {
       const devDb = (window as Record<string, unknown>).__devDb as { getConflictCount(): Promise<number> } | undefined
@@ -176,7 +180,7 @@ test.describe('Offline Edit Conflict', () => {
     })
     expect(countA).toBe(1)
 
-    await expect(pageB.locator('[data-cy="conflicts-card"]')).toBeVisible({ timeout: 10000 })
+    await expect(pageB.locator('[data-cy="conflicts-card"]')).toBeVisible({ timeout: 30000 })
     await expect(pageB.locator('[data-cy="conflict-count-badge"]')).toContainText('1')
 
     await context.close()

@@ -13,7 +13,7 @@ test('pause works on a recurring record that has an endDate set', async ({ page 
   // Seed so the Dexie store exists, then inject a record with endDate + autoInsert (mirrors a
   // user-created "ends 31 Aug" charge). Raw IndexedDB mirrors what the app persists.
   const seedBtn = page.locator('ion-header ion-buttons[slot="end"] > ion-button').first()
-  await expect(seedBtn, 'dev seed (flask) button should be visible').toBeVisible({ timeout: 30000 })
+  await expect(seedBtn, 'dev seed (flask) button should be visible').toBeVisible({ timeout: 60000 })
   await seedBtn.click()
   await page.waitForTimeout(1500)
 
@@ -50,14 +50,14 @@ test('pause works on a recurring record that has an endDate set', async ({ page 
   await page.waitForLoadState('networkidle')
 
   const row = page.locator('ion-item', { hasText: 'Recurrente Agosto' }).first()
-  await expect(row, 'record with endDate should render').toBeVisible({ timeout: 30000 })
+  await expect(row, 'record with endDate should render').toBeVisible({ timeout: 60000 })
 
   const pauseBtn = row.locator('ion-button').first()
   await expect(pauseBtn, 'pause button should be visible for an autoInsert record').toBeVisible()
   await pauseBtn.click()
 
   const resumeBtn = row.locator('ion-button').first()
-  await expect(resumeBtn, 'after pause the button should show "Reanudar" (endDate is irrelevant)').toBeVisible({ timeout: 10000 })
+  await expect(resumeBtn, 'after pause the button should show "Reanudar" (endDate is irrelevant)').toBeVisible({ timeout: 30000 })
       await expect(
         page.locator('ion-badge', { hasText: 'Pausado' }).first(),
         'status badge should show "Pausado"',

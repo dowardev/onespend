@@ -127,8 +127,8 @@ SPDX-License-Identifier: AGPL-3.0-only
     <!-- alerts -->
     <ion-alert
       :is-open="deleteConfirm.open"
-      :header="'Eliminar cargo recurrente'"
-      :message="`¿Eliminar ${deleteConfirm.recordName}?`"
+      :header="t('recurring.recurringpage.deleteAlertHeader')"
+      :message="t('recurring.recurringpage.deleteAlertMessage', { name: deleteConfirm.recordName })"
       :buttons="deleteAlertButtons"
       @did-dismiss="onDeleteAlertDidDismiss"
     />
@@ -207,32 +207,49 @@ const deleteConfirm = reactive({
 
 const isDev = import.meta.env.DEV;
 
-const weekDayShort = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
-const weekDayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-const monthNames = [
-  'Enero',
-  'Febrero',
-  'Marzo',
-  'Abril',
-  'Mayo',
-  'Junio',
-  'Julio',
-  'Agosto',
-  'Septiembre',
-  'Octubre',
-  'Noviembre',
-  'Diciembre',
+// Translation keys for frequency description
+const weekDayShortKeys = [
+  'recurring.recurringpage.weekdayShort.0',
+  'recurring.recurringpage.weekdayShort.1',
+  'recurring.recurringpage.weekdayShort.2',
+  'recurring.recurringpage.weekdayShort.3',
+  'recurring.recurringpage.weekdayShort.4',
+  'recurring.recurringpage.weekdayShort.5',
+  'recurring.recurringpage.weekdayShort.6',
 ];
-const ordinalNames = [
+const weekDayNamesKeys = [
+  'recurring.recurringpage.weekdayFull.0',
+  'recurring.recurringpage.weekdayFull.1',
+  'recurring.recurringpage.weekdayFull.2',
+  'recurring.recurringpage.weekdayFull.3',
+  'recurring.recurringpage.weekdayFull.4',
+  'recurring.recurringpage.weekdayFull.5',
+  'recurring.recurringpage.weekdayFull.6',
+];
+const monthNamesKeys = [
+  'recurring.recurringpage.month.1',
+  'recurring.recurringpage.month.2',
+  'recurring.recurringpage.month.3',
+  'recurring.recurringpage.month.4',
+  'recurring.recurringpage.month.5',
+  'recurring.recurringpage.month.6',
+  'recurring.recurringpage.month.7',
+  'recurring.recurringpage.month.8',
+  'recurring.recurringpage.month.9',
+  'recurring.recurringpage.month.10',
+  'recurring.recurringpage.month.11',
+  'recurring.recurringpage.month.12',
+];
+const ordinalNamesKeys = [
   '',
-  'Primer',
-  'Segundo',
-  'Tercer',
-  'Cuarto',
-  'Quinto',
-  'Sexto',
-  'Séptimo',
-  'Octavo',
+  'recurring.recurringpage.ordinal.1',
+  'recurring.recurringpage.ordinal.2',
+  'recurring.recurringpage.ordinal.3',
+  'recurring.recurringpage.ordinal.4',
+  'recurring.recurringpage.ordinal.5',
+  'recurring.recurringpage.ordinal.6',
+  'recurring.recurringpage.ordinal.7',
+  'recurring.recurringpage.ordinal.8',
 ];
 const syncRecurringRecord = syncQueue.syncRecurringRecord;
 // End Vars and const
@@ -299,7 +316,7 @@ onIonViewWillEnter(() => {
 // Functions
 function typeLabel(params: { record: RecurringRecord }) {
   const { record } = params;
-  return record.type === 'cargo' ? 'Cargo' : 'Provedor';
+  return record.type === 'cargo' ? t('recurring.recurringpage.type.charge') : t('recurring.recurringpage.type.provider');
 }
 
 function frequencyDescription(params: { record: RecurringRecord }) {
@@ -308,29 +325,36 @@ function frequencyDescription(params: { record: RecurringRecord }) {
 
   switch (record.repeatFrequency) {
     case 'day':
-      return interval === 1 ? 'Cada día' : `Cada ${interval} días`;
+      return interval === 1
+        ? t('recurring.recurringpage.freq.day.single')
+        : t('recurring.recurringpage.freq.day.multiple', { n: interval });
     case 'week': {
       const days = (record.repeatDays || [])
         .sort((a, b) => a - b)
-        .map((d) => weekDayShort[d] || '')
+        .map((d) => t(weekDayShortKeys[d]))
         .filter(Boolean)
         .join(', ');
-      const base = interval === 1 ? 'Cada semana' : `Cada ${interval} semanas`;
+      const base = interval === 1
+        ? t('recurring.recurringpage.freq.week.single')
+        : t('recurring.recurringpage.freq.week.multiple', { n: interval });
       return days ? `${base} - ${days}` : base;
     }
     case 'month':
       if (record.repeatMonthWeekdayMode) {
         const ordinalIdx = record.repeatMonthWeekdayOrdinal ?? 1;
-        const ordinal = ordinalIdx === -1 ? 'Último' : ordinalNames[ordinalIdx] || 'Primer';
-        const weekday = weekDayNames[record.repeatMonthWeekday ?? 0] || '';
-        return `Cada mes - ${ordinal} ${weekday}`;
+        const ordinalKey = ordinalIdx === -1 ? 'recurring.recurringpage.ordinal.last' : ordinalNamesKeys[ordinalIdx];
+        const ordinal = t(ordinalKey);
+        const weekday = t(weekDayNamesKeys[record.repeatMonthWeekday ?? 0]);
+        return t('recurring.recurringpage.freq.month.weekday', { ordinal, weekday });
       }
-      return `Cada mes - día ${record.repeatMonthDay || 1}`;
+      return t('recurring.recurringpage.freq.month.day', { day: record.repeatMonthDay || 1 });
     case 'year': {
-      const month = monthNames[(record.repeatYearMonth || 1) - 1];
+      const month = t(monthNamesKeys[(record.repeatYearMonth || 1) - 1]);
       const day = record.repeatYearDay || 1;
-      const base = interval === 1 ? 'Cada año' : `Cada ${interval} años`;
-      return `${base} - ${month} ${day}`;
+      const base = interval === 1
+        ? t('recurring.recurringpage.freq.year.single')
+        : t('recurring.recurringpage.freq.year.multiple', { n: interval });
+      return t('recurring.recurringpage.freq.year.withDate', { base, month, day });
     }
     default:
       return '';
@@ -364,7 +388,7 @@ async function toggleRecord(params: { record: RecurringRecord }) {
   await recurringRecordsController.toggleActive({ id: recId });
   await loadRecords();
   const toast = await toastController.create({
-    message: willPause ? 'Cargo pausado' : 'Cargo reanudado',
+    message: willPause ? t('recurring.recurringpage.toast.paused') : t('recurring.recurringpage.toast.resumed'),
     duration: 2000,
     position: 'bottom',
     color: willPause ? 'warning' : 'success',

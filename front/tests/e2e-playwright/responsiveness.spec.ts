@@ -55,12 +55,12 @@ for (const vp of VIEWPORTS) {
       await setupAuth(page)
       await mockExternalCalls(page)
 
-      await page.goto(route, { waitUntil: 'domcontentloaded', timeout: 45000 })
+      await page.goto(route, { waitUntil: 'domcontentloaded', timeout: 120000 })
       // wait for Vue app to mount and the global dev db to exist (same pattern as conflict-resolution.spec.ts)
       await page.waitForFunction(() => {
         const w = window as Record<string, unknown>
         return typeof w.__devDb !== 'undefined'
-      }, { timeout: 15000 })
+      }, { timeout: 30000 })
 
       const overflow = await page.evaluate(() => {
         const doc = document.documentElement

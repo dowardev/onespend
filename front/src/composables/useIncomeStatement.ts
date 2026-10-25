@@ -14,6 +14,9 @@ export interface StatementItem {
 }
 
 export interface StatementSection {
+  // Glossary slug of the section (see useFinancialGlossary): the help popover
+  // looks the definition up by slug, not by the translated title.
+  key: string
   title: string
   items: StatementItem[]
   total: number
@@ -223,14 +226,14 @@ export function useIncomeStatement(params: {
     const netResultPercent = incomeTotal > 0 ? Number(((netResult / incomeTotal) * 100).toFixed(1)) : 0
 
     return {
-      incomes: { title: t('statistics.performance.useincomestatement.incomes'), items: incomeItems, total: incomeTotal },
-      costOfLife: { title: t('statistics.performance.useincomestatement.costOfLife'), items: costOfLifeItems, total: costOfLifeTotal },
+      incomes: { key: 'incomes', title: t('statistics.performance.useincomestatement.incomes'), items: incomeItems, total: incomeTotal },
+      costOfLife: { key: 'costOfLife', title: t('statistics.performance.useincomestatement.costOfLife'), items: costOfLifeItems, total: costOfLifeTotal },
       grossProfit,
       grossProfitPercent,
-      discretionaryExpenses: { title: t('statistics.performance.useincomestatement.discretionaryExpenses'), items: discretionaryItems, total: discretionaryTotal },
+      discretionaryExpenses: { key: 'discretionaryExpenses', title: t('statistics.performance.useincomestatement.discretionaryExpenses'), items: discretionaryItems, total: discretionaryTotal },
       operatingSavings,
       operatingSavingsPercent,
-      financialExpenses: { title: t('statistics.performance.useincomestatement.financialExpenses'), items: financialItems, total: financialTotal },
+      financialExpenses: { key: 'financialExpenses', title: t('statistics.performance.useincomestatement.financialExpenses'), items: financialItems, total: financialTotal },
       netResult,
       netResultPercent,
     }

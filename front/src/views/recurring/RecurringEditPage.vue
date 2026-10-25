@@ -61,7 +61,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                     label-placement="stacked"
                   >
                     <ion-select-option value="cargo">{{ t("recurring.edit.type.cargo") }}</ion-select-option>
-                    <ion-select-option value="provedor">Proveedor</ion-select-option>
+                    <ion-select-option value="provedor">{{ t("recurring.edit.type.provider") }}</ion-select-option>
                   </ion-select>
                 </ion-item>
 
@@ -80,7 +80,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                     label-placement="stacked"
                   >
                     <ion-select-option value="ingreso">{{ t("recurring.edit.entryType.income") }}</ion-select-option>
-                    <ion-select-option value="egreso">Egreso</ion-select-option>
+                    <ion-select-option value="egreso">{{ t("recurring.edit.entryType.expense") }}</ion-select-option>
                   </ion-select>
                 </ion-item>
 
@@ -92,7 +92,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                   @click="showSupplierModal = true"
                 >
                   <ion-label class="truncate">
-                    Proveedor
+                    {{ t('recurring.edit.field.supplier') }}
                     <p class="truncate">
                       {{ selectedSupplierName || t('common.selectProvider') }}
                     </p>
@@ -165,7 +165,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                       :class="{ 'chip-selected': formData.repeatDays?.includes(day.value) }"
                       @click="toggleDayOfWeek({ day: day.value })"
                     >
-                      {{ day.label }}
+                      {{ t(day.key) }}
                     </ion-chip>
                   </div>
                 </ion-item>
@@ -207,7 +207,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                           :key="ord.value"
                           :value="ord.value"
                         >
-                          {{ ord.label }}
+                          {{ t(ord.key) }}
                         </ion-select-option>
                       </ion-select>
                     </ion-item>
@@ -224,7 +224,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                           :key="day.value"
                           :value="day.value"
                         >
-                          {{ day.label }}
+                          {{ t(day.key) }}
                         </ion-select-option>
                       </ion-select>
                     </ion-item>
@@ -241,7 +241,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                       label-placement="stacked"
                     >
                       <ion-select-option v-for="m in months" :key="m.value" :value="m.value">
-                        {{ m.label }}
+                        {{ t(m.key) }}
                       </ion-select-option>
                     </ion-select>
                   </ion-item>
@@ -408,7 +408,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                 <ion-item lines="none" class="transparent">
                   <ion-textarea
                     v-model="formData.notes"
-                    label="Notas"
+                    :label="t('recurring.edit.field.notes')"
                     label-placement="stacked"
                     :placeholder="t('recurring.edit.field.notesPlaceholder')"
                     :auto-grow="true"
@@ -664,17 +664,17 @@ import CategoryPickerModal from '@/components/CategoryPickerModal.vue';
 
 // interface and types imports
 interface WeekDay {
-  label: string;
+  key: string;
   value: number;
 }
 
 interface MonthOption {
-  label: string;
+  key: string;
   value: number;
 }
 
 interface OrdinalOption {
-  label: string;
+  key: string;
   value: number;
 }
 
@@ -733,7 +733,7 @@ const rules = computed(() => ({
   repeatFrequency: { required },
   items: {
     itemsValid: helpers.withMessage(
-      'Todos los items deben tener un monto válido y cuenta asignada',
+      t('recurring.edit.validation.itemsValid'),
       itemsValidator,
     ),
   },
@@ -773,46 +773,46 @@ const popoverMenu = reactive({ open: false, event: null as Event | null });
 
 // Weekday constants
 const weekDays: WeekDay[] = [
-  { label: 'D', value: 0 },
-  { label: 'L', value: 1 },
-  { label: 'M', value: 2 },
-  { label: 'M', value: 3 },
-  { label: 'J', value: 4 },
-  { label: 'V', value: 5 },
-  { label: 'S', value: 6 },
+  { key: 'recurring.edit.weekday.short.0', value: 0 },
+  { key: 'recurring.edit.weekday.short.1', value: 1 },
+  { key: 'recurring.edit.weekday.short.2', value: 2 },
+  { key: 'recurring.edit.weekday.short.3', value: 3 },
+  { key: 'recurring.edit.weekday.short.4', value: 4 },
+  { key: 'recurring.edit.weekday.short.5', value: 5 },
+  { key: 'recurring.edit.weekday.short.6', value: 6 },
 ];
 
 const weekDayLabels: WeekDay[] = [
-  { label: 'Domingo', value: 0 },
-  { label: 'Lunes', value: 1 },
-  { label: 'Martes', value: 2 },
-  { label: 'Miércoles', value: 3 },
-  { label: 'Jueves', value: 4 },
-  { label: 'Viernes', value: 5 },
-  { label: 'Sábado', value: 6 },
+  { key: 'recurring.edit.weekday.full.0', value: 0 },
+  { key: 'recurring.edit.weekday.full.1', value: 1 },
+  { key: 'recurring.edit.weekday.full.2', value: 2 },
+  { key: 'recurring.edit.weekday.full.3', value: 3 },
+  { key: 'recurring.edit.weekday.full.4', value: 4 },
+  { key: 'recurring.edit.weekday.full.5', value: 5 },
+  { key: 'recurring.edit.weekday.full.6', value: 6 },
 ];
 
 const months: MonthOption[] = [
-  { label: 'Enero', value: 1 },
-  { label: 'Febrero', value: 2 },
-  { label: 'Marzo', value: 3 },
-  { label: 'Abril', value: 4 },
-  { label: 'Mayo', value: 5 },
-  { label: 'Junio', value: 6 },
-  { label: 'Julio', value: 7 },
-  { label: 'Agosto', value: 8 },
-  { label: 'Septiembre', value: 9 },
-  { label: 'Octubre', value: 10 },
-  { label: 'Noviembre', value: 11 },
-  { label: 'Diciembre', value: 12 },
+  { key: 'recurring.edit.month.1', value: 1 },
+  { key: 'recurring.edit.month.2', value: 2 },
+  { key: 'recurring.edit.month.3', value: 3 },
+  { key: 'recurring.edit.month.4', value: 4 },
+  { key: 'recurring.edit.month.5', value: 5 },
+  { key: 'recurring.edit.month.6', value: 6 },
+  { key: 'recurring.edit.month.7', value: 7 },
+  { key: 'recurring.edit.month.8', value: 8 },
+  { key: 'recurring.edit.month.9', value: 9 },
+  { key: 'recurring.edit.month.10', value: 10 },
+  { key: 'recurring.edit.month.11', value: 11 },
+  { key: 'recurring.edit.month.12', value: 12 },
 ];
 
 const monthOrdinals: OrdinalOption[] = [
-  { label: 'Primer', value: 1 },
-  { label: 'Segundo', value: 2 },
-  { label: 'Tercer', value: 3 },
-  { label: 'Cuarto', value: 4 },
-  { label: 'Último', value: -1 },
+  { key: 'recurring.edit.ordinal.1', value: 1 },
+  { key: 'recurring.edit.ordinal.2', value: 2 },
+  { key: 'recurring.edit.ordinal.3', value: 3 },
+  { key: 'recurring.edit.ordinal.4', value: 4 },
+  { key: 'recurring.edit.ordinal.last', value: -1 },
 ];
 
 // Composable instances

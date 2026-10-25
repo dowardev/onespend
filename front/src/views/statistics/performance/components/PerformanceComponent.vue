@@ -100,7 +100,7 @@ SPDX-License-Identifier: AGPL-3.0-only
           <ion-list class="transparent section-list">
             <ion-list-header class="section-header">
               <ion-label class="section-title">
-                <FinancialInfoPopover :term="section.title" inline>
+                <FinancialInfoPopover :term="section.key" inline>
                   <template #trigger>
                     <strong style="cursor: pointer">{{ section.title }}</strong>
                   </template>
@@ -132,7 +132,7 @@ SPDX-License-Identifier: AGPL-3.0-only
               >
                 {{ t('statistics.performance.performancecomponent.add') }}
               </ion-button>
-              <FinancialInfoPopover :term="section.title">
+              <FinancialInfoPopover :term="section.key">
                 <template #trigger>
                   <ion-icon
                     :icon="helpCircleOutline"
@@ -153,7 +153,7 @@ SPDX-License-Identifier: AGPL-3.0-only
               >
                 <ion-item lines="none" class="transparent ion-no-padding summary-label-item">
                   <ion-label class="summary-label">
-                    <FinancialInfoPopover :term="cards[idx].label" inline>
+                    <FinancialInfoPopover :term="cards[idx].key" inline>
                       <template #trigger>
                         <strong style="cursor: pointer">{{ cards[idx].label }}</strong>
                       </template>
@@ -217,7 +217,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
     <ion-item v-for="row in comparisonRows" :key="row.key" lines="full">
       <ion-label class="cmp-name">
-        <FinancialInfoPopover :term="row.label" inline>
+        <FinancialInfoPopover :term="row.key" inline>
           <template #trigger>
             <strong style="cursor: pointer">{{ row.label }}</strong>
           </template>
@@ -354,6 +354,8 @@ const sections = computed(() => [
 ]);
 
 interface CardData {
+  // Glossary slug: the help popover resolves the definition by slug.
+  key: string;
   label: string;
   amount: number;
   percent: number;
@@ -365,18 +367,21 @@ const cards = computed<Record<number, CardData>>(() => {
   const c = comparison.value;
   return {
     1: {
+      key: 'grossProfit',
       label: t('statistics.performance.components.performancecomponent.label1'),
       amount: s.grossProfit,
       percent: s.grossProfitPercent,
       diff: c ? s.grossProfit - c.grossProfit : null,
     },
     2: {
+      key: 'operatingSavings',
       label: t('statistics.performance.components.performancecomponent.label2'),
       amount: s.operatingSavings,
       percent: s.operatingSavingsPercent,
       diff: c ? s.operatingSavings - c.operatingSavings : null,
     },
     3: {
+      key: 'netResult',
       label: t('statistics.performance.components.performancecomponent.label3'),
       amount: s.netResult,
       percent: s.netResultPercent,

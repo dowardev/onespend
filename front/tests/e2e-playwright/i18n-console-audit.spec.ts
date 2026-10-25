@@ -3,7 +3,7 @@
 import { test, expect } from '@playwright/test';
 
 test('no i18n console errors on main pages', async ({ page }) => {
-  test.setTimeout(120000);
+  test.setTimeout(300000);
   const errors: string[] = [];
   page.on('console', (msg) => {
     if (msg.type() === 'error') {
@@ -21,7 +21,7 @@ test('no i18n console errors on main pages', async ({ page }) => {
 
   const routes = ['/', '/budget', '/recurring', '/statistics/cashflow', '/statistics/performance', '/accounts', '/sync', '/downloads'];
   for (const route of routes) {
-    const resp = await page.goto(route, { waitUntil: 'domcontentloaded' });
+    const resp = await page.goto(route, { waitUntil: 'domcontentloaded', timeout: 120000 });
     if (!resp || resp.status() >= 400) continue;
     await page.waitForTimeout(2000);
   }

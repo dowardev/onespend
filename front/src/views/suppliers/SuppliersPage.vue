@@ -12,7 +12,7 @@ SPDX-License-Identifier: AGPL-3.0-only
           <ion-menu-button :mode="designMode" />
         </ion-buttons>
 
-        <ion-title>Provedores</ion-title>
+        <ion-title>{{ t('suppliers.supplierspage.title') }}</ion-title>
 
         <ion-buttons slot="end">
           <ion-button @click="openModal()">
@@ -105,7 +105,7 @@ SPDX-License-Identifier: AGPL-3.0-only
       <!-- alerts -->
       <ion-alert
         :is-open="deleteConfirmSupplier.open"
-        :message="`¿Eliminar proveedor ${deleteConfirmSupplier.supplierName}?`"
+        :message="t('suppliers.supplierspage.deleteConfirm', { name: deleteConfirmSupplier.supplierName })"
         :buttons="getAlertButtonsSupplier()"
         @did-dismiss="onDeleteAlertDidDismissSupplier"
       ></ion-alert>

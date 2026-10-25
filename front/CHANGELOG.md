@@ -8,9 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- CI job `frontend_e2e`: the Playwright suite (`front/tests/e2e-playwright/`) now runs in CI — in its own job, on the Playwright browser image, for merge requests and for release tags — uploading the HTML report and the test artifacts. It is `allow_failure: true` for now, so a red e2e does not block a merge while the suite stabilises (GitLab #18).
+- `front/tests/e2e-playwright/global-setup.ts`: warms up vite's on-demand transform cache before the first spec runs, so the first navigation does not pay the cold start of the whole route.
+- `front/tests/e2e-playwright/helpers/syncConfig.ts`: `enableSync()` opts the browser context into sync, which the sync specs need — sync is opt-in since LBDS-289, so without it the sync button stays disabled and nothing is ever pushed.
 - Optional time of day on budget entries and optional category on recurring charges: `BudgetEntryRow.time` and `RecurringRecordRow.category` are declared on the row types, `toBudgetEntryRow` / `mapEntryRow` preserve them, and `addIngreso` / `addEgreso` carry `time` on the create path. The live pull path (`mapServerItemToRow`) restores `budget_entry.time` (normalizing the server's `HH:MM:SS` to `HH:MM`) and `recurring_record.category`; the push mapper (`toApiFormat`) sends both. The entry form gets a time picker (same popover as the date, commits on Apply, defaults to the current time for a new entry), the recurring form gets a category picker reusing `CategoryPickerModal`, and the Historial list shows the time when the entry has one. A recurring charge with `autoInsert` propagates its category to the entry it generates (LBDS-273).
 
+### Changed
+- `front/playwright.config.ts`: the browser locale is pinned to `es-ES` (the specs assert Spanish UI strings and the app picks its language from `navigator.language`), the global timeout goes from 60s to 300s for the cold start, the HTML report is generated, and chromium runs with `--no-sandbox --disable-dev-shm-usage` so it survives a container.
+- `front/vite.config.ts`: the e2e dev server (`VITE_E2E=true`) hides the fixed dev-mode banner, which used to swallow the clicks aimed at the elements underneath it.
+
 ### Fixed
+- `syncController.getResolvedConflicts()` no longer lets `SyncDisabledError` escape when sync is off: the rejection aborted the whole status refresh of the `/sync` page, leaving it without the conflict list and with a page error in the console.
+- Untranslated strings replaced by vue-i18n keys in the budget, recurring, performance, suppliers, accounts and failed-items-queue views, and the missing English keys added to `en.json` (including 12 `sync.dlqview.*` keys that were never added and rendered as raw key paths).
+- The performance help popovers resolve their glossary entry by slug (`section.key` / `row.key`) instead of the translated title, so the concept definition shows up again.
+- E2E specs updated for the current app: the sync specs opt into sync, the accordion header is scrolled with the browser (Ionic scrolls inside the shadow root of `ion-content`, which Playwright's auto-scroll does not follow), the i18n audit opens a page per route and got a bigger timeout, and `sync-divergence` mocks the session check (without it the app drops the fake token and renders the login gate instead of the sync page).
 - `notes` field on budget entries saved and synced end-to-end: `BudgetEntryRow.notes` is declared on the row type, `toBudgetEntryRow` and `mapEntryRow` preserve it, `addIngreso` / `addEgreso` accept `notes` on create, and the live pull mapper (`mapServerItemToRow`) restores it from the server payload. The sync push (`toApiFormat('budget_entry')`) and pull (`fromApiFormat('budget_entry')`) carry the field. The form preserves the absence of a note as `undefined` (no `notes: ''` wipe on the first edit of a pre-fix row) and the notes textarea enforces a 2000-char limit to match the server validation (LBDS-275).
 
 ## [v0.79.0] - 2026-10-11
