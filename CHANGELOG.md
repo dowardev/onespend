@@ -14,6 +14,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 ### Fixed
 - Notes typed on a budget entry now persist and sync across devices. The free-form note field on the entry form is saved locally, included in the sync payload, stored on the server, and restored when the entry is reopened, so the note survives save → reload → sync round-trip (LBDS-275).
 - Syncing several records at once no longer drops a field (such as the note on an entry) when the first record of the batch did not have that field: every record now gets the fields it actually sent, and the ones it did not send keep their previous value (GitLab #16).
+- The app now speaks English on the screens that used to keep Spanish: budget, recurring charges, performance, suppliers, accounts and the failed-items queue now show translated labels, placeholders and confirmations, and the performance help popovers explain each concept again (GitLab #18).
+- The synchronization screen no longer breaks when synchronization is turned off: it used to fail while loading its status, so the page showed no conflict list and logged an error (GitLab #18).
 
 ## [v0.79.0] - 2026-10-11
 

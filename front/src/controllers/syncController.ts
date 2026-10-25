@@ -479,11 +479,20 @@ class SyncController {
   }
 
   async getResolvedConflicts(): Promise<any[]> {
-    const { syncApiService } = await import('@/services/sync/SyncApiService');
-    const response = await syncApiService.getResolvedConflicts();
-    if (!response.ok) return [];
-    const data = await response.json();
-    return data.conflicts ?? [];
+    const { syncApiService, SyncDisabledError } = await import('@/services/sync/SyncApiService');
+    try {
+      const response = await syncApiService.getResolvedConflicts();
+      if (!response.ok) return [];
+      const data = await response.json();
+      return data.conflicts ?? [];
+    } catch (error) {
+      // Sync is opt-in (LBDS-289): with sync disabled the API refuses every
+      // call, and the "resolved conflicts" list simply does not exist. The
+      // /sync view used to let that rejection escape, which aborted the whole
+      // status refresh and left the page without its conflict list.
+      if (error instanceof SyncDisabledError) return [];
+      throw error;
+    }
   }
 
   async getActiveConflicts(): Promise<Array<{ entityType: string; sync_id: string; diffs: import('@/utils/conflictDiff').FieldDiff[]; client_data: SyncItemData; server_data?: SyncItemData }>> {

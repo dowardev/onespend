@@ -28,8 +28,7 @@ SPDX-License-Identifier: AGPL-3.0-only
               </ion-item>
               <ion-card-content>
                 <ion-note color="medium" class="ion-text-wrap">
-                      La sección define en qué bloque del Income Statement va una categoría. Solo
-                      cambia el orden de tus números en esa vista — tus datos quedan iguales.
+                      {{ t('statistics.performance.config.performanceconfigpage.description') }}
                 </ion-note>
               </ion-card-content>
             </ion-card>
@@ -93,10 +92,10 @@ const sectionMap = ref<IncomeStatementSectionMap>({
 });
 
 const sections: Array<{ key: IncomeStatementSection; label: string }> = [
-  { key: 'incomes', label: 'Ingresos' },
-  { key: 'costOfLife', label: 'Costo de Vida' },
-  { key: 'discretionaryExpenses', label: 'Gastos Discrecionales' },
-  { key: 'financialExpenses', label: 'Gastos Financieros' },
+  { key: 'incomes', label: t('statistics.performance.useincomestatement.incomes') },
+  { key: 'costOfLife', label: t('statistics.performance.useincomestatement.costOfLife') },
+  { key: 'discretionaryExpenses', label: t('statistics.performance.useincomestatement.discretionaryExpenses') },
+  { key: 'financialExpenses', label: t('statistics.performance.useincomestatement.financialExpenses') },
 ];
 
 const showAssignModal = ref(false);

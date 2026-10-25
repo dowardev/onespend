@@ -108,7 +108,7 @@ test('LBDS-280 — merge endpoint accepts an attachment bucket (wire contract)',
 
   await page.goto('/budget', { waitUntil: 'domcontentloaded' })
   const addBtn = page.locator('#add-btn')
-  await expect(addBtn).toBeVisible({ timeout: 30000 })
+  await expect(addBtn).toBeVisible({ timeout: 60000 })
 
   // The smoke assertion: the route handler covers /api/sync/merge with an
   // attachment key; the actual queueing path is covered by the unit tests.

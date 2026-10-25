@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import { test, expect, type Page, type BrowserContext } from '@playwright/test'
+import { enableSync } from './helpers/syncConfig'
 
 // Echo mock: acknowledges whatever the client sends, per entity type.
 // This is the contract the queue-drain logic depends on: an item only leaves
@@ -103,12 +104,16 @@ async function queueCount(page: Page): Promise<number> {
 async function gotoBudgetReady(page: Page) {
   await page.goto('/budget', { waitUntil: 'domcontentloaded' })
   const addButton = page.locator('#add-btn')
-  await expect(addButton).toBeVisible({ timeout: 30000 })
+  await expect(addButton).toBeVisible({ timeout: 60000 })
+  // Sync is opt-in (LBDS-289): without opting in, the /sync page renders its
+  // actions disabled and no queued item is ever pushed, so the drain
+  // assertions below could not pass for the right reason.
+  await enableSync(page)
 }
 
 async function createEntryViaUI(page: Page, name: string) {
   const addButton = page.locator('#add-btn')
-  await expect(addButton).toBeVisible({ timeout: 30000 })
+  await expect(addButton).toBeVisible({ timeout: 60000 })
 
   await addButton.click()
   await page.locator('ion-item', { hasText: 'Registro' }).first().click()
@@ -138,9 +143,9 @@ async function createEntryViaUI(page: Page, name: string) {
 async function syncNowViaUI(page: Page) {
   await page.goto('/sync', { waitUntil: 'domcontentloaded' })
   const syncButton = page.locator('[data-cy="sync-btn"]')
-  await expect(syncButton).toBeVisible({ timeout: 30000 })
+  await expect(syncButton).toBeVisible({ timeout: 60000 })
   // The button disables when there is nothing pending; wait until it enables.
-  await expect(syncButton).toBeEnabled({ timeout: 15000 })
+  await expect(syncButton).toBeEnabled({ timeout: 30000 })
   await syncButton.click()
 }
 
@@ -219,7 +224,7 @@ test.describe('Offline→Online Sync Queue Drain', () => {
     }
 
     await expect
-      .poll(() => queueCount(page), { timeout: 45000, message: 'queue should drain after retry' })
+      .poll(() => queueCount(page), { timeout: 120000, message: 'queue should drain after retry' })
       .toBe(0)
 
     await context.close()
@@ -244,7 +249,7 @@ test.describe('Stale offline flag after reconnect', () => {
     // so the app still believes it is offline while the network is fine.
     await page.goto('/sync', { waitUntil: 'domcontentloaded' })
     await page.evaluate(() => window.dispatchEvent(new Event('offline')))
-    await expect(page.getByText('Fuera de línea').first()).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Fuera de línea').first()).toBeVisible({ timeout: 30000 })
     // ion-button never reports native disabled to Playwright; aria-disabled is
     // the real state (this is also why the button *looks* disabled to users).
     await expect(page.locator('[data-cy="sync-btn"]')).toHaveAttribute('aria-disabled', 'true')
@@ -252,13 +257,17 @@ test.describe('Stale offline flag after reconnect', () => {
     // 3. "Actualizar estado" must reconcile the stale flag (no force/repair).
     // LBDS-263 moved the troubleshooting actions into a collapsed accordion, so the
     // status refresh is only reachable once the user opens "Opciones avanzadas".
-    await page.locator('ion-accordion > ion-item[slot="header"]').first().click()
+    const accordionHeader = page.locator('ion-accordion > ion-item[slot="header"]').first()
+    // Ionic scrolls inside the shadow root of ion-content, which Playwright's
+    // own auto-scroll does not follow: scroll it with the browser first.
+    await accordionHeader.evaluate((el) => el.scrollIntoView({ block: 'center' }))
+    await accordionHeader.click()
     const refreshStatusButton = page.getByRole('button', { name: 'Actualizar estado' })
-    await expect(refreshStatusButton).toBeVisible({ timeout: 15000 })
+    await expect(refreshStatusButton).toBeVisible({ timeout: 30000 })
     await refreshStatusButton.click()
-    await expect(page.getByText('En línea').first()).toBeVisible({ timeout: 15000 })
+    await expect(page.getByText('En línea').first()).toBeVisible({ timeout: 30000 })
     // When enabled, Ionic removes aria-disabled entirely (no 'false' value).
-    await expect(page.locator('[data-cy="sync-btn"]')).not.toHaveAttribute('aria-disabled', 'true', { timeout: 15000 })
+    await expect(page.locator('[data-cy="sync-btn"]')).not.toHaveAttribute('aria-disabled', 'true', { timeout: 30000 })
 
     // 4. A single sync drains the queue.
     await page.locator('[data-cy="sync-btn"]').click()

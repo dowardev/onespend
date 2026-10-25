@@ -71,7 +71,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                           v-if="block.dateKey === todayDate"
                           color="tertiary"
                           class="today-badge"
-                          >Hoy</ion-badge
+                          >{{ t('common.today') }}</ion-badge
                         >
                       </ion-label>
 
@@ -136,16 +136,16 @@ SPDX-License-Identifier: AGPL-3.0-only
                   <section class="ion-padding ion-text-center">
                     <ion-icon :icon="calendarOutline" color="medium" size="large"></ion-icon>
                     <p v-if="hasActiveFilters">
-                      <ion-label color="medium"> Sin resultados para la búsqueda o el filtro </ion-label>
+                      <ion-label color="medium">{{ t('budget.agenda.historialview.noResults') }}</ion-label>
                     </p>
                     <p v-else>
-                      <ion-label color="medium"> No hay registros en el historial </ion-label>
+                      <ion-label color="medium">{{ t('budget.agenda.historialview.emptyResults') }}</ion-label>
                     </p>
                     <ion-button v-if="hasActiveFilters" fill="outline" @click="clearAllFilters">
-                      Limpiar filtros
+                      {{ t('budget.agenda.historialview.clearFilters') }}
                     </ion-button>
                     <ion-button v-else fill="outline" @click="router.push('/budget')">
-                      Ir a Presupuesto
+                      {{ t('budget.agenda.historialview.goToBudget') }}
                     </ion-button>
                   </section>
                 </template>

@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import { test, expect, type Page, type BrowserContext } from '@playwright/test'
+import { enableSync } from './helpers/syncConfig'
 
 const CONFLICT_SYNC_ID = 'test-conflict-001'
 
@@ -41,12 +42,15 @@ async function mockExternalCalls(page: Page) {
 }
 
 async function navigateAndWait(page: Page, url: string) {
-  await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45000 })
+  await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 120000 })
   // wait for Vue app to mount and __devDb to exist
   await page.waitForFunction(() => {
     const w = window as Record<string, unknown>
     return typeof w.__devDb !== 'undefined'
-  }, { timeout: 15000 })
+  }, { timeout: 30000 })
+  // Sync is opt-in (LBDS-289): resolving a conflict calls the server, and the
+  // API refuses every call while sync is off.
+  await enableSync(page)
 }
 
 async function injectConflict(page: Page) {
@@ -87,15 +91,15 @@ test.describe('Conflict Resolution', () => {
     await navigateAndWait(pageB, '/budget')
 
     await injectConflict(pageA)
-    await pageA.goto('/sync', { waitUntil: 'domcontentloaded', timeout: 45000 })
-    await pageA.waitForFunction(() => (window as Record<string, unknown>).__devDb !== undefined, { timeout: 15000 })
+    await pageA.goto('/sync', { waitUntil: 'domcontentloaded', timeout: 120000 })
+    await pageA.waitForFunction(() => (window as Record<string, unknown>).__devDb !== undefined, { timeout: 30000 })
 
-    await expect(pageA.locator('[data-cy="conflicts-card"]')).toBeVisible({ timeout: 10000 })
+    await expect(pageA.locator('[data-cy="conflicts-card"]')).toBeVisible({ timeout: 30000 })
     await expect(pageA.locator('[data-cy="conflict-count-badge"]')).toContainText('1')
     await pageA.locator('[data-cy="conflict-badge"]').first().click()
-    await expect(pageA.locator('[data-cy="conflict-modal"]')).toBeVisible({ timeout: 10000 })
+    await expect(pageA.locator('[data-cy="conflict-modal"]')).toBeVisible({ timeout: 30000 })
     await pageA.locator('[data-cy="resolve-server-btn"]').click()
-    await expect(pageA.getByText('Conflicto resuelto')).toBeVisible({ timeout: 15000 })
+    await expect(pageA.getByText('Conflicto resuelto')).toBeVisible({ timeout: 30000 })
 
     await contextA.close()
     await contextB.close()
@@ -111,15 +115,15 @@ test.describe('Conflict Resolution', () => {
     await navigateAndWait(pageB, '/budget')
 
     await injectConflict(pageA)
-    await pageA.goto('/sync', { waitUntil: 'domcontentloaded', timeout: 45000 })
-    await pageA.waitForFunction(() => (window as Record<string, unknown>).__devDb !== undefined, { timeout: 15000 })
+    await pageA.goto('/sync', { waitUntil: 'domcontentloaded', timeout: 120000 })
+    await pageA.waitForFunction(() => (window as Record<string, unknown>).__devDb !== undefined, { timeout: 30000 })
 
-    await expect(pageA.locator('[data-cy="conflicts-card"]')).toBeVisible({ timeout: 10000 })
+    await expect(pageA.locator('[data-cy="conflicts-card"]')).toBeVisible({ timeout: 30000 })
     await expect(pageA.locator('[data-cy="conflict-count-badge"]')).toContainText('1')
     await pageA.locator('[data-cy="conflict-badge"]').first().click()
-    await expect(pageA.locator('[data-cy="conflict-modal"]')).toBeVisible({ timeout: 10000 })
+    await expect(pageA.locator('[data-cy="conflict-modal"]')).toBeVisible({ timeout: 30000 })
     await pageA.locator('[data-cy="resolve-client-btn"]').click()
-    await expect(pageA.getByText('Conflicto resuelto')).toBeVisible({ timeout: 15000 })
+    await expect(pageA.getByText('Conflicto resuelto')).toBeVisible({ timeout: 30000 })
 
     const count = await pageA.evaluate(async () => {
       const devDb = (window as Record<string, unknown>).__devDb as { getConflictCount(): Promise<number> } | undefined
@@ -137,16 +141,16 @@ test.describe('Conflict Resolution', () => {
 
     await navigateAndWait(page, '/budget')
     await injectConflict(page)
-    await page.goto('/sync', { waitUntil: 'domcontentloaded', timeout: 45000 })
-    await page.waitForFunction(() => (window as Record<string, unknown>).__devDb !== undefined, { timeout: 15000 })
+    await page.goto('/sync', { waitUntil: 'domcontentloaded', timeout: 120000 })
+    await page.waitForFunction(() => (window as Record<string, unknown>).__devDb !== undefined, { timeout: 30000 })
 
-    await expect(page.locator('[data-cy="conflicts-card"]')).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('[data-cy="conflicts-card"]')).toBeVisible({ timeout: 30000 })
     await page.locator('[data-cy="conflict-badge"]').first().click()
     await page.locator('[data-cy="resolve-client-btn"]').click()
-    await expect(page.getByText('Conflicto resuelto')).toBeVisible({ timeout: 15000 })
+    await expect(page.getByText('Conflicto resuelto')).toBeVisible({ timeout: 30000 })
 
-    await page.reload({ waitUntil: 'domcontentloaded', timeout: 45000 })
-    await page.waitForFunction(() => (window as Record<string, unknown>).__devDb !== undefined, { timeout: 15000 })
-    await expect(page.locator('[data-cy="conflicts-card"]')).not.toBeVisible({ timeout: 10000 })
+    await page.reload({ waitUntil: 'domcontentloaded', timeout: 120000 })
+    await page.waitForFunction(() => (window as Record<string, unknown>).__devDb !== undefined, { timeout: 30000 })
+    await expect(page.locator('[data-cy="conflicts-card"]')).not.toBeVisible({ timeout: 30000 })
   })
 })

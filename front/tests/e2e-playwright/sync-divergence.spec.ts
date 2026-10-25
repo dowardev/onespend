@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import { test, expect, type Page, type BrowserContext } from '@playwright/test'
+import { enableSync } from './helpers/syncConfig'
 
 /**
  * LBDS-276 e2e coverage for the divergence diagnostic + repair flow.
@@ -19,18 +20,48 @@ async function setupAuth(context: BrowserContext) {
 }
 
 async function openAdvancedAccordion(page: Page) {
+  // Sync is opt-in (LBDS-289): the diagnostic action stays disabled while the
+  // flag is off, so opt in before opening the /sync page.
+  await page.goto('/')
+  await enableSync(page)
   await page.goto('/sync')
   // The accordion collapses the advanced troubleshooting actions.
-  await page.getByRole('button', { name: /Opciones avanzadas/i }).click()
+  const header = page.locator('ion-accordion > ion-item[slot="header"]').first()
+  // Ionic scrolls inside the shadow root of ion-content, which Playwright's own
+  // auto-scroll does not follow: scroll it with the browser first.
+  await header.evaluate((el) => el.scrollIntoView({ block: 'center' }))
+  await header.click()
 }
 
 async function mockSyncServer(page: Page, snapshot: { rowsByType: Record<string, unknown[]>; tombstoneIdsByType: Record<string, string[]> }) {
+  // The session check: without it the app asks the real SSO server about the
+  // fake token, drops it and renders the login gate instead of the sync page.
+  await page.route('**/user-auth**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ id: '1', name: 'Test User', user: 'testuser', email: 'test@test.com', roles: [] }),
+    });
+  });
   await page.route('**/api/sync/changes**', async (route) => {
+    // The server sends each tombstone inside the bucket of its own entity
+    // type (`{id, _deleted: true}`), which is how the detector can attribute
+    // an account tombstone to `account` and not to another entity type.
+    const changes: Record<string, unknown[]> = {}
+    for (const [entityType, rows] of Object.entries(snapshot.rowsByType)) {
+      changes[entityType] = [...rows]
+    }
+    for (const [entityType, ids] of Object.entries(snapshot.tombstoneIdsByType)) {
+      const bucket = changes[entityType] ?? (changes[entityType] = [])
+      for (const id of ids) {
+        bucket.push({ id, _deleted: true })
+      }
+    }
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
-        changes: snapshot.rowsByType,
+        changes,
         serverTime: Math.floor(Date.now() / 1000),
       }),
     })

@@ -53,7 +53,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                   </ion-label>
 
                   <ion-label slot="end">
-                    Inicial: {{ formatCurrency({ value: acc.initialBalance }) }}
+                    {{ t('budget.account.initialBalance') }}: {{ formatCurrency({ value: acc.initialBalance }) }}
                   </ion-label>
                 </ion-item>
 
@@ -87,7 +87,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
             <template v-else>
               <ion-item lines="none">
-                <ion-label>No hay cuentas creadas</ion-label>
+                <ion-label>{{ t('budget.components.accountcards.empty') }}</ion-label>
               </ion-item>
             </template>
           </ion-list>
@@ -118,11 +118,11 @@ SPDX-License-Identifier: AGPL-3.0-only
         <ion-card-content>
           <p>
             <span style="color: var(--ion-color-success)"
-              >Ingresos: {{ formatCurrency({ value: summary.ingresos }) }}</span
+              >{{ t("budget.account.incomes") }}: {{ formatCurrency({ value: summary.ingresos }) }}</span
             >
             <br />
             <span style="color: var(--ion-color-danger)"
-              >Gastos: {{ formatCurrency({ value: summary.egresos }) }}</span
+              >{{ t("budget.account.expenses") }}: {{ formatCurrency({ value: summary.egresos }) }}</span
             >
           </p>
         </ion-card-content>
@@ -142,7 +142,7 @@ SPDX-License-Identifier: AGPL-3.0-only
               </ion-label>
 
               <ion-label slot="end">
-                Inicial: {{ formatCurrency({ value: acc.initialBalance }) }}
+                {{ t('budget.account.initialBalance') }}: {{ formatCurrency({ value: acc.initialBalance }) }}
               </ion-label>
             </ion-item>
 
@@ -176,7 +176,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
         <template v-else>
           <ion-item lines="none">
-            <ion-label>No hay cuentas creadas</ion-label>
+            <ion-label>{{ t('budget.components.accountcards.empty') }}</ion-label>
           </ion-item>
         </template>
       </ion-list>

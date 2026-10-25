@@ -23,7 +23,8 @@
     "selectAccount": "Seleccionar cuenta",
     "select": "Seleccionar",
     "selectProvider": "Seleccionar proveedor",
-    "unnamed": "Sin nombre"
+    "unnamed": "Sin nombre",
+    "today": "Hoy"
   },
   "recurring": {
     "section": {
@@ -105,7 +106,79 @@
       "deleteButton": "Eliminar",
       "testDataToast": "Datos de prueba insertados",
       "title": "Cargos Recurrentes",
-      "empty": "No hay cargos recurrentes"
+      "empty": "No hay cargos recurrentes",
+      "type": {
+        "charge": "Cargo",
+        "provider": "Proveedor"
+      },
+      "freq": {
+        "day": {
+          "single": "Cada día",
+          "multiple": "Cada {n} días"
+        },
+        "week": {
+          "single": "Cada semana",
+          "multiple": "Cada {n} semanas"
+        },
+        "month": {
+          "day": "Cada mes - día {day}",
+          "weekday": "Cada mes - {ordinal} {weekday}"
+        },
+        "year": {
+          "single": "Cada año",
+          "multiple": "Cada {n} años",
+          "withDate": "{base} - {month} {day}"
+        }
+      },
+      "weekdayShort": {
+        "0": "D",
+        "1": "L",
+        "2": "M",
+        "3": "M",
+        "4": "J",
+        "5": "V",
+        "6": "S"
+      },
+      "weekdayFull": {
+        "0": "Domingo",
+        "1": "Lunes",
+        "2": "Martes",
+        "3": "Miércoles",
+        "4": "Jueves",
+        "5": "Viernes",
+        "6": "Sábado"
+      },
+      "month": {
+        "1": "Enero",
+        "2": "Febrero",
+        "3": "Marzo",
+        "4": "Abril",
+        "5": "Mayo",
+        "6": "Junio",
+        "7": "Julio",
+        "8": "Agosto",
+        "9": "Septiembre",
+        "10": "Octubre",
+        "11": "Noviembre",
+        "12": "Diciembre"
+      },
+      "ordinal": {
+        "1": "Primer",
+        "2": "Segundo",
+        "3": "Tercer",
+        "4": "Cuarto",
+        "5": "Quinto",
+        "6": "Sexto",
+        "7": "Séptimo",
+        "8": "Octavo",
+        "last": "Último"
+      },
+      "toast": {
+        "paused": "Cargo pausado",
+        "resumed": "Cargo reanudado"
+      },
+      "deleteAlertHeader": "Eliminar cargo recurrente",
+      "deleteAlertMessage": "¿Eliminar {name}?"
     },
     "edit": {
       "section": {
@@ -130,7 +203,12 @@
         "endDate": "Fecha de fin",
         "autoInsert": "Auto-insertar",
         "notesPlaceholder": "Agregar notas...",
-        "searchSupplierPlaceholder": "Buscar proveedor"
+        "searchSupplierPlaceholder": "Buscar proveedor",
+        "supplier": "Proveedor",
+        "ordinal": "Ocurrencia",
+        "month": "Mes",
+        "time": "Hora",
+        "notes": "Notas"
       },
       "type": {
         "cargo": "Cargo",
@@ -158,7 +236,9 @@
       },
       "validation": {
         "nameRequired": "El nombre es requerido",
-        "frequencyRequired": "La frecuencia es requerida"
+        "frequencyRequired": "La frecuencia es requerida",
+        "startDateRequired": "La fecha de inicio es obligatoria",
+        "itemsValid": "Todos los items deben tener un monto válido y cuenta asignada"
       },
       "distribution": {
         "header": "Distribución",
@@ -173,6 +253,48 @@
       },
       "error": {
         "createSupplier": "Error al crear proveedor"
+      },
+      "confirmDelete": "¿Estás seguro de que deseas eliminar este registro recurrente?",
+      "weekday": {
+        "short": {
+          "0": "D",
+          "1": "L",
+          "2": "M",
+          "3": "M",
+          "4": "J",
+          "5": "V",
+          "6": "S"
+        },
+        "full": {
+          "0": "Domingo",
+          "1": "Lunes",
+          "2": "Martes",
+          "3": "Miércoles",
+          "4": "Jueves",
+          "5": "Viernes",
+          "6": "Sábado"
+        }
+      },
+      "month": {
+        "1": "Enero",
+        "2": "Febrero",
+        "3": "Marzo",
+        "4": "Abril",
+        "5": "Mayo",
+        "6": "Junio",
+        "7": "Julio",
+        "8": "Agosto",
+        "9": "Septiembre",
+        "10": "Octubre",
+        "11": "Noviembre",
+        "12": "Diciembre"
+      },
+      "ordinal": {
+        "1": "Primer",
+        "2": "Segundo",
+        "3": "Tercer",
+        "4": "Cuarto",
+        "last": "Último"
       }
     },
     "action": {
@@ -359,7 +481,7 @@
     "dlqview": {
       "retryAllHeader": "Reintentar todos",
       "removeAllHeader": "Eliminar todos",
-      "emptyMessage": "No hay elementos fallidos",
+      "emptyMessage": "La cola de elementos fallidos está vacía.",
       "removeItemMessage": "¿Eliminar este elemento?",
       "removeAllMessage": "¿Eliminar todos los elementos?",
       "removeConfirmMessage": "Confirmar eliminación",
@@ -367,7 +489,56 @@
       "retryAllButton": "Reintentar todos",
       "removeAllButton": "Eliminar todos",
       "retryOneButton": "Reintentar",
-      "removeOneButton": "Eliminar"
+      "removeOneButton": "Eliminar",
+      "title": "Cola de elementos fallidos",
+      "title1": "Reintentar todos",
+      "title2": "Eliminar todos",
+      "message1": "Elemento reintentado",
+      "message2": "Todos los elementos reintentados",
+      "message3": "Cola vaciada",
+      "message4": "No se pudo vaciar la cola",
+      "header1": "Reintentar todos",
+      "header2": "Eliminar todos",
+      "text1": "Cancelar",
+      "text2": "Reintentar",
+      "text4": "Eliminar",
+      "attemptSingle": "intento",
+      "attemptMultiple": "intentos",
+      "aria": {
+        "hideDetail": "Ocultar detalle de {entity}",
+        "showDetail": "Ver detalle de {entity}",
+        "retry": "Reintentar {entity}"
+      },
+      "emptyTitle": "Cola de elementos fallidos",
+      "retryAllMessage": "¿Reintentar {count} elementos?",
+      "errorGeneric": "Error al reintentar",
+      "errorRetry": "Error al reintentar: {msg}",
+      "entity": {
+        "account": "Cuentas",
+        "budget": "Presupuestos",
+        "budget_entry": "Entradas de gasto",
+        "budget_entry_group": "Grupos de entradas",
+        "budget_provider": "Proveedores del presupuesto",
+        "budget_provider_product": "Productos de proveedores",
+        "entry": "Entradas",
+        "income": "Ingresos",
+        "recurring_record": "Registros recurrentes",
+        "recurring_record_product": "Productos recurrentes",
+        "supplier": "Proveedores",
+        "supplier_product": "Productos de proveedores",
+        "template": "Plantillas"
+      },
+      "operation": {
+        "create": "Crear",
+        "update": "Actualizar",
+        "delete": "Eliminar"
+      },
+      "time": {
+        "secondsAgo": "hace unos segundos",
+        "minutesAgo": "hace {m} min",
+        "hoursAgo": "hace {h} h",
+        "daysAgo": "hace {d} días"
+      }
     },
     "syncview": {
       "title": "Sesión requerida",
@@ -539,7 +710,8 @@
       "incomes": "Ingresos",
       "expenses": "Gastos",
       "selectAccount": "Seleccionar Cuenta",
-      "newAccount": "Nueva Cuenta"
+      "newAccount": "Nueva Cuenta",
+      "initialBalance": "Inicial"
     },
     "entryType": {
       "income": "Ingreso",
@@ -552,7 +724,11 @@
       "historialview": {
         "aria": "Buscar",
         "text": "Filtrar por fecha",
-        "placeholder": "Buscar por nombre, cuenta o proveedor"
+        "placeholder": "Buscar por nombre, cuenta o proveedor",
+        "noResults": "Sin resultados para la búsqueda o el filtro",
+        "emptyResults": "No hay registros en el historial",
+        "clearFilters": "Limpiar filtros",
+        "goToBudget": "Ir a Presupuesto"
       }
     },
     "components": {
@@ -579,7 +755,8 @@
         "label5": "Tarjeta"
       },
       "accountcards": {
-        "label": "Cuentas"
+        "label": "Cuentas",
+        "empty": "No hay cuentas creadas"
       },
       "accountdistributionpicker": {
         "text": "Cantidad"
@@ -601,7 +778,10 @@
         "button1": "Retroceder",
         "text": "Seleccionar fecha",
         "button2": "Avanzar",
-        "label": "Registro"
+        "label": "Registro",
+        "emptyMessage": "Pulsa el botón \"+\" para agregar un nuevo ingreso",
+        "registro": "Registro",
+        "providers": "Proveedores"
       },
       "entryeditpage": {
         "text1": "Tipo",
@@ -627,7 +807,10 @@
       "clearDayHeader": "Vaciar día",
       "clearDayMessage": "¿Eliminar todas las entradas de este día?",
       "clearDayConfirm": "Vaciar",
-      "autoCreateError": "Error creando cuentas automáticamente"
+      "autoCreateError": "Error creando cuentas automáticamente",
+      "title": "Presupuesto",
+      "clearDayLabel": "Vaciar día",
+      "message": "No hay cuentas disponibles"
     }
   },
   "admin": {
@@ -686,7 +869,8 @@
         },
         "performanceconfigpage": {
           "label": "Organizá tus categorías por sección",
-          "title": "Configuración de Performance"
+          "title": "Configuración de Performance",
+          "description": "La sección define en qué bloque del Income Statement va una categoría. Solo cambia el orden de tus números en esa vista — tus datos quedan iguales."
         }
       },
       "performancepage": {
@@ -734,9 +918,9 @@
       },
       "useincomestatement": {
         "incomes": "Ingresos",
-        "costOfLife": "Costo de vida",
-        "discretionaryExpenses": "Gastos discrecionales",
-        "financialExpenses": "Gastos financieros",
+        "costOfLife": "Costo de Vida",
+        "discretionaryExpenses": "Gastos Discrecionales",
+        "financialExpenses": "Gastos Financieros",
         "label": {
           "salary": "Salario",
           "investments": "Inversiones",
@@ -852,7 +1036,10 @@
       },
       "accountspage": {
         "label": "Lista de cuentas",
-        "placeholder": "Buscar cuentas"
+        "placeholder": "Buscar cuentas",
+        "deleteConfirm": "¿Eliminar cuenta {name}?",
+        "text1": "Cancelar",
+        "text2": "Eliminar"
       }
     },
     "modals": {
@@ -868,7 +1055,11 @@
     },
     "supplierspage": {
       "label": "Lista de proveedores",
-      "placeholder": "Buscar proveedores"
+      "placeholder": "Buscar proveedores",
+      "title": "Provedores",
+      "deleteConfirm": "¿Eliminar proveedor {name}?",
+      "text1": "Cancelar",
+      "text2": "Eliminar"
     }
   },
   "test": {

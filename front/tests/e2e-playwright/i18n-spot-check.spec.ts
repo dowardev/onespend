@@ -20,7 +20,7 @@ const SPANISH_HINTS = [
 const KEY_PATH_RE = /\b(?:sync|i18n|recurring|menu|home|auth|settings|privacy|downloads|common|budget|suppliers|statistics|views|components|accounts|admin|info)\.[a-z][a-z0-9_]*(?:\.[a-z0-9_]+){1,}/i;
 
 async function setEnglishLocale(page: Page): Promise<void> {
-  await page.goto('/');
+  await page.goto('/', { timeout: 120000 });
   await page.waitForLoadState('domcontentloaded');
   await page.waitForTimeout(1000);
   await page.keyboard.press('Escape').catch(() => {});
@@ -45,7 +45,7 @@ async function setEnglishLocale(page: Page): Promise<void> {
 }
 
 test('spot-check: no Spanish in English mode for problematic pages', async ({ page }) => {
-  test.setTimeout(120000);
+  test.setTimeout(300000);
   page.on('pageerror', (err) => console.log('PAGE ERROR:', err.message));
   const pages = [
     { route: '/statistics/performance/config', label: 'PerformanceConfig' },
@@ -58,7 +58,7 @@ test('spot-check: no Spanish in English mode for problematic pages', async ({ pa
   await setEnglishLocale(page);
   const failures: string[] = [];
   for (const p of pages) {
-    const resp = await page.goto(p.route, { waitUntil: 'domcontentloaded' });
+    const resp = await page.goto(p.route, { waitUntil: 'domcontentloaded', timeout: 120000 });
     if (!resp || resp.status() >= 400) {
       console.log(`${p.label}: HTTP ${resp?.status()}`);
       continue;

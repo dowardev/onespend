@@ -99,7 +99,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
       <ion-alert
         :is-open="deleteConfirmAccount.open"
-        :message="`¿Eliminar cuenta ${deleteConfirmAccount.accountName}?`"
+        :message="t('suppliers.accounts.accountspage.deleteConfirm', { name: deleteConfirmAccount.accountName })"
         :buttons="getAlertButtonsAccount()"
         @did-dismiss="onDeleteAlertDidDismissAccount"
       ></ion-alert>

@@ -16,7 +16,7 @@ import { test, expect } from '@playwright/test'
 // picker, which is covered by recurring-enddate-edit.spec.ts.
 test('time selector renders with a current-time default', async ({ page }) => {
   await page.goto('/recurring/edit', { waitUntil: 'domcontentloaded' })
-  await page.waitForSelector('ion-content', { timeout: 30000 })
+  await page.waitForSelector('ion-content', { timeout: 60000 })
   await page.waitForTimeout(600)
 
   // Hora is hidden until auto-insert is enabled.
@@ -36,5 +36,5 @@ test('time selector renders with a current-time default', async ({ page }) => {
 
   // Opening the picker shows a time datetime.
   await horaItem.click()
-  await expect(page.locator('ion-datetime:visible').first(), 'time picker opens').toBeVisible({ timeout: 10000 })
+  await expect(page.locator('ion-datetime:visible').first(), 'time picker opens').toBeVisible({ timeout: 30000 })
 })

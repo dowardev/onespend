@@ -13,6 +13,31 @@ import { VitePWA } from 'vite-plugin-pwa';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+// The dev-mode banner is a fixed footer that sits on top of the bottom of the
+// viewport, and it swallows the clicks aimed at whatever is underneath it (the
+// "Opciones avanzadas" accordion of the sync page, for example). The e2e dev
+// server hides it: the banner is not what those specs are about, and it moves
+// with every release. Dev server only (`apply: 'serve'`), and only when the
+// e2e server asks for it with VITE_E2E=true.
+const e2eHideDevBanner = {
+  name: 'onespend:e2e-hide-dev-banner',
+  apply: 'serve' as const,
+  transformIndexHtml(html: string) {
+    if (process.env.VITE_E2E !== 'true') return html;
+    return {
+      html,
+      tags: [
+        {
+          tag: 'style',
+          attrs: { 'data-e2e': 'hide-dev-banner' },
+          children: '.dev-footer { display: none !important; }',
+          injectTo: 'head',
+        },
+      ],
+    };
+  },
+};
+
 // https://vitejs.dev/config/
 export default defineConfig(({ command }) => ({
   // Web build uses an absolute base so assets resolve correctly from any
@@ -22,6 +47,7 @@ export default defineConfig(({ command }) => ({
   base: command === 'build' ? (process.env.DESKTOP_BUILD === 'true' ? './' : '/') : '/',
   plugins: [
     vue(),
+    e2eHideDevBanner,
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],

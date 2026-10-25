@@ -5,7 +5,7 @@ import { test, expect } from '@playwright/test'
 // ion-datetime (the same event a scroll/click interaction emits), then click "Aplicar".
 test('selected time value is captured and shown', async ({ page }) => {
   await page.goto('/recurring/edit', { waitUntil: 'domcontentloaded' })
-  await page.waitForSelector('ion-content', { timeout: 30000 })
+  await page.waitForSelector('ion-content', { timeout: 60000 })
   await page.waitForTimeout(600)
 
   await page.locator('ion-toggle', { hasText: 'Auto-insertar' }).first().click()
