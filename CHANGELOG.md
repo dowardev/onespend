@@ -16,6 +16,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 - Syncing several records at once no longer drops a field (such as the note on an entry) when the first record of the batch did not have that field: every record now gets the fields it actually sent, and the ones it did not send keep their previous value (GitLab #16).
 - The app now speaks English on the screens that used to keep Spanish: budget, recurring charges, performance, suppliers, accounts and the failed-items queue now show translated labels, placeholders and confirmations, and the performance help popovers explain each concept again (GitLab #18).
 - The synchronization screen no longer breaks when synchronization is turned off: it used to fail while loading its status, so the page showed no conflict list and logged an error (GitLab #18).
+- Some screens still showed Spanish when the app is set to English: the recurring charges form, the sync screen, the performance charts and the cash flow periods now show their English text, and the labels that were rendering as raw key paths (the entry editor, the provider editor, the attachments and the account balance) are translated now (GitLab #20).
 
 ## [v0.79.0] - 2026-10-11
 
