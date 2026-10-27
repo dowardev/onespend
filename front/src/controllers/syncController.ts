@@ -12,7 +12,7 @@ import type { DeadLetterItem } from '@/db/types';
 import db from '@/db/OneSpendDB';
 import { detectDivergence, type DivergenceReport, type LocalDbLike, type SnapshotServiceLike } from '@/services/sync/SyncDivergenceDetector';
 import { syncApiService } from '@/services/sync/SyncApiService';
-import { isSyncEnabled, readSyncConfig } from '@/services/sync/syncConfig';
+import { readSyncConfig } from '@/services/sync/syncConfig';
 
 /**
  * DLQ items can carry a `data` field that was stored before the queue was
