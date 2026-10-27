@@ -16,7 +16,7 @@ import db from '@/db/OneSpendDB';
 import { syncApiService, AuthExpiredError, SyncDisabledError } from './SyncApiService';
 import { syncLockService } from './SyncLockService';
 import { conflictResolutionService } from './ConflictResolutionService';
-import { isSyncEnabled, readSyncConfig } from './syncConfig';
+import { readSyncConfig } from './syncConfig';
 import pendingAttachmentsService from '../pendingAttachmentsService';
 import attachmentService from '../attachmentService';
 import { toApiFormat } from './entityMappers';
@@ -1724,7 +1724,6 @@ export class SyncQueueService {
     }
 
     const lastSync = localStorage.getItem(LAST_SYNC_KEY) || '0';
-    const wasFullSync = lastSync === '0';
     // LBDS-276 class 5: the previous "reset to 0 if last_sync is more than
     // 5 minutes ahead of the client clock" guard was the single remaining
     // way to rewind the cursor. A client clock ≥ 5 min behind the server

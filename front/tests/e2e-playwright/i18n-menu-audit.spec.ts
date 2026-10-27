@@ -1,6 +1,6 @@
 // SPDX-FileCopyrightText: 2026 DowarDev
 // SPDX-License-Identifier: AGPL-3.0-only
-import { test, expect } from '@playwright/test';
+import { test } from '@playwright/test';
 
 test('main menu renders user section when logged in', async ({ page }) => {
   test.setTimeout(60000);
