@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.80.0] - 2026-10-27
+
 ### Added
 - `time` on budget entries and `category` on recurring records: migrations `2026_10_18_000000_add_time_to_budget_entries_table` and `2026_10_18_000001_add_category_to_recurring_records_table` add the nullable columns. `BudgetEntry::$fillable` / `$casts` accept `time` and `RecurringRecord::$fillable` accepts `category`. `BudgetEntry::getTimeAttribute` normalizes the MySQL `TIME` value to `HH:MM`, so the field hash the server computes matches the one the client computes over its `HH:MM` local value and the round-trip does not raise a false conflict. `BudgetEntryProcessor` stores both on create and update, and normalizes an empty `time` to `null` (LBDS-273).
 

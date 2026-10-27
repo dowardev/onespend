@@ -1,0 +1,4 @@
+v0.80.0
+• Budget entries can now record the time of day of a transaction, and recurring charges can be tagged with a category.
+• Notes on a budget entry are saved and synced across devices, and batching several records no longer drops a field.
+• The app now speaks English on the screens that used to keep Spanish, and the sync screen no longer breaks when sync is turned off.

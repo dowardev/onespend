@@ -1,0 +1,4 @@
+v0.80.0
+• Las entradas de gasto pueden registrar la hora del día, y los cargos recurrentes se pueden etiquetar con una categoría.
+• Las notas de una entrada se guardan y se sincronizan entre dispositivos, y sincronizar varios registros ya no pierde ningún campo.
+• La app ahora está en inglés en las pantallas que seguían en español, y la pantalla de sincronización ya no se rompe cuando la sincronización está apagada.

@@ -8,6 +8,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 ## [Unreleased]
 
+## [v0.80.0] - 2026-10-27
+
 ### Added
 - Budget entries can now record the time of day of a transaction, and recurring charges can be tagged with a category. The time is optional — existing entries keep working unchanged — and the category picker is the same one the entries already use, so the same categories apply to both. A recurring charge tagged with a category passes it on to the entries it generates automatically (LBDS-273).
 

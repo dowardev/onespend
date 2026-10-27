@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.80.0] - 2026-10-27
+
 ### Added
 - CI job `frontend_e2e`: the Playwright suite (`front/tests/e2e-playwright/`) now runs in CI — in its own job, on the Playwright browser image, for merge requests and for release tags — uploading the HTML report and the test artifacts. It is `allow_failure: true` for now, so a red e2e does not block a merge while the suite stabilises (GitLab #18).
 - `front/tests/e2e-playwright/global-setup.ts`: warms up vite's on-demand transform cache before the first spec runs, so the first navigation does not pay the cold start of the whole route.
