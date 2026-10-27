@@ -182,7 +182,7 @@
     },
     "edit": {
       "section": {
-        "info": "Información",
+        "info": "Information",
         "date": "Date",
         "details": "More details",
         "products": "Products",
@@ -191,17 +191,17 @@
       "field": {
         "name": "Name",
         "namePlaceholder": "Name of the recurring charge",
-        "type": "Tipo",
-        "entryType": "Tipo de entrada",
+        "type": "Type",
+        "entryType": "Entry type",
         "category": "Category",
         "frequency": "Frequency",
-        "every": "Cada",
-        "day": "Día",
-        "dayOfMonth": "Día del mes",
-        "dayOfWeek": "Día de la semana",
+        "every": "Every",
+        "day": "Day",
+        "dayOfMonth": "Day of the month",
+        "dayOfWeek": "Day of the week",
         "startDate": "Start date",
         "endDate": "End date",
-        "autoInsert": "Auto-insertar",
+        "autoInsert": "Auto-insert",
         "notesPlaceholder": "Add notes...",
         "searchSupplierPlaceholder": "Search supplier",
         "supplier": "Supplier",
@@ -219,12 +219,12 @@
         "expense": "Expense"
       },
       "frequency": {
-        "day": "Día",
-        "week": "Semana",
-        "month": "Mes",
-        "year": "Año",
-        "weekdayMode": "Día de semana",
-        "fixedDayMode": "Día fijo"
+        "day": "Day",
+        "week": "Week",
+        "month": "Month",
+        "year": "Year",
+        "weekdayMode": "Weekday",
+        "fixedDayMode": "Fixed day"
       },
       "title": {
         "editCharge": "Edit charge",
@@ -241,7 +241,7 @@
         "itemsValid": "All items must have a valid amount and assigned account"
       },
       "distribution": {
-        "header": "Distribución",
+        "header": "Distribution",
         "itemNamePlaceholder": "Name",
         "itemPricePlaceholder": "Price",
         "itemQtyPlaceholder": "Quantity"
@@ -249,7 +249,7 @@
       "toast": {
         "resumed": "Charge resumed",
         "paused": "Charge paused",
-        "supplierCreated": "Proveedor creado"
+        "supplierCreated": "Supplier created"
       },
       "error": {
         "createSupplier": "Error creating the supplier"
@@ -545,9 +545,9 @@
       "text1": "Cancel",
       "text2": "Delete",
       "text3": "Cancel",
-      "text4": "Continuar",
+      "text4": "Continue",
       "text5": "Got it, repair",
-      "text6": "Solucionar",
+      "text6": "Fix",
       "message1": "Sync queue cleared",
       "message2": "Status updated",
       "message3": "Could not update the status",
@@ -763,7 +763,8 @@
       },
       "daysummarymodal": {
         "fallbackTime": "--:--",
-        "fallbackAccount": "No account"
+        "fallbackAccount": "No account",
+        "fallbackName": "Unnamed"
       },
       "pendingrecurringmodal": {
         "title": "Pending Recurring Charges",
@@ -771,6 +772,10 @@
         "autoInsertAt": "Auto-inserts at {time}",
         "empty": "No pending recurring charges",
         "applyAll": "Apply all ({count})"
+      },
+      "accountbarchart": {
+        "label1": "Income",
+        "label2": "Expenses"
       }
     },
     "entries": {
@@ -791,7 +796,13 @@
         "label2": "Date",
         "labelTime": "Time",
         "text3": "Accounts",
-        "label3": "Reassign date"
+        "label3": "Reassign date",
+        "message": "Entry not found"
+      },
+      "componentes": {
+        "attachmentsmodal": {
+          "fallback": "0 Bytes"
+        }
       }
     },
     "suppliers": {
@@ -800,7 +811,8 @@
         "label2": "Products",
         "placeholder1": "Name",
         "placeholder2": "Price",
-        "placeholder3": "Cant"
+        "placeholder3": "Cant",
+        "message": "Provider updated"
       }
     },
     "budgetview": {
@@ -821,9 +833,9 @@
   "statistics": {
     "cashflow": {
       "cashflow": {
-        "label1": "30 días",
-        "label2": "90 días",
-        "label3": "1 año"
+        "label1": "30 days",
+        "label2": "90 days",
+        "label3": "1 year"
       },
       "title": "Cash Flow",
       "incomes": "Income",
@@ -832,13 +844,13 @@
     "performance": {
       "components": {
         "budgetexpenseschartmodal": {
-          "label": "Desglose"
+          "label": "Breakdown"
         },
         "budgetincomeschartmodal": {
-          "label": "Desglose"
+          "label": "Breakdown"
         },
         "expenseschartmodal": {
-          "label": "Desglose"
+          "label": "Breakdown"
         },
         "goalschartmodal": {
           "label1": "Summary",
@@ -847,10 +859,10 @@
           "label4": "Faltante"
         },
         "incomeschartmodal": {
-          "label": "Desglose"
+          "label": "Breakdown"
         },
         "budgetdetailmodal": {
-          "label": "Detalle"
+          "label": "Detail"
         },
         "performancecomponent": {
           "label1": "Gross profit",
@@ -888,7 +900,11 @@
         "exportExcel": "Export to Excel",
         "help": "Help",
         "config": "Settings",
-        "generatingExcel": "Generating Excel..."
+        "generatingExcel": "Generating Excel...",
+        "aria1": "Export to Excel",
+        "aria2": "Help",
+        "aria3": "Settings",
+        "text": "Exporting..."
       },
       "performancecomponent": {
         "prevPeriod": "Previous period",
@@ -1031,7 +1047,11 @@
       "modals": {
         "addaccountcomponent": {
           "text1": "Name",
-          "text2": "Balance inicial"
+          "text2": "Initial balance",
+          "alert": {
+            "cancel": "Cancel"
+          },
+          "text": "Delete"
         }
       },
       "accountspage": {
@@ -1046,7 +1066,8 @@
       "supplierformcomponent": {
         "text": "Name",
         "label": "Products",
-        "placeholder": "Search products"
+        "placeholder": "Search products",
+        "message": "Add at least one product"
       },
       "addsuplierscomponent": {
         "editTitle": "Edit Supplier",
@@ -1089,7 +1110,8 @@
     "placeholder": "Search category"
   },
   "quickcategoryalert": {
-    "subHeader": "Choose the section where this category will live"
+    "subHeader": "Choose the section where this category will live",
+    "text": "New category"
   },
   "sectionassignmodal": {
     "aria1": "New category",
@@ -1100,7 +1122,8 @@
   "devmodebanner": {
     "unknownVersion": "OneSpend in active development",
     "stable": "OneSpend v{version} stable",
-    "development": "OneSpend in active development · v{version}"
+    "development": "OneSpend in active development · v{version}",
+    "text": "Close notice"
   },
   "cashflowchart": {
     "income": "Income",

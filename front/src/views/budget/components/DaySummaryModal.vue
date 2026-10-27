@@ -135,7 +135,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                 <h3>Mayor Ingreso</h3>
 
                 <p v-if="largestIncome">
-                  {{ largestIncome.name || t('budget.components.daysummarymodal.fallbackTime') }}
+                  {{ largestIncome.name || t('budget.components.daysummarymodal.fallbackName') }}
                 </p>
               </ion-label>
 
@@ -151,7 +151,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                 <h3>Mayor Gasto</h3>
 
                 <p v-if="largestExpense">
-                  {{ largestExpense.name || t('budget.components.daysummarymodal.fallbackAccount') }}
+                  {{ largestExpense.name || t('budget.components.daysummarymodal.fallbackName') }}
                 </p>
               </ion-label>
 
@@ -233,7 +233,7 @@ const { t } = useLocale();
 
 function formatTime(params: { timestamp: number }) {
   const { timestamp } = params;
-  if (!timestamp) return t('budget.components.daysummarymodal.fallback1');
+  if (!timestamp) return t('budget.components.daysummarymodal.fallbackTime');
   return new Date(timestamp).toLocaleTimeString('es-MX', {
     hour: '2-digit',
     minute: '2-digit',
@@ -366,7 +366,7 @@ function resolveProviderName(id: string) {
 }
 
 function resolveAccountName(id: string) {
-  if (id === 'unknown' || id === 'null' || id == null) return t('budget.components.daysummarymodal.fallback2');
+  if (id === 'unknown' || id === 'null' || id == null) return t('budget.components.daysummarymodal.fallbackAccount');
   const accounts = accountsController.getAccounts();
   const acc = accounts.find((a) => String(a.id) === String(id));
   return acc ? acc.name : String(id);

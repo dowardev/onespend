@@ -763,7 +763,8 @@
       },
       "daysummarymodal": {
         "fallbackTime": "--:--",
-        "fallbackAccount": "Sin cuenta"
+        "fallbackAccount": "Sin cuenta",
+        "fallbackName": "Sin nombre"
       },
       "pendingrecurringmodal": {
         "title": "Cargos recurrentes pendientes",
@@ -771,6 +772,10 @@
         "autoInsertAt": "Se inserta automáticamente a las {time}",
         "empty": "No hay cargos recurrentes pendientes",
         "applyAll": "Aplicar todos ({count})"
+      },
+      "accountbarchart": {
+        "label1": "Ingresos",
+        "label2": "Gastos"
       }
     },
     "entries": {
@@ -791,7 +796,13 @@
         "label2": "Fecha",
         "labelTime": "Hora",
         "text3": "Cuentas",
-        "label3": "Reasignar fecha"
+        "label3": "Reasignar fecha",
+        "message": "No se encontró la entrada"
+      },
+      "componentes": {
+        "attachmentsmodal": {
+          "fallback": "0 Bytes"
+        }
       }
     },
     "suppliers": {
@@ -800,7 +811,8 @@
         "label2": "Productos",
         "placeholder1": "Nombre",
         "placeholder2": "Precio",
-        "placeholder3": "Cant"
+        "placeholder3": "Cant",
+        "message": "Proveedor actualizado"
       }
     },
     "budgetview": {
@@ -888,7 +900,11 @@
         "exportExcel": "Exportar a Excel",
         "help": "Ayuda",
         "config": "Configuración",
-        "generatingExcel": "Generando Excel..."
+        "generatingExcel": "Generando Excel...",
+        "aria1": "Exportar a Excel",
+        "aria2": "Ayuda",
+        "aria3": "Configuración",
+        "text": "Exportando..."
       },
       "performancecomponent": {
         "prevPeriod": "Periodo anterior",
@@ -1031,7 +1047,11 @@
       "modals": {
         "addaccountcomponent": {
           "text1": "Nombre",
-          "text2": "Balance inicial"
+          "text2": "Balance inicial",
+          "alert": {
+            "cancel": "Cancelar"
+          },
+          "text": "Eliminar"
         }
       },
       "accountspage": {
@@ -1046,7 +1066,8 @@
       "supplierformcomponent": {
         "text": "Nombre",
         "label": "Productos",
-        "placeholder": "Buscar productos"
+        "placeholder": "Buscar productos",
+        "message": "Agregá al menos un producto"
       },
       "addsuplierscomponent": {
         "editTitle": "Editar Proveedor",
@@ -1056,7 +1077,7 @@
     "supplierspage": {
       "label": "Lista de proveedores",
       "placeholder": "Buscar proveedores",
-      "title": "Provedores",
+      "title": "Proveedores",
       "deleteConfirm": "¿Eliminar proveedor {name}?",
       "text1": "Cancelar",
       "text2": "Eliminar"
@@ -1089,7 +1110,8 @@
     "placeholder": "Buscar categoría"
   },
   "quickcategoryalert": {
-    "subHeader": "Elige la sección donde vivirá esta categoría"
+    "subHeader": "Elige la sección donde vivirá esta categoría",
+    "text": "Nueva categoría"
   },
   "sectionassignmodal": {
     "aria1": "Nueva categoría",
@@ -1100,7 +1122,8 @@
   "devmodebanner": {
     "unknownVersion": "OneSpend en desarrollo activo",
     "stable": "OneSpend v{version} estable",
-    "development": "OneSpend en desarrollo activo · v{version}"
+    "development": "OneSpend en desarrollo activo · v{version}",
+    "text": "Cerrar aviso"
   },
   "cashflowchart": {
     "income": "Ingresos",
