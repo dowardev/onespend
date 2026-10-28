@@ -102,12 +102,17 @@ describe('syncConfig (LBDS-289)', () => {
   })
 
   describe('readSyncConfig', () => {
-    it('returns enabled=false and hasServerUrl=false on a fresh install', async () => {
+    it('returns enabled=false and the build-time URL on a fresh install', async () => {
+      // Nothing persisted yet: the flag is off and the server URL falls back to
+      // the build-time default (LBDS-289), which is empty when VITE_API_URL is
+      // not set. The expectation is derived from that same default so the test
+      // does not depend on the environment it runs in.
       configDbMock.get.mockResolvedValue(undefined)
+      const fallback = defaultSyncServerUrl()
       expect(await readSyncConfig()).toEqual({
         enabled: false,
-        serverUrl: '',
-        hasServerUrl: false,
+        serverUrl: fallback,
+        hasServerUrl: fallback.length > 0,
       })
     })
 
