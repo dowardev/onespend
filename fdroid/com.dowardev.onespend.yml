@@ -23,9 +23,9 @@ Repo: https://gitlab.com/dowardev/onespend.git
 Binaries: https://gitlab.com/dowardev/onespend/-/releases/v%v/downloads/onespend-%v.apk
 
 Builds:
-  - versionName: 0.79.0
-    versionCode: 7900
-    commit: f43930894c0bac0ac303843d78f41d28c3014af5
+  - versionName: 0.80.0
+    versionCode: 8000
+    commit: d84020eed00ad25b9cf5bc606edc92d49a8fae83
     subdir: front/android/app
     sudo:
       - echo "deb https://deb.debian.org/debian forky main" > /etc/apt/sources.list.d/forky.list
@@ -52,5 +52,5 @@ AllowedAPKSigningKeys: c6d2961a958ea23a36925ea818e0605b28c9f8e60f84f0432c7e68ee5
 AutoUpdateMode: Version
 UpdateCheckMode: Tags ^v[\d.]+$
 UpdateCheckData: front/package.json|"versionCode":\s*(\d+)|.|"version":\s*"([\d.]+)"
-CurrentVersion: 0.79.0
-CurrentVersionCode: 7900
+CurrentVersion: 0.80.0
+CurrentVersionCode: 8000
