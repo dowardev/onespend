@@ -1,16 +1,3 @@
-# REGLA DURA — pregunta del usuario (máxima prioridad, leer primero)
-
-Cuando el usuario haga una PREGUNTA:
-1. Respondo SOLO la pregunta.
-2. Paro.
-3. Espero instrucción explícita.
-
-PROHIBIDO actuar por cuenta propia ante una pregunta: no editar archivos, no
-commitear, no crear tickets, no correr comandos con efectos. Esta regla está
-POR ENCIMA de cualquier skill, flujo o impulso de "aprovechar" el turno.
-Pregunta = responder y parar. Sin excepciones.
-
----
 <!--
 SPDX-FileCopyrightText: 2026 DowarDev
 
@@ -296,8 +283,6 @@ Determina cuándo usar un **controller** vs un **composable**:
 **Regla general:** Si necesitas `ref`, `computed`, `watch`, o `onMounted` → **composable**.
 Si solo necesitas funciones puras o acceso a datos → **controller**.
 
----
-
 ### Frontend (Vue Components): Ionic Imports
 
 Todos los componentes Vue que usen componentes de Ionic en su template **deben importar explícitamente** dichos componentes en la **sección 1** (`// 1. Imports (ionic/vue/ionicons)`) del script.
@@ -336,26 +321,11 @@ NEVER create or edit GitLab issues (or any external issue/ticket) without the us
 
 This rule exists because tickets (unlike code) are project-planning artifacts the user owns: content, priority, and even whether an item deserves a ticket are the user's decisions, not the agent's. The same applies to changelog/package edits that imply a release decision — propose, don't act.
 
+Before creating anything, search for open duplicates first:
+  GET /issues?state=opened&search=QUERY&per_page=20
+If a clear duplicate exists, do NOT create a second one: comment on the existing
+issue and ask the user (comment on the existing / create anyway).
 
-## Pi lifecycle command guard (gentle-ai)
-
-> **Histórico (gentle-pi v2.2.0):** este guard era un problema de la extensión
-> gentle-pi v2.2.0 y fue eliminado en la v2.3.0. Con la versión actual los comandos
-> compuestos (con `&&`, `;`, `|`, backtick o `$(`) ya no se bloquean. Esta sección
-> se conserva como referencia histórica únicamente.
-
-`git commit` / `git push` / `glab mr ...` desde el bash tool se bloquean si el
-comando tiene `&&`, `;`, `|`, backtick o `$(` (reporte: "Compound or wrapped
-lifecycle command ... must fail closed"). NO tiene que ver con RDD; RDD off no
-bloquea. El guard es stateless: cada comando se evalúa de forma aislada, no queda
-"trabado" tras un bloqueo.
-
-Fix: un solo comando directo, sin `&&` ni `cd`, preferiblemente
-`git -C <ruta-absoluta> <subcommand> -m "mensaje de una sola linea"`.
-IMPORTANTE: el mensaje del `-m` debe ser UNA sola linea (sin saltos de linea);
-un cuerpo multilinea introduce un `\n` sin comillar que dispara el mismo bloqueo.
-Si un comando "simple" sigue bloqueando, no es estado persistido: tiene algun
-control-char sin comillar (`;`, `|`, `&`, backtick, `$(` o `\n`) en la linea.
 
 ## Formato HTML / Vue / Ionic (legibilidad para review)
 
