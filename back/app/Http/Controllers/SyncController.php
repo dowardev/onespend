@@ -438,6 +438,8 @@ class SyncController extends Controller
                     return [
                         'sync_id' => $item['sync_id'] ?? ($item['id'] ?? null),
                         'id' => $item['id'] ?? null,
+                        // GitLab #15: the ack carries the row's version.
+                        'version' => $item['version'] ?? null,
                     ];
                 }, $items);
             }

@@ -9,6 +9,7 @@ namespace App\Services\Sync;
 use App\Repositories\SyncMetadataRepository;
 use App\Services\Sync\Contracts\SyncProcessorInterface;
 use App\Services\SyncIdResolver;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class SyncOrchestratorService
@@ -236,60 +237,67 @@ class SyncOrchestratorService
         $toCreate = [];
         $toUpdate = [];
         $toDelete = [];
-
-        $result = $processor->detectConflicts($items, $userId);
-        $conflicts = $result['conflicts'];
-        $existingMap = $result['existingMap'];
-
-        $conflictSyncIds = array_map(fn ($c) => $c['sync_id'], $conflicts);
-
-        foreach ($items as $item) {
-            $syncId = $item['id'] ?? null;
-            if (! $syncId) {
-                continue;
-            }
-
-            if (in_array($syncId, $conflictSyncIds, true)) {
-                $clientData = $item;
-                $conflictInfo = [];
-                foreach ($conflicts as $c) {
-                    if ($c['sync_id'] === $syncId) {
-                        $conflictInfo = array_intersect_key(
-                            $c,
-                            array_flip(['conflict_type', 'server_hash', 'client_hash', 'overlapping_fields', 'server_data'])
-                        );
-                        break;
-                    }
-                }
-                $this->saveConflictMetadata($entityType, $syncId, $userId, $clientData, $conflictInfo);
-
-                continue;
-            }
-
-            if (isset($item['_deleted']) && $item['_deleted'] === true) {
-                $toDelete[] = $syncId;
-            } else {
-                $existing = $existingMap->get($syncId);
-                if ($existing) {
-                    $toUpdate[] = $item;
-                } else {
-                    $toCreate[] = $item;
-                }
-            }
-        }
+        $conflicts = [];
+        $existingMap = collect();
 
         try {
-            $updated = $processor->update($toUpdate, $userId, $existingMap);
+            // GitLab #15 (review R1-001): the detection and the write must be
+            // atomic. The detection locks the rows it reads (SELECT ... FOR
+            // UPDATE) and this transaction holds those locks until the write
+            // commits, so a concurrent merge waits, re-reads the fresh row and
+            // sees the divergence before it decides.
+            return DB::transaction(function () use ($entityType, $items, $processor, $userId, &$toCreate, &$toUpdate, &$toDelete, &$conflicts, &$existingMap) {
+                $result = $processor->detectConflicts($items, $userId);
+                $conflicts = $result['conflicts'];
+                $existingMap = $result['existingMap'];
 
-            $result = [
-                'created' => $processor->create($toCreate, $userId),
-                'updated' => $updated,
-                'deleted' => $processor->delete($toDelete, $userId),
-                'conflicts' => $conflicts,
-                'errors' => [],
-            ];
+                $conflictSyncIds = array_map(fn ($c) => $c['sync_id'], $conflicts);
 
-            return $result;
+                foreach ($items as $item) {
+                    $syncId = $item['id'] ?? null;
+                    if (! $syncId) {
+                        continue;
+                    }
+
+                    if (in_array($syncId, $conflictSyncIds, true)) {
+                        $clientData = $item;
+                        $conflictInfo = [];
+                        foreach ($conflicts as $c) {
+                            if ($c['sync_id'] === $syncId) {
+                                $conflictInfo = array_intersect_key(
+                                    $c,
+                                    array_flip(['conflict_type', 'server_hash', 'client_hash', 'overlapping_fields', 'server_data'])
+                                );
+                                break;
+                            }
+                        }
+                        $this->saveConflictMetadata($entityType, $syncId, $userId, $clientData, $conflictInfo);
+
+                        continue;
+                    }
+
+                    if (isset($item['_deleted']) && $item['_deleted'] === true) {
+                        $toDelete[] = $syncId;
+                    } else {
+                        $existing = $existingMap->get($syncId);
+                        if ($existing) {
+                            $toUpdate[] = $item;
+                        } else {
+                            $toCreate[] = $item;
+                        }
+                    }
+                }
+
+                $updated = $processor->update($toUpdate, $userId, $existingMap);
+
+                return [
+                    'created' => $processor->create($toCreate, $userId),
+                    'updated' => $updated,
+                    'deleted' => $processor->delete($toDelete, $userId),
+                    'conflicts' => $conflicts,
+                    'errors' => [],
+                ];
+            });
         } catch (\Exception $e) {
             // LBDS-244: one poison row (e.g. an FK to a local-only id) must not
             // nuke the whole batch. Retry per item so siblings still sync and

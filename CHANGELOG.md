@@ -8,6 +8,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 ## [Unreleased]
 
+### Fixed
+- Editing a record right after creating it no longer produces a false "concurrent edit" conflict. The server now compares the pushed fields against the last synced state one by one, so an edit to a row the same client just created is applied instead of landing in the conflict list, and an edit made while another device changed a different field is merged instead of rejected (GitLab #15).
+- The local copy of a record now keeps the same revision counter as the server after every sync, for every kind of record. Before, a record created on the device kept revision 0 on the device while the server had already moved on, which the sync diagnostics reported as a version drift on every row the device had created (GitLab #15).
+
 ## [v0.80.0] - 2026-10-27
 
 ### Added

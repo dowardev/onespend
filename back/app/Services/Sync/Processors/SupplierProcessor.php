@@ -82,7 +82,8 @@ class SupplierProcessor extends AbstractEntityProcessor
                     ->get(['id', 'sync_id']);
 
                 foreach ($created as $record) {
-                    $result[] = ['sync_id' => $record->sync_id, 'id' => $record->id];
+                    // GitLab #15: the ack carries the row's version.
+                    $result[] = ['sync_id' => $record->sync_id, 'id' => $record->id, 'version' => 1];
                     if (isset($productsToCreate[$record->sync_id])) {
                         $this->createSupplierProducts($record->sync_id, $record->id, $productsToCreate[$record->sync_id], $userId);
                     }
@@ -170,6 +171,16 @@ class SupplierProcessor extends AbstractEntityProcessor
 
             $syncIds = array_column($result, 'sync_id');
             if (! empty($syncIds)) {
+                $versions = Supplier::whereIn('sync_id', $syncIds)
+                    ->where('user_id', $userId)
+                    ->pluck('version', 'sync_id');
+                foreach ($result as $index => $row) {
+                    $version = $versions[$row['sync_id']] ?? null;
+                    if ($version !== null) {
+                        $result[$index]['version'] = (int) $version;
+                    }
+                }
+
                 $fieldHashes = [];
                 $baseDataMap = [];
                 foreach ($syncIds as $sid) {

@@ -170,13 +170,15 @@ abstract class AbstractEntityProcessor implements SyncProcessorInterface
             $fieldHashes = [];
             $baseDataMap = [];
             foreach ($created as $record) {
-                $result[] = ['sync_id' => $record->sync_id, 'id' => $record->id];
+                // GitLab #15: the ack carries the row's version so the client
+                // can align its local copy instead of guessing it.
+                $result[] = ['sync_id' => $record->sync_id, 'id' => $record->id, 'version' => 1];
             }
             foreach ($insertData as $data) {
                 $sid = $data['sync_id'];
                 $fillableOnly = $this->filterToFillableFromCache($data, $this->getCachedFillable());
                 $fieldHashes[$sid] = $this->computeFieldHash($fillableOnly);
-                $baseDataMap[$sid] = $fillableOnly;
+                $baseDataMap[$sid] = $fillableOnly + ['_version' => 1];
             }
 
             $this->bulkUpdateSyncMetadata($syncIds, 'synced', $userId, [], $fieldHashes, $baseDataMap);
@@ -258,13 +260,24 @@ abstract class AbstractEntityProcessor implements SyncProcessorInterface
                 $syncIds = array_keys($bulkData);
                 $this->bulkUpdateByCase($modelClass, $bulkData, $userId);
 
+                // GitLab #15: the ack carries the version the write left.
+                $versions = $modelClass::whereIn('sync_id', $syncIds)
+                    ->where('user_id', $userId)
+                    ->pluck('version', 'sync_id');
+                foreach ($updated as $index => $row) {
+                    $version = $versions[$row['sync_id']] ?? null;
+                    if ($version !== null) {
+                        $updated[$index]['version'] = (int) $version;
+                    }
+                }
+
                 $fieldHashes = [];
                 $baseDataMap = [];
                 foreach ($syncIds as $sid) {
                     if (isset($bulkData[$sid])) {
                         $fillableData = $this->filterToFillableFromCache($bulkData[$sid], $this->getCachedFillable());
                         $fieldHashes[$sid] = $this->computeFieldHash($fillableData);
-                        $baseDataMap[$sid] = $fillableData;
+                        $baseDataMap[$sid] = $fillableData + ['_version' => (int) ($versions[$sid] ?? 0)];
                     }
                 }
                 $this->bulkUpdateSyncMetadata($syncIds, 'synced', $userId, [], $fieldHashes, $baseDataMap);

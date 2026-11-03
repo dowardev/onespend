@@ -250,7 +250,10 @@ class BudgetEntryProcessorTest extends TestCase
             ],
         ], $this->user->id);
 
-        BudgetEntry::where('sync_id', $syncId)->update(['updated_at' => now()->addDay()]);
+        BudgetEntry::where('sync_id', $syncId)->update([
+            'name' => 'Server Version Changed',
+            'updated_at' => now()->addDay(),
+        ]);
 
         $oldTimestamp = now()->subDay()->timestamp;
 
@@ -258,8 +261,12 @@ class BudgetEntryProcessorTest extends TestCase
             ['id' => $syncId, 'name' => 'Client Version', 'updated_at' => $oldTimestamp],
         ], $this->user->id);
 
+        // GitLab #15: a conflict is reported when both sides changed the
+        // same field since the merge base.
         $this->assertCount(1, $result['conflicts']);
         $this->assertEquals($syncId, $result['conflicts'][0]['sync_id']);
+        $this->assertEquals('semantic', $result['conflicts'][0]['conflict_type']);
+        $this->assertContains('name', $result['conflicts'][0]['overlapping_fields']);
     }
     public function test_process_updates_entity_with_groups(): void
     {
