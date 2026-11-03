@@ -164,12 +164,17 @@ class SupplierProductProcessorTest extends TestCase
             ['id' => $syncId, 'name' => 'Client SP', 'updated_at' => $oldTimestamp],
         ], $this->user->id);
 
-        $this->assertCount(1, $result['conflicts']);
-        $this->assertEquals('concurrent_edit', $result['conflicts'][0]['conflict_type']);
-        $this->assertEquals('Client SP', $result['conflicts'][0]['client_data']['name']);
+        // GitLab #15: the server row still holds the base values, so the
+        // client's update is a plain update — not a conflict.
+        $this->assertCount(0, $result['conflicts']);
+
+        $this->processor->update([
+            ['id' => $syncId, 'name' => 'Client SP', 'updated_at' => $oldTimestamp],
+        ], $this->user->id);
+
         $this->assertDatabaseHas('supplier_products', [
             'sync_id' => $syncId,
-            'name' => 'Original SP',
+            'name' => 'Client SP',
         ]);
     }
 

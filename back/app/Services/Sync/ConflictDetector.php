@@ -84,8 +84,14 @@ class ConflictDetector
 
         $existing = $modelClass::whereIn('sync_id', $syncIds)
             ->where('user_id', $userId)
+            // GitLab #15 (review R1-001): the detection and the write must
+            // see the same server state. The row lock is held until the
+            // transaction that wraps both commits.
+            ->lockForUpdate()
             ->get()
             ->keyBy('sync_id');
+
+        $dateColumns = $this->dateColumnsFor($modelClass);
 
         $baseDataRecords = SyncMetadata::forUser($userId)
             ->byEntityType($processor->getEntityType())
@@ -111,6 +117,7 @@ class ConflictDetector
 
             $serverData = $serverItem->toArray();
             $serverFiltered = $processor->filterToFillableFromCache($serverData, $processor->getCachedFillable());
+            $serverFiltered = $this->normalizeDateColumns($serverFiltered, $serverItem, $dateColumns);
             $serverHash = $this->computeFieldHash($processor, $serverFiltered);
 
             if ($clientHash === $serverHash) {
@@ -123,35 +130,105 @@ class ConflictDetector
             $syncMeta = $baseDataRecords->get($syncId);
             $baseData = $syncMeta?->base_data ?? [];
 
-            $shouldReportConflict = false;
+            // GitLab #15: a row with a higher version than the base was
+            // written after the base was taken, so a field the base does not
+            // carry has an unknown server state.
+            $baseVersion = $baseData['_version'] ?? null;
+            $serverChangedSinceBase = $baseVersion !== null
+                && (int) $serverItem->version > (int) $baseVersion;
 
-            if ($clientTimestamp < $serverTimestamp) {
-                $shouldReportConflict = true;
-            } elseif (! empty($baseData)) {
-                $shouldReportConflict = true;
-            }
+            $conflict = $this->buildConflictReport([
+                'syncId' => $syncId,
+                'clientFiltered' => $clientFiltered,
+                'serverFiltered' => $serverFiltered,
+                'baseData' => $baseData,
+                'serverData' => $serverData,
+                'item' => $item,
+                'serverHash' => $serverHash,
+                'clientHash' => $clientHash,
+                'clientTimestamp' => $clientTimestamp,
+                'serverTimestamp' => $serverTimestamp,
+                'serverChangedSinceBase' => $serverChangedSinceBase,
+            ]);
 
-            if ($shouldReportConflict) {
-                $conflict = $this->buildConflictReport([
-                    'syncId' => $syncId,
-                    'clientFiltered' => $clientFiltered,
-                    'serverFiltered' => $serverFiltered,
-                    'baseData' => $baseData,
-                    'serverData' => $serverData,
-                    'item' => $item,
-                    'serverHash' => $serverHash,
-                    'clientHash' => $clientHash,
-                ]);
-
-                if ($conflict !== null) {
-                    $conflicts[] = $conflict;
-                }
+            if ($conflict !== null) {
+                $conflicts[] = $conflict;
             }
         }
 
         return ['conflicts' => $conflicts, 'existingMap' => $existing];
     }
 
+    /**
+     * Bring the stored DATE columns back to the "Y-m-d" shape the client
+     * sends.
+     *
+     * The model casts a DATE column to a Carbon instance, so `toArray()`
+     * serializes it as an ISO timestamp ("2026-06-01T00:00:00.000000Z")
+     * while the client (and the merge base) carry the plain "2026-06-01".
+     * Comparing the two as they are makes every push of a dated row look
+     * like the server changed the date, which raises a phantom conflict.
+     *
+     * The raw column value is used (not the cast one) so the calendar day
+     * is the one the database stores, with no timezone shifting.
+     */
+    private function normalizeDateColumns(array $serverFiltered, $serverItem, array $dateColumns): array
+    {
+        $rawAttributes = $serverItem->getAttributes();
+
+        foreach ($dateColumns as $field) {
+            if (! array_key_exists($field, $serverFiltered)) {
+                continue;
+            }
+
+            $rawValue = $rawAttributes[$field] ?? null;
+            if ($rawValue === null || $rawValue === '') {
+                continue;
+            }
+
+            $serverFiltered[$field] = substr((string) $rawValue, 0, 10);
+        }
+
+        return $serverFiltered;
+    }
+
+    /**
+     * The fillable fields the model stores in a DATE column.
+     */
+    private function dateColumnsFor(string $modelClass): array
+    {
+        $casts = (new $modelClass)->getCasts();
+        $fields = [];
+
+        foreach ($casts as $field => $cast) {
+            if (in_array($cast, ['date', 'immutable_date'], true)) {
+                $fields[] = $field;
+            }
+        }
+
+        return $fields;
+    }
+
+    /**
+     * GitLab #15: decide whether one push is a conflict, field by field.
+     *
+     * The client payload is "base + the client's own changes", so it can be
+     * applied as-is whenever the server row still equals the base state for
+     * every field the client writes. That is the normal case of a client
+     * that creates a row and then edits it: the server never touched the
+     * row after the create, so the edit is a plain update, not a conflict.
+     *
+     * A conflict is reported only when applying the payload would destroy
+     * something the server owns:
+     *
+     *  - `semantic`: both sides changed the same field since the base.
+     *  - `concurrent_edit`: the server changed a field and the client still
+     *    carries the base value for it, so the write would revert it.
+     *
+     * Rows without a merge base (never synced through the merge path) keep
+     * the historical rule: the client wins unless its timestamp is older
+     * than the server's.
+     */
     private function buildConflictReport(array $params): ?array
     {
         $syncId = $params['syncId'];
@@ -162,52 +239,149 @@ class ConflictDetector
         $item = $params['item'];
         $serverHash = $params['serverHash'];
         $clientHash = $params['clientHash'];
+        $clientTimestamp = $params['clientTimestamp'];
+        $serverTimestamp = $params['serverTimestamp'];
+        $serverChangedSinceBase = $params['serverChangedSinceBase'] ?? false;
 
-        $clientChangedFields = [];
-        $serverChangedFields = [];
+        $analysis = $this->analyzeChanges($clientFiltered, $serverFiltered, $baseData, $serverChangedSinceBase);
 
-        foreach (array_keys($clientFiltered + $serverFiltered) as $field) {
+        if (empty($baseData)) {
+            // No merge base: there is nothing to compare the server row
+            // against, so the client wins unless it is stale.
+            if ($clientTimestamp >= $serverTimestamp) {
+                return null;
+            }
+
+            return $this->report([
+                'syncId' => $syncId,
+                'serverData' => $serverData,
+                'item' => $item,
+                'serverHash' => $serverHash,
+                'clientHash' => $clientHash,
+                'conflictType' => 'concurrent_edit',
+                'fields' => $analysis['clientChanged'],
+            ]);
+        }
+
+        if (! empty($analysis['overlapping'])) {
+            return $this->report([
+                'syncId' => $syncId,
+                'serverData' => $serverData,
+                'item' => $item,
+                'serverHash' => $serverHash,
+                'clientHash' => $clientHash,
+                'conflictType' => 'semantic',
+                'fields' => $analysis['overlapping'],
+                'fieldsKey' => 'overlapping_fields',
+            ]);
+        }
+
+        if (! empty($analysis['staleClobber'])) {
+            return $this->report([
+                'syncId' => $syncId,
+                'serverData' => $serverData,
+                'item' => $item,
+                'serverHash' => $serverHash,
+                'clientHash' => $clientHash,
+                'conflictType' => 'concurrent_edit',
+                'fields' => array_values(array_unique(array_merge(
+                    $analysis['clientChanged'],
+                    $analysis['staleClobber'],
+                ))),
+            ]);
+        }
+
+        // The server did not change anything the client writes: the client
+        // is simply ahead of the server and its update can be applied.
+        return null;
+    }
+
+    /**
+     * Field-level three-way analysis of one push.
+     *
+     * Only the fields the client sends are analysed: those are the ones
+     * the update path writes. A field the client does not send keeps the
+     * stored value, so it can never be clobbered by this push.
+     *
+     * A field the client sends but the base never saw (the base is the
+     * snapshot of the last synced payload) counts as "changed by the
+     * server" only when the server holds a value for it — a null server
+     * value means nobody ever set it.
+     */
+    private function analyzeChanges(
+        array $clientFiltered,
+        array $serverFiltered,
+        array $baseData,
+        bool $serverChangedSinceBase = false,
+    ): array {
+        $clientChanged = [];
+        $serverChanged = [];
+        $overlapping = [];
+        $staleClobber = [];
+
+        foreach (array_keys($clientFiltered) as $field) {
             $clientVal = $clientFiltered[$field] ?? null;
-            $baseVal = $baseData[$field] ?? null;
             $serverVal = $serverFiltered[$field] ?? null;
 
-            $clientDifferent = $this->valuesDiffer($clientVal, $baseVal);
-            $serverDifferent = $this->valuesDiffer($serverVal, $baseVal);
-
-            if ($clientDifferent) {
-                $clientChangedFields[] = $field;
+            // The push does not change this field: nothing to merge.
+            if (! $this->valuesDiffer($clientVal, $serverVal)) {
+                continue;
             }
-            if ($serverDifferent) {
-                $serverChangedFields[] = $field;
+
+            $hasBase = array_key_exists($field, $baseData);
+            $baseVal = $hasBase ? $baseData[$field] : null;
+
+            $clientChangedField = $this->valuesDiffer($clientVal, $baseVal);
+            $serverChangedField = $this->valuesDiffer($serverVal, $baseVal);
+
+            if (! $hasBase && $serverChangedSinceBase) {
+                // The base never carried this field and the server wrote the
+                // row after the base was taken, so the server side value of
+                // the field is unknown: treat it as changed so the client's
+                // write cannot silently overwrite it.
+                $serverChangedField = true;
+            }
+
+            if ($clientChangedField) {
+                $clientChanged[] = $field;
+            }
+
+            if ($serverChangedField) {
+                $serverChanged[] = $field;
+
+                if ($clientChangedField) {
+                    $overlapping[] = $field;
+                } else {
+                    // The server changed this field and the client still
+                    // carries the base value: applying the push would
+                    // revert the server's change.
+                    $staleClobber[] = $field;
+                }
             }
         }
 
-        $overlapping = array_intersect($clientChangedFields, $serverChangedFields);
+        return [
+            'clientChanged' => $clientChanged,
+            'serverChanged' => $serverChanged,
+            'overlapping' => $overlapping,
+            'staleClobber' => $staleClobber,
+        ];
+    }
 
-        if (! empty($overlapping)) {
-            return [
-                'sync_id' => $syncId,
-                'server_data' => $serverData,
-                'client_data' => $item,
-                'server_hash' => $serverHash,
-                'client_hash' => $clientHash,
-                'conflict_type' => 'semantic',
-                'overlapping_fields' => array_values($overlapping),
-            ];
-        }
+    private function report(array $params): array
+    {
+        $report = [
+            'sync_id' => $params['syncId'],
+            'server_data' => $params['serverData'],
+            'client_data' => $params['item'],
+            'server_hash' => $params['serverHash'],
+            'client_hash' => $params['clientHash'],
+            'conflict_type' => $params['conflictType'],
+        ];
 
-        if (! empty($clientChangedFields)) {
-            return [
-                'sync_id' => $syncId,
-                'server_data' => $serverData,
-                'client_data' => $item,
-                'server_hash' => $serverHash,
-                'client_hash' => $clientHash,
-                'conflict_type' => 'concurrent_edit',
-                'changed_fields' => array_values($clientChangedFields),
-            ];
-        }
+        $fieldsKey = $params['fieldsKey'] ?? 'changed_fields';
+        $report[$fieldsKey] = array_values($params['fields']);
 
-        return null;
+        return $report;
     }
 }

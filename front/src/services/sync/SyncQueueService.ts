@@ -41,6 +41,23 @@ function debug(...args: unknown[]): void {
   if (import.meta.env.DEV) { console.log(...args); }
 }
 
+// GitLab #15: the sync entity types and the local table that holds each of
+// them. Used by the ack phase to align the local `version` of every acked
+// row with the server's.
+const SYNC_ENTITY_TABLES: Record<string, {
+  bulkGet: (params: { syncIds: string[] }) => Promise<any[]>;
+  bulkPut: (params: { entries: any[] }) => Promise<any>;
+}> = {
+  account: accountsDb,
+  supplier: suppliersDb,
+  supplier_product: supplierProductsDb,
+  budget_provider: budgetProvidersDb,
+  budget_provider_product: budgetProviderProductsDb,
+  budget_entry: budgetEntriesDb,
+  recurring_record: recurringRecordsDb,
+  recurring_record_product: recurringRecordProductsDb,
+};
+
 // LBDS-244: ack ids arrive in mixed shapes (plain string, {sync_id},
 // {sync_id, id}, legacy {sync_id: null}). Centralize extraction so a
 // falsy sync_id can still fall back to id instead of sticking the queue.
@@ -942,6 +959,76 @@ export class SyncQueueService {
     void this.schedulePendingAttachmentsRetry();
   }
 
+  /**
+   * GitLab #15: align the local `version` of every acked row with the
+   * server's.
+   *
+   * The ack carries the version the row has on the server now, so the
+   * client mirrors it. The client must not infer the version: an inferred
+   * one drifts as soon as an ack is replayed or the server did not write
+   * the row, and the local counter then disagrees with the server for
+   * good.
+   */
+  private async applyServerVersionsFromAck(params: {
+    results: Record<string, Record<string, Array<{ sync_id: string; id?: number | null; version?: number | null }>>>;
+  }): Promise<void> {
+    const { results } = params;
+
+    await this.alignLocalVersions({ bucket: results?.created });
+    await this.alignLocalVersions({ bucket: results?.updated });
+  }
+
+  private async alignLocalVersions(params: {
+    bucket: Record<string, Array<Record<string, unknown> | string>> | undefined;
+  }): Promise<void> {
+    const { bucket } = params;
+    if (!bucket) return;
+
+    for (const [entityType, items] of Object.entries(bucket)) {
+      const table = SYNC_ENTITY_TABLES[entityType];
+      if (!table) continue; // unknown type (e.g. attachment) -> nothing to align
+      if (!Array.isArray(items) || items.length === 0) continue;
+
+      const syncIds: string[] = [];
+      const versions = new Map<string, number>();
+      for (const item of items) {
+        const syncId = extractAckId({ item });
+        if (!syncId) continue;
+        syncIds.push(syncId);
+
+        // The ack carries the version the row has on the server now. The
+        // client mirrors it: inferring it would drift as soon as an ack is
+        // replayed or the server did not write the row.
+        const raw = item && typeof item === 'object' ? (item as Record<string, unknown>).version : null;
+        const version = Number(raw);
+        if (Number.isFinite(version) && version > 0) versions.set(syncId, version);
+      }
+      if (syncIds.length === 0) continue;
+
+      try {
+        const rows = await table.bulkGet({ syncIds });
+        const updatedRows: any[] = [];
+
+        for (const row of rows) {
+          if (!row) continue;
+          const version = versions.get(row.sync_id);
+          if (version === undefined) continue;
+          const current = Number(row.version ?? 0);
+          if (version === current) continue;
+          updatedRows.push({ ...row, version });
+        }
+
+        if (updatedRows.length > 0) {
+          await table.bulkPut({ entries: updatedRows });
+        }
+      } catch (error) {
+        // A local write failure must not break the ack phase: the row is
+        // synced, only its local version counter lags behind.
+        console.warn(`[SYNC-PQ] version alignment failed for ${entityType}:`, error);
+      }
+    }
+  }
+
   private async updateLocalRecordsWithMysqlIds(
     results: Record<string, Record<string, Array<{ sync_id: string; id?: number | null }>>>,
   ): Promise<void> {
@@ -1321,17 +1408,14 @@ export class SyncQueueService {
             if (mergeResult.success && mergeResult.results) {
               await this.updateLocalRecordsWithMysqlIds(mergeResult.results);
 
-              // Bump version for newly created budget_entries (server uses version=1 after create)
-              const createdBe = ((mergeResult.results?.created?.budget_entry ?? []) as Array<Record<string, unknown> | string>);
-              for (const item of createdBe) {
-                const syncId = extractAckId({ item });
-                if (!syncId) continue;
-                const row = await budgetEntriesDb.getBySyncId({ syncId });
-                if (row && (!row.version || row.version < 1)) {
-                  row.version = 1;
-                  await budgetEntriesDb.put({ entry: row });
-                }
-              }
+              // GitLab #15: keep the local row's `version` aligned with the
+              // server's. The ack does not carry the server version (the
+              // merge response is compressed to sync_id + id), so the client
+              // mirrors the server rule: a create leaves the row at version
+              // 1, an applied update bumps it by one.
+              await this.applyServerVersionsFromAck({
+                results: mergeResult.results,
+              });
 
               const mergeConflicts = mergeResult.results?.conflicts ?? mergeResult.conflicts;
               if (mergeConflicts && Object.keys(mergeConflicts).length > 0) {

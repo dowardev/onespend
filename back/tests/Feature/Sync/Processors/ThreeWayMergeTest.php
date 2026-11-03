@@ -144,12 +144,16 @@ class ThreeWayMergeTest extends TestCase
             ['id' => 'acc-2', 'name' => 'Original Name', 'initial_balance' => 200.00, 'status' => 'active'],
         ], $this->user->id);
 
-        $this->assertCount(1, $result['conflicts']);
-        $this->assertEquals('concurrent_edit', $result['conflicts'][0]['conflict_type']);
-        $this->assertEquals(200.00, $result['conflicts'][0]['client_data']['initial_balance']);
+        // GitLab #15: the server row still holds the base values, so the
+        // client's change is merged, not reported as a conflict.
+        $this->assertCount(0, $result['conflicts']);
+
+        $this->accountProcessor->update([
+            ['id' => 'acc-2', 'name' => 'Original Name', 'initial_balance' => 200.00, 'status' => 'active'],
+        ], $this->user->id);
 
         $updated = Account::where('sync_id', 'acc-2')->first();
-        $this->assertEquals(100.00, (float) $updated->initial_balance);
+        $this->assertEquals(200.00, (float) $updated->initial_balance);
         $this->assertEquals('Original Name', $updated->name);
     }
 
@@ -195,7 +199,7 @@ class ThreeWayMergeTest extends TestCase
     }
 
     /** @test */
-    public function detect_conflicts_no_conflict_when_client_stale_server_changed(): void
+    public function detect_conflicts_preserves_server_change_when_client_is_stale(): void
     {
         // Server has updated the name (different from base)
         $account = Account::create([
@@ -223,13 +227,16 @@ class ThreeWayMergeTest extends TestCase
             ],
         ]);
 
-        // Client is stale - sends old data (matches base but not server)
-        // This should NOT create a conflict - client is stale, server wins
+        // Client is stale - it still carries the base value for the field
+        // the server changed. Applying the push would revert the server's
+        // change, so it is reported as a conflict.
         $result = $this->accountProcessor->detectConflicts([
             ['id' => 'acc-4', 'name' => 'Original Name', 'initial_balance' => 100.00, 'status' => 'active'],
         ], $this->user->id);
 
-        $this->assertEmpty($result['conflicts']);
+        $this->assertCount(1, $result['conflicts']);
+        $this->assertEquals('concurrent_edit', $result['conflicts'][0]['conflict_type']);
+        $this->assertContains('name', $result['conflicts'][0]['changed_fields']);
     }
 
     /** @test */
@@ -261,12 +268,9 @@ class ThreeWayMergeTest extends TestCase
             ['id' => 'sup-1', 'name' => 'Original Supplier', 'status' => 'inactive'],
         ], $this->user->id);
 
-        $this->assertCount(1, $result['conflicts']);
-        $this->assertEquals('concurrent_edit', $result['conflicts'][0]['conflict_type']);
-        $this->assertEquals('inactive', $result['conflicts'][0]['client_data']['status']);
-
-        $updated = Supplier::where('sync_id', 'sup-1')->first();
-        $this->assertEquals('active', $updated->status);
+        // GitLab #15: the server row still holds the base values, so the
+        // client's change is merged, not reported as a conflict.
+        $this->assertCount(0, $result['conflicts']);
     }
 
     /** @test */
