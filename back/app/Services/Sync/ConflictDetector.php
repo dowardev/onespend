@@ -124,6 +124,11 @@ class ConflictDetector
                 continue;
             }
 
+            // A delete does not write any field value, so a stale client copy
+            // of the row is not a divergence of its content (GitLab #19). It
+            // can still remove a newer revision, so the staleness of the
+            // delete is checked below.
+            $isDelete = isset($item['_deleted']) && $item['_deleted'] === true;
             $clientTimestamp = $this->normalizeTimestamp($item['updated_at'] ?? 0);
             $serverTimestamp = $serverItem->updated_at->timestamp;
 
@@ -146,9 +151,10 @@ class ConflictDetector
                 'item' => $item,
                 'serverHash' => $serverHash,
                 'clientHash' => $clientHash,
+                'serverChangedSinceBase' => $serverChangedSinceBase,
+                'isDelete' => $isDelete,
                 'clientTimestamp' => $clientTimestamp,
                 'serverTimestamp' => $serverTimestamp,
-                'serverChangedSinceBase' => $serverChangedSinceBase,
             ]);
 
             if ($conflict !== null) {
@@ -239,16 +245,22 @@ class ConflictDetector
         $item = $params['item'];
         $serverHash = $params['serverHash'];
         $clientHash = $params['clientHash'];
-        $clientTimestamp = $params['clientTimestamp'];
-        $serverTimestamp = $params['serverTimestamp'];
         $serverChangedSinceBase = $params['serverChangedSinceBase'] ?? false;
+        $isDelete = $params['isDelete'] ?? false;
+        $clientTimestamp = $params['clientTimestamp'] ?? 0;
+        $serverTimestamp = $params['serverTimestamp'] ?? 0;
 
         $analysis = $this->analyzeChanges($clientFiltered, $serverFiltered, $baseData, $serverChangedSinceBase);
 
         if (empty($baseData)) {
-            // No merge base: there is nothing to compare the server row
-            // against, so the client wins unless it is stale.
-            if ($clientTimestamp >= $serverTimestamp) {
+            // GitLab #19: without a merge base the server cannot tell which
+            // side changed what, so a divergence between the pushed payload and
+            // the stored row is reported as a conflict instead of being applied
+            // over the server's row (the client would silently revert the
+            // server's change).
+            if ($isDelete && $clientTimestamp >= $serverTimestamp) {
+                // The delete is not older than the stored row, so it cannot
+                // remove a newer revision: it is applied.
                 return null;
             }
 
@@ -259,7 +271,7 @@ class ConflictDetector
                 'serverHash' => $serverHash,
                 'clientHash' => $clientHash,
                 'conflictType' => 'concurrent_edit',
-                'fields' => $analysis['clientChanged'],
+                'fields' => $analysis['divergent'],
             ]);
         }
 
@@ -318,6 +330,7 @@ class ConflictDetector
         $serverChanged = [];
         $overlapping = [];
         $staleClobber = [];
+        $divergent = [];
 
         foreach (array_keys($clientFiltered) as $field) {
             $clientVal = $clientFiltered[$field] ?? null;
@@ -327,6 +340,8 @@ class ConflictDetector
             if (! $this->valuesDiffer($clientVal, $serverVal)) {
                 continue;
             }
+
+            $divergent[] = $field;
 
             $hasBase = array_key_exists($field, $baseData);
             $baseVal = $hasBase ? $baseData[$field] : null;
@@ -365,6 +380,7 @@ class ConflictDetector
             'serverChanged' => $serverChanged,
             'overlapping' => $overlapping,
             'staleClobber' => $staleClobber,
+            'divergent' => $divergent,
         ];
     }
 

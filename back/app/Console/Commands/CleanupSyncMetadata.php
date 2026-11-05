@@ -13,14 +13,19 @@ class CleanupSyncMetadata extends Command
 {
     protected $signature = 'syncmetadata:cleanup {--days=30 : Delete synced/resolved records older than this many days}';
 
-    protected $description = 'Clean up old SyncMetadata records';
+    protected $description = 'Clean up the SyncMetadata of the records the user deleted';
 
     public function handle(): int
     {
         $days = (int) $this->option('days');
         $cutoff = now()->subDays($days);
 
-        $deleted = SyncMetadata::whereIn('sync_status', ['synced', 'resolved'])
+        // GitLab #19: this table holds the merge base (base_data), so the
+        // metadata of a row that still exists must survive: dropping it would
+        // leave the next push of that row without a base, and the server
+        // would report a conflict it cannot explain. Only the metadata of the
+        // rows the user deleted is disposable.
+        $deleted = SyncMetadata::where('sync_status', 'deleted')
             ->where('server_updated_at', '<', $cutoff)
             ->delete();
 

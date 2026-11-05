@@ -297,6 +297,68 @@ abstract class AbstractEntityProcessor implements SyncProcessorInterface
         }
     }
 
+    /**
+     * GitLab #19: the merge base of a row has to describe the row as it was
+     * persisted, not the payload that was sent: the write can leave a
+     * different value in the row (a status the client did not send, a default
+     * the database filled in) and a base that does not match the row makes the
+     * next push look like a stale clobber.
+     *
+     * Returns the field hashes and the base map for the given rows.
+     */
+    /**
+     * A DATE column is serialized as an ISO timestamp by the model, while the
+     * client (and the merge base) carry the plain "Y-m-d". The base has to use
+     * the same shape as the client, or the field looks changed on the server.
+     */
+    private function normalizeDateColumns(array $data, string $modelClass): array
+    {
+        $casts = (new $modelClass)->getCasts();
+
+        foreach ($casts as $field => $cast) {
+            if (! in_array($cast, ['date', 'immutable_date'], true)) {
+                continue;
+            }
+
+            if (! isset($data[$field]) || ! is_string($data[$field])) {
+                continue;
+            }
+
+            $data[$field] = substr($data[$field], 0, 10);
+        }
+
+        return $data;
+    }
+
+    protected function mergeBaseForPersistedRows(string $modelClass, array $syncIds, int $userId): array
+    {
+        $fieldHashes = [];
+        $baseDataMap = [];
+
+        if (empty($syncIds)) {
+            return [$fieldHashes, $baseDataMap];
+        }
+
+        $rows = $modelClass::whereIn('sync_id', $syncIds)
+            ->where('user_id', $userId)
+            ->get()
+            ->keyBy('sync_id');
+
+        foreach ($syncIds as $syncId) {
+            $row = $rows->get($syncId);
+            if (! $row) {
+                continue;
+            }
+
+            $base = $this->filterToFillableFromCache($row->toArray(), (new $modelClass)->getFillable());
+            $base = $this->normalizeDateColumns($base, $modelClass);
+            $fieldHashes[$syncId] = $this->computeFieldHash($base);
+            $baseDataMap[$syncId] = $base + ['_version' => (int) ($row->version ?? 0)];
+        }
+
+        return [$fieldHashes, $baseDataMap];
+    }
+
     private function bulkUpdateByCase(
         string $modelClass,
         array $bulkData,
@@ -438,15 +500,23 @@ abstract class AbstractEntityProcessor implements SyncProcessorInterface
         return $this->conflictDetector->detectConflicts($this, $items, $userId);
     }
 
-    protected function bulkUpdateSyncMetadata(array $syncIds, string $status, int $userId, array $conflictDataMap = [], array $fieldHashes = [], array $baseDataMap = []): void
+    /**
+     * `$entityName` is the entity the metadata belongs to: a processor that
+     * writes the rows of a sub-entity (the products of a supplier, for
+     * example) has to store their metadata under their own entity name, or
+     * the conflict detector will not find their merge base.
+     */
+    protected function bulkUpdateSyncMetadata(array $syncIds, string $status, int $userId, array $conflictDataMap = [], array $fieldHashes = [], array $baseDataMap = [], ?string $entityName = null): void
     {
+        $entityName = $entityName ?? $this->getEntityName();
+
         if ($status === 'deleted') {
-            $this->syncMetadataRepo->markSynced($this->getEntityName(), $syncIds, $userId, [], [], 'deleted');
+            $this->syncMetadataRepo->markSynced($entityName, $syncIds, $userId, [], [], 'deleted');
 
             return;
         }
 
-        $this->syncMetadataRepo->markSynced($this->getEntityName(), $syncIds, $userId, $fieldHashes, $baseDataMap, $status);
+        $this->syncMetadataRepo->markSynced($entityName, $syncIds, $userId, $fieldHashes, $baseDataMap, $status);
     }
 
     public function getCachedFillable(): array

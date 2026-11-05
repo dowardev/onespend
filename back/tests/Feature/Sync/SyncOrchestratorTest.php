@@ -78,14 +78,15 @@ class SyncOrchestratorTest extends TestCase
     public function test_merge_updates_existing_entities(): void
     {
         $accountSyncId = 'sync-account-upd-1';
-        Account::create([
-            'user_id' => $this->user->id,
-            'sync_id' => $accountSyncId,
-            'name' => 'Old Name',
-            'status' => 'active',
-        ]);
-        Account::where('sync_id', $accountSyncId)
-            ->update(['updated_at' => '2001-01-01 00:00:00']);
+
+        // Created through the merge so the row carries its merge base: a row
+        // that never went through the sync has no base, and the server
+        // reports a conflict for it (GitLab #19).
+        $this->orchestrator->merge([
+            'account' => [
+                ['id' => $accountSyncId, 'name' => 'Old Name', 'initialBalance' => 0, 'status' => 'active'],
+            ],
+        ], $this->user->id);
 
         $data = [
             'account' => [
