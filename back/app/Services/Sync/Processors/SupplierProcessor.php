@@ -89,7 +89,13 @@ class SupplierProcessor extends AbstractEntityProcessor
                     }
                 }
 
-                $this->bulkUpdateSyncMetadata($syncIds, 'synced', $userId);
+                // GitLab #19: write a proper merge base so conflict detection
+                // can compare future pushes against the server-stored state.
+                // GitLab #19: the base has to describe the row as it was
+                // persisted, not the payload that was sent (a value the write
+                // transforms, a default the database filled in).
+                [$fieldHashes, $baseDataMap] = $this->mergeBaseForPersistedRows(Supplier::class, $syncIds, $userId);
+                $this->bulkUpdateSyncMetadata($syncIds, 'synced', $userId, [], $fieldHashes, $baseDataMap);
                 DB::commit();
             } catch (\Exception $e) {
                 DB::rollBack();
@@ -142,6 +148,11 @@ class SupplierProcessor extends AbstractEntityProcessor
                     $existingUpdatedAt = $existingMap[$syncId]->updated_at ?? null;
                 }
 
+                // The version advances like in every other entity, so the
+                // merge base can tell whether the server wrote the row after
+                // the base was taken (GitLab #19).
+                $updateFields['version'] = DB::raw('version + 1');
+
                 $query = Supplier::where('sync_id', $syncId)->where('user_id', $userId);
                 if ($existingUpdatedAt !== null) {
                     $query->where('updated_at', $existingUpdatedAt);
@@ -181,14 +192,9 @@ class SupplierProcessor extends AbstractEntityProcessor
                     }
                 }
 
-                $fieldHashes = [];
-                $baseDataMap = [];
-                foreach ($syncIds as $sid) {
-                    if (isset($filteredDataBySyncId[$sid])) {
-                        $fieldHashes[$sid] = $this->computeFieldHash($filteredDataBySyncId[$sid]);
-                        $baseDataMap[$sid] = [];
-                    }
-                }
+                // GitLab #19: the base has to describe the row as it was
+                // persisted, not the payload that was sent.
+                [$fieldHashes, $baseDataMap] = $this->mergeBaseForPersistedRows(Supplier::class, $syncIds, $userId);
                 $this->bulkUpdateSyncMetadata($syncIds, 'synced', $userId, [], $fieldHashes, $baseDataMap);
             }
 
@@ -212,9 +218,11 @@ class SupplierProcessor extends AbstractEntityProcessor
     {
         $now = now();
         $insertData = [];
+        $productSyncIds = [];
 
         foreach ($products as $product) {
             $productSyncId = $product['sync_id'] ?? $product['id'] ?? uniqid('sp_', true);
+            $productSyncIds[] = $productSyncId;
 
             $insertData[] = [
                 'user_id' => $userId,
@@ -231,6 +239,10 @@ class SupplierProcessor extends AbstractEntityProcessor
 
         if (! empty($insertData)) {
             SupplierProduct::insert($insertData);
+
+            // GitLab #19: write the merge base of the persisted rows.
+            [$fieldHashes, $baseDataMap] = $this->mergeBaseForPersistedRows(SupplierProduct::class, $productSyncIds, $userId);
+            $this->bulkUpdateSyncMetadata($productSyncIds, 'synced', $userId, [], $fieldHashes, $baseDataMap, 'supplier_product');
         }
     }
 
@@ -256,6 +268,7 @@ class SupplierProcessor extends AbstractEntityProcessor
             ->keyBy('sync_id');
 
         $insertData = [];
+        $updatedData = [];
 
         foreach ($productsBySyncId as $productSyncId => $product) {
             $productData = [
@@ -267,6 +280,7 @@ class SupplierProcessor extends AbstractEntityProcessor
 
             if (isset($existingProducts[$productSyncId])) {
                 $existingProducts[$productSyncId]->update($productData);
+                $updatedData[$productSyncId] = $productData;
             } else {
                 $insertData[] = [
                     'user_id' => $userId,
@@ -292,6 +306,13 @@ class SupplierProcessor extends AbstractEntityProcessor
                 ->where('user_id', $userId)
                 ->whereNotIn('sync_id', $incomingSyncIds)
                 ->update(['deleted_at' => $now, 'status' => 'deleted']);
+        }
+
+        // GitLab #19: write the merge base of the persisted rows (the ones
+        // inserted and the ones updated).
+        if (! empty($productSyncIds)) {
+            [$fieldHashes, $baseDataMap] = $this->mergeBaseForPersistedRows(SupplierProduct::class, $productSyncIds, $userId);
+            $this->bulkUpdateSyncMetadata($productSyncIds, 'synced', $userId, [], $fieldHashes, $baseDataMap, 'supplier_product');
         }
     }
 }

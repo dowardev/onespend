@@ -231,15 +231,15 @@ class RecurringRecordProcessorTest extends TestCase
             ],
         ], $this->user->id);
 
+        // Server changes the name (simulating another device editing it).
         RecurringRecord::where('sync_id', $syncId)->update([
             'name' => 'Server RR Changed',
             'updated_at' => now()->addDay(),
         ]);
 
-        $oldTimestamp = now()->subDay()->timestamp;
-
+        // Client tries to change the same field to a different value -> semantic conflict.
         $result = $this->processor->detectConflicts([
-            ['id' => $syncId, 'name' => 'Client RR', 'updated_at' => $oldTimestamp],
+            ['id' => $syncId, 'name' => 'Client RR', 'updated_at' => now()->timestamp],
         ], $this->user->id);
 
         // GitLab #15: a conflict is reported when both sides changed the
@@ -248,6 +248,41 @@ class RecurringRecordProcessorTest extends TestCase
         $this->assertEquals($syncId, $result['conflicts'][0]['sync_id']);
         $this->assertEquals('semantic', $result['conflicts'][0]['conflict_type']);
         $this->assertContains('name', $result['conflicts'][0]['overlapping_fields']);
+    }
+
+    public function test_process_detects_stale_clobber_conflict(): void
+    {
+        $syncId = 'test-rr-stale-1';
+
+        $this->processor->create([
+            [
+                'id' => $syncId,
+                'name' => 'Original Record',
+                'type' => 'cargo',
+                'entry_type' => 'egreso',
+                'amount' => 100,
+                'repeat_frequency' => 'month',
+                'repeat_interval' => 1,
+                'start_date' => '2026-01-01',
+                'status' => 'active',
+            ],
+        ], $this->user->id);
+
+        // Server changes the name.
+        RecurringRecord::where('sync_id', $syncId)->update([
+            'name' => 'Server Changed',
+            'updated_at' => now()->addDay(),
+        ]);
+
+        // Client does NOT change the name (keeps base value) but changes another field.
+        // The client pushes the base value for 'name' -> stale clobber.
+        $result = $this->processor->detectConflicts([
+            ['id' => $syncId, 'name' => 'Original Record', 'updated_at' => now()->timestamp],
+        ], $this->user->id);
+
+        $this->assertCount(1, $result['conflicts']);
+        $this->assertEquals('concurrent_edit', $result['conflicts'][0]['conflict_type']);
+        $this->assertContains('name', $result['conflicts'][0]['changed_fields']);
     }
 
     // LBDS-273 (GitLab #13): mirror the `category` column that budget_entries

@@ -91,7 +91,13 @@ class BudgetProviderProcessor extends AbstractEntityProcessor
                 }
             }
 
-            $this->bulkUpdateSyncMetadata($syncIds, 'synced', $userId);
+            // GitLab #19: write a proper merge base so conflict detection
+            // can compare future pushes against the server-stored state.
+            // GitLab #19: the base has to describe the row as it was
+            // persisted, not the payload that was sent (a value the write
+            // transforms, a default the database filled in).
+            [$fieldHashes, $baseDataMap] = $this->mergeBaseForPersistedRows(BudgetProvider::class, $syncIds, $userId);
+            $this->bulkUpdateSyncMetadata($syncIds, 'synced', $userId, [], $fieldHashes, $baseDataMap);
             DB::commit();
         } catch (\Exception $e) {
             DB::rollBack();
@@ -136,6 +142,11 @@ class BudgetProviderProcessor extends AbstractEntityProcessor
                     $existingUpdatedAt = $existingMap[$syncId]->updated_at ?? null;
                 }
 
+                // The version advances like in every other entity, so the
+                // merge base can tell whether the server wrote the row after
+                // the base was taken (GitLab #19).
+                $data['version'] = DB::raw('version + 1');
+
                 $query = $modelClass::where('sync_id', $syncId)->where('user_id', $userId);
                 if ($existingUpdatedAt !== null) {
                     $query->where('updated_at', $existingUpdatedAt);
@@ -179,14 +190,19 @@ class BudgetProviderProcessor extends AbstractEntityProcessor
             }
 
             if (! empty($syncIds)) {
-                $fieldHashes = [];
-                $baseDataMap = [];
-                foreach ($syncIds as $sid) {
-                    if (isset($filteredDataBySyncId[$sid])) {
-                        $fieldHashes[$sid] = $this->computeFieldHash($filteredDataBySyncId[$sid]);
-                        $baseDataMap[$sid] = [];
+                $versions = $modelClass::whereIn('sync_id', $syncIds)
+                    ->where('user_id', $userId)
+                    ->pluck('version', 'sync_id');
+                foreach ($updated as $index => $row) {
+                    $version = $versions[$row['sync_id']] ?? null;
+                    if ($version !== null) {
+                        $updated[$index]['version'] = (int) $version;
                     }
                 }
+
+                // GitLab #19: the base has to describe the row as it was
+                // persisted, not the payload that was sent.
+                [$fieldHashes, $baseDataMap] = $this->mergeBaseForPersistedRows(BudgetProvider::class, $syncIds, $userId);
                 $this->bulkUpdateSyncMetadata($syncIds, 'synced', $userId, [], $fieldHashes, $baseDataMap);
             }
 
@@ -246,9 +262,9 @@ class BudgetProviderProcessor extends AbstractEntityProcessor
                 ['sync_id', 'user_id'],
                 ['budget_provider_id', 'supplier_product_id', 'product_name', 'product_price', 'quantity', 'status', 'deleted_at', 'updated_at']
             );
-            $fieldHashes = array_combine($productSyncIds, array_map(fn ($item) => $this->computeFieldHash($item), $upsertData));
-            $baseDataMap = array_fill_keys($productSyncIds, []);
-            $this->bulkUpdateSyncMetadata($productSyncIds, 'synced', $userId, [], $fieldHashes, $baseDataMap);
+            // GitLab #19: write the merge base of the persisted rows.
+            [$fieldHashes, $baseDataMap] = $this->mergeBaseForPersistedRows(BudgetProviderProduct::class, $productSyncIds, $userId);
+            $this->bulkUpdateSyncMetadata($productSyncIds, 'synced', $userId, [], $fieldHashes, $baseDataMap, 'budget_provider_product');
         }
     }
 }

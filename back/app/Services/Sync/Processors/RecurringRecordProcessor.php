@@ -122,12 +122,12 @@ class RecurringRecordProcessor extends AbstractEntityProcessor
                 }
             }
 
-            $fieldHashes = [];
-            $baseDataMap = [];
-            foreach ($insertData as $item) {
-                $fieldHashes[$item['sync_id']] = $this->computeFieldHash($item);
-                $baseDataMap[$item['sync_id']] = $item;
-            }
+            // GitLab #19: write a proper merge base so conflict detection
+            // can compare future pushes against the server-stored state.
+            // GitLab #19: the base has to describe the row as it was
+            // persisted, not the payload that was sent (a value the write
+            // transforms, a default the database filled in).
+            [$fieldHashes, $baseDataMap] = $this->mergeBaseForPersistedRows(RecurringRecord::class, $syncIds, $userId);
 
             $this->bulkUpdateSyncMetadata($syncIds, 'synced', $userId, [], $fieldHashes, $baseDataMap);
             DB::commit();
@@ -174,6 +174,11 @@ class RecurringRecordProcessor extends AbstractEntityProcessor
                     $existingUpdatedAt = $existingMap[$syncId]->updated_at ?? null;
                 }
 
+                // The version advances like in every other entity, so the
+                // merge base can tell whether the server wrote the row after
+                // the base was taken (GitLab #19).
+                $data['version'] = DB::raw('version + 1');
+
                 $query = $modelClass::where('sync_id', $syncId)->where('user_id', $userId);
                 if ($existingUpdatedAt !== null) {
                     $query->where('updated_at', $existingUpdatedAt);
@@ -219,7 +224,20 @@ class RecurringRecordProcessor extends AbstractEntityProcessor
             }
 
             if (! empty($syncIds)) {
-                $this->bulkUpdateSyncMetadata($syncIds, 'synced', $userId);
+                $versions = $modelClass::whereIn('sync_id', $syncIds)
+                    ->where('user_id', $userId)
+                    ->pluck('version', 'sync_id');
+                foreach ($updated as $index => $row) {
+                    $version = $versions[$row['sync_id']] ?? null;
+                    if ($version !== null) {
+                        $updated[$index]['version'] = (int) $version;
+                    }
+                }
+
+                // GitLab #19: the base has to describe the row as it was
+                // persisted, not the payload that was sent.
+                [$fieldHashes, $baseDataMap] = $this->mergeBaseForPersistedRows(RecurringRecord::class, $syncIds, $userId);
+                $this->bulkUpdateSyncMetadata($syncIds, 'synced', $userId, [], $fieldHashes, $baseDataMap);
             }
 
             DB::commit();
@@ -278,13 +296,9 @@ class RecurringRecordProcessor extends AbstractEntityProcessor
                 ['sync_id', 'user_id'],
                 ['recurring_record_id', 'supplier_product_id', 'product_name', 'product_price', 'quantity', 'status', 'deleted_at', 'updated_at']
             );
-            $fieldHashes = [];
-            $baseDataMap = [];
-            foreach ($upsertData as $item) {
-                $fieldHashes[$item['sync_id']] = $this->computeFieldHash($item);
-                $baseDataMap[$item['sync_id']] = $item;
-            }
-            $this->bulkUpdateSyncMetadata($productSyncIds, 'synced', $userId, [], $fieldHashes, $baseDataMap);
+            // GitLab #19: write the merge base of the persisted rows.
+            [$fieldHashes, $baseDataMap] = $this->mergeBaseForPersistedRows(RecurringRecordProduct::class, $productSyncIds, $userId);
+            $this->bulkUpdateSyncMetadata($productSyncIds, 'synced', $userId, [], $fieldHashes, $baseDataMap, 'recurring_record_product');
         }
     }
 }

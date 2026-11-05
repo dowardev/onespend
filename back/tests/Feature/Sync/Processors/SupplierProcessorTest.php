@@ -167,15 +167,46 @@ class SupplierProcessorTest extends TestCase
             ],
         ], $this->user->id);
 
-        Supplier::where('sync_id', $syncId)->update(['updated_at' => now()->addDay()]);
+        // Server changes the name (simulating another device editing it).
+        Supplier::where('sync_id', $syncId)->update(['name' => 'Server Changed', 'updated_at' => now()->addDay()]);
 
-        $oldTimestamp = now()->subDay()->timestamp;
-
+        // Client tries to change the same field to a different value -> semantic conflict.
         $result = $this->processor->detectConflicts([
-            ['id' => $syncId, 'name' => 'Client Version', 'updated_at' => $oldTimestamp],
+            ['id' => $syncId, 'name' => 'Client Version', 'updated_at' => now()->timestamp],
         ], $this->user->id);
 
         $this->assertCount(1, $result['conflicts']);
         $this->assertEquals($syncId, $result['conflicts'][0]['sync_id']);
+        $this->assertEquals('semantic', $result['conflicts'][0]['conflict_type']);
+        $this->assertContains('name', $result['conflicts'][0]['overlapping_fields']);
+    }
+
+    public function test_process_detects_stale_clobber_conflict(): void
+    {
+        $syncId = 'test-supplier-stale-1';
+
+        $this->processor->create([
+            [
+                'id' => $syncId,
+                'name' => 'Original',
+                'products' => [
+                    ['sync_id' => 'sp-stale-1', 'name' => 'Prod', 'price' => 5],
+                ],
+            ],
+        ], $this->user->id);
+
+        // Server changes the name.
+        Supplier::where('sync_id', $syncId)->update(['name' => 'Server Changed', 'updated_at' => now()->addDay()]);
+
+        // Client does NOT change the name (keeps base value) but changes another field.
+        // Note: Supplier has limited fillable fields, so we test with what we have.
+        // The client pushes the base value for 'name' -> stale clobber.
+        $result = $this->processor->detectConflicts([
+            ['id' => $syncId, 'name' => 'Original', 'updated_at' => now()->timestamp],
+        ], $this->user->id);
+
+        $this->assertCount(1, $result['conflicts']);
+        $this->assertEquals('concurrent_edit', $result['conflicts'][0]['conflict_type']);
+        $this->assertContains('name', $result['conflicts'][0]['changed_fields']);
     }
 }
