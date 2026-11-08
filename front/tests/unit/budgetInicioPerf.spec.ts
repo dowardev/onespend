@@ -125,7 +125,12 @@ describe('InicioViewComponent unified totals (LBDS-210 RC4 §2)', () => {
     // Day-scoped provider appears; other-day provider does not leak into unifiedItems.
     expect(wrapper.text()).toContain('Proveedor Hoy')
     expect(wrapper.text()).not.toContain('Proveedor Otro Día')
-  })
+    // GitLab #23: mounting the whole Ionic view is the heaviest thing in
+    // the suite; on a loaded runner it can take longer than vitest's 5s
+    // default timeout. The assertions above are about the totals, not
+    // about the wall time, so the timeout is raised instead of the spec
+    // being made cheaper.
+  }, 20_000)
 
   it('includes provider product totals in egresos (semantics preserved)', async () => {
     // Give the day provider a real product price.

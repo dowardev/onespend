@@ -14,13 +14,13 @@ const {
   mockMarkPendingDelete,
   mockSyncAttachment,
 } = vi.hoisted(() => ({
-  mockListAttachments: vi.fn(async () => ({ data: [], total: 0 })) as Mock<unknown[], Promise<{ data: unknown[]; total: number }>> & { mock: { calls: unknown[][] } },
-  mockListProviderAttachments: vi.fn(async () => ({ data: [], total: 0 })) as Mock<unknown[], Promise<{ data: unknown[]; total: number }>> & { mock: { calls: unknown[][] } },
-  mockDeleteAttachments: vi.fn(async () => undefined) as Mock<unknown[], Promise<void>> & { mock: { calls: unknown[][] } },
-  mockPendingRemovePending: vi.fn(async () => undefined) as Mock<unknown[], Promise<void>> & { mock: { calls: unknown[][] } },
-  mockListForEntity: vi.fn(async () => []) as Mock<unknown[], Promise<unknown[]>> & { mock: { calls: unknown[][] } },
-  mockMarkPendingDelete: vi.fn(async () => undefined) as Mock<unknown[], Promise<void>> & { mock: { calls: unknown[][] } },
-  mockSyncAttachment: vi.fn(async () => 0) as Mock<unknown[], Promise<number>> & { mock: { calls: unknown[][] } },
+  mockListAttachments: vi.fn(async () => ({ data: [], total: 0 })) as Mock<(...args: unknown[]) => Promise<{ data: unknown[]; total: number }>> & { mock: { calls: unknown[][] } },
+  mockListProviderAttachments: vi.fn(async () => ({ data: [], total: 0 })) as Mock<(...args: unknown[]) => Promise<{ data: unknown[]; total: number }>> & { mock: { calls: unknown[][] } },
+  mockDeleteAttachments: vi.fn(async () => undefined) as Mock<(...args: unknown[]) => Promise<void>> & { mock: { calls: unknown[][] } },
+  mockPendingRemovePending: vi.fn(async () => undefined) as Mock<(...args: unknown[]) => Promise<void>> & { mock: { calls: unknown[][] } },
+  mockListForEntity: vi.fn(async () => []) as Mock<(...args: unknown[]) => Promise<unknown[]>> & { mock: { calls: unknown[][] } },
+  mockMarkPendingDelete: vi.fn(async () => undefined) as Mock<(...args: unknown[]) => Promise<void>> & { mock: { calls: unknown[][] } },
+  mockSyncAttachment: vi.fn(async () => 0) as Mock<(...args: unknown[]) => Promise<number>> & { mock: { calls: unknown[][] } },
 }))
 
 vi.mock('@/services/attachmentService', () => ({

@@ -1143,31 +1143,38 @@ export class SyncQueueService {
   private pendingDrainInFlight = false;
 
   private async processPendingAttachments() {
-    // LBDS-289: skip the drain (and its HTTP upload) when sync is off.
-    // Local pending attachments stay queued in pendingAttachments — when
-    // the user re-enables sync, the scheduler's first tick picks them up.
-    if (!(await this.isSyncEnabledForRun())) {
-      debug('[SYNC-PQ] pending attachments drain skipped — sync disabled');
-      return;
-    }
+    // LBDS-287 (GitLab #23): the in-flight flag is claimed synchronously,
+    // before the first `await`. The flag used to be checked after the
+    // config read, so two concurrent drains could both pass the check when
+    // the first one finished inside that window — and the second drain
+    // uploaded the same attachment again (the duplicate the LBDS-287 flag
+    // was introduced to prevent). Claiming the flag before any await makes
+    // the guard atomic: the second drain sees it set and exits.
     if (this.pendingDrainInFlight) {
       debug('[SYNC-PQ] pending attachments drain already in flight — skipping concurrent call');
       return;
     }
-    // LBDS-287: a 401 from the merge sets syncBlockedByAuth and the
-    // processQueue finally block still calls this drain. Without this
-    // guard the drain would attempt uploads with the dead token, fail,
-    // and the scheduler would re-arm every backoff tick forever. The
-    // merge queue's scheduleBackoffRetry honours the flag; the
-    // attachment drain must too.
-    if (this.syncBlockedByAuth) {
-      debug('[SYNC-PQ] drain skipped: auth blocked');
-      return;
-    }
-    if (!this._isOnline) return;
-
     this.pendingDrainInFlight = true;
     try {
+      // LBDS-289: skip the drain (and its HTTP upload) when sync is off.
+      // Local pending attachments stay queued in pendingAttachments — when
+      // the user re-enables sync, the scheduler's first tick picks them up.
+      if (!(await this.isSyncEnabledForRun())) {
+        debug('[SYNC-PQ] pending attachments drain skipped — sync disabled');
+        return;
+      }
+      // LBDS-287: a 401 from the merge sets syncBlockedByAuth and the
+      // processQueue finally block still calls this drain. Without this
+      // guard the drain would attempt uploads with the dead token, fail,
+      // and the scheduler would re-arm every backoff tick forever. The
+      // merge queue's scheduleBackoffRetry honours the flag; the
+      // attachment drain must too.
+      if (this.syncBlockedByAuth) {
+        debug('[SYNC-PQ] drain skipped: auth blocked');
+        return;
+      }
+      if (!this._isOnline) return;
+
       const pending = await pendingAttachmentsService.getAllPendingAttachments();
 
       for (const attachment of pending) {

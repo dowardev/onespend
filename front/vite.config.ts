@@ -144,6 +144,14 @@ export default defineConfig(({ command }) => ({
   test: {
     globals: true,
     environment: 'jsdom',
+    // GitLab #23: vitest 3 defaults to the `forks` pool, which starts a
+    // fresh process per test file. The suite is jsdom + IndexedDB heavy and
+    // the process pool roughly doubles the wall time (and the CPU
+    // contention) of a full run, which is what pushed the heavier specs
+    // past vitest's 5s default timeout. `threads` keeps the isolation
+    // model of vitest 0.34 (the pool this suite was written against) and
+    // keeps the run green.
+    pool: 'threads',
     exclude: [...configDefaults.exclude, 'tests/e2e-playwright/**'],
     setupFiles: ['./src/test-setup.ts'],
   },

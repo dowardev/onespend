@@ -1,9 +1,10 @@
 [tools]
-# The frontend toolchain (vitest 0.34 + jsdom 22) does not run on Node 26:
-# Node 26 exposes an experimental global `localStorage` that stays undefined
-# without `--localstorage-file`, so the jsdom environment never takes over and
-# every spec that touches localStorage fails. Node 24 is the line the CI uses
-# (see .gitlab-ci.yml) and the last one this toolchain supports. Moving to the
-# current LTS needs vitest 3.x/4.x first.
-node = "24"
+# The frontend toolchain (vitest 3.x + jsdom) runs on the current Node LTS
+# (26, in LTS since October 2026). The previous pin to Node 24 was needed
+# because vitest 0.34 + jsdom 22 did not survive Node 26: Node exposes an
+# experimental global `localStorage` that stays undefined without
+# `--localstorage-file`, so the jsdom environment never took over and every
+# spec that touches localStorage failed. vitest 3.x owns the jsdom globals, so
+# the pin now follows the LTS line the CI uses (see .gitlab-ci.yml).
+node = "26"
 java = "21"
