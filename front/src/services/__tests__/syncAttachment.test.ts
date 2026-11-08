@@ -5,8 +5,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
 
 const { mockQueueOperation, mockGetQueueCount } = vi.hoisted(() => ({
-  mockQueueOperation: vi.fn(async () => undefined) as Mock<unknown[], Promise<void>> & { mock: { calls: unknown[][] } },
-  mockGetQueueCount: vi.fn(async () => 0) as Mock<unknown[], Promise<number>> & { mock: { calls: unknown[][] } },
+  mockQueueOperation: vi.fn(async () => undefined) as Mock<(...args: unknown[]) => Promise<void>> & { mock: { calls: unknown[][] } },
+  mockGetQueueCount: vi.fn(async () => 0) as Mock<(...args: unknown[]) => Promise<number>> & { mock: { calls: unknown[][] } },
 }))
 
 const { mockSyncId } = vi.hoisted(() => ({ mockSyncId: vi.fn(() => 'generated-uuid') }))

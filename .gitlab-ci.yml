@@ -103,7 +103,7 @@ backend_test:
 
 frontend_lint:
   stage: lint
-  image: node:24.4-alpine
+  image: node:26.13-alpine
   extends:
     - .frontend_setup
     - .tag_rules
@@ -113,7 +113,7 @@ frontend_lint:
 
 frontend_test:
   stage: test
-  image: node:24.4-alpine
+  image: node:26.13-alpine
   extends:
     - .frontend_setup
     - .tag_rules
@@ -174,7 +174,7 @@ backend_build:
 
 frontend_build:
   stage: build
-  image: node:24.4-alpine
+  image: node:26.13-alpine
   extends:
     - .frontend_setup
     - .tag_rules
