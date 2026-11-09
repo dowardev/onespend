@@ -58,10 +58,10 @@ export function toBudgetEntryRow(entry: any): BudgetEntryRow {
     notes: entry.notes != null ? entry.notes : undefined,
     // LBDS-273 (GitLab #13): optional HH:MM mirror of recurring `time`.
     // Same `!= null` guard as notes (no silent string coercion) so a
-    // future server-side type change is caught by TypeScript. The pull
-    // mapper (entityMappers.fromApiFormat) already normalizes the back's
-    // "HH:MM:SS" MySQL TIME response to "HH:MM", so what arrives here
-    // is already in the storage format.
+    // future server-side type change is caught by TypeScript. The live
+    // pull mapper (`SyncQueueService.mapServerItemToRow`) already
+    // normalizes the back's "HH:MM:SS" MySQL TIME response to "HH:MM",
+    // so what arrives here is already in the storage format.
     time: entry.time != null ? entry.time : undefined,
     fromRecurringId: entry._fromRecurringId ?? entry.from_recurring_id ?? null,
     providerGroupId: entry._fromProviderGroupId != null ? str(entry._fromProviderGroupId) : null,

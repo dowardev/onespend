@@ -289,8 +289,8 @@ class RecurringRecordProcessorTest extends TestCase
     // already has. Stores a category id (string, not FK) so the contract
     // stays device-local. These tests pin the create-with-category,
     // create-without-category and update-category paths so a regression in
-    // the migration, the model's $fillable or the SyncRequest rule is
-    // caught here.
+    // the migration, the model's $fillable or the push request's `category`
+    // rule is caught here.
     public function test_process_creates_entity_with_category(): void
     {
         $syncId = 'test-rr-category-create-1';
@@ -380,5 +380,96 @@ class RecurringRecordProcessorTest extends TestCase
         $record = RecurringRecord::where('sync_id', $syncId)->first();
         $this->assertNotNull($record);
         $this->assertNull($record->category);
+    }
+
+    // GitLab #17 (P1): the `time` column is a MySQL TIME, so the database
+    // stores "14:30:00" while the wire format (and the local row) is
+    // "HH:MM". Unlike `budget_entries`, recurring records had no accessor
+    // normalizing the value on read, so the API handed "14:30:00" back and
+    // the client stored it verbatim. These tests pin the same contract the
+    // budget entries already have.
+
+    public function test_time_accessor_normalizes_mysql_time_to_hh_mm(): void
+    {
+        $syncId = 'test-rr-time-accessor-1';
+
+        $this->processor->create([
+            [
+                'id' => $syncId,
+                'name' => 'Recurring At Half Past',
+                'type' => 'cargo',
+                'entry_type' => 'egreso',
+                'amount' => 100,
+                'account_id' => (string) $this->account->sync_id,
+                'repeat_frequency' => 'month',
+                'repeat_interval' => 1,
+                'start_date' => '2026-01-01',
+                'time' => '14:30',
+                'status' => 'active',
+            ],
+        ], $this->user->id);
+
+        $record = RecurringRecord::where('sync_id', $syncId)->first();
+        $this->assertNotNull($record);
+
+        // Raw DB value is the MySQL TIME shape...
+        $this->assertSame('14:30:00', $record->getRawOriginal('time'));
+        // ...and the model accessor is what the API and the conflict
+        // detector see: "HH:MM", so the field hash matches the one the
+        // client computes over its "HH:MM" local value.
+        $this->assertSame('14:30', $record->time);
+        $this->assertSame('14:30', $record->toArray()['time']);
+    }
+
+    public function test_process_stores_single_digit_hour_time(): void
+    {
+        $syncId = 'test-rr-time-single-digit-1';
+
+        $this->processor->create([
+            [
+                'id' => $syncId,
+                'name' => 'Recurring At Nine',
+                'type' => 'cargo',
+                'entry_type' => 'egreso',
+                'amount' => 100,
+                'account_id' => (string) $this->account->sync_id,
+                'repeat_frequency' => 'month',
+                'repeat_interval' => 1,
+                'start_date' => '2026-01-01',
+                'time' => '9:00',
+                'status' => 'active',
+            ],
+        ], $this->user->id);
+
+        $record = RecurringRecord::where('sync_id', $syncId)->first();
+        $this->assertNotNull($record);
+        $this->assertSame('09:00:00', $record->getRawOriginal('time'));
+        $this->assertSame('09:00', $record->time);
+    }
+
+    public function test_process_treats_empty_time_as_null(): void
+    {
+        $syncId = 'test-rr-time-empty-1';
+
+        $this->processor->create([
+            [
+                'id' => $syncId,
+                'name' => 'Recurring Without Time',
+                'type' => 'cargo',
+                'entry_type' => 'egreso',
+                'amount' => 100,
+                'account_id' => (string) $this->account->sync_id,
+                'repeat_frequency' => 'month',
+                'repeat_interval' => 1,
+                'start_date' => '2026-01-01',
+                'time' => '',
+                'status' => 'active',
+            ],
+        ], $this->user->id);
+
+        $record = RecurringRecord::where('sync_id', $syncId)->first();
+        $this->assertNotNull($record);
+        // An empty string means "no time" — it must not land as a zero time.
+        $this->assertNull($record->time);
     }
 }

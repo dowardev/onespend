@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Support\CanonicalTime;
 
 class BudgetEntry extends Model
 {
@@ -75,28 +76,10 @@ class BudgetEntry extends Model
      */
     public function getTimeAttribute($value): ?string
     {
-        if ($value === null || $value === '') {
-            return null;
-        }
-
-        $parts = explode(':', trim((string) $value));
-        if (count($parts) < 2) {
-            return null;
-        }
-
-        $hours = trim($parts[0]);
-        $minutes = trim($parts[1]);
-        if (! preg_match('/^\d{1,2}$/', $hours) || ! preg_match('/^\d{1,2}$/', $minutes)) {
-            return null;
-        }
-
-        $hourValue = (int) $hours;
-        $minuteValue = (int) $minutes;
-        if ($hourValue > 23 || $minuteValue > 59) {
-            return null;
-        }
-
-        return sprintf('%02d:%02d', $hourValue, $minuteValue);
+        // GitLab #17 (P1): the rule lives in `App\Support\CanonicalTime`
+        // so the budget entries and the recurring records cannot drift
+        // apart from the client's `normalizeTime`.
+        return CanonicalTime::normalize($value);
     }
 
     public function user(): BelongsTo

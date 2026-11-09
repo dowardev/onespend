@@ -261,10 +261,9 @@ export async function mapServerItemToRow(params: {
       // take the server value when present, fall back to the local base.
       r.notes = i.notes != null ? String(i.notes) : (base.notes ?? undefined);
       // LBDS-273: `time` must be restored in the LIVE pull path (this
-      // mapper), not only in entityMappers.fromApiFormat — the latter is
-      // not what the merge/upsert flow uses. The server stores a MySQL
-      // TIME and returns "HH:MM:SS"; the local row (and the sync push
-      // payload) use the canonical zero-padded "HH:MM", so normalize here.
+      // mapper). The server stores a MySQL TIME and returns "HH:MM:SS";
+      // the local row (and the sync push payload) use the canonical
+      // zero-padded "HH:MM", so normalize here.
       // Normalizing matters for the roundtrip in two ways: the next push
       // sends the local value, and the back computes the conflict-detection
       // field hash over the value it receives — if the client sent "9:00"
@@ -368,7 +367,13 @@ export async function mapServerItemToRow(params: {
       r.repeatMonthWeekdayOrdinal = i.repeat_month_weekday_ordinal != null ? Number(i.repeat_month_weekday_ordinal) : (base.repeatMonthWeekdayOrdinal ?? undefined);
       r.repeatYearMonth = i.repeat_year_month != null ? Number(i.repeat_year_month) : (base.repeatYearMonth ?? undefined);
       r.repeatYearDay = i.repeat_year_day != null ? Number(i.repeat_year_day) : (base.repeatYearDay ?? undefined);
-      r.time = i.time ?? base.time ?? undefined;
+      // GitLab #17 (P1): same contract as the budget entries' `time` — the
+      // server stores a MySQL TIME and returns "HH:MM:SS", while the local
+      // row (and the next push payload) use the canonical zero-padded
+      // "HH:MM". Without this the recurring record stored "14:30:00" locally
+      // and pushed it back, which does not match the value the server
+      // hashes over ("14:30") and raises a phantom conflict.
+      r.time = normalizeTime(i.time) ?? (base.time ?? undefined);
       r.autoInsert = i.auto_insert != null ? Boolean(i.auto_insert) : (base.autoInsert ?? false);
       r.estimated = i.estimated != null ? Number(i.estimated) : (base.estimated ?? undefined);
       r.items = Array.isArray(i.items) ? (i.items as unknown[]) : (base.items ?? undefined);

@@ -121,12 +121,14 @@ SPDX-License-Identifier: AGPL-3.0-only
     />
 
   <!-- LBDS-273: time picker popover (same component, presentation="time"). -->
+  <!-- GitLab #17 (P6): no explicit `locale` — the picker follows the active
+       app language. The 24h cycle stays explicit: that is a format
+       decision, not a language one. -->
   <DatePickerPopover
     :popover-state="timePickerPopover"
     :temp-picker-date-iso="timeTemp"
     :can-apply="true"
     presentation="time"
-    locale="es-ES"
     hour-cycle="h24"
     @did-dismiss="timePickerPopover.open = false"
     @cancel="timePickerPopover.open = false"
@@ -271,7 +273,7 @@ const entryDatePicker = useDatePicker();
 // column. Empty string = no time set; the save path coerces '' to
 // undefined so the mapper drops the key from the push payload. The
 // load path populates from `entryAny.time` (already normalized to
-// HH:MM by entityMappers.fromApiFormat).
+// HH:MM by the live pull mapper, `SyncQueueService.mapServerItemToRow`).
 const entryTime = ref<string>('');
 
 // LBDS-273: popover state for the time picker. Same pattern as the
@@ -420,7 +422,8 @@ async function loadEntry(entryId: string) {
   categoryId.value = entryAny.category ?? null;
   entrySyncId.value = entryAny.sync_id || null;
   // LBDS-273: hydrate the time from the loaded entry. `entryAny.time` is
-  // already normalized to HH:MM by entityMappers.fromApiFormat on pull.
+  // already normalized to HH:MM by the live pull mapper
+  // (`SyncQueueService.mapServerItemToRow`) on pull.
   entryTime.value = entryAny.time ?? '';
 
   function normalizeAccountId(accountId: unknown): { id: string | number } | null {

@@ -439,7 +439,7 @@ class BudgetEntryProcessorTest extends TestCase
     // already has. The column is nullable (D2: optional) and stored as
     // HH:MM. These tests pin the create-with-time, create-without-time
     // and update-time paths so a regression in the migration, the model's
-    // $fillable or the SyncRequest's date_format rule is caught here.
+    // $fillable or the push request's `time` rule is caught here.
     public function test_process_creates_entity_with_time(): void
     {
         $syncId = 'test-be-time-create-1';

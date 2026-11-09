@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- The live pull mapper (`SyncQueueService.mapServerItemToRow`) normalizes `recurring_record.time` to `"HH:MM"` (`"14:30:00"` -> `"14:30"`, `"9:00:00"` -> `"09:00"`), falling back to the local row's time when the server omits it. The server stores the column as a MySQL TIME and hands back `"HH:MM:SS"`, which the client stored verbatim, so the row disagreed with the field hash the server computes over the `"HH:MM"` the client sent — a phantom conflict on every push (GitLab #17).
+- The date picker derives its locale from the app's active language (`es` -> `es-ES`, `en` -> `en-US`) instead of forcing `en-US`, so the calendar and the time picker follow the language the user picked. An explicit `locale` prop still wins (GitLab #17).
+
+### Removed
+- `fromApiFormat` (`front/src/services/sync/entityMappers.ts`): a second pull mapper that only the tests used. The live pull path is `SyncQueueService.mapServerItemToRow`, and its coverage now pins the cases the dead mapper used to cover (GitLab #17).
+
 ## [v0.80.0] - 2026-10-27
 
 ### Added

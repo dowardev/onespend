@@ -16,7 +16,7 @@ SPDX-License-Identifier: AGPL-3.0-only
     <ion-datetime
       :model-value="tempPickerDateISO"
       :presentation="presentation"
-      :locale="locale"
+      :locale="resolvedLocale"
       :hour-cycle="hourCycle"
       style="background: transparent; width: 100%"
       @update:model-value="$emit('update:temp-picker-date-iso', $event)"
@@ -40,12 +40,21 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
+// 1. Imports (ionic/vue/ionicons)
+import { computed } from 'vue';
 import { IonPopover, IonContent, IonDatetime, IonItem, IonButton } from '@ionic/vue';
+
+// 2. Controllers / Composables
 import { useLocale } from '@/composables/useLocale';
 
-const { t } = useLocale();
+// 3. Components
+// (none)
 
-defineProps({
+// 4. Interface and types imports
+import type { AppLocale } from '@/i18n';
+
+// 5. Main (props, emits, etc.)
+const props = defineProps({
   popoverState: { type: Object, default: () => ({ open: false, event: null }) },
   tempPickerDateISO: { type: String, default: null },
   canApply: { type: Boolean, default: false },
@@ -61,7 +70,9 @@ defineProps({
   // ion-datetime's default 12h with a.m./p.m. column. Only meaningful when
   // presentation="time"; the date picker ignores it.
   hourCycle: { type: String as () => 'h12' | 'h23' | 'h24', default: 'h12' },
-  locale: { type: String, default: 'en-US' },
+  // GitLab #17 (P6): an explicit locale still wins, but the empty default
+  // means "follow the active app language" instead of forcing 'en-US'.
+  locale: { type: String, default: '' },
 });
 
 defineEmits<{
@@ -70,4 +81,36 @@ defineEmits<{
   apply: [];
   'update:temp-picker-date-iso': [value: string | null];
 }>();
+
+// 6. Vars and const
+const { t, locale: appLocale } = useLocale();
+
+// GitLab #17 (P6): the picker used to force `locale="en-US"`, so the month
+// names showed in English inside the Spanish app. The app language is
+// 'es' | 'en'; ion-datetime needs a full BCP 47 tag, so the app locale is
+// mapped to the regional variant it stands for.
+const DATETIME_LOCALE_BY_APP_LOCALE: Record<AppLocale, string> = {
+  es: 'es-ES',
+  en: 'en-US',
+};
+
+// 7. Watch
+// (none)
+
+// 8. Computed
+const resolvedLocale = computed<string>(() => {
+  const explicit = props.locale.trim();
+
+  if (explicit) {
+    return explicit;
+  }
+
+  return DATETIME_LOCALE_BY_APP_LOCALE[appLocale.value] ?? 'en-US';
+});
+
+// 9. OnMounted
+// (none)
+
+// 10. Functions (named parameters pattern)
+// (none)
 </script>

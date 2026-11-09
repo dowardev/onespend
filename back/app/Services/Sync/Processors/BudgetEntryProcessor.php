@@ -9,6 +9,7 @@ namespace App\Services\Sync\Processors;
 use App\Models\Account;
 use App\Models\BudgetEntry;
 use App\Models\BudgetEntryGroup;
+use App\Support\CanonicalTime;
 use Illuminate\Support\Str;
 
 class BudgetEntryProcessor extends AbstractEntityProcessor
@@ -56,50 +57,13 @@ class BudgetEntryProcessor extends AbstractEntityProcessor
         // day is dropped rather than stored, so a malformed payload cannot
         // poison the row.
         if (array_key_exists('time', $item)) {
-            $item['time'] = $this->normalizeTime($item['time']);
+            $item['time'] = CanonicalTime::normalize($item['time']);
         }
 
         unset($item['paymentType'], $item['entryType'], $item['supplierName'],
             $item['supplierId'], $item['accountId']);
 
         return $item;
-    }
-
-    /**
-     * LBDS-273: canonical "HH:MM" for the stored time, or null when the
-     * value is not a usable time of day (empty string, garbage, an
-     * out-of-range hour or minute).
-     *
-     * The rule has to match the client's `front/src/utils/timeFormat.ts`
-     * `normalizeTime` and the model's `BudgetEntry::getTimeAttribute`
-     * character for character: the client and the server have to agree on
-     * the exact string they hash, or the field hash differs and the row
-     * raises a phantom conflict on every push.
-     */
-    private function normalizeTime(mixed $value): ?string
-    {
-        if ($value === null || $value === '') {
-            return null;
-        }
-
-        $parts = explode(':', trim((string) $value));
-        if (count($parts) < 2) {
-            return null;
-        }
-
-        $hours = trim($parts[0]);
-        $minutes = trim($parts[1]);
-        if (! preg_match('/^\d{1,2}$/', $hours) || ! preg_match('/^\d{1,2}$/', $minutes)) {
-            return null;
-        }
-
-        $hourValue = (int) $hours;
-        $minuteValue = (int) $minutes;
-        if ($hourValue > 23 || $minuteValue > 59) {
-            return null;
-        }
-
-        return sprintf('%02d:%02d', $hourValue, $minuteValue);
     }
 
     protected function postprocessCreate(array $created, int $userId): void

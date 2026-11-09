@@ -17,7 +17,7 @@ return new class extends Migration
      * but no column existed on `budget_entries` and the sync payload never
      * carried it, so the note was lost on save. This migration adds the
      * nullable text column the processor (BudgetEntryProcessor) will store
-     * once `notes` is in the model's $fillable and the SyncRequest allows it.
+     * once `notes` is in the model's $fillable and the push request allows it.
      */
     public function up(): void
     {
