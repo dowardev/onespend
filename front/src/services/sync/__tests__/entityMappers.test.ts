@@ -2,15 +2,22 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-// LBDS-273 (GitLab #13): sync roundtrip coverage for the two new fields.
-// `toApiFormat` pushes row → API payload; `fromApiFormat` pulls API item
-// → local row. The back stores `time` as MySQL TIME (returns "HH:MM:SS")
-// but its `date_format:H:i` rule only accepts "HH:MM", so the pull
-// normalizes to "HH:MM" to keep the roundtrip safe. The `category`
-// contract is device-local: both sides carry the id as a string.
+// LBDS-273 (GitLab #13): sync push coverage for the two new fields.
+// `toApiFormat` pushes row → API payload. The back stores `time` as MySQL
+// TIME (returns "HH:MM:SS") but its `date_format:H:i` rule only accepts
+// "HH:MM", so the push normalizes to "HH:MM" to keep the roundtrip safe.
+// The `category` contract is device-local: both sides carry the id as a
+// string.
+//
+// GitLab #17 (P4): the pull side is covered where it actually runs —
+// `SyncQueueService.mapServerItemToRow` (see
+// `src/services/sync/__tests__/mapServerItemToRow.test.ts`). The parallel
+// pull mapper that used to live in this file was removed: it was never
+// wired into the merge/upsert flow, so its coverage proved nothing about
+// production behaviour.
 
 import { describe, it, expect } from 'vitest'
-import { toApiFormat, fromApiFormat } from '../entityMappers'
+import { toApiFormat } from '../entityMappers'
 
 describe('entityMappers - budget_entry time field (LBDS-273)', () => {
   describe('toApiFormat (push)', () => {
@@ -92,63 +99,6 @@ describe('entityMappers - budget_entry time field (LBDS-273)', () => {
     })
   })
 
-  describe('fromApiFormat (pull)', () => {
-    it('normalizes MySQL TIME HH:MM:SS to HH:MM', () => {
-      const item = {
-        sync_id: 'test-1',
-        name: 'Test Entry',
-        amount: 100,
-        date: '2026-10-18',
-        entry_type: 'egreso',
-        time: '14:30:00',
-      }
-      const result = fromApiFormat('budget_entry', item)
-      expect(result).not.toBeNull()
-      expect(result?.time).toBe('14:30')
-    })
-
-    it('preserves the zero-padded hour when normalizing', () => {
-      const item = {
-        sync_id: 'test-1',
-        name: 'Test Entry',
-        amount: 100,
-        date: '2026-10-18',
-        entry_type: 'egreso',
-        time: '9:00:00',
-      }
-      const result = fromApiFormat('budget_entry', item)
-      expect(result).not.toBeNull()
-      // Canonical shape: zero-padded, so it matches what the server hashes.
-      expect(result?.time).toBe('09:00')
-    })
-
-    it('sets time to undefined when missing from payload', () => {
-      const item = {
-        sync_id: 'test-1',
-        name: 'Test Entry',
-        amount: 100,
-        date: '2026-10-18',
-        entry_type: 'egreso',
-      }
-      const result = fromApiFormat('budget_entry', item)
-      expect(result).not.toBeNull()
-      expect(result?.time).toBeUndefined()
-    })
-
-    it('is idempotent when given already-normalized HH:MM', () => {
-      const item = {
-        sync_id: 'test-1',
-        name: 'Test Entry',
-        amount: 100,
-        date: '2026-10-18',
-        entry_type: 'egreso',
-        time: '14:30',
-      }
-      const result = fromApiFormat('budget_entry', item)
-      expect(result).not.toBeNull()
-      expect(result?.time).toBe('14:30')
-    })
-  })
 })
 
 describe('entityMappers - recurring_record category field (LBDS-273)', () => {
@@ -210,58 +160,4 @@ describe('entityMappers - recurring_record category field (LBDS-273)', () => {
     })
   })
 
-  describe('fromApiFormat (pull)', () => {
-    it('includes category in row when set', () => {
-      const item = {
-        sync_id: 'rec-1',
-        name: 'Recurring',
-        type: 'cargo',
-        entry_type: 'egreso',
-        repeat_frequency: 'month',
-        repeat_interval: 1,
-        auto_insert: true,
-        start_date: '2026-01-01',
-        status: 'active',
-        category: 'groceries',
-      }
-      const result = fromApiFormat('recurring_record', item)
-      expect(result).not.toBeNull()
-      expect(result?.category).toBe('groceries')
-    })
-
-    it('sets category to null when missing from payload', () => {
-      const item = {
-        sync_id: 'rec-1',
-        name: 'Recurring',
-        type: 'cargo',
-        entry_type: 'egreso',
-        repeat_frequency: 'month',
-        repeat_interval: 1,
-        auto_insert: true,
-        start_date: '2026-01-01',
-        status: 'active',
-      }
-      const result = fromApiFormat('recurring_record', item)
-      expect(result).not.toBeNull()
-      expect(result?.category).toBeNull()
-    })
-
-    it('coerces numeric category to string via String()', () => {
-      const item = {
-        sync_id: 'rec-1',
-        name: 'Recurring',
-        type: 'cargo',
-        entry_type: 'egreso',
-        repeat_frequency: 'month',
-        repeat_interval: 1,
-        auto_insert: true,
-        start_date: '2026-01-01',
-        status: 'active',
-        category: 123,
-      }
-      const result = fromApiFormat('recurring_record', item)
-      expect(result).not.toBeNull()
-      expect(result?.category).toBe('123')
-    })
-  })
 })

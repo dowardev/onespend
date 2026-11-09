@@ -2,14 +2,15 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-// LBDS-273 (GitLab #13): coverage for the LIVE pull path.
+// LBDS-273 (GitLab #13) / GitLab #17 (P4): coverage for the LIVE pull path.
 //
-// `entityMappers.fromApiFormat` is a different mapper from the one the
-// merge/upsert flow actually uses — `SyncQueueService.mapServerItemToRow`
-// is. The two are easy to confuse, and a test that only covers
-// `fromApiFormat` gives false confidence: the fields can be threaded
+// `SyncQueueService.mapServerItemToRow` is the ONE pull mapper the
+// merge/upsert flow uses. There used to be a second, parallel pull mapper
+// (`entityMappers.fromApiFormat`) that was covered by tests but never ran
+// in production, which gave false confidence: the fields could be threaded
 // correctly through the unused mapper and still be dropped by the live
-// one. These tests pin the live mapper.
+// one. These tests pin the live mapper, and the coverage that used to sit
+// on the dead mapper was migrated here.
 
 import { describe, it, expect } from 'vitest'
 import { mapServerItemToRow } from '../SyncQueueService'
@@ -95,6 +96,84 @@ describe('mapServerItemToRow — budget_entry time (LBDS-273)', () => {
 
     expect(row.time).toBeUndefined()
   })
+
+  it('is idempotent when the server already sends the canonical HH:MM', async () => {
+    const row = await mapServerItemToRow({
+      entityType: 'budget_entry',
+      item: {
+        id: 'sync-5',
+        name: 'Café',
+        amount: 5,
+        date: '2026-10-18',
+        entry_type: 'egreso',
+        payment_type: 'cash',
+        time: '14:30',
+      } as any,
+      base: { sync_id: 'sync-5' },
+      ...emptyMaps(),
+    })
+
+    expect(row.time).toBe('14:30')
+  })
+})
+
+describe('mapServerItemToRow — recurring_record time (GitLab #17, P1)', () => {
+  const recurringItem = (extra: Record<string, any>) => ({
+    id: 'rec-time-1',
+    name: 'Suscripción',
+    type: 'cargo',
+    entry_type: 'egreso',
+    amount: 100,
+    repeat_frequency: 'month',
+    repeat_interval: 1,
+    start_date: '2026-01-01',
+    status: 'active',
+    ...extra,
+  })
+
+  it('restores the time, normalizing the MySQL TIME shape to HH:MM', async () => {
+    const row = await mapServerItemToRow({
+      entityType: 'recurring_record',
+      item: recurringItem({ time: '14:30:00' }) as any,
+      base: { sync_id: 'rec-time-1' },
+      ...emptyMaps(),
+    })
+
+    expect(row.time).toBe('14:30')
+  })
+
+  it('zero-pads a single-digit hour', async () => {
+    const row = await mapServerItemToRow({
+      entityType: 'recurring_record',
+      item: recurringItem({ time: '9:00:00' }) as any,
+      base: { sync_id: 'rec-time-1' },
+      ...emptyMaps(),
+    })
+
+    expect(row.time).toBe('09:00')
+  })
+
+  it('falls back to the local base value when the server sends no time', async () => {
+    const row = await mapServerItemToRow({
+      entityType: 'recurring_record',
+      item: recurringItem({}) as any,
+      base: { sync_id: 'rec-time-1', time: '08:00' },
+      ...emptyMaps(),
+    })
+
+    expect(row.time).toBe('08:00')
+  })
+
+  it('leaves the time undefined when neither the server nor the base has one', async () => {
+    const row = await mapServerItemToRow({
+      entityType: 'recurring_record',
+      item: recurringItem({}) as any,
+      base: { sync_id: 'rec-time-1' },
+      ...emptyMaps(),
+    })
+
+    expect(row.time).toBeUndefined()
+  })
 })
 
 describe('mapServerItemToRow — recurring_record category (LBDS-273)', () => {
@@ -158,5 +237,25 @@ describe('mapServerItemToRow — recurring_record category (LBDS-273)', () => {
     })
 
     expect(row.category).toBe('hogar')
+  })
+
+  it('leaves the category undefined when neither the server nor the base has one', async () => {
+    const row = await mapServerItemToRow({
+      entityType: 'recurring_record',
+      item: {
+        id: 'rec-4',
+        name: 'Sin categoría',
+        type: 'cargo',
+        entry_type: 'egreso',
+        repeat_frequency: 'month',
+        repeat_interval: 1,
+        start_date: '2026-01-01',
+        status: 'active',
+      } as any,
+      base: { sync_id: 'rec-4' },
+      ...emptyMaps(),
+    })
+
+    expect(row.category).toBeUndefined()
   })
 })

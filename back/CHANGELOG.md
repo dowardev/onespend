@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `App\Support\CanonicalTime`: the single place in the back that holds the canonical `"HH:MM"` rule for a time of day. It matches the client's `front/src/utils/timeFormat.ts` `normalizeTime` character for character, and it is used by the `BudgetEntry` and `RecurringRecord` model accessors and by both sync processors, so the two entities cannot drift apart (GitLab #17).
+
+### Fixed
+- `RecurringRecord::getTimeAttribute` normalizes the MySQL `TIME` value to `"HH:MM"`, exactly like `BudgetEntry::getTimeAttribute`. The column is a MySQL TIME, so the API used to hand `"14:30:00"` back while the client stores `"14:30"`, and the two strings disagreed on the field hash the server computes — a phantom conflict on every push of that row (GitLab #17).
+- `RecurringRecordProcessor` normalizes `time` before writing it, like the budget entries' processor already did: an empty string (a client that clears the field without dropping the key) became an invalid MySQL TIME insert and failed the whole batch, and a malformed value could poison the row. An unusable time is now stored as `null` (GitLab #17).
+- The live pull mapper (`SyncQueueService.mapServerItemToRow`) normalizes `recurring_record.time` to `"HH:MM"`, falling back to the local row's time when the server omits it (GitLab #17).
+
+### Removed
+- `BudgetEntrySyncRequest` and `RecurringRecordSyncRequest`: dead classes, not wired into any route, request or controller. The live push validation lives in `StoreBudgetEntryRequest` and `StoreRecurringRecordRequest`, and it is unchanged (GitLab #17).
+
 ## [v0.80.0] - 2026-10-27
 
 ### Added

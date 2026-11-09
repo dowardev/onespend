@@ -8,6 +8,7 @@ namespace App\Services\Sync\Processors;
 
 use App\Models\RecurringRecord;
 use App\Models\RecurringRecordProduct;
+use App\Support\CanonicalTime;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -64,6 +65,18 @@ class RecurringRecordProcessor extends AbstractEntityProcessor
         // category, which reads differently from "unset" on the roundtrip.
         if (array_key_exists('category', $item) && $item['category'] === '') {
             $item['category'] = null;
+        }
+
+        // GitLab #17 (P1): the sync payload may carry an empty string for
+        // `time` (a client that clears the field without dropping the key)
+        // or a value that is not a usable time of day. The column is a
+        // MySQL TIME, so an empty string is rejected by the driver
+        // ("Incorrect time value") and a malformed value would poison the
+        // row. Normalize to the canonical "HH:MM" the model accessor
+        // returns, or null when there is no usable time — exactly what the
+        // budget entries' processor already does.
+        if (array_key_exists('time', $item)) {
+            $item['time'] = CanonicalTime::normalize($item['time']);
         }
 
         return $item;

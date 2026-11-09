@@ -31,9 +31,7 @@ class StoreBudgetEntryRequest extends FormRequest
             // lenient (no `date_format`): the column is a MySQL TIME, the
             // model accessor normalizes whatever comes back to "HH:MM", and
             // a strict format here would reject the empty string a client
-            // sends to clear the field. The matching
-            // `BudgetEntrySyncRequest` rule is inert (that class is not
-            // wired into any route).
+            // sends to clear the field.
             'time' => 'nullable|string|max:5',
             'groups' => 'nullable|array',
             'groups.*.account_id' => 'nullable|integer',

@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Support\CanonicalTime;
 
 class RecurringRecord extends Model
 {
@@ -46,6 +47,21 @@ class RecurringRecord extends Model
     ];
 
     protected $hidden = ['deleted_at'];
+
+    /**
+     * GitLab #17 (P1): the `time` column is a MySQL TIME, so the database
+     * stores "14:30:00" while the wire format (and the local row) is the
+     * canonical "HH:MM". Without this accessor the API handed "14:30:00"
+     * back and the client stored it verbatim, which then disagreed with
+     * the field hash the server computes over the "HH:MM" the client sent.
+     *
+     * Same contract as `BudgetEntry::getTimeAttribute`: only the getter is
+     * defined, so the raw column value is still what the database stores.
+     */
+    public function getTimeAttribute($value): ?string
+    {
+        return CanonicalTime::normalize($value);
+    }
 
     public function user(): BelongsTo
     {
