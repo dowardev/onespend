@@ -10,6 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - The live pull mapper (`SyncQueueService.mapServerItemToRow`) normalizes `recurring_record.time` to `"HH:MM"` (`"14:30:00"` -> `"14:30"`, `"9:00:00"` -> `"09:00"`), falling back to the local row's time when the server omits it. The server stores the column as a MySQL TIME and hands back `"HH:MM:SS"`, which the client stored verbatim, so the row disagreed with the field hash the server computes over the `"HH:MM"` the client sent — a phantom conflict on every push (GitLab #17).
 - The date picker derives its locale from the app's active language (`es` -> `es-ES`, `en` -> `en-US`) instead of forcing `en-US`, so the calendar and the time picker follow the language the user picked. An explicit `locale` prop still wins (GitLab #17).
+- The app now pushes the changes it queued while it was offline as soon as the connection comes back, instead of leaving them pending until the user taps sync by hand. An item queued offline carries no retry evidence of its own, so the reconnect itself is what marks a push as owed (GitLab #14).
+- A run whose chunks all failed with a network or server error no longer unblocks the retries against an expired token: the auth block is now only lifted by a successful response from the server (GitLab #14).
+
+### Changed
+- The merge retry lifecycle is now a single state machine (`SyncRetryScheduler`) with one predicate, one timer and one re-arm per transition, instead of four independent guards each with its own arming logic. Its lock-retry budget lives in that state, so a lock that never frees can no longer be retried forever (GitLab #14).
 
 ### Removed
 - `fromApiFormat` (`front/src/services/sync/entityMappers.ts`): a second pull mapper that only the tests used. The live pull path is `SyncQueueService.mapServerItemToRow`, and its coverage now pins the cases the dead mapper used to cover (GitLab #17).
