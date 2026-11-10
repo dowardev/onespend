@@ -15,6 +15,7 @@ import { recurringRecordProductsDb } from '@/db/controllers/recurringRecordProdu
 import db from '@/db/OneSpendDB';
 import { syncApiService, AuthExpiredError, SyncDisabledError } from './SyncApiService';
 import { syncLockService } from './SyncLockService';
+import { SyncRetryScheduler } from './SyncRetryScheduler';
 import { conflictResolutionService } from './ConflictResolutionService';
 import { readSyncConfig } from './syncConfig';
 import pendingAttachmentsService from '../pendingAttachmentsService';
@@ -425,22 +426,10 @@ export class SyncQueueService {
   private authExpiredListeners: Set<() => void> = new Set();
   private _isOnline = true;
 
-  // LBDS-244: a merge response that does not acknowledge the sent ids (or an
-  // HTTP failure) puts the affected items into backoff. Nothing used to re-run
-  // processQueue when that backoff expired, so the queue stayed stuck at
-  // "N pendientes" with no error shown and no retry. This timer re-checks the
-  // queue while backoffed items exist and self-clears once it drains.
-  private backoffRetryTimeout: ReturnType<typeof setTimeout> | null = null;
-  private static readonly BACKOFF_RETRY_MIN_MS = 1000;
-  private static readonly BACKOFF_RETRY_MAX_MS = 30000;
-
-  // LBDS-244: a lock collision applies no backoff, so the retry it arms is a
-  // plain 1s re-check. Without a budget, a lock that is never released (a run
-  // that hangs before its finally, or one left behind by a page load whose
-  // heartbeat died) would keep that 1s loop alive forever. Reset on every
-  // successful acquire.
-  private lockRetryAttempts = 0;
-  private static readonly LOCK_RETRY_MAX_ATTEMPTS = 45;
+  // GitLab #14 (LBDS-272): the retry lifecycle is a single state machine.
+  // `SyncRetryScheduler` owns the one predicate, the one timer and the
+  // lock-retry budget; this service only reports the transitions.
+  private readonly retryScheduler: SyncRetryScheduler;
 
   // LBDS-244: un 401 deja el token inválido. Sin este flag, el scheduler
   // reintentaba el merge cada ~1s contra un token vencido (applyBackoffToIds
@@ -503,8 +492,28 @@ export class SyncQueueService {
   };
 
   constructor() {
+    // The live connectivity is resolved BEFORE the scheduler exists: the
+    // scheduler needs it as its initial state, otherwise an app that boots
+    // offline believes it is online and never sees the reconnect as a
+    // transition (the queue would stay "N pending" until a manual tap).
     if (typeof window !== 'undefined') {
       this._isOnline = navigator.onLine;
+    }
+
+    this.retryScheduler = new SyncRetryScheduler({
+      online: this._isOnline,
+      loadQueueState: () => this.loadQueueState(),
+      onFire: async () => {
+        try {
+          await this.processQueue();
+        } catch (error) {
+          if (error instanceof AuthExpiredError) return;
+          debug('Retry scheduler run failed:', error);
+        }
+      },
+    });
+
+    if (typeof window !== 'undefined') {
       window.addEventListener('online', this.onOnlineHandler);
       window.addEventListener('offline', this.onOfflineHandler);
       // The 'online' event is unreliable on real devices (it can be missed
@@ -526,10 +535,10 @@ export class SyncQueueService {
       window.removeEventListener('offline', this.onOfflineHandler);
       document.removeEventListener('visibilitychange', this.onVisibilityHandler);
     }
-    if (this.backoffRetryTimeout) {
-      clearTimeout(this.backoffRetryTimeout);
-      this.backoffRetryTimeout = null;
-    }
+    // GitLab #14: the scheduler owns its timer. Disposing it marks the
+    // scheduler as disposed, so an in-flight queue read that resolves late
+    // cannot arm a timer on a dead service.
+    this.retryScheduler.dispose();
     if (this.debounceTimeout) {
       clearTimeout(this.debounceTimeout);
       this.debounceTimeout = null;
@@ -550,9 +559,18 @@ export class SyncQueueService {
     if (typeof window !== 'undefined') {
       const online = navigator.onLine;
       if (online !== this._isOnline) {
-        const wasOffline = !this._isOnline;
         this._isOnline = online;
-        if (wasOffline) this.resumeInterruptedRetries();
+        this.retryScheduler.setOnline(online);
+        if (!online) {
+          // The debounce push cannot run without connectivity, and leaving it
+          // armed would race the scheduler's reconnect push.
+          this.cancelDebounce();
+        }
+        // GitLab #14: coming back online is a transition of the retry state
+        // machine. The scheduler decides (with its own state) whether a
+        // retry is owed, so a lock-busy retry that persisted nothing is
+        // resumed too.
+        void this.rescheduleRetries();
         this.onlineListeners.forEach((listener) => listener(online));
       }
     }
@@ -560,13 +578,15 @@ export class SyncQueueService {
   }
 
   private handleOnline() {
-    const wasOffline = !this._isOnline;
     this._isOnline = true;
-    if (wasOffline) this.resumeInterruptedRetries();
+    this.retryScheduler.setOnline(true);
+    // GitLab #14: the re-arm no longer inspects persisted queue rows; the
+    // scheduler owns the state, so every pending retry (including one that
+    // only exists in memory, like a lock collision) resumes here.
+    void this.rescheduleRetries();
     // LBDS-287: coming back online is also the moment pending uploads
-    // should drain. The merge queue gets its own retry via
-    // resumeInterruptedRetries above; the attachment drain needs the same
-    // "we just got connectivity, re-check" arm.
+    // should drain. The attachment drain needs its own "we just got
+    // connectivity, re-check" arm.
     void this.schedulePendingAttachmentsRetry();
     this.onlineListeners.forEach((listener) => listener(true));
   }
@@ -574,12 +594,14 @@ export class SyncQueueService {
   private handleOffline() {
     this.cancelActiveRequests();
     this._isOnline = false;
-    // LBDS-244: sin conexión, processQueue devuelve null sin lanzar, así que
-    // un retry ya armado se re-armaba para siempre. Lo cancelamos acá.
-    if (this.backoffRetryTimeout) {
-      clearTimeout(this.backoffRetryTimeout);
-      this.backoffRetryTimeout = null;
-    }
+    // GitLab #14: offline is a state of the machine; the single predicate
+    // clears the timer (no second guard needed).
+    this.retryScheduler.setOnline(false);
+    void this.rescheduleRetries();
+    // The debounce push cannot run without connectivity. Cancelling it here
+    // leaves the reconnect push to the scheduler, so the queue is not pushed
+    // twice (the second push would collide with the first one on the lock).
+    this.cancelDebounce();
     // LBDS-287: same self-containment for the pending-attachments drain.
     // An armed timer whose callback would have hit an offline check is
     // wasted work; clear it so a fresh attempt arms on the next online.
@@ -607,6 +629,10 @@ export class SyncQueueService {
     // upload 401) can mark the sync as blocked without having to wait for
     // the next processQueue chunk to see the 401.
     this.syncBlockedByAuth = true;
+    // GitLab #14: the auth block is part of the scheduler state, so the
+    // single predicate stops arming retries while the token is dead.
+    this.retryScheduler.setAuthBlocked(true);
+    void this.rescheduleRetries();
     this.authExpiredListeners.forEach((listener) => listener());
   }
 
@@ -618,7 +644,9 @@ export class SyncQueueService {
   private resumeRetriesAfterAuthRecovery(): void {
     if (!this.syncBlockedByAuth) return;
     this.syncBlockedByAuth = false;
-    void this.scheduleBackoffRetry();
+    // GitLab #14: auth recovery is a transition of the state machine.
+    this.retryScheduler.setAuthBlocked(false);
+    void this.rescheduleRetries();
     // LBDS-287: the merge queue re-arms on auth recovery, but the
     // attachment drain is a separate scheduler. Without this, a user
     // who re-logs in after a 401 would see the merge queue drain but
@@ -628,22 +656,41 @@ export class SyncQueueService {
   }
 
   /**
-   * LBDS-244: al recuperar la conexión, un retry interrumpido por
-   * handleOffline() quedó sin timer. Sólo lo re-armamos si hay evidencia de un
-   * reintento interrumpido (retryCount > 0 o nextRetryAt), para no
-   * auto-sincronizar ítems frescos que se encolaron estando offline.
+   * Reads the live queue state for the retry scheduler. The scheduler owns
+   * the decision; this is only the data it needs.
    */
-  private resumeInterruptedRetries(): void {
-    void syncQueueDb.getAll()
-      .then((queue) => {
-        const hasInterruptedRetry = queue.some(
-          (item) => (item.retryCount ?? 0) > 0 || item.nextRetryAt !== undefined,
-        );
-        if (hasInterruptedRetry) void this.scheduleBackoffRetry();
-      })
-      .catch((error) => {
-        debug('resumeInterruptedRetries failed:', error);
-      });
+  private async loadQueueState(): Promise<{
+    pending: boolean;
+    retryPending: boolean;
+    nextRetryAt: number | null;
+  }> {
+    const rows = await syncQueueDb.getAll();
+    let retryPending = false;
+    let nextRetryAt: number | null = null;
+    for (const row of rows) {
+      if ((row.retryCount ?? 0) > 0 || row.nextRetryAt !== undefined) {
+        retryPending = true;
+      }
+      if (row.nextRetryAt !== undefined) {
+        nextRetryAt = nextRetryAt === null ? row.nextRetryAt : Math.min(nextRetryAt, row.nextRetryAt);
+      }
+    }
+    return { pending: rows.length > 0, retryPending, nextRetryAt };
+  }
+
+  /**
+   * GitLab #14: diagnostic view of the retry state machine. Exposed for the
+   * scheduler tests and for debugging a stuck queue.
+   */
+  getRetryDecision() {
+    return this.retryScheduler.getLastDecision();
+  }
+
+  /**
+   * GitLab #14: whether an expired token is blocking the automatic retries.
+   */
+  isAuthBlocked(): boolean {
+    return this.syncBlockedByAuth;
   }
 
   getOnlineStatus(): boolean {
@@ -670,6 +717,7 @@ export class SyncQueueService {
 
   setOnline(online: boolean) {
     this._isOnline = online;
+    this.retryScheduler.setOnline(online);
   }
 
   private async getQueue(): Promise<SyncItem[]> {
@@ -730,6 +778,20 @@ export class SyncQueueService {
     await syncQueueDb.delete({ id });
   }
 
+  /**
+   * Cancels the pending debounce push. Used when the connectivity drops:
+   * the debounce cannot push anything offline, and the scheduler owns the
+   * push when the connection comes back.
+   */
+  private cancelDebounce(): void {
+    if (this.debounceTimeout) {
+      clearTimeout(this.debounceTimeout);
+      this.debounceTimeout = null;
+      this.firstQueueTime = null;
+      debug('[SYNC-Q] debounce cancelled — offline');
+    }
+  }
+
   async queueOperation(item: Omit<SyncItem, 'timestamp' | 'retryCount'>): Promise<void> {
     await this.addOrUpdateQueueItem(item);
     debug('[SYNC-Q] queued:', item.entityType, item.id, 'op:', item.operation, 'online:', this._isOnline, 'queueCount:', await syncQueueDb.count());
@@ -738,6 +800,11 @@ export class SyncQueueService {
       if (this.firstQueueTime === null) {
         this.firstQueueTime = Date.now();
       }
+
+      // GitLab #14: a new item is a transition of the retry machine. The
+      // scheduler decides on its own whether this owes a retry (a fresh item
+      // does not: the debounce below pushes it).
+      void this.rescheduleRetries();
 
       if (this.debounceTimeout) {
         clearTimeout(this.debounceTimeout);
@@ -836,53 +903,26 @@ export class SyncQueueService {
     onIssue?.(
       `El servidor no confirmó ${updated.length} ${updated.length === 1 ? 'cambio' : 'cambios'} pendientes: ${errorMsg}`,
     );
-    // LBDS-244: without this, a dropped/unacked item waited forever — nothing
-    // retried when its backoff expired and the badge never returned to zero.
-    this.scheduleBackoffRetry();
+    // GitLab #14: the backoff is a state transition of the retry machine.
+    // The scheduler owns the deadline from now on.
+    this.retryScheduler.markRetryPending(
+      updated.length > 0
+        ? Math.min(...updated.map((item) => item.nextRetryAt ?? Date.now()))
+        : null,
+    );
+    void this.rescheduleRetries();
   }
 
   /**
-   * Re-arms a queue re-check while the queue is non-empty. The delay comes
-   * from the live queue (earliest pending nextRetryAt) and is clamped, so a
-   * long backoff is still re-checked periodically and a lock no-op is retried
-   * too (its items are ready, not backoffed, and still need the retry that
-   * LBDS-244 used to lack). Stops on its own once the queue drains.
-   *
-   * LBDS-244: se auto-contiene. No arma nada si estamos offline ni si un 401
-   * bloqueó la sync por auth, y cualquier fallo interno se traga para que sus
-   * call sites no puedan producir un unhandled rejection.
+   * GitLab #14: the single entry point to the retry state machine. Kept as a
+   * method so the existing call sites (and their tests) keep working, but it
+   * no longer owns a timer: `SyncRetryScheduler` does.
    */
-  private async scheduleBackoffRetry(): Promise<void> {
+  private async rescheduleRetries(): Promise<void> {
     try {
-      if (typeof window === 'undefined') return;
-      if (!this._isOnline) return;
-      if (this.syncBlockedByAuth) return;
-      const queue = await syncQueueDb.getAll();
-      if (queue.length === 0) return;
-
-      const now = Date.now();
-      const backoffed = queue.filter((item) => item.nextRetryAt !== undefined && item.nextRetryAt > now);
-      const earliest = backoffed.length > 0
-        ? Math.min(...backoffed.map((item) => item.nextRetryAt!))
-        : now;
-      const delay = Math.min(
-        SyncQueueService.BACKOFF_RETRY_MAX_MS,
-        Math.max(SyncQueueService.BACKOFF_RETRY_MIN_MS, earliest - now + 250),
-      );
-
-      if (this.backoffRetryTimeout) clearTimeout(this.backoffRetryTimeout);
-      this.backoffRetryTimeout = setTimeout(() => {
-        this.backoffRetryTimeout = null;
-        debug('[SYNC-PQ] backoff retry firing — calling processQueue');
-        void this.processQueue()
-          .then(() => this.scheduleBackoffRetry())
-          .catch((error) => {
-            if (error instanceof AuthExpiredError) return;
-            debug('Backoff retry failed:', error);
-          });
-      }, delay);
+      await this.retryScheduler.reschedule();
     } catch (error) {
-      debug('scheduleBackoffRetry failed:', error);
+      debug('rescheduleRetries failed:', error);
     }
   }
 
@@ -896,7 +936,7 @@ export class SyncQueueService {
    * it is non-empty and only stops once everything drained (or the
    * online / auth gates fail closed).
    *
-   * Self-containment, same shape as scheduleBackoffRetry:
+   * Self-containment, same shape as the retry scheduler:
    *  - no-op when nothing is pending
    *  - no-op while offline (handleOffline already cleared the timer)
    *  - no-op while a 401 has blocked sync (avoids spamming the server
@@ -1172,7 +1212,7 @@ export class SyncQueueService {
       // processQueue finally block still calls this drain. Without this
       // guard the drain would attempt uploads with the dead token, fail,
       // and the scheduler would re-arm every backoff tick forever. The
-      // merge queue's scheduleBackoffRetry honours the flag; the
+      // merge queue's retry scheduler honours the flag; the
       // attachment drain must too.
       if (this.syncBlockedByAuth) {
         debug('[SYNC-PQ] drain skipped: auth blocked');
@@ -1237,23 +1277,16 @@ export class SyncQueueService {
       // per-page-load tabId) used to turn a user-initiated sync into a silent
       // no-op. Surface it instead.
       reportIssue('Hay otra sincronización en curso; reintentá en unos segundos');
-      // LBDS-244: surfacing it was not enough — the tap armed nothing, so the
-      // queue stayed at "N pendientes" until the user tapped again. Re-check on
-      // its own until the lock frees (no backoff is applied on this path, so
-      // the scheduler re-checks every second) and stop once the queue drains.
-      // The counter bounds the loop, so a lock that is never released cannot
-      // turn into an endless 1s re-check.
-      if (this.lockRetryAttempts < SyncQueueService.LOCK_RETRY_MAX_ATTEMPTS) {
-        this.lockRetryAttempts++;
-        debug('[SYNC-PQ] lock busy — silent retry', this.lockRetryAttempts);
-        this.scheduleBackoffRetry();
-      } else {
-        debug('[SYNC-PQ] lock busy — retry budget exhausted');
-      }
+      // GitLab #14: the lock-busy retry budget lives in the scheduler state,
+      // so the single predicate decides whether another attempt is allowed.
+      // The retry persists nothing, so the evidence stays in memory.
+      this.retryScheduler.markLockBusy();
+      debug('[SYNC-PQ] lock busy — retry scheduled', this.retryScheduler.getState()?.lockRetryAttempts);
+      void this.rescheduleRetries();
       return null;
     }
     debug('[SYNC-PQ] lock acquired');
-    this.lockRetryAttempts = 0;
+    this.retryScheduler.markLockAcquired();
 
     const zombieIds: string[] = [];
     const zombieEntries: DeadLetterItem[] = [];
@@ -1271,6 +1304,9 @@ export class SyncQueueService {
       debug('[SYNC-PQ] queue items:', queue.length, JSON.stringify(queue.map(q => ({ id: q.id, op: q.operation, retry: q.retryCount, nextRetry: q.nextRetryAt }))));
       if (queue.length === 0) {
         debug('[SYNC-PQ] queue empty');
+        // GitLab #14: an empty queue is a transition: nothing is owed.
+        this.retryScheduler.markQueueDrained();
+        void this.rescheduleRetries();
         return null;
       }
 
@@ -1543,9 +1579,18 @@ export class SyncQueueService {
       const remainingCount = await syncQueueDb.count();
       debug('[SYNC-PQ] done. allChunksSucceeded:', allChunksSucceeded, 'remainingQueue:', remainingCount, 'finalResult:', finalResult ? 'ok' : 'null');
 
-      // LBDS-244: la corrida llegó al final sin 401; un re-login ya puede
-      // reanudar los reintentos automáticos.
-      this.syncBlockedByAuth = false;
+      // GitLab #14: only a drained queue clears the retry state. A run that
+      // failed leaves the queue pending, and the backoff already asked for a
+      // retry.
+      if (remainingCount === 0) {
+        this.retryScheduler.markQueueDrained();
+        void this.rescheduleRetries();
+      }
+
+      // GitLab #14: the auth block is NOT cleared here. Only a successful
+      // server response proves the token is alive again (see
+      // resumeRetriesAfterAuthRecovery); a run whose chunks all failed with
+      // network/5xx errors must not unblock retries against an expired token.
 
       pendingResult = finalResult || null;
     } catch (error) {

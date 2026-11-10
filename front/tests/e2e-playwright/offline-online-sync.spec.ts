@@ -178,6 +178,29 @@ test.describe('Offline→Online Sync Queue Drain', () => {
     await context.close()
   })
 
+  test('reconnect drains the queue automatically, without a manual tap', async ({ browser }) => {
+    const context = await browser.newContext()
+    const page = await context.newPage()
+    await setupAuth(page)
+    await mockSyncEndpoints(page)
+
+    await gotoBudgetReady(page)
+    await context.setOffline(true)
+    await createEntryViaUI(page, `Auto Drain ${Date.now()}`)
+    expect(await queueCount(page)).toBeGreaterThan(0)
+
+    // Reconnect and do nothing else: the retry scheduler owns the push. An
+    // item queued while offline persists no retry evidence, so without the
+    // reconnect transition the queue stays "N pending" until a manual tap.
+    await context.setOffline(false)
+
+    await expect
+      .poll(() => queueCount(page), { timeout: 30000, message: 'queue should drain automatically after reconnect' })
+      .toBe(0)
+
+    await context.close()
+  })
+
   test('three entries created offline all drain after one sync', async ({ browser }) => {
     const context: BrowserContext = await browser.newContext()
     const page = await context.newPage()
