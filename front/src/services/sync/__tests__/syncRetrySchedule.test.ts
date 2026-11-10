@@ -29,13 +29,13 @@ vi.mock('@/db/controllers/configDb', () => ({
 // LBDS-244: el scheduler de reintentos no debe girar mientras no hay red, y un
 // lock ocupado debe re-chequear la cola hasta que se libere, drenándola.
 interface SchedulerProbe {
-  scheduleBackoffRetry(): Promise<void>
+  rescheduleRetries(): Promise<void>
   handleOffline(): void
   handleOnline(): void
   notifyAuthExpired(): void
 }
 
-function makeItem(): SyncQueueItem {
+function makeItem(overrides: Partial<SyncQueueItem> = {}): SyncQueueItem {
   return {
     id: 'q-1',
     entityType: 'budget_entry',
@@ -43,6 +43,7 @@ function makeItem(): SyncQueueItem {
     data: { name: 'test' },
     timestamp: Date.now(),
     retryCount: 0,
+    ...overrides,
   }
 }
 
@@ -99,17 +100,20 @@ describe('SyncQueueService retry scheduling (LBDS-244)', () => {
     const getAll = vi.spyOn(syncQueueDb, 'getAll')
     service.setOnline(false)
 
-    await probe.scheduleBackoffRetry()
+    await probe.rescheduleRetries()
 
     expect(getAll).not.toHaveBeenCalled()
     expect(vi.getTimerCount()).toBe(0)
   })
 
   it('cancela un reintento ya armado al pasar a offline', async () => {
-    vi.spyOn(syncQueueDb, 'getAll').mockResolvedValue([makeItem()])
+    // GitLab #14: the scheduler only arms a timer when a retry is actually
+    // owed, so the item carries retry evidence (the old scheduler armed a
+    // timer for any non-empty queue).
+    vi.spyOn(syncQueueDb, 'getAll').mockResolvedValue([makeItem({ retryCount: 2 })])
     service.setOnline(true)
 
-    await probe.scheduleBackoffRetry()
+    await probe.rescheduleRetries()
     expect(vi.getTimerCount()).toBe(1)
 
     probe.handleOffline()
@@ -171,14 +175,33 @@ describe('SyncQueueService retry scheduling (LBDS-244)', () => {
     expect(vi.getTimerCount()).toBe(0)
   })
 
-  it('no arma nada al volver online si sólo hay items frescos', async () => {
-    const getAll = vi.spyOn(syncQueueDb, 'getAll').mockResolvedValue([makeItem()])
+  it('empuja la cola sola al volver online, incluso con items frescos', async () => {
+    // Un item encolado offline no persiste evidencia de reintento (retryCount
+    // 0, sin nextRetryAt) y el debounce que lo habria empujado nunca corrio:
+    // volver a estar online es la evidencia de que se debe un push.
+    let queue: SyncQueueItem[] = [makeItem()]
+    const getAll = vi.spyOn(syncQueueDb, 'getAll').mockImplementation(async () => [...queue])
+    vi.spyOn(syncQueueDb, 'bulkDelete').mockImplementation(async ({ ids }) => {
+      queue = queue.filter((item) => !ids.includes(item.id))
+    })
+    vi.spyOn(syncQueueDb, 'count').mockImplementation(async () => queue.length)
+    vi.spyOn(budgetEntriesDb, 'getBySyncId').mockResolvedValue(null)
+    vi.spyOn(pendingAttachmentsService, 'getAllPendingAttachments').mockResolvedValue([])
+    vi.spyOn(syncApiService, 'getActiveConflicts').mockResolvedValue({ ok: false } as Response)
+    const merge = vi.spyOn(syncApiService, 'merge').mockResolvedValue(mergeOkResponse())
+    vi.spyOn(syncLockService, 'acquire').mockResolvedValue(true)
 
     service.setOnline(false)
     probe.handleOnline()
     await vi.advanceTimersByTimeAsync(0)
 
     expect(getAll).toHaveBeenCalled()
+    expect(vi.getTimerCount()).toBe(1)
+
+    await vi.advanceTimersByTimeAsync(1500)
+
+    expect(merge).toHaveBeenCalledTimes(1)
+    expect(queue).toHaveLength(0)
     expect(vi.getTimerCount()).toBe(0)
   })
 
@@ -188,7 +211,7 @@ describe('SyncQueueService retry scheduling (LBDS-244)', () => {
     service.setOnline(true)
 
     probe.notifyAuthExpired()
-    await probe.scheduleBackoffRetry()
+    await probe.rescheduleRetries()
     expect(vi.getTimerCount()).toBe(0)
 
     await service.pullChanges()
