@@ -3,10 +3,14 @@
 This directory documents how OneSpend is published on
 [F-Droid](https://f-droid.org) and how that differs from other stores.
 
-Status: submitted as merge request
-[`!48564`](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/48564) to
-[fdroiddata](https://gitlab.com/fdroid/fdroiddata). The app is not in the index
-yet; the Downloads page entry stays on "Próximamente" until it is.
+Status: the app is in the index since v0.79.0, and the 0.81.0 update is
+submitted as merge request
+[`!56717`](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/56717) to
+[fdroiddata](https://gitlab.com/fdroid/fdroiddata). The F-Droid CI checks
+(`fdroid build`, `fdroid lint`, `rewritemeta`, `check apk`, ...) run on the
+merge request and are currently blocked by `ci_quota_exceeded` on the shared
+GitLab runners, so they still have to go green before the version is
+published.
 
 ## How F-Droid publishing works
 
@@ -99,9 +103,9 @@ Current build block:
 
 | Field | Value |
 | ----- | ----- |
-| `versionName` | `0.79.0` (`"version"` in `front/package.json`) |
-| `versionCode` | `7900` (`"versionCode"` in `front/package.json`) |
-| `commit` | `f43930894c0bac0ac303843d78f41d28c3014af5` — full SHA, never a tag |
+| `versionName` | `0.81.0` (`"version"` in `front/package.json`) |
+| `versionCode` | `8100` (`"versionCode"` in `front/package.json`) |
+| `commit` | `810eee6ba0cfd1187f96388413502e1f51dc4661` — full SHA, never a tag |
 
 The recipe pins the **full commit hash** on purpose: a tag can be moved, a hash
 cannot, and the buildserver needs an immutable revision.
