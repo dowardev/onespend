@@ -1,0 +1,4 @@
+v0.81.0
+• La app ahora sube sola los cambios que encolaste sin conexión en cuanto vuelve la red, sin que toques "Sincronizar".
+• Editar un registro recién creado ya no muestra un conflicto falso de "edición concurrente", y el contador de revisiones ya no difiere con el servidor.
+• Los cargos recurrentes con hora ya no generan un conflicto fantasma en cada sincronización, y el calendario sigue el idioma de la app.

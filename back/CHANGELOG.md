@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.81.0] - 2026-11-10
+
 ### Added
 - `App\Support\CanonicalTime`: the single place in the back that holds the canonical `"HH:MM"` rule for a time of day. It matches the client's `front/src/utils/timeFormat.ts` `normalizeTime` character for character, and it is used by the `BudgetEntry` and `RecurringRecord` model accessors and by both sync processors, so the two entities cannot drift apart (GitLab #17).
 

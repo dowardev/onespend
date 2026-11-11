@@ -1,0 +1,4 @@
+v0.81.0
+• The app now pushes the changes you queued while offline as soon as the connection comes back, without needing a manual sync.
+• Editing a record right after creating it no longer shows a false "concurrent edit" conflict, and the revision counter no longer drifts from the server.
+• Recurring charges with a time no longer produce a phantom conflict on every sync, and the date picker follows the app language.
