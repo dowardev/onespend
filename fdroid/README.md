@@ -28,8 +28,9 @@ F-Droid does not accept uploaded APKs to publish. Instead:
 ### Consequences
 
 - No proprietary dependencies or trackers are allowed in the build.
-- Updates come from new Git tags on the upstream repository; a bot opens a
-  merge request with the new build block.
+- Updates come from new Git tags on the upstream repository; the
+  `checkupdates` bot commits the new build block straight into the upstream
+  `master`, so no merge request from us is needed.
 - F-Droid is a separate distribution channel. It only becomes update-compatible
   with AppGallery / Google Play when the reproducible build check passes and
   F-Droid publishes our own signed APK.
@@ -162,11 +163,30 @@ versionCode.
      "/path/to/app-release.apk#onespend-X.Y.Z.apk"
    ```
    Verify the download works before moving on.
-6. F-Droid's bot opens a merge request adding the new build block. Replace the
-   tag with the **full commit hash** if it used one, and confirm the pipelines.
-   If the merge request has to be opened by hand, branch from the current
-   upstream `master` (not from the fork's own `master`, which lags behind) so
-   the diff shows only the new build block.
+6. F-Droid's `checkupdates` bot reacts to the tag: it commits the new build
+   block directly into `fdroid/fdroiddata` `master` (commit
+   "bot: Update OneSpend to `<versionCode>`") and bumps `CurrentVersion` /
+   `CurrentVersionCode`. **We do not open a merge request**: the bot races
+   us, and a hand-made one that is cut from a master that already carries the
+   new block ends up with a duplicate build block, which fails the schema
+   validation with `non-unique elements`. If the bot ever does not pick the
+   version up, open the merge request by hand, but branch from the current
+   upstream `master` (not from a fork's own `master`, which lags behind) so
+   the diff shows only the new build block, and pin the **full commit hash**
+   instead of the tag.
+7. Wait for the buildserver. It compiles the recipe, runs the reproducible
+   build check against our signed APK and only then publishes the version to
+   the index. This takes **3 to 4 days** in practice: 0.79.0 took 4 days and
+   0.80.0 took 3 days between the metadata commit and the APK appearing.
+   Verify with:
+   ```bash
+   curl -sI https://f-droid.org/repo/com.dowardev.onespend_<versionCode>.apk | head -1
+   ```
+   A `404` means "not published yet", not "failed". The package page
+   (https://f-droid.org/packages/com.dowardev.onespend/) shows the published
+   version as *suggested* once the build lands.
+8. Mirror the new metadata block into `fdroid/com.dowardev.onespend.yml` in
+   this repo, so the mirror keeps matching the upstream metadata.
 
 ## Store metadata
 
@@ -200,6 +220,9 @@ download link) only after the first F-Droid release is live.
 
 ## What you never do
 
+- Never open a merge request to `fdroiddata` for a version you already
+  tagged: the `checkupdates` bot commits the build block on its own, and a
+  duplicate block fails the schema validation.
 - Never move a tag that a recipe already pins — submit a new version instead.
 - Never commit a keystore or its passwords.
 - Never enable the Downloads page F-Droid entry until the app is live in the
