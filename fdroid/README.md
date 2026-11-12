@@ -6,8 +6,10 @@ This directory documents how OneSpend is published on
 Status: the app is in the index since v0.79.0. The 0.81.0 (versionCode 8100)
 build block is merged upstream in
 [fdroiddata](https://gitlab.com/fdroid/fdroiddata) `master` — commit `c883782`
-("bot: Update OneSpend to 8100"), added by F-Droid's `checkupdates` bot when
-the `v0.81.0` tag was published. The 0.79.0 and 0.80.0 build blocks are
+("bot: Update OneSpend to 8100"), the squash of merge request
+[`!56840`](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/56840), which
+F-Droid's `checkupdates` bot opened on its own when the `v0.81.0` tag was
+published and a maintainer merged. The 0.79.0 and 0.80.0 build blocks are
 unchanged upstream.
 
 The buildserver still has to publish the 0.81.0 APK: until
@@ -29,8 +31,8 @@ F-Droid does not accept uploaded APKs to publish. Instead:
 
 - No proprietary dependencies or trackers are allowed in the build.
 - Updates come from new Git tags on the upstream repository; the
-  `checkupdates` bot commits the new build block straight into the upstream
-  `master`, so no merge request from us is needed.
+  `checkupdates` bot opens a merge request with the new build block and a
+  maintainer merges it, so no merge request from us is needed.
 - F-Droid is a separate distribution channel. It only becomes update-compatible
   with AppGallery / Google Play when the reproducible build check passes and
   F-Droid publishes our own signed APK.
@@ -163,17 +165,17 @@ versionCode.
      "/path/to/app-release.apk#onespend-X.Y.Z.apk"
    ```
    Verify the download works before moving on.
-6. F-Droid's `checkupdates` bot reacts to the tag: it commits the new build
-   block directly into `fdroid/fdroiddata` `master` (commit
-   "bot: Update OneSpend to `<versionCode>`") and bumps `CurrentVersion` /
-   `CurrentVersionCode`. **We do not open a merge request**: the bot races
-   us, and a hand-made one that is cut from a master that already carries the
-   new block ends up with a duplicate build block, which fails the schema
-   validation with `non-unique elements`. If the bot ever does not pick the
-   version up, open the merge request by hand, but branch from the current
-   upstream `master` (not from a fork's own `master`, which lags behind) so
-   the diff shows only the new build block, and pin the **full commit hash**
-   instead of the tag.
+6. F-Droid's `checkupdates` bot reacts to the tag: it opens a merge request
+   with the new build block ("bot: Update OneSpend to `<versionCode>`"), a
+   maintainer merges it, and `master` ends up with the new block plus the
+   `CurrentVersion` / `CurrentVersionCode` bump. **We do not open a merge
+   request**: the bot races us, and a hand-made one that is cut from a master
+   that already carries the new block ends up with a duplicate build block,
+   which fails the schema validation with `non-unique elements`. If the bot
+   ever does not pick the version up, open the merge request by hand, but
+   branch from the current upstream `master` (not from a fork's own `master`,
+   which lags behind) so the diff shows only the new build block, and pin the
+   **full commit hash** instead of the tag.
 7. Wait for the buildserver. It compiles the recipe, runs the reproducible
    build check against our signed APK and only then publishes the version to
    the index. This takes **3 to 4 days** in practice: 0.79.0 took 4 days and
@@ -221,8 +223,8 @@ download link) only after the first F-Droid release is live.
 ## What you never do
 
 - Never open a merge request to `fdroiddata` for a version you already
-  tagged: the `checkupdates` bot commits the build block on its own, and a
-  duplicate block fails the schema validation.
+  tagged: the `checkupdates` bot opens one on its own, and a duplicate block
+  fails the schema validation.
 - Never move a tag that a recipe already pins — submit a new version instead.
 - Never commit a keystore or its passwords.
 - Never enable the Downloads page F-Droid entry until the app is live in the
