@@ -3,14 +3,16 @@
 This directory documents how OneSpend is published on
 [F-Droid](https://f-droid.org) and how that differs from other stores.
 
-Status: the app is in the index since v0.79.0, and the 0.81.0 update is
-submitted as merge request
-[`!56717`](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/56717) to
-[fdroiddata](https://gitlab.com/fdroid/fdroiddata). The F-Droid CI checks
-(`fdroid build`, `fdroid lint`, `rewritemeta`, `check apk`, ...) run on the
-merge request and are currently blocked by `ci_quota_exceeded` on the shared
-GitLab runners, so they still have to go green before the version is
-published.
+Status: the app is in the index since v0.79.0. The 0.81.0 (versionCode 8100)
+build block is merged upstream in
+[fdroiddata](https://gitlab.com/fdroid/fdroiddata) `master` — commit `c883782`
+("bot: Update OneSpend to 8100"), added by F-Droid's `checkupdates` bot when
+the `v0.81.0` tag was published. The 0.79.0 and 0.80.0 build blocks are
+unchanged upstream.
+
+The buildserver still has to publish the 0.81.0 APK: until
+`https://f-droid.org/repo/com.dowardev.onespend_8100.apk` answers `200`, the
+version is not in the index yet.
 
 ## How F-Droid publishing works
 
@@ -96,8 +98,16 @@ cd android
 ## Recipe file
 
 `fdroid/com.dowardev.onespend.yml` in this repo mirrors
-`metadata/com.dowardev.onespend.yml` in the fork. Keep both in sync while the
-app is under review; afterwards the fdroiddata copy is the source of truth.
+`metadata/com.dowardev.onespend.yml` in
+[fdroiddata](https://gitlab.com/fdroid/fdroiddata) `master`. The upstream copy
+is the source of truth; update this mirror whenever the upstream metadata
+changes.
+
+If a merge request ever has to be opened by hand, branch from the current
+upstream `master`, not from the fork's own `master`: a branch cut from an older
+fork state makes the merge request show the whole metadata file as newly added
+instead of the real diff, and it can silently drop the build configuration of
+an already published version.
 
 Current build block:
 
@@ -154,6 +164,9 @@ versionCode.
    Verify the download works before moving on.
 6. F-Droid's bot opens a merge request adding the new build block. Replace the
    tag with the **full commit hash** if it used one, and confirm the pipelines.
+   If the merge request has to be opened by hand, branch from the current
+   upstream `master` (not from the fork's own `master`, which lags behind) so
+   the diff shows only the new build block.
 
 ## Store metadata
 
