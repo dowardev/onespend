@@ -196,7 +196,7 @@ Store metadata lives in the standard Triple-T / Fastlane layout, one directory
 per locale, with the icon inside each locale:
 
 ```
-front/android/fastlane/metadata/android/
+front/android/app/fastlane/metadata/android/
 ├── en-US/
 │   ├── title.txt, short_description.txt, full_description.txt
 │   ├── changelogs/<versionCode>.txt
@@ -217,8 +217,12 @@ front/android/fastlane/metadata/android/
 | F-Droid     | Release keystore   | Yes, when the reproducible build check passes |
 
 The Downloads page entry lives in
-`front/src/views/info/DownloadsPage.vue` and must be enabled (badge +
-download link) only after the first F-Droid release is live.
+`front/src/views/info/DownloadsPage.vue` and is enabled (badge + download
+link) since the app is live in the F-Droid index. The button opens the
+package page (`https://f-droid.org/packages/com.dowardev.onespend/`), not a
+versioned APK URL: the package page always serves the latest published build,
+so the link never breaks while the buildserver is still compiling a new
+version.
 
 ## What you never do
 
@@ -227,8 +231,9 @@ download link) only after the first F-Droid release is live.
   fails the schema validation.
 - Never move a tag that a recipe already pins — submit a new version instead.
 - Never commit a keystore or its passwords.
-- Never enable the Downloads page F-Droid entry until the app is live in the
-  F-Droid index.
+- Never enable the Downloads page F-Droid entry before the app is live in the
+  F-Droid index, and never point it at a versioned APK URL: the package page
+  is the only stable link.
 - Never edit the version in `build.gradle`; `front/package.json` is the single
   source of truth for both `versionName` and `versionCode`.
 
@@ -238,6 +243,6 @@ download link) only after the first F-Droid release is live.
 | ----- | ---- |
 | This guide | `fdroid/README.md` |
 | Recipe (mirror of the submission) | `fdroid/com.dowardev.onespend.yml` |
-| Store metadata | `front/android/fastlane/metadata/android/{en-US,es}/` |
+| Store metadata | `front/android/app/fastlane/metadata/android/{en-US,es}/` |
 | Downloads page entry | `front/src/views/info/DownloadsPage.vue` |
 | Version source of truth | `front/package.json` (`version` + `versionCode`) |

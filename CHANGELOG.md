@@ -10,9 +10,17 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 ## [v0.81.0] - 2026-11-10
 
+### Added
+- The app now pushes the changes it queued while it was offline as soon as the connection comes back, instead of leaving them pending until you tap sync by hand (GitLab #14).
+
 ### Fixed
+- Recurring charges with a time of day no longer produce a phantom conflict on every sync: the server answers with the full "HH:MM:SS" form while the client stored "HH:MM", and the two strings did not match the hash the server computes to detect concurrent edits. Both sides now use the same "HH:MM" format (GitLab #17).
+- The date picker follows the language of the app instead of always showing the English calendar and time picker (GitLab #17).
 - Editing a record right after creating it no longer produces a false "concurrent edit" conflict. The server now compares the pushed fields against the last synced state one by one, so an edit to a row the same client just created is applied instead of landing in the conflict list, and an edit made while another device changed a different field is merged instead of rejected (GitLab #15).
 - The local copy of a record now keeps the same revision counter as the server after every sync, for every kind of record. Before, a record created on the device kept revision 0 on the device while the server had already moved on, which the sync diagnostics reported as a version drift on every row the device had created (GitLab #15).
+
+### Changed
+- The merge retry lifecycle is now a single state machine with one predicate, one timer and one re-arm per transition, instead of four independent guards each with its own arming logic, so a lock that never frees can no longer be retried forever (GitLab #14).
 
 ## [v0.80.0] - 2026-10-27
 

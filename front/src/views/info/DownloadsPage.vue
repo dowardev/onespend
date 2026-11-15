@@ -94,15 +94,15 @@ SPDX-License-Identifier: AGPL-3.0-only
                       <h3>{{ t('info.downloadspage.text3') }}</h3>
                       <p>{{ t('downloads.fdroidSubtitle') }}</p>
                     </ion-label>
-                    <ion-badge slot="end" color="medium">{{ t('downloads.comingSoon') }}</ion-badge>
+                    <ion-badge slot="end" color="success">{{ t('downloads.available') }}</ion-badge>
                   </ion-item>
                   <div slot="content" class="ac-content">
                     <ion-item class="transparent">
                       <ion-label>
                         <h3>{{ t('common.requirements') }}</h3>
-                        <p>Android 7.0 (Nougat) o superior · ~30 MB de espacio</p>
+                        <p>{{ t('downloads.androidRequirementsBody') }}</p>
                       </ion-label>
-                      <ion-button slot="end" fill="clear" disabled>
+                      <ion-button slot="end" fill="clear" @click="openFdroid">
                         <ion-icon :icon="downloadOutline"></ion-icon>
                       </ion-button>
                     </ion-item>
@@ -140,7 +140,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                       <ion-label>
                         <h3>{{ t('common.requirements') }}</h3>
 
-                        <p>Android 7.0 (Nougat) o superior · ~30 MB de espacio</p>
+                        <p>{{ t('downloads.androidRequirementsBody') }}</p>
                       </ion-label>
 
                       <ion-button slot="end" fill="clear" @click="openUptodown">
@@ -233,7 +233,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                     <ion-label>
                       <h3>{{ t('downloads.linux') }}</h3>
 
-                      <p>AppImage · DEB · OBS · Flathub · AUR</p>
+                      <p>{{ t('downloads.linuxBody') }}</p>
                     </ion-label>
 
                     <ion-badge slot="end" color="medium">{{ t('downloads.comingSoon') }}</ion-badge>
@@ -246,9 +246,9 @@ SPDX-License-Identifier: AGPL-3.0-only
                       en Debian estable. Pendiente: builds de release en contenedor. -->
                     <ion-item class="transparent">
                       <ion-label>
-                        <h3>AppImage</h3>
+                        <h3>{{ t('downloads.linuxAppImage') }}</h3>
 
-                        <p>Universal — funciona en cualquier distribución, sin instalar</p>
+                        <p>{{ t('downloads.linuxAppImageBody') }}</p>
                       </ion-label>
 
                       <ion-button slot="end" fill="clear" disabled>
@@ -258,9 +258,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 
                     <ion-item class="transparent">
                       <ion-label>
-                        <h3>DEB</h3>
+                        <h3>{{ t('downloads.linuxDeb') }}</h3>
 
-                        <p>Debian · Ubuntu · Mint</p>
+                        <p>{{ t('downloads.linuxDebBody') }}</p>
                       </ion-label>
 
                       <ion-button slot="end" fill="clear" disabled>
@@ -270,9 +270,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 
                     <ion-item class="transparent">
                       <ion-label>
-                        <h3>OBS (Open Build Service)</h3>
+                        <h3>{{ t('downloads.linuxObs') }}</h3>
 
-                        <p>Repositorio · openSUSE · Fedora</p>
+                        <p>{{ t('downloads.linuxObsBody') }}</p>
                       </ion-label>
 
                       <ion-button slot="end" fill="clear" disabled>
@@ -282,9 +282,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 
                     <ion-item class="transparent">
                       <ion-label>
-                        <h3>Flathub</h3>
+                        <h3>{{ t('downloads.linuxFlathub') }}</h3>
 
-                        <p>Flatpak · sandboxeado</p>
+                        <p>{{ t('downloads.linuxFlathubBody') }}</p>
                       </ion-label>
 
                       <ion-button slot="end" fill="clear" disabled>
@@ -294,9 +294,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 
                     <ion-item class="transparent">
                       <ion-label>
-                        <h3>AUR</h3>
+                        <h3>{{ t('downloads.linuxAur') }}</h3>
 
-                        <p>Arch Linux · paquete -bin</p>
+                        <p>{{ t('downloads.linuxAurBody') }}</p>
                       </ion-label>
 
                       <ion-button slot="end" fill="clear" disabled>
@@ -336,7 +336,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                       <ion-label>
                         <h3>{{ t('downloads.windowsNsis') }}</h3>
 
-                        <p>Windows 10 y 11 · 64 bits</p>
+                        <p>{{ t('downloads.windowsVersionBody') }}</p>
                       </ion-label>
 
                       <ion-badge slot="end" color="medium">{{ t('downloads.comingSoon') }}</ion-badge>
@@ -344,9 +344,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 
                     <ion-item class="transparent">
                       <ion-label>
-                        <h3>Winget</h3>
+                        <h3>{{ t('downloads.winget') }}</h3>
 
-                        <p>Instalación por terminal · sin cuenta</p>
+                        <p>{{ t('downloads.wingetBody') }}</p>
                       </ion-label>
 
                       <ion-badge slot="end" color="medium">{{ t('downloads.comingSoon') }}</ion-badge>
@@ -354,9 +354,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 
                     <ion-item class="transparent">
                       <ion-label>
-                        <h3>Uptodown</h3>
+                        <h3>{{ t('downloads.uptodown') }}</h3>
 
-                        <p>Descarga directa · sin cuenta</p>
+                        <p>{{ t('downloads.uptodownBody') }}</p>
                       </ion-label>
 
                       <ion-badge slot="end" color="medium">{{ t('downloads.comingSoon') }}</ion-badge>
@@ -460,6 +460,11 @@ const { t } = useLocale();
 function openPwa() {
   // Install from wherever the app is currently served
   window.open(window.location.origin, '_blank', 'noopener');
+}
+
+function openFdroid() {
+  // The package page always serves the latest published build
+  window.open('https://f-droid.org/packages/com.dowardev.onespend/', '_blank', 'noopener');
 }
 
 function openUptodown() {
