@@ -34,7 +34,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                   class="ion-margin-top"
                   @click="navigateToConnections"
                 >
-                  <ion-icon :icon="settingsOutline" slot="start"></ion-icon>
+                  <ion-icon slot="start" :icon="settingsOutline"></ion-icon>
                   {{ t('sync.view.disabled.goToSettings') }}
                 </ion-button>
               </ion-card-content>
