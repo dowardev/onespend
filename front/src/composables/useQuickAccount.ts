@@ -4,6 +4,7 @@
 
 import { ref } from 'vue';
 import accountsController from '@/controllers/accountsController';
+import { translate } from '@/i18n';
 
 export function useQuickAccount(params: {
   onAccountCreated: (params: { newAccount: { id: IDBValidKey }; targetIndex: number }) => void;
@@ -33,14 +34,14 @@ export function useQuickAccount(params: {
   }
 
   const quickAccountInputs = [
-    { name: 'accountName', type: 'text' as const, placeholder: 'Nombre de la cuenta' },
-    { name: 'initialBalance', type: 'number' as const, placeholder: 'Balance inicial (opcional)', value: 0 },
+    { name: 'accountName', type: 'text' as const, placeholder: translate('components.quickAccount.namePlaceholder') },
+    { name: 'initialBalance', type: 'number' as const, placeholder: translate('components.quickAccount.initialBalancePlaceholder'), value: 0 },
   ];
 
   const quickAccountButtons = [
-    { text: 'Cancelar', role: 'cancel' as const },
+    { text: translate('common.cancel'), role: 'cancel' as const },
     {
-      text: 'Crear',
+      text: translate('common.create'),
       handler: (data: { accountName: string; initialBalance: string }) => {
         if (!data.accountName || data.accountName.trim() === '') {
           return false;

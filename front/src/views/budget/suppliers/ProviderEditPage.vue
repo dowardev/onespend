@@ -25,7 +25,7 @@ SPDX-License-Identifier: AGPL-3.0-only
             <ion-list class="ion-padding-start ion-padding-end">
               <ion-card class="shadow1">
                 <div v-if="v$.name?.$error" class="validation-error">
-                  <span v-if="v$.name?.required?.$invalid">Debes seleccionar un proveedor</span>
+                  <span v-if="v$.name?.required?.$invalid">{{ t('budget.suppliers.providereditpage.supplierRequired') }}</span>
                 </div>
 
                 <ion-item class="transparent" button lines="full" @click="showProviderModal = true">
@@ -191,17 +191,23 @@ SPDX-License-Identifier: AGPL-3.0-only
                     ></ion-icon>
                     <ion-label>
                       <div class="coverage-info">
-                        <span class="coverage-total">Total: {{ formatPrice(productsTotal) }}</span>
-                        <span class="coverage-entered"
-                          >Cubierto: {{ formatPrice(productsCoverage.entered) }}</span
-                        >
+                        <span class="coverage-total">{{ t('common.total') }}: {{ formatPrice(productsTotal) }}</span>
+                        <span class="coverage-entered">{{
+                          t('budget.suppliers.providereditpage.coverageEntered', {
+                            amount: formatPrice(productsCoverage.entered),
+                          })
+                        }}</span>
                         <template v-if="productsCoverage.falta > 0">
-                          <span class="coverage-shortage"
-                            >Faltante: {{ formatPrice(productsCoverage.falta) }}</span
-                          >
+                          <span class="coverage-shortage">{{
+                            t('budget.suppliers.providereditpage.coverageShortage', {
+                              amount: formatPrice(productsCoverage.falta),
+                            })
+                          }}</span>
                         </template>
                         <template v-else>
-                          <span class="coverage-covered">¡Cubierto!</span>
+                          <span class="coverage-covered">{{
+                            t('budget.suppliers.providereditpage.covered')
+                          }}</span>
                         </template>
                       </div>
                       <div class="progress-container">
@@ -227,8 +233,8 @@ SPDX-License-Identifier: AGPL-3.0-only
               <div class="ion-padding-start ion-padding-end ion-margin-top">
                 <AccountDistributionPicker
                   :items="items"
-                  header-label="Distribución por Cuenta"
-                  header-subtitle="Distribuye el monto entre las cuentas"
+                  :header-label="t('budget.suppliers.providereditpage.distributionHeader')"
+                  :header-subtitle="t('budget.suppliers.providereditpage.distributionSubtitle')"
                   reverse-order
                   @add-item="handleAddItem"
                   @remove-item="removeItem"
@@ -269,7 +275,7 @@ SPDX-License-Identifier: AGPL-3.0-only
             </ion-button>
           </ion-buttons>
 
-          <ion-title>Seleccionar Proveedor</ion-title>
+          <ion-title>{{ t('budget.suppliers.providereditpage.selectSupplierTitle') }}</ion-title>
 
           <ion-buttons slot="end">
             <ion-button @click="showCreateProviderView = true">
@@ -285,7 +291,7 @@ SPDX-License-Identifier: AGPL-3.0-only
             </ion-button>
           </ion-buttons>
 
-          <ion-title>Crear Proveedor</ion-title>
+          <ion-title>{{ t('budget.suppliers.providereditpage.createSupplierTitle') }}</ion-title>
 
           <ion-buttons slot="end">
             <ion-button @click="onCreateSupplier">
@@ -299,7 +305,7 @@ SPDX-License-Identifier: AGPL-3.0-only
             <ion-searchbar
               v-model="searchQuery"
               mode="ios"
-              placeholder="Buscar proveedor"
+              :placeholder="t('budget.suppliers.providereditpage.searchSupplier')"
               class="ion-no-padding"
             ></ion-searchbar>
           </div>
@@ -356,7 +362,7 @@ SPDX-License-Identifier: AGPL-3.0-only
         <ion-item lines="full" button @click="handleDeleteFromPopover">
           <ion-icon slot="start" color="danger" :icon="trashOutline"></ion-icon>
 
-          <ion-label>Eliminar proveedor</ion-label>
+          <ion-label>{{ t('budget.suppliers.providereditpage.deleteProviderLabel') }}</ion-label>
         </ion-item>
       </ion-content>
     </ion-popover>
@@ -366,22 +372,22 @@ SPDX-License-Identifier: AGPL-3.0-only
     <!-- alerts -->
     <DeleteConfirmAlert
       :is-open="deleteConfirm.showDeleteAlert.value"
-      message="¿Estás seguro de que deseas eliminar este proveedor?"
+      :message="t('budget.suppliers.providereditpage.deleteConfirm')"
       :buttons="deleteConfirm.deleteAlertButtons"
       @did-dismiss="deleteConfirm.showDeleteAlert.value = false"
     />
 
     <ion-alert
       :is-open="showCoverageAlert"
-      header="Total cubierto"
-      message="Ya has distribuido el monto total de los productos entre las cuentas existentes."
+      :header="t('budget.suppliers.providereditpage.totalCoveredHeader')"
+      :message="t('budget.suppliers.providereditpage.totalCoveredMessage')"
       :buttons="[{ text: 'Entendido', role: 'cancel' }]"
       @did-dismiss="showCoverageAlert = false"
     ></ion-alert>
 
     <ion-toast
       :is-open="showIncompleteGroupToast"
-      message="Completa el grupo actual antes de agregar otro"
+      :message="t('budget.suppliers.providereditpage.completeGroup')"
       :duration="2000"
       position="top"
       color="warning"
@@ -611,7 +617,7 @@ const itemsValidator = (items: Array<{ amount: number | string; accountId: unkno
 
 const rules = computed(() => ({
   name: { required: isEntryMode.value ? (() => true) : required },
-  items: { itemsValid: helpers.withMessage('Todos los items deben tener un monto válido y una cuenta asignada', itemsValidator) },
+  items: { itemsValid: helpers.withMessage(t('budget.suppliers.providereditpage.itemsInvalid'), itemsValidator) },
 }))
 
 const v$ = useVuelidate(rules, computed(() => ({
@@ -782,12 +788,12 @@ async function initializeFromProvider() {
 
 const pageTitle = computed(() => {
   if (isEntryMode.value) {
-    return 'Editar Entrada';
+    return t('budget.suppliers.providereditpage.editEntry');
   }
   if (routeProviderId.value) {
-    return 'Editar Proveedor';
+    return t('budget.suppliers.providereditpage.editProvider');
   }
-  return 'Agregar Proveedor';
+  return t('budget.suppliers.providereditpage.addProvider');
 });
 
 const providerName = computed(() => {
@@ -878,7 +884,7 @@ function getProductQuantityError(params: { productId: string | number }): string
   const { productId } = params;
   const rawValue = getProductRawValue({ productId });
   if (rawValue === '') return '';
-  if (!isNumericValue({ value: rawValue })) return 'Solo números';
+  if (!isNumericValue({ value: rawValue })) return t('budget.suppliers.providereditpage.numbersOnly');
   return '';
 }
 

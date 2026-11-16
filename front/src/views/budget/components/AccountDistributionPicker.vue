@@ -78,7 +78,7 @@ SPDX-License-Identifier: AGPL-3.0-only
         <ion-searchbar
           v-model="accountSearchQuery"
           mode="ios"
-          placeholder="Buscar cuenta"
+          :placeholder="t('budget.components.accountdistributionpicker.searchAccount')"
           class="ion-no-padding"
         />
       </ion-item>
@@ -107,7 +107,7 @@ SPDX-License-Identifier: AGPL-3.0-only
             :disabled="true"
           >
             <ion-label>{{ acc.name }}</ion-label>
-            <ion-note slot="end" color="medium">Seleccionada</ion-note>
+            <ion-note slot="end" color="medium">{{ t('budget.components.accountdistributionpicker.selected') }}</ion-note>
           </ion-item>
         </ion-card>
       </ion-list>
@@ -131,7 +131,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
   <ion-toast
     :is-open="showIncompleteToast"
-    message="Completa los campos pendientes antes de añadir otra distribución"
+    :message="t('budget.components.accountdistributionpicker.pendingFields')"
     :duration="3000"
     color="warning"
     @did-dismiss="showIncompleteToast = false"

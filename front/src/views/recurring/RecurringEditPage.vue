@@ -199,7 +199,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                       <ion-select
                         v-model="formData.repeatMonthWeekdayOrdinal"
                         interface="popover"
-                        label="Ocurrencia"
+                        :label="t('recurring.edit.occurrenceLabel')"
                         label-placement="stacked"
                       >
                         <ion-select-option
@@ -237,7 +237,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                     <ion-select
                       v-model="formData.repeatYearMonth"
                       interface="popover"
-                      label="Mes"
+                      :label="t('recurring.edit.monthLabel')"
                       label-placement="stacked"
                     >
                       <ion-select-option v-for="m in months" :key="m.value" :value="m.value">
@@ -301,7 +301,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                   button
                   @click="openTimePicker({ e: $event })"
                 >
-                  <ion-label>Hora</ion-label>
+                  <ion-label>{{ t('recurring.edit.hourLabel') }}</ion-label>
                   <ion-label slot="end">{{ formData.time || '--:--' }}</ion-label>
                 </ion-item>
               </ion-card>
@@ -561,7 +561,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
         <ion-item lines="full" button @click="handleDeleteFromPopover">
           <ion-icon slot="start" color="danger" :icon="trashOutline" />
-          <ion-label>Eliminar</ion-label>
+          <ion-label>{{ t('recurring.edit.deleteLabel') }}</ion-label>
         </ion-item>
       </ion-content>
     </ion-popover>
@@ -570,7 +570,7 @@ SPDX-License-Identifier: AGPL-3.0-only
     <!-- alerts -->
     <DeleteConfirmAlert
       :is-open="deleteConfirm.showDeleteAlert.value"
-      message="¿Estás seguro de que deseas eliminar este registro recurrente?"
+      :message="t('recurring.edit.confirmDelete')"
       :buttons="deleteConfirm.deleteAlertButtons"
       @did-dismiss="deleteConfirm.showDeleteAlert.value = false"
     />

@@ -9,6 +9,7 @@
 
 import { ref } from 'vue';
 import { entryCategoriesDb } from '@/db/controllers/entryCategoriesDb';
+import { translate } from '@/i18n';
 import type { EntryCategoryRow } from '@/db/types';
 
 export function useQuickCategory(params: {
@@ -42,13 +43,13 @@ export function useQuickCategory(params: {
   }
 
   const quickCategoryInputs = [
-    { name: 'categoryName', type: 'text' as const, placeholder: 'Nombre de la categoría' },
+    { name: 'categoryName', type: 'text' as const, placeholder: translate('components.quickCategory.namePlaceholder') },
   ];
 
   const quickCategoryButtons = [
-    { text: 'Cancelar', role: 'cancel' as const },
+    { text: translate('common.cancel'), role: 'cancel' as const },
     {
-      text: 'Crear',
+      text: translate('common.create'),
       handler: async (data: { categoryName: string }) => {
         if (!data.categoryName || data.categoryName.trim() === '') {
           return false;
