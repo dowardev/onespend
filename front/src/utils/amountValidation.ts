@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
+import { translate } from '@/i18n';
+
 export function isNumericValue(params: { value: unknown }): boolean {
   const { value } = params;
   if (value === null || value === undefined || value === '') return true;
@@ -17,8 +19,8 @@ export function isPositiveValue(params: { value: unknown }): boolean {
 
 export function getAmountError(params: { value: unknown }): string {
   const { value } = params;
-  if (!isNumericValue({ value })) return 'Solo se permiten números';
-  if (!isPositiveValue({ value })) return 'El valor debe ser mayor a 0';
+  if (!isNumericValue({ value })) return translate('common.onlyNumbersAllowed');
+  if (!isPositiveValue({ value })) return translate('common.mustBeGreaterThanZero');
   return '';
 }
 

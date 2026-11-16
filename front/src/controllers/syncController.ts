@@ -13,6 +13,7 @@ import db from '@/db/OneSpendDB';
 import { detectDivergence, type DivergenceReport, type LocalDbLike, type SnapshotServiceLike } from '@/services/sync/SyncDivergenceDetector';
 import { syncApiService } from '@/services/sync/SyncApiService';
 import { readSyncConfig } from '@/services/sync/syncConfig';
+import { translate } from '@/i18n';
 
 /**
  * DLQ items can carry a `data` field that was stored before the queue was
@@ -275,7 +276,7 @@ class SyncController {
     this.lastSyncDisplayTime.value = syncService.getLastSyncDisplayTime();
       this.pendingChanges.value = await syncService.getQueueCount();
     } catch (error) {
-      this.syncError.value = error instanceof Error ? error.message : 'Full sync failed';
+      this.syncError.value = error instanceof Error ? error.message : translate('sync.view.controller.fullSyncFailed');
     } finally {
       this.isSyncing.value = false;
     }
@@ -285,11 +286,11 @@ class SyncController {
     const { onProgress } = params;
 
     if (!(await this.ensureSyncEnabled())) {
-      onProgress({ step: 'error', message: 'La sincronización está desactivada', percent: 0 });
+      onProgress({ step: 'error', message: translate('sync.view.controller.disabled'), percent: 0 });
       return { ok: false, created: 0, updated: 0, errors: 1 };
     }
     if (!this.refreshOnline()) {
-      onProgress({ step: 'error', message: 'No se puede reparar sin conexión', percent: 0 });
+      onProgress({ step: 'error', message: translate('sync.view.controller.repairOffline'), percent: 0 });
       return { ok: false, created: 0, updated: 0, errors: 1 };
     }
 
@@ -297,35 +298,35 @@ class SyncController {
     this.syncError.value = null;
 
     try {
-      onProgress({ step: 'pulling_server', message: 'Obteniendo datos del servidor...', percent: 10 });
+      onProgress({ step: 'pulling_server', message: translate('sync.view.repair.pullingServer'), percent: 10 });
       await syncService.pullChanges();
 
-      onProgress({ step: 'scanning_local', message: 'Escaneando base local...', percent: 35 });
+      onProgress({ step: 'scanning_local', message: translate('sync.view.repair.scanningLocal'), percent: 35 });
       const { created } = await syncQueueService.reconstructQueueForUnsyncedCreates();
 
       if (created > 0) {
         onProgress({
           step: 'reconstructing_queue',
-          message: `Reconstruida cola con ${created} elemento(s)`,
+          message: translate('sync.view.repair.queueRebuilt', { count: created }),
           percent: 55,
         });
         await new Promise(r => setTimeout(r, 300));
 
         onProgress({
           step: 'pushing_changes',
-          message: `Subiendo ${created} elemento(s)...`,
+          message: translate('sync.view.repair.pushingItems', { count: created }),
           percent: 70,
         });
         await syncService.processQueue();
       } else {
-        onProgress({ step: 'done', message: 'No se encontraron elementos pendientes', percent: 100 });
+        onProgress({ step: 'done', message: translate('sync.view.repair.noPending'), percent: 100 });
         this.lastSyncTime.value = syncService.getLastSyncTime();
     this.lastSyncDisplayTime.value = syncService.getLastSyncDisplayTime();
         this.pendingChanges.value = await syncService.getQueueCount();
         return { ok: true, created: 0, updated: 0, errors: 0 };
       }
 
-      onProgress({ step: 'pulling_final', message: 'Actualizando estado final...', percent: 85 });
+      onProgress({ step: 'pulling_final', message: translate('sync.view.repair.updatingFinalState'), percent: 85 });
       await syncService.pullChanges();
 
       this.lastSyncTime.value = syncService.getLastSyncTime();
@@ -334,13 +335,13 @@ class SyncController {
 
       onProgress({
         step: 'done',
-        message: `¡Reparación completa! ${created} elemento(s) sincronizado(s)`,
+        message: translate('sync.view.repair.complete', { count: created }),
         percent: 100,
       });
 
       return { ok: true, created, updated: 0, errors: 0 };
     } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Error en reparación';
+      const msg = error instanceof Error ? error.message : translate('sync.view.repair.error');
       this.syncError.value = msg;
       onProgress({ step: 'error', message: msg, percent: 0 });
       return { ok: false, created: 0, updated: 0, errors: 1 };

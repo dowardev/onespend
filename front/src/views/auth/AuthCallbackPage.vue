@@ -46,7 +46,7 @@ onMounted(async () => {
     // The SSO refused or the user cancelled. Silent success here would look
     // like the app ignored the attempt, so surface it instead.
     error.value =
-      params.get("error_description") || `No se completó el inicio de sesión (${oauthError})`
+      params.get("error_description") || t("auth.callback.loginFailed", { error: oauthError })
     loading.value = false
     return
   }
@@ -64,7 +64,7 @@ onMounted(async () => {
     loading.value = false
     router.replace("/budget")
   } catch (e: any) {
-    error.value = e?.message || "Error en la autenticación"
+    error.value = e?.message || t("auth.callback.genericError")
     loading.value = false
   }
 })

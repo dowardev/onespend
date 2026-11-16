@@ -23,6 +23,7 @@ import attachmentService from '../attachmentService';
 import { toApiFormat } from './entityMappers';
 import { normalizeTime } from '@/utils/timeFormat';
 import { performanceMonitor } from '@/utils/performanceMonitor';
+import { translate } from '@/i18n';
 import type {
   SupplierRow,
   RecurringRecordRow,
@@ -901,7 +902,14 @@ export class SyncQueueService {
       await syncQueueDb.bulkPut({ entries: updated });
     }
     onIssue?.(
-      `El servidor no confirmó ${updated.length} ${updated.length === 1 ? 'cambio' : 'cambios'} pendientes: ${errorMsg}`,
+      translate('sync.view.queue.unconfirmed', {
+        count: updated.length,
+        changes:
+          updated.length === 1
+            ? translate('sync.view.change_one')
+            : translate('sync.view.change_other'),
+        message: errorMsg,
+      }),
     );
     // GitLab #14: the backoff is a state transition of the retry machine.
     // The scheduler owns the deadline from now on.
@@ -1276,7 +1284,7 @@ export class SyncQueueService {
       // survive a page navigation for up to 30s because release() compares a
       // per-page-load tabId) used to turn a user-initiated sync into a silent
       // no-op. Surface it instead.
-      reportIssue('Hay otra sincronización en curso; reintentá en unos segundos');
+      reportIssue(translate('sync.view.queue.alreadyRunning'));
       // GitLab #14: the lock-busy retry budget lives in the scheduler state,
       // so the single predicate decides whether another attempt is allowed.
       // The retry persists nothing, so the evidence stays in memory.
@@ -1358,7 +1366,7 @@ export class SyncQueueService {
         debug('[SYNC-PQ] no ready items');
         // LBDS-244: everything is inside its backoff window. This used to be a
         // silent no-op for a user-initiated sync; say so instead.
-        reportIssue('Cambios en reintento automático; esperá unos segundos y volvé a sincronizar');
+        reportIssue(translate('sync.view.queue.retrying'));
         return null;
       }
 
