@@ -24,7 +24,17 @@
     "select": "Seleccionar",
     "selectProvider": "Seleccionar proveedor",
     "unnamed": "Sin nombre",
-    "today": "Hoy"
+    "today": "Hoy",
+    "periodDay": "Día",
+    "periodWeek": "Semana",
+    "periodMonth": "Mes",
+    "periodYear": "Año",
+    "description": "Descripción",
+    "empty": "(vacío)",
+    "onlyNumbers": "Solo números",
+    "onlyNumbersAllowed": "Solo se permiten números",
+    "mustBeGreaterThanZero": "El valor debe ser mayor a 0",
+    "create": "Crear"
   },
   "recurring": {
     "section": {
@@ -181,6 +191,8 @@
       "deleteAlertMessage": "¿Eliminar {name}?"
     },
     "edit": {
+      "occurrenceLabel": "Ocurrencia",
+      "monthLabel": "Mes",
       "section": {
         "info": "Información",
         "date": "Fecha",
@@ -234,6 +246,8 @@
         "selectSupplier": "Seleccionar proveedor",
         "createSupplier": "Crear proveedor"
       },
+      "hourLabel": "Hora",
+      "deleteLabel": "Eliminar",
       "validation": {
         "nameRequired": "El nombre es requerido",
         "frequencyRequired": "La frecuencia es requerida",
@@ -345,6 +359,8 @@
     }
   },
   "auth": {
+    "logoutWarning": "Si cierras sesión ahora, estos datos se perderán. ¿Deseas continuar?",
+    "logoutPendingWarning": "Tienes {count} cambio(s) pendiente(s) de sincronizar. Si cierras sesión ahora, estos datos se perderán. ¿Deseas continuar?",
     "login": {
       "title": "Iniciar Sesión",
       "subtitle": "Redirigiendo al servidor de autenticación...",
@@ -363,7 +379,9 @@
     },
     "callback": {
       "title": "Iniciando sesión",
-      "message": "Procesando autenticación…"
+      "message": "Procesando autenticación…",
+      "loginFailed": "No se completó el inicio de sesión ({error})",
+      "genericError": "Error en la autenticación"
     }
   },
   "sync": {
@@ -463,6 +481,112 @@
       "dlq": {
         "itemFailed": "elemento fallido",
         "itemsFailed": "elementos fallidos"
+      },
+      "lastSync": {
+        "lessThanMinute": "Hace menos de 1 minuto",
+        "minutes": "Hace {n} minutos",
+        "hours": "Hace {n} horas",
+        "days": "Hace {n} días"
+      },
+      "resolvedAt": {
+        "lessThanMinute": "Hace menos de 1 minuto",
+        "minutes": "Hace {n} min",
+        "hours": "Hace {n} h",
+        "days": "Hace {n} días"
+      },
+      "state": {
+        "offline": "Sin conexión",
+        "pending": "Pendientes",
+        "synced": "Sincronizado",
+        "syncing": "Sincronizando..."
+      },
+      "time": {
+        "secondsAgo": "hace unos segundos",
+        "minutesAgo": "hace {m} min",
+        "hoursAgo": "hace {h} h",
+        "daysAgo": "hace {d} días"
+      },
+      "entity": {
+        "account": "Cuentas",
+        "budget": "Presupuestos",
+        "budget_entry": "Entradas de gasto",
+        "budget_entry_group": "Grupos de entradas",
+        "budget_provider": "Proveedores del presupuesto",
+        "budget_provider_product": "Productos de proveedores",
+        "entry": "Entradas",
+        "income": "Ingresos",
+        "recurring_record": "Registros recurrentes",
+        "recurring_record_product": "Productos recurrentes",
+        "supplier": "Proveedores",
+        "supplier_product": "Productos de proveedores",
+        "template": "Plantillas"
+      },
+      "conflicts": {
+        "moreFields": "+{n} más",
+        "field_one": "campo",
+        "field_other": "campos",
+        "sameField_one": "✓ {n} campo coincide — no hay cambios",
+        "sameField_other": "✓ {n} campos coinciden — no hay cambios",
+        "resolvedTitle": "Conflictos resueltos",
+        "resolution": "Resolución: {resolution}",
+        "resolutionServer": "servidor",
+        "modalTitle": "Conflicto detectado",
+        "intro": "Este registro se modificó desde dos sitios a la vez. Elige qué versión quieres conservar:",
+        "introHint": "↕ Los valores que difieren entre versiones están resaltados en ambas columnas",
+        "yourVersion": "Tu versión",
+        "serverVersion": "Versión del servidor",
+        "keepLocal": "Conservar lo que tengo aquí",
+        "keepServer": "Conservar lo del servidor"
+      },
+      "debug": {
+        "title": "Debug",
+        "show": "Ver información de depuración"
+      },
+      "login": {
+        "required": "Necesitás iniciar sesión para sincronizar tus datos.",
+        "action": "Iniciar sesión"
+      },
+      "repairModal": {
+        "title": "Reparando sincronización",
+        "starting": "Iniciando reparación..."
+      },
+      "fix": {
+        "updatingStatus": "Actualizando estado...",
+        "syncingAll": "Sincronizando todo...",
+        "repairing": "Reparando sincronización...",
+        "failedStep": "Falló el paso ({step}){reason}"
+      },
+      "toast": {
+        "syncCompleted": "Sincronización completada",
+        "syncFailed": "No se pudo sincronizar",
+        "fullSyncError": "Error en sincronización completa: {message}",
+        "fullSyncOk": "Sincronización completa exitosa",
+        "resolveConflictError": "Error al resolver el conflicto: {message}",
+        "resolveConflictErrorGeneric": "Error al resolver el conflicto",
+        "repairCompleted": "Reparación completada: {count} elemento(s) sincronizado(s)",
+        "requeueCompleted": "Re-encadenadas {count} fila(s); sincronización completada"
+      },
+      "controller": {
+        "disabled": "La sincronización está desactivada",
+        "repairOffline": "No se puede reparar sin conexión",
+        "repairComplete": "¡Reparación completa! {count} elemento(s) sincronizado(s)",
+        "repairError": "Error en reparación",
+        "fullSyncFailed": "Falló la sincronización completa"
+      },
+      "repair": {
+        "pullingServer": "Obteniendo datos del servidor...",
+        "scanningLocal": "Escaneando base local...",
+        "queueRebuilt": "Reconstruida cola con {count} elemento(s)",
+        "pushingItems": "Subiendo {count} elemento(s)...",
+        "noPending": "No se encontraron elementos pendientes",
+        "updatingFinalState": "Actualizando estado final...",
+        "complete": "¡Reparación completa! {count} elemento(s) sincronizado(s)",
+        "error": "Error en reparación"
+      },
+      "queue": {
+        "unconfirmed": "El servidor no confirmó {count} {changes} pendientes: {message}",
+        "alreadyRunning": "Hay otra sincronización en curso; reintentá en unos segundos",
+        "retrying": "Cambios en reintento automático; esperá unos segundos y volvé a sincronizar"
       }
     },
     "settings": {
@@ -730,7 +854,9 @@
         "noResults": "Sin resultados para la búsqueda o el filtro",
         "emptyResults": "No hay registros en el historial",
         "clearFilters": "Limpiar filtros",
-        "goToBudget": "Ir a Presupuesto"
+        "goToBudget": "Ir a Presupuesto",
+        "goToDay": "Ir al día {label}",
+        "noAccount": "Sin cuenta"
       }
     },
     "components": {
@@ -761,19 +887,52 @@
         "empty": "No hay cuentas creadas"
       },
       "accountdistributionpicker": {
-        "text": "Cantidad"
+        "text": "Cantidad",
+        "searchAccount": "Buscar cuenta",
+        "pendingFields": "Completa los campos pendientes antes de añadir otra distribución",
+        "selected": "Seleccionada"
       },
       "daysummarymodal": {
+        "title": "Resumen del Día",
+        "totalOfDay": "Total del día",
+        "averages": "Promedios",
+        "income": "Ingreso:",
+        "expense": "Gasto:",
+        "byPaymentType": "Por tipo de pago",
+        "times": "Tiempos",
+        "start": "Inicio:",
+        "end": "Final:",
         "fallbackTime": "--:--",
         "fallbackAccount": "Sin cuenta",
-        "fallbackName": "Sin nombre"
+        "fallbackName": "Sin nombre",
+        "emptySelectedDate": "No hay registros para la fecha seleccionada.",
+        "entries": "Entradas",
+        "exits": "Salidas",
+        "balance": "Balance",
+        "topSuppliers": "Top Proveedores",
+        "noSuppliersWithExpenses": "No hay proveedores con gastos",
+        "topAccounts": "Top Cuentas",
+        "noAccountMovements": "No hay movimientos en cuentas",
+        "details": "Detalles",
+        "biggestIncome": "Mayor Ingreso",
+        "biggestExpense": "Mayor Gasto"
       },
       "pendingrecurringmodal": {
         "title": "Cargos recurrentes pendientes",
         "variableAmount": "Monto variable",
         "autoInsertAt": "Se inserta automáticamente a las {time}",
         "empty": "No hay cargos recurrentes pendientes",
-        "applyAll": "Aplicar todos ({count})"
+        "applyAll": "Aplicar todos ({count})",
+        "ordinal": {
+          "1": "Primer",
+          "2": "Segundo",
+          "3": "Tercer",
+          "4": "Cuarto",
+          "5": "Quinto",
+          "6": "Sexto",
+          "7": "Séptimo",
+          "8": "Octavo"
+        }
       },
       "accountbarchart": {
         "label1": "Ingresos",
@@ -799,11 +958,22 @@
         "labelTime": "Hora",
         "text3": "Cuentas",
         "label3": "Reasignar fecha",
-        "message": "No se encontró la entrada"
+        "message": "No se encontró la entrada",
+        "editTitle": "Editar Entrada",
+        "newTitle": "Nueva Entrada",
+        "deleteConfirm": "¿Estás seguro de que deseas eliminar esta entrada?",
+        "itemsInvalid": "Todos los items deben tener un monto válido y una cuenta asignada",
+        "incomeType": "Ingreso",
+        "expenseType": "Egreso",
+        "nameRequired": "El nombre es obligatorio",
+        "dateRequired": "La fecha es obligatoria"
       },
       "componentes": {
         "attachmentsmodal": {
-          "fallback": "0 Bytes"
+          "fallback": "0 Bytes",
+          "title": "Adjuntos",
+          "uploadText": "Toca o arrastra archivos",
+          "uploadHint": "Imagenes y PDF"
         }
       }
     },
@@ -814,7 +984,26 @@
         "placeholder1": "Nombre",
         "placeholder2": "Precio",
         "placeholder3": "Cant",
-        "message": "Proveedor actualizado"
+        "message": "Proveedor actualizado",
+        "coverageEntered": "Cubierto: {amount}",
+        "coverageShortage": "Faltante: {amount}",
+        "covered": "¡Cubierto!",
+        "distributionHeader": "Distribución por Cuenta",
+        "distributionSubtitle": "Distribuye el monto entre las cuentas",
+        "searchSupplier": "Buscar proveedor",
+        "deleteConfirm": "¿Estás seguro de que deseas eliminar este proveedor?",
+        "totalCoveredHeader": "Total cubierto",
+        "totalCoveredMessage": "Ya has distribuido el monto total de los productos entre las cuentas existentes.",
+        "completeGroup": "Completa el grupo actual antes de agregar otro",
+        "itemsInvalid": "Todos los items deben tener un monto válido y una cuenta asignada",
+        "numbersOnly": "Solo números",
+        "supplierRequired": "Debes seleccionar un proveedor",
+        "selectSupplierTitle": "Seleccionar Proveedor",
+        "createSupplierTitle": "Crear Proveedor",
+        "deleteProviderLabel": "Eliminar proveedor",
+        "editEntry": "Editar Entrada",
+        "editProvider": "Editar Proveedor",
+        "addProvider": "Agregar Proveedor"
       }
     },
     "budgetview": {
@@ -829,42 +1018,71 @@
   },
   "admin": {
     "maintenancepage": {
-      "label": "Herramientas de mantenimiento del sistema"
+      "label": "Herramientas de mantenimiento del sistema",
+      "title": "Mantenimiento"
     }
   },
   "statistics": {
+    "excel": {
+      "reportTitle": "Reporte de {period} {date}",
+      "concept": "Concepto",
+      "amount": "Monto",
+      "incomes": "INGRESOS",
+      "totalIncomes": "TOTAL INGRESOS",
+      "expenses": "GASTOS",
+      "totalExpenses": "TOTAL GASTOS",
+      "summary": "RESUMEN",
+      "balance": "Balance",
+      "savings": "Ahorro",
+      "savingsPercent": "Porcentaje de ahorro",
+      "configuration": "CONFIGURACIÓN",
+      "expectedPercent": "Porcentaje esperado",
+      "sheetName": "Reporte"
+    },
     "cashflow": {
       "cashflow": {
         "label1": "30 días",
         "label2": "90 días",
-        "label3": "1 año"
+        "label3": "1 año",
+        "label4": "Promedio / día"
       },
       "title": "Flujo de Caja",
       "incomes": "Ingresos",
-      "expenses": "Egresos"
+      "expenses": "Egresos",
+      "net": "Neto"
     },
     "performance": {
       "components": {
         "budgetexpenseschartmodal": {
-          "label": "Desglose"
+          "label": "Desglose",
+          "title": "Gastos Budget",
+          "empty": "No hay gastos budget"
         },
         "budgetincomeschartmodal": {
-          "label": "Desglose"
+          "label": "Desglose",
+          "empty": "No hay ingresos budget"
         },
         "expenseschartmodal": {
-          "label": "Desglose"
+          "label": "Desglose",
+          "empty": "No hay gastos registrados"
         },
         "goalschartmodal": {
           "label1": "Resumen",
           "label2": "Meta mensual",
           "label3": "Progreso actual",
-          "label4": "Faltante"
+          "label4": "Faltante",
+          "title": "Progreso de Metas",
+          "monthlySavings": "Ahorro Mensual",
+          "progress": "Progreso"
         },
         "incomeschartmodal": {
-          "label": "Desglose"
+          "label": "Desglose",
+          "empty": "No hay ingresos registrados"
         },
         "budgetdetailmodal": {
-          "label": "Detalle"
+          "label": "Detalle",
+          "emptyPeriod": "Sin registros en este período",
+          "total": "Total"
         },
         "performancecomponent": {
           "label1": "Utilidad Bruta",
@@ -879,7 +1097,12 @@
       "config": {
         "statisticsconfigpage": {
           "label": "Registra tus gastos",
-          "title": "Configuración"
+          "title": "Configuración",
+          "addServiceHint": "Pulsa el botón «+» para agregar un nuevo servicio",
+          "descriptionPlaceholder": "Descripción",
+          "amountPlaceholder": "Cantidad",
+          "services": "Servicios",
+          "estimationHint": "Ingresa una estimacion diaria"
         },
         "performanceconfigpage": {
           "label": "Organizá tus categorías por sección",
@@ -1053,7 +1276,8 @@
           "alert": {
             "cancel": "Cancelar"
           },
-          "text": "Eliminar"
+          "text": "Eliminar",
+          "deleteConfirm": "¿Eliminar esta cuenta?"
         }
       },
       "accountspage": {
@@ -1061,7 +1285,8 @@
         "placeholder": "Buscar cuentas",
         "deleteConfirm": "¿Eliminar cuenta {name}?",
         "text1": "Cancelar",
-        "text2": "Eliminar"
+        "text2": "Eliminar",
+        "initialBalance": "Balance inicial: {amount}"
       }
     },
     "modals": {
@@ -1069,7 +1294,11 @@
         "text": "Nombre",
         "label": "Productos",
         "placeholder": "Buscar productos",
-        "message": "Agregá al menos un producto"
+        "message": "Agregá al menos un producto",
+        "nameLabel": "Nombre",
+        "priceLabel": "Precio",
+        "nameRequired": "El nombre es obligatorio (máx. 255 caracteres)",
+        "price": "Precio: {price}"
       },
       "addsuplierscomponent": {
         "editTitle": "Editar Proveedor",
@@ -1129,14 +1358,51 @@
   },
   "cashflowchart": {
     "income": "Ingresos",
-    "expense": "Gastos"
+    "expense": "Gastos",
+    "empty": "Sin datos para mostrar"
   },
   "components": {
     "categoryPicker": {
-      "title": "Seleccionar Categoría"
+      "title": "Seleccionar Categoría",
+      "empty": "Sin categorías. Presiona '+' para crear una nueva."
     },
     "sectionAssign": {
-      "title": "Categorías por sección"
+      "title": "Categorías por sección",
+      "empty": "Sin categorías. Presiona '+' para crear una nueva.",
+      "ariaSection": "Sección de {name}",
+      "unassigned": "Sin asignar"
+    },
+    "quickCategory": {
+      "namePlaceholder": "Nombre de la categoría"
+    },
+    "quickAccount": {
+      "namePlaceholder": "Nombre de la cuenta",
+      "initialBalancePlaceholder": "Balance inicial (opcional)"
+    }
+  },
+  "lookupResolver": {
+    "unavailable": "(elemento no disponible)",
+    "list": "Lista ({count})",
+    "properties": "{count} propiedades",
+    "field": {
+      "name": "Nombre",
+      "amount": "Monto",
+      "note": "Nota",
+      "date": "Fecha",
+      "description": "Descripción",
+      "account_id": "Cuenta",
+      "supplier_id": "Proveedor",
+      "supplier_name": "Proveedor",
+      "budget_id": "Presupuesto",
+      "entry_type": "Tipo",
+      "payment_type": "Forma de pago",
+      "status": "Estado",
+      "currency": "Moneda",
+      "type": "Tipo",
+      "initial_balance": "Saldo inicial",
+      "balance": "Saldo",
+      "price": "Precio",
+      "total": "Total"
     }
   },
   "views": {

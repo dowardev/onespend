@@ -61,3 +61,26 @@ export function getCurrentLocale(): AppLocale {
 export function setCurrentLocale(locale: AppLocale): void {
   i18n.global.locale.value = locale;
 }
+
+/**
+ * Returns the BCP-47 tag to use for `Intl` formatting (dates, currency).
+ * It follows the active app locale so an English user sees English date
+ * and currency formats.
+ */
+export function getIntlLocale(): string {
+  return getCurrentLocale() === 'en' ? 'en-GB' : 'es-ES';
+}
+
+/**
+ * Translates a message outside of a component setup (services, plain
+ * controllers, DB helpers). Those code paths cannot call `useLocale()`
+ * because `useI18n()` needs an active component instance, so they use
+ * the global composer instead. The locale is read at call time, so the
+ * translation always follows the active language.
+ */
+export function translate(
+  path: string,
+  params?: Record<string, unknown>,
+): string {
+  return params ? i18n.global.t(path, params) : i18n.global.t(path);
+}
