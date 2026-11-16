@@ -15,7 +15,7 @@ SPDX-License-Identifier: AGPL-3.0-only
       ></ion-input>
     </ion-item>
     <ion-note v-if="v$.name.$error" color="danger" class="validation-error">
-      El nombre es obligatorio (máx. 255 caracteres)
+      {{ t('suppliers.modals.supplierformcomponent.nameRequired') }}
     </ion-note>
   </ion-card>
 
@@ -50,7 +50,7 @@ SPDX-License-Identifier: AGPL-3.0-only
           ></ion-searchbar>
 
           <ion-button slot="end" fill="clear" @click="showProductSearch = false"
-            >Cancelar</ion-button
+            >{{ t('common.cancel') }}</ion-button
           >
         </ion-item>
       </template>
@@ -75,7 +75,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
             <ion-label>
               <h3>{{ item.product.name }}</h3>
-              <p v-if="item.product.price">Precio: {{ item.product.price }}</p>
+              <p v-if="item.product.price">{{ t('suppliers.modals.supplierformcomponent.price', { price: item.product.price }) }}</p>
             </ion-label>
 
             <ion-buttons slot="end" class="supplier-actions">
@@ -113,7 +113,7 @@ SPDX-License-Identifier: AGPL-3.0-only
         <ion-item class="transparent">
           <ion-input
             v-model="newProduct.name"
-            label="Nombre"
+            :label="t('suppliers.modals.supplierformcomponent.nameLabel')"
             label-placement="floating"
           ></ion-input>
         </ion-item>
@@ -121,7 +121,7 @@ SPDX-License-Identifier: AGPL-3.0-only
         <ion-item class="transparent">
           <ion-input
             v-model.number="newProduct.price"
-            label="Precio"
+            :label="t('suppliers.modals.supplierformcomponent.priceLabel')"
             label-placement="floating"
             type="number"
           ></ion-input>
@@ -398,15 +398,12 @@ function toggleProductSearch() {
 }
 
 function addProduct() {
-  const inputElements = document.querySelectorAll('input[placeholder="Nombre del producto"]');
-  const inputElement = (inputElements.length > 1 ? inputElements[1] : inputElements[0]) as HTMLInputElement | undefined;
-  const priceElements = document.querySelectorAll('input[placeholder="Precio"]');
-  const priceInputElement = (priceElements.length > 1 ? priceElements[1] : priceElements[0]) as HTMLInputElement | undefined;
-
-  const productName = (inputElement?.value || newProduct.name || '').trim();
-  const productPrice = priceInputElement
-    ? parseFloat(priceInputElement.value)
-    : Number(newProduct.price);
+  // The product name/price inputs are bound with `v-model`, so the reactive
+  // model is the source of truth. A DOM query keyed on the translated
+  // placeholder text would break on any translation change (and matched
+  // nothing at all, because those inputs carry a label, not a placeholder).
+  const productName = (newProduct.name || '').trim();
+  const productPrice = Number(newProduct.price);
 
   if (!productName) return;
 
@@ -423,10 +420,10 @@ function addProduct() {
   }
 
   editingIndex.value = null;
+  // The inputs are bound with `v-model`, so resetting the model already
+  // clears them (same as `cancelNewProduct` does).
   newProduct.name = '';
   newProduct.price = 0;
-  if (inputElement) inputElement.value = '';
-  if (priceInputElement) priceInputElement.value = '';
   showNewProductFields.value = false;
 }
 

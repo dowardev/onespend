@@ -13,7 +13,7 @@ SPDX-License-Identifier: AGPL-3.0-only
             <ion-icon :icon="closeOutline"></ion-icon>
           </ion-button>
         </ion-buttons>
-        <ion-title>Progreso de Metas</ion-title>
+        <ion-title>{{ t('statistics.performance.components.goalschartmodal.title') }}</ion-title>
       </ion-toolbar>
     </ion-header>
     <ion-content>
@@ -27,7 +27,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
       <ion-card>
         <ion-card-header>
-          <ion-card-title>Ahorro Mensual</ion-card-title>
+          <ion-card-title>{{ t('statistics.performance.components.goalschartmodal.monthlySavings') }}</ion-card-title>
         </ion-card-header>
         <ion-card-content>
           <div style="height: 200px">
@@ -57,7 +57,7 @@ SPDX-License-Identifier: AGPL-3.0-only
           </ion-note>
         </ion-item>
         <ion-item lines="none">
-          <ion-label><strong>Progreso</strong></ion-label>
+          <ion-label><strong>{{ t('statistics.performance.components.goalschartmodal.progress') }}</strong></ion-label>
           <ion-note slot="end"
             ><strong>{{ progressPercent.toFixed(1) }}%</strong></ion-note
           >

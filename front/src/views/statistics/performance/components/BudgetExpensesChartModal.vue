@@ -13,7 +13,7 @@ SPDX-License-Identifier: AGPL-3.0-only
             <ion-icon :icon="closeOutline"></ion-icon>
           </ion-button>
         </ion-buttons>
-        <ion-title>Gastos Budget</ion-title>
+        <ion-title>{{ t('statistics.performance.components.budgetexpenseschartmodal.title') }}</ion-title>
       </ion-toolbar>
     </ion-header>
     <ion-content>
@@ -27,7 +27,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
       <ion-list v-else>
         <ion-item lines="none">
-          <ion-label color="medium">No hay gastos budget</ion-label>
+          <ion-label color="medium">{{ t('statistics.performance.components.budgetexpenseschartmodal.empty') }}</ion-label>
         </ion-item>
       </ion-list>
 

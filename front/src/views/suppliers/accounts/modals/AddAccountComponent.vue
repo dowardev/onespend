@@ -51,7 +51,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
     <ion-alert
       :is-open="showDeleteAlert"
-      message="¿Eliminar esta cuenta?"
+      :message="t('suppliers.accounts.modals.addaccountcomponent.deleteConfirm')"
       :buttons="alertButtons"
       @did-dismiss="showDeleteAlert = false"
     ></ion-alert>

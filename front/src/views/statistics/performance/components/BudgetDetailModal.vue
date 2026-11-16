@@ -27,7 +27,7 @@ SPDX-License-Identifier: AGPL-3.0-only
         <ion-card-content class="ion-padding">
           <ion-item lines="none" class="ion-no-padding transparent">
             <ion-label>
-              <div class="total-label">Total</div>
+              <div class="total-label">{{ t('statistics.performance.components.budgetdetailmodal.total') }}</div>
               <div
                 class="total-amount"
                 :color="type === 'ingreso' ? 'success' : 'danger'"
@@ -58,7 +58,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
       <div v-else class="empty-state">
         <ion-icon :icon="walletOutline" color="medium"></ion-icon>
-        <p>Sin registros en este período</p>
+        <p>{{ t('statistics.performance.components.budgetdetailmodal.emptyPeriod') }}</p>
       </div>
     </ion-content>
   </ion-page>

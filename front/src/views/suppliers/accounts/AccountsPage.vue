@@ -67,7 +67,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                     >
                       <ion-label>
                         <h3>{{ c.name }}</h3>
-                        <p>Balance inicial: {{ c.initialBalance ?? 0 }}</p>
+                        <p>{{ t('suppliers.accounts.accountspage.initialBalance', { amount: c.initialBalance ?? 0 }) }}</p>
                       </ion-label>
 
                       <ion-buttons slot="end" class="account-actions">
