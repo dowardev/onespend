@@ -62,7 +62,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                       class="day-divider"
                       role="button"
                       tabindex="0"
-                      :aria-label="`Ir al día ${block.label}`"
+                      :aria-label="t('budget.agenda.historialview.goToDay', { label: block.label })"
                       @click="handleDayClick(block.dateKey)"
                     >
                       <ion-label>
@@ -126,7 +126,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                             {{ item.accountName }} |
                             {{ formatCurrency({ value: item.runningBalance }) }}
                           </p>
-                          <p v-else>Sin cuenta</p>
+                          <p v-else>{{ t('budget.agenda.historialview.noAccount') }}</p>
                         </ion-label>                      </ion-item>
                     </ion-card>
                   </template>

@@ -16,6 +16,7 @@ import {
   endOfMonth,
   endOfYear,
 } from 'date-fns';
+import { translate } from '@/i18n';
 
 export type PeriodType = 'day' | 'week' | 'month' | 'year';
 
@@ -53,10 +54,10 @@ export function usePeriodRange(
   const weekStartDay = options.weekStartDay ?? ref(1);
 
   const _periodLabels: Record<PeriodType, string> = {
-    day: 'Día',
-    week: 'Semana',
-    month: 'Mes',
-    year: 'Año',
+    day: translate('common.periodDay'),
+    week: translate('common.periodWeek'),
+    month: translate('common.periodMonth'),
+    year: translate('common.periodYear'),
   };
 
   function startOfWeekWithConfig(date: Date): Date {

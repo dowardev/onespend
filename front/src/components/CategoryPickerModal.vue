@@ -62,7 +62,7 @@ SPDX-License-Identifier: AGPL-3.0-only
       </ion-list>
 
       <div v-else class="ion-text-center ion-padding">
-        <ion-label color="medium">Sin categorías. Presiona '+' para crear una nueva.</ion-label>
+        <ion-label color="medium">{{ t('components.categoryPicker.empty') }}</ion-label>
       </div>
     </ion-content>
 

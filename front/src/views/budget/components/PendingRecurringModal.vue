@@ -73,6 +73,7 @@ import {
   IonItem,
   IonLabel,
 } from '@ionic/vue';
+import { computed } from 'vue';
 import { closeOutline } from 'ionicons/icons';
 import { formatCurrency } from '@/utils/currency';
 import type { RecurringRecord } from '@/controllers/recurringRecordsController';
@@ -103,10 +104,24 @@ const emit = defineEmits<{
 }>();
 
 const { t } = useLocale();
-const weekDayShort = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
-const weekDayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-const ordinalNames = ['', 'Primer', 'Segundo', 'Tercer', 'Cuarto', 'Quinto', 'Sexto', 'Séptimo', 'Octavo'];
+// Weekday/month/ordinal names come from the locale files so they follow the
+// active language. They are computed (not plain consts) so a runtime locale
+// switch re-renders them.
+const weekDayShort = computed(() =>
+  [0, 1, 2, 3, 4, 5, 6].map((day) => t(`recurring.edit.weekday.short.${day}`)),
+);
+const weekDayNames = computed(() =>
+  [0, 1, 2, 3, 4, 5, 6].map((day) => t(`recurring.edit.weekday.full.${day}`)),
+);
+const monthNames = computed(() =>
+  Array.from({ length: 12 }, (_, index) => t(`recurring.edit.month.${index + 1}`)),
+);
+const ordinalNames = computed(() => [
+  '',
+  ...[1, 2, 3, 4, 5, 6, 7, 8].map((ordinal) =>
+    t(`budget.components.pendingrecurringmodal.ordinal.${ordinal}`),
+  ),
+]);
 
 // 7. Watch
 // (none)
@@ -129,7 +144,7 @@ function frequencyLabel(params: { record: RecurringRecord }) {
     case 'week': {
       const days = (record.repeatDays || [])
         .sort((a, b) => a - b)
-        .map((d) => weekDayShort[d] || '')
+        .map((d) => weekDayShort.value[d] || '')
         .filter(Boolean)
         .join(', ');
       const base = interval === 1
@@ -142,13 +157,13 @@ function frequencyLabel(params: { record: RecurringRecord }) {
         const ordinalIdx = record.repeatMonthWeekdayOrdinal ?? 1;
         const ordinal = ordinalIdx === -1
           ? t('recurring.frequency.last')
-          : (ordinalNames[ordinalIdx] || t('recurring.frequency.first'));
-        const weekday = weekDayNames[record.repeatMonthWeekday ?? 0] || '';
+          : (ordinalNames.value[ordinalIdx] || t('recurring.frequency.first'));
+        const weekday = weekDayNames.value[record.repeatMonthWeekday ?? 0] || '';
         return t('recurring.frequency.monthWeekday', { ordinal, weekday });
       }
       return t('recurring.frequency.monthDay', { day: record.repeatMonthDay || 1 });
     case 'year': {
-      const m = monthNames[(record.repeatYearMonth || 1) - 1];
+      const m = monthNames.value[(record.repeatYearMonth || 1) - 1];
       const d = record.repeatYearDay || 1;
       return interval === 1
         ? t('recurring.frequency.yearly', { m, d })

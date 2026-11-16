@@ -53,11 +53,11 @@ SPDX-License-Identifier: AGPL-3.0-only
               :value="assignments[cat.id] || ''"
               :placeholder="t('sectionassignmodal.placeholder2')"
               interface="popover"
-              :aria-label="'Sección de ' + cat.name"
+              :aria-label="t('components.sectionAssign.ariaSection', { name: cat.name })"
               :data-test="'section-select-' + cat.id"
               @ion-change="onAssign({ id: cat.id, value: $event.detail.value })"
             >
-              <ion-select-option value="">Sin asignar</ion-select-option>
+              <ion-select-option value="">{{ t('components.sectionAssign.unassigned') }}</ion-select-option>
               <ion-select-option
                 v-for="s in sections"
                 :key="s.key"
@@ -69,7 +69,7 @@ SPDX-License-Identifier: AGPL-3.0-only
       </ion-list>
 
       <div v-else class="ion-text-center ion-padding">
-        <ion-label color="medium">Sin categorías. Presiona '+' para crear una nueva.</ion-label>
+        <ion-label color="medium">{{ t('components.sectionAssign.empty') }}</ion-label>
       </div>
 
       <QuickCategoryAlert

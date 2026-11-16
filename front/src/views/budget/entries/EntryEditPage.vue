@@ -7,7 +7,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <template>
   <ion-page>
     <EditPageHeader
-      :title="isEditing ? 'Editar Entrada' : 'Nueva Entrada'"
+      :title="isEditing ? t('budget.entries.entryeditpage.editTitle') : t('budget.entries.entryeditpage.newTitle')"
       :is-save-disabled="v$.$invalid"
       :show-options-button="isEditing"
       @back="handleBack"
@@ -29,8 +29,8 @@ SPDX-License-Identifier: AGPL-3.0-only
                       :label="t('budget.entries.entryeditpage.text1')"
                       label-placement="stacked"
                     >
-                      <ion-select-option value="ingreso">Ingreso</ion-select-option>
-                      <ion-select-option value="egreso">Egreso</ion-select-option>
+                      <ion-select-option value="ingreso">{{ t('budget.entries.entryeditpage.incomeType') }}</ion-select-option>
+                      <ion-select-option value="egreso">{{ t('budget.entries.entryeditpage.expenseType') }}</ion-select-option>
                     </ion-select>
                   </ion-item>
 
@@ -52,7 +52,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                   </ion-item>
 
                     <div v-if="v$.name?.$error" class="validation-error">
-                      <span v-if="v$.name?.required?.$invalid">El nombre es obligatorio</span>
+                      <span v-if="v$.name?.required?.$invalid">{{ t('budget.entries.entryeditpage.nameRequired') }}</span>
                     </div>
 
                   <ion-item lines="full" class="transparent" button @click="entryDatePicker.openPopover({ e: $event })">
@@ -61,7 +61,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                   </ion-item>
 
                     <div v-if="v$.date?.$error" class="validation-error">
-                      <span v-if="v$.date?.required?.$invalid">La fecha es obligatoria</span>
+                      <span v-if="v$.date?.required?.$invalid">{{ t('budget.entries.entryeditpage.dateRequired') }}</span>
                     </div>
 
                   <ion-item lines="full" class="transparent" button data-cy="entry-time-trigger" @click="openTimePicker({ e: $event })">
@@ -157,7 +157,7 @@ SPDX-License-Identifier: AGPL-3.0-only
     <!-- alerts -->
     <DeleteConfirmAlert
       :is-open="deleteConfirm.showDeleteAlert.value"
-      message="¿Estás seguro de que deseas eliminar esta entrada?"
+      :message="t('budget.entries.entryeditpage.deleteConfirm')"
       :buttons="deleteConfirm.deleteAlertButtons"
       @did-dismiss="deleteConfirm.showDeleteAlert.value = false"
     />
@@ -320,7 +320,7 @@ const rules = computed(() => ({
   name: { required },
   date: { required },
   entryType: { required },
-  items: { itemsValid: helpers.withMessage('Todos los items deben tener un monto válido y una cuenta asignada', itemsValid) },
+  items: { itemsValid: helpers.withMessage(t('budget.entries.entryeditpage.itemsInvalid'), itemsValid) },
 }))
 
 const v$ = useVuelidate(rules, computed(() => {

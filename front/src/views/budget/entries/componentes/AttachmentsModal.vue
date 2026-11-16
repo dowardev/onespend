@@ -14,7 +14,7 @@ SPDX-License-Identifier: AGPL-3.0-only
           </ion-button>
         </ion-buttons>
 
-        <ion-title>Adjuntos</ion-title>
+        <ion-title>{{ t('budget.entries.componentes.attachmentsmodal.title') }}</ion-title>
 
         <ion-buttons slot="end">
           <ion-button :disabled="!hasChanges" @click="handleSave">
@@ -45,9 +45,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 
           <ion-icon :icon="attachOutline" class="upload-icon"></ion-icon>
 
-          <ion-text class="upload-text">Toca o arrastra archivos</ion-text>
+          <ion-text class="upload-text">{{ t('budget.entries.componentes.attachmentsmodal.uploadText') }}</ion-text>
 
-          <ion-text class="upload-hint">Imagenes y PDF</ion-text>
+          <ion-text class="upload-hint">{{ t('budget.entries.componentes.attachmentsmodal.uploadHint') }}</ion-text>
         </div>
       </ion-card>
 

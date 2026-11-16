@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import { ref } from 'vue';
+import { translate } from '@/i18n';
 
 export function useDeleteConfirm(params: {
   onConfirm: () => Promise<void> | void;
@@ -13,14 +14,14 @@ export function useDeleteConfirm(params: {
 
   const deleteAlertButtons = [
     {
-      text: 'Cancelar',
+      text: translate('common.cancel'),
       role: 'cancel' as const,
       handler: () => {
         showDeleteAlert.value = false;
       },
     },
     {
-      text: 'Eliminar',
+      text: translate('common.delete'),
       cssClass: 'danger-alert-btn',
       handler: onConfirm,
     },

@@ -14,7 +14,7 @@ SPDX-License-Identifier: AGPL-3.0-only
           </ion-button>
         </ion-buttons>
 
-        <ion-title>Resumen del Día</ion-title>
+        <ion-title>{{ t('budget.components.daysummarymodal.title') }}</ion-title>
       </ion-toolbar>
     </ion-header>
 
@@ -22,7 +22,7 @@ SPDX-License-Identifier: AGPL-3.0-only
       <template v-if="summary.incomeCount + summary.expenseCount === 0">
         <ion-card class="shadow1">
           <ion-card-content>
-            <p class="ion-padding">No hay registros para la fecha seleccionada.</p>
+            <p class="ion-padding">{{ t('budget.components.daysummarymodal.emptySelectedDate') }}</p>
           </ion-card-content>
         </ion-card>
       </template>
@@ -39,7 +39,7 @@ SPDX-License-Identifier: AGPL-3.0-only
           <div class="list-content">
             <ion-item class="transparent">
               <ion-label>
-                <h3>Entradas</h3>
+                <h3>{{ t('budget.components.daysummarymodal.entries') }}</h3>
 
                 <p>{{ summary.incomeCount }} registros</p>
               </ion-label>
@@ -51,7 +51,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
             <ion-item class="transparent">
               <ion-label>
-                <h3>Salidas</h3>
+                <h3>{{ t('budget.components.daysummarymodal.exits') }}</h3>
 
                 <p>{{ summary.expenseCount }} registros</p>
               </ion-label>
@@ -63,9 +63,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 
             <ion-item class="transparent">
               <ion-label>
-                <h3>Balance</h3>
+                <h3>{{ t('budget.components.daysummarymodal.balance') }}</h3>
 
-                <p>Total del día</p>
+                <p>{{ t('budget.components.daysummarymodal.totalOfDay') }}</p>
               </ion-label>
 
               <ion-note slot="end" :color="summary.balance >= 0 ? 'success' : 'danger'">{{
@@ -77,7 +77,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
         <ion-list>
           <ion-list-header>
-            <ion-label>Top Proveedores</ion-label>
+            <ion-label>{{ t('budget.components.daysummarymodal.topSuppliers') }}</ion-label>
           </ion-list-header>
 
           <div class="list-content">
@@ -94,7 +94,7 @@ SPDX-License-Identifier: AGPL-3.0-only
             </template>
             <template v-else>
               <ion-item>
-                <ion-label>No hay proveedores con gastos</ion-label>
+                <ion-label>{{ t('budget.components.daysummarymodal.noSuppliersWithExpenses') }}</ion-label>
               </ion-item>
             </template>
           </div>
@@ -102,7 +102,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
         <ion-list>
           <ion-list-header>
-            <ion-label>Top Cuentas</ion-label>
+            <ion-label>{{ t('budget.components.daysummarymodal.topAccounts') }}</ion-label>
           </ion-list-header>
 
           <div class="list-content">
@@ -118,7 +118,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
             <template v-else>
               <ion-item class="transparent">
-                <ion-label>No hay movimientos en cuentas</ion-label>
+                <ion-label>{{ t('budget.components.daysummarymodal.noAccountMovements') }}</ion-label>
               </ion-item>
             </template>
           </div>
@@ -126,13 +126,13 @@ SPDX-License-Identifier: AGPL-3.0-only
 
         <ion-list>
           <ion-list-header>
-            <ion-label>Detalles</ion-label>
+            <ion-label>{{ t('budget.components.daysummarymodal.details') }}</ion-label>
           </ion-list-header>
 
           <div class="list-content">
             <ion-item class="transparent">
               <ion-label>
-                <h3>Mayor Ingreso</h3>
+                <h3>{{ t('budget.components.daysummarymodal.biggestIncome') }}</h3>
 
                 <p v-if="largestIncome">
                   {{ largestIncome.name || t('budget.components.daysummarymodal.fallbackName') }}
@@ -148,7 +148,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
             <ion-item class="transparent">
               <ion-label>
-                <h3>Mayor Gasto</h3>
+                <h3>{{ t('budget.components.daysummarymodal.biggestExpense') }}</h3>
 
                 <p v-if="largestExpense">
                   {{ largestExpense.name || t('budget.components.daysummarymodal.fallbackName') }}
@@ -164,11 +164,12 @@ SPDX-License-Identifier: AGPL-3.0-only
 
             <ion-item class="transparent">
               <ion-label>
-                <h3>Promedios</h3>
+                <h3>{{ t('budget.components.daysummarymodal.averages') }}</h3>
 
                 <p>
-                  Ingreso:
-                  {{ formatCurrency({ value: summary.avgIncome }) }} · Gasto:
+                  {{ t('budget.components.daysummarymodal.income') }}
+                  {{ formatCurrency({ value: summary.avgIncome }) }} ·
+                  {{ t('budget.components.daysummarymodal.expense') }}
                   {{ formatCurrency({ value: summary.avgExpense }) }}
                 </p>
               </ion-label>
@@ -176,7 +177,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
             <ion-item class="transparent">
               <ion-label>
-                <h3>Por tipo de pago</h3>
+                <h3>{{ t('budget.components.daysummarymodal.byPaymentType') }}</h3>
 
                 <p v-for="(v, k) in paymentTypeBreakdown" :key="k">
                   {{ k }}: {{ formatCurrency({ value: v }) }}
@@ -186,10 +187,11 @@ SPDX-License-Identifier: AGPL-3.0-only
 
             <ion-item class="transparent">
               <ion-label>
-                <h3>Tiempos</h3>
+                <h3>{{ t('budget.components.daysummarymodal.times') }}</h3>
 
                 <p>
-                  Inicio: {{ summary.startTime }} · Final:
+                  {{ t('budget.components.daysummarymodal.start') }} {{ summary.startTime }} ·
+                  {{ t('budget.components.daysummarymodal.end') }}
                   {{ summary.endTime }}
                 </p>
               </ion-label>
