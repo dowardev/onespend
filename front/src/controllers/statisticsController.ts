@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import { format } from 'date-fns';
+import { translate } from '@/i18n';
 
 class StatisticsController {
   async downloadExcel(opts: {
@@ -38,10 +39,10 @@ class StatisticsController {
       const worksheet = XLSX.utils.aoa_to_sheet([]);
 
       const periodLabels: Record<string, string> = {
-        day: 'Día',
-        week: 'Semana',
-        month: 'Mes',
-        year: 'Año',
+        day: translate('common.periodDay'),
+        week: translate('common.periodWeek'),
+        month: translate('common.periodMonth'),
+        year: translate('common.periodYear'),
       };
 
       let row = 1;
@@ -50,92 +51,154 @@ class StatisticsController {
 
       XLSX.utils.sheet_add_aoa(
         worksheet,
-        [[`Reporte de ${periodLabels[opts.period]} ${opts.dateLabel}`]],
+        [[translate('statistics.excel.reportTitle', { period: periodLabels[opts.period], date: opts.dateLabel })]],
         { origin: `A${row}` },
       );
       row += 2;
 
-      XLSX.utils.sheet_add_aoa(worksheet, [['INGRESOS']], { origin: `A${row}` });
-      row++;
-      XLSX.utils.sheet_add_aoa(worksheet, [['Concepto', 'Monto']], { origin: `A${row}` });
-      row++;
-      XLSX.utils.sheet_add_aoa(worksheet, [['Salario', opts.incomeData.salary]], {
-        origin: `A${row}`,
-      });
-      row++;
-      XLSX.utils.sheet_add_aoa(worksheet, [['Inversiones', opts.incomeData.investments]], {
-        origin: `A${row}`,
-      });
-      row++;
-      XLSX.utils.sheet_add_aoa(worksheet, [['Otros', opts.incomeData.other]], {
-        origin: `A${row}`,
-      });
-      row++;
-      XLSX.utils.sheet_add_aoa(worksheet, [['TOTAL INGRESOS', opts.incomeData.total]], {
-        origin: `A${row}`,
-      });
-      row += 2;
-
-      XLSX.utils.sheet_add_aoa(worksheet, [['GASTOS']], { origin: `A${row}` });
-      row++;
-      XLSX.utils.sheet_add_aoa(worksheet, [['Concepto', 'Monto']], { origin: `A${row}` });
-      row++;
-      XLSX.utils.sheet_add_aoa(worksheet, [['Vivienda', opts.expensesData.housing]], {
-        origin: `A${row}`,
-      });
-      row++;
-      XLSX.utils.sheet_add_aoa(worksheet, [['Alimentación', opts.expensesData.food]], {
-        origin: `A${row}`,
-      });
-      row++;
-      XLSX.utils.sheet_add_aoa(worksheet, [['Transporte', opts.expensesData.transport]], {
-        origin: `A${row}`,
-      });
-      row++;
-      XLSX.utils.sheet_add_aoa(worksheet, [['Entretenimiento', opts.expensesData.entertainment]], {
-        origin: `A${row}`,
-      });
-      row++;
-      XLSX.utils.sheet_add_aoa(worksheet, [['Salud', opts.expensesData.health]], {
-        origin: `A${row}`,
-      });
-      row++;
-      XLSX.utils.sheet_add_aoa(worksheet, [['Otros', opts.expensesData.other]], {
-        origin: `A${row}`,
-      });
-      row++;
-      XLSX.utils.sheet_add_aoa(worksheet, [['TOTAL GASTOS', opts.expensesData.total]], {
-        origin: `A${row}`,
-      });
-      row += 2;
-
-      XLSX.utils.sheet_add_aoa(worksheet, [['RESUMEN']], { origin: `A${row}` });
-      row++;
-      XLSX.utils.sheet_add_aoa(worksheet, [['Balance', opts.summaryData.balance]], {
-        origin: `A${row}`,
-      });
-      row++;
-      XLSX.utils.sheet_add_aoa(worksheet, [['Ahorro', opts.summaryData.savings]], {
-        origin: `A${row}`,
-      });
+      XLSX.utils.sheet_add_aoa(
+        worksheet,
+        [[translate('statistics.excel.concept'), translate('statistics.excel.amount')]],
+        { origin: `A${row}` },
+      );
       row++;
       XLSX.utils.sheet_add_aoa(
         worksheet,
-        [['Porcentaje de ahorro', `${opts.summaryData.savingsPercentage}%`]],
+        [[translate('statistics.performance.useincomestatement.label.salary'), opts.incomeData.salary]],
+        {
+          origin: `A${row}`,
+        },
+      );
+      row++;
+      XLSX.utils.sheet_add_aoa(
+        worksheet,
+        [[translate('statistics.performance.useincomestatement.label.investments'), opts.incomeData.investments]],
+        {
+          origin: `A${row}`,
+        },
+      );
+      row++;
+      XLSX.utils.sheet_add_aoa(
+        worksheet,
+        [[translate('statistics.performance.useincomestatement.label.other'), opts.incomeData.other]],
+        {
+          origin: `A${row}`,
+        },
+      );
+      row++;
+      XLSX.utils.sheet_add_aoa(
+        worksheet,
+        [[translate('statistics.excel.totalIncomes'), opts.incomeData.total]],
+        {
+          origin: `A${row}`,
+        },
+      );
+      row += 2;
+
+      XLSX.utils.sheet_add_aoa(worksheet, [[translate('statistics.excel.expenses')]], { origin: `A${row}` });
+      row++;
+      XLSX.utils.sheet_add_aoa(
+        worksheet,
+        [[translate('statistics.excel.concept'), translate('statistics.excel.amount')]],
+        { origin: `A${row}` },
+      );
+      row++;
+      XLSX.utils.sheet_add_aoa(
+        worksheet,
+        [[translate('statistics.performance.useincomestatement.label.housing'), opts.expensesData.housing]],
+        {
+          origin: `A${row}`,
+        },
+      );
+      row++;
+      XLSX.utils.sheet_add_aoa(
+        worksheet,
+        [[translate('statistics.performance.useincomestatement.label.food'), opts.expensesData.food]],
+        {
+          origin: `A${row}`,
+        },
+      );
+      row++;
+      XLSX.utils.sheet_add_aoa(
+        worksheet,
+        [[translate('statistics.performance.useincomestatement.label.transport'), opts.expensesData.transport]],
+        {
+          origin: `A${row}`,
+        },
+      );
+      row++;
+      XLSX.utils.sheet_add_aoa(
+        worksheet,
+        [[translate('statistics.performance.useincomestatement.label.entertainment'), opts.expensesData.entertainment]],
+        {
+          origin: `A${row}`,
+        },
+      );
+      row++;
+      XLSX.utils.sheet_add_aoa(
+        worksheet,
+        [[translate('statistics.performance.useincomestatement.label.health'), opts.expensesData.health]],
+        {
+          origin: `A${row}`,
+        },
+      );
+      row++;
+      XLSX.utils.sheet_add_aoa(
+        worksheet,
+        [[translate('statistics.performance.useincomestatement.label.other'), opts.expensesData.other]],
+        {
+          origin: `A${row}`,
+        },
+      );
+      row++;
+      XLSX.utils.sheet_add_aoa(
+        worksheet,
+        [[translate('statistics.excel.totalExpenses'), opts.expensesData.total]],
+        {
+          origin: `A${row}`,
+        },
+      );
+      row += 2;
+
+      XLSX.utils.sheet_add_aoa(worksheet, [[translate('statistics.excel.summary')]], { origin: `A${row}` });
+      row++;
+      XLSX.utils.sheet_add_aoa(
+        worksheet,
+        [[translate('statistics.excel.balance'), opts.summaryData.balance]],
+        {
+          origin: `A${row}`,
+        },
+      );
+      row++;
+      XLSX.utils.sheet_add_aoa(
+        worksheet,
+        [[translate('statistics.excel.savings'), opts.summaryData.savings]],
+        {
+          origin: `A${row}`,
+        },
+      );
+      row++;
+      XLSX.utils.sheet_add_aoa(
+        worksheet,
+        [[translate('statistics.excel.savingsPercent'), `${opts.summaryData.savingsPercentage}%`]],
         { origin: `A${row}` },
       );
       row += 2;
 
-      XLSX.utils.sheet_add_aoa(worksheet, [['CONFIGURACIÓN']], { origin: `A${row}` });
+      XLSX.utils.sheet_add_aoa(
+        worksheet,
+        [[translate('statistics.excel.configuration')]],
+        { origin: `A${row}` },
+      );
       row++;
       XLSX.utils.sheet_add_aoa(
         worksheet,
-        [['Porcentaje esperado', `${opts.configData.savingsPercent}%`]],
+        [[translate('statistics.excel.expectedPercent'), `${opts.configData.savingsPercent}%`]],
         { origin: `A${row}` },
       );
 
       const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Reporte');
+      XLSX.utils.book_append_sheet(workbook, worksheet, translate('statistics.excel.sheetName'));
 
       const filename = opts.filenameFactory
         ? opts.filenameFactory()

@@ -73,7 +73,7 @@ SPDX-License-Identifier: AGPL-3.0-only
               <ion-col size="6" size-sm="3">
                 <ion-card class="metric-card neto-card shadow1">
                   <ion-card-content>
-                    <ion-label class="metric-label">Neto</ion-label>
+                    <ion-label class="metric-label">{{ t('statistics.cashflow.net') }}</ion-label>
                     <ion-text
                       :color="(cf.summary.value?.neto ?? 0) >= 0 ? 'success' : 'danger'"
                       class="metric-value"
@@ -86,7 +86,7 @@ SPDX-License-Identifier: AGPL-3.0-only
               <ion-col size="6" size-sm="3">
                 <ion-card class="metric-card promedio-card shadow1">
                   <ion-card-content>
-                    <ion-label class="metric-label">Promedio / día</ion-label>
+                    <ion-label class="metric-label">{{ t('statistics.cashflow.cashflow.label4') }}</ion-label>
                     <ion-text
                       :color="(cf.summary.value?.promedioDiario ?? 0) >= 0 ? 'success' : 'danger'"
                       class="metric-value"

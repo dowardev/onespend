@@ -24,8 +24,8 @@ SPDX-License-Identifier: AGPL-3.0-only
     <ion-list class="transparent">
       <ion-list-header>
         <ion-label>
-          <div>Servicios</div>
-          <ion-note>Ingresa una estimacion diaria</ion-note>
+          <div>{{ t('statistics.performance.config.statisticsconfigpage.services') }}</div>
+          <ion-note>{{ t('statistics.performance.config.statisticsconfigpage.estimationHint') }}</ion-note>
         </ion-label>
 
         <ion-button :disabled="hasUnfilledService" @click="addItem()">
@@ -36,7 +36,7 @@ SPDX-License-Identifier: AGPL-3.0-only
       <div class="list-content">
         <template v-if="serviceItems.length === 0">
           <ion-item>
-            <ion-label>Pulsa el botón «+» para agregar un nuevo servicio</ion-label>
+            <ion-label>{{ t('statistics.performance.config.statisticsconfigpage.addServiceHint') }}</ion-label>
           </ion-item>
         </template>
 
@@ -47,7 +47,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                 <ion-col size="12" size-md="6" class="ion-padding-bottom">
                   <ion-input
                     v-model="item.name"
-                    placeholder="Descripción"
+                    :placeholder="t('statistics.performance.config.statisticsconfigpage.descriptionPlaceholder')"
                     @ion-blur="() => updateItem(item)"
                   ></ion-input>
                 </ion-col>
@@ -55,7 +55,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                   <ion-input
                     v-model.number="item.amount"
                     type="number"
-                    placeholder="Cantidad"
+                    :placeholder="t('statistics.performance.config.statisticsconfigpage.amountPlaceholder')"
                     @ion-blur="() => updateItem(item)"
                   ></ion-input>
                 </ion-col>

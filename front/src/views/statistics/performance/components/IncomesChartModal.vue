@@ -27,7 +27,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
       <ion-list v-else>
         <ion-item lines="none">
-          <ion-label color="medium">No hay ingresos registrados</ion-label>
+          <ion-label color="medium">{{ t('statistics.performance.components.incomeschartmodal.empty') }}</ion-label>
         </ion-item>
       </ion-list>
 
