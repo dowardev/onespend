@@ -9,7 +9,7 @@ SPDX-License-Identifier: AGPL-3.0-only
     <canvas ref="chartRef" style="display: none"></canvas>
     <Line v-if="canRender" :data="chartData" :options="chartOptions" />
     <div v-else class="chart-placeholder">
-      <ion-text color="medium">Sin datos para mostrar</ion-text>
+      <ion-text color="medium">{{ t('components.cashflowchart.empty') }}</ion-text>
     </div>
   </div>
 </template>

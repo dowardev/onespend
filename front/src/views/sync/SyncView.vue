@@ -289,7 +289,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                       {{ diff.field }}
                     </span>
                     <span v-if="entry.diffs.length > 5" class="conflict-more"
-                      >+{{ entry.diffs.length - 5 }} más</span
+                      >{{ t('sync.view.conflicts.moreFields', { n: entry.diffs.length - 5 }) }}</span
                     >
                   </p>
                 </ion-label>
@@ -299,7 +299,14 @@ SPDX-License-Identifier: AGPL-3.0-only
                   :color="entry.diffs.some((d) => d.changed_in === 'both') ? 'danger' : 'warning'"
                   @click="showConflictDiff(entry)"
                 >
-                  {{ entry.diffs.length }} campo{{ entry.diffs.length !== 1 ? 's' : '' }}
+                  {{
+                    entry.diffs.length
+                  }}
+                  {{
+                    entry.diffs.length !== 1
+                      ? t('sync.view.conflicts.field_other')
+                      : t('sync.view.conflicts.field_one')
+                  }}
                 </ion-badge>
               </ion-item>
             </ion-list>
@@ -309,7 +316,7 @@ SPDX-License-Identifier: AGPL-3.0-only
         <ion-card v-if="resolvedConflicts.length > 0">
           <ion-card-header>
             <ion-card-title
-              >Conflictos resueltos
+              >{{ t('sync.view.conflicts.resolvedTitle') }}
               <ion-badge color="medium">{{ resolvedConflicts.length }}</ion-badge></ion-card-title
             >
           </ion-card-header>
@@ -322,7 +329,14 @@ SPDX-License-Identifier: AGPL-3.0-only
                 <ion-label>
                   <h3>{{ getEntityLabel(conflict.entity_type) }}</h3>
                   <p>ID: {{ conflict.entity_id }}</p>
-                  <p>Resolución: {{ conflict.conflict_data?.resolution ?? 'servidor' }}</p>
+                  <p>
+                    {{
+                      t('sync.view.conflicts.resolution', {
+                        resolution:
+                          conflict.conflict_data?.resolution ?? t('sync.view.conflicts.resolutionServer'),
+                      })
+                    }}
+                  </p>
                 </ion-label>
                 <ion-note slot="end">{{ formatResolvedAt(conflict) }}</ion-note>
               </ion-item>
@@ -341,7 +355,7 @@ SPDX-License-Identifier: AGPL-3.0-only
               <ion-buttons slot="start">
                 <ion-button @click="showConflictModal = false">{{ t('common.close') }}</ion-button>
               </ion-buttons>
-              <ion-title>Conflicto detectado</ion-title>
+              <ion-title>{{ t('sync.view.conflicts.modalTitle') }}</ion-title>
             </ion-toolbar>
           </ion-header>
           <ion-content>
@@ -351,11 +365,10 @@ SPDX-License-Identifier: AGPL-3.0-only
                 <div>
                   <h2>{{ getEntityLabel(selectedConflict.entityType) }}</h2>
                   <p class="conflict-intro-text">
-                    Este registro se modificó desde dos sitios a la vez. Elige qué versión quieres
-                    conservar:
+                    {{ t('sync.view.conflicts.intro') }}
                   </p>
                   <p class="conflict-intro-hint">
-                    ↕ Los valores que difieren entre versiones están resaltados en ambas columnas
+                    {{ t('sync.view.conflicts.introHint') }}
                   </p>
                 </div>
               </div>
@@ -363,7 +376,9 @@ SPDX-License-Identifier: AGPL-3.0-only
               <div class="conflict-cards-grid">
                 <div class="version-card version-local">
                   <div class="version-card-header">
-                    <span class="version-card-badge version-card-badge-local">Tu versión</span>
+                    <span class="version-card-badge version-card-badge-local">{{
+                      t('sync.view.conflicts.yourVersion')
+                    }}</span>
                     <span class="version-card-time">{{ formatRelativeTime(clientTimestamp) }}</span>
                   </div>
                   <ion-list class="transparent">
@@ -375,16 +390,22 @@ SPDX-License-Identifier: AGPL-3.0-only
                     </ion-item>
                   </ion-list>
                   <div v-if="sameFieldCount > 0" class="version-card-footer">
-                    ✓ {{ sameFieldCount }} campo{{ sameFieldCount === 1 ? '' : 's' }} coinciden — no
-                    hay cambios
+                    {{
+                      t(
+                        sameFieldCount === 1
+                          ? 'sync.view.conflicts.sameField_one'
+                          : 'sync.view.conflicts.sameField_other',
+                        { n: sameFieldCount },
+                      )
+                    }}
                   </div>
                 </div>
 
                 <div class="version-card version-server">
                   <div class="version-card-header">
-                    <span class="version-card-badge version-card-badge-server"
-                      >Versión del servidor</span
-                    >
+                    <span class="version-card-badge version-card-badge-server">{{
+                      t('sync.view.conflicts.serverVersion')
+                    }}</span>
                     <span class="version-card-time">{{ formatRelativeTime(serverTimestamp) }}</span>
                   </div>
                   <ion-list class="transparent">
@@ -396,8 +417,14 @@ SPDX-License-Identifier: AGPL-3.0-only
                     </ion-item>
                   </ion-list>
                   <div v-if="sameFieldCount > 0" class="version-card-footer">
-                    ✓ {{ sameFieldCount }} campo{{ sameFieldCount === 1 ? '' : 's' }} coinciden — no
-                    hay cambios
+                    {{
+                      t(
+                        sameFieldCount === 1
+                          ? 'sync.view.conflicts.sameField_one'
+                          : 'sync.view.conflicts.sameField_other',
+                        { n: sameFieldCount },
+                      )
+                    }}
                   </div>
                 </div>
               </div>
@@ -411,7 +438,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                   @click="handleResolveClient"
                 >
                   <ion-icon slot="start" :icon="personOutline" />
-                  Conservar lo que tengo aquí
+                  {{ t('sync.view.conflicts.keepLocal') }}
                 </ion-button>
                 <ion-button
                   data-cy="resolve-server-btn"
@@ -422,7 +449,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                   @click="handleResolveServer"
                 >
                   <ion-icon slot="start" :icon="cloudOutline" />
-                  Conservar lo del servidor
+                  {{ t('sync.view.conflicts.keepServer') }}
                 </ion-button>
               </div>
             </div>
@@ -431,12 +458,12 @@ SPDX-License-Identifier: AGPL-3.0-only
 
         <ion-card v-if="showDebugInfo">
           <ion-card-header>
-            <ion-card-title>Debug</ion-card-title>
+            <ion-card-title>{{ t('sync.view.debug.title') }}</ion-card-title>
           </ion-card-header>
           <ion-card-content>
             <ion-button expand="block" fill="clear" @click="handleShowDebug">
               <ion-icon slot="start" :icon="codeOutline"></ion-icon>
-              Ver información de depuración
+              {{ t('sync.view.debug.show') }}
             </ion-button>
           </ion-card-content>
         </ion-card>
@@ -451,11 +478,11 @@ SPDX-License-Identifier: AGPL-3.0-only
 
                   <h2>{{ t('sync.syncview.title') }}</h2>
 
-                  <p>Necesitás iniciar sesión para sincronizar tus datos.</p>
+                  <p>{{ t('sync.view.login.required') }}</p>
 
                   <ion-button expand="block" @click="handleGoToLogin">
                     <ion-icon slot="start" :icon="logInOutline"></ion-icon>
-                    Iniciar sesión
+                    {{ t('sync.view.login.action') }}
                   </ion-button>
                 </div>
               </ion-col>
@@ -469,7 +496,7 @@ SPDX-License-Identifier: AGPL-3.0-only
       >
         <ion-header>
           <ion-toolbar>
-            <ion-title>Reparando sincronización</ion-title>
+            <ion-title>{{ t('sync.view.repairModal.title') }}</ion-title>
             <ion-buttons slot="end">
               <ion-button v-if="!isRepairing" fill="clear" @click="closeRepairModal">
                 <ion-icon slot="icon-only" :icon="closeOutline" />
@@ -687,10 +714,10 @@ watch(
 function formatRelativeTime(timestamp?: number): string {
   if (timestamp === undefined || timestamp === null) return '';
   const diff = Date.now() / 1000 - timestamp;
-  if (diff < 60) return 'hace unos segundos';
-  if (diff < 3600) return `hace ${Math.floor(diff / 60)} min`;
-  if (diff < 86400) return `hace ${Math.floor(diff / 3600)} h`;
-  return `hace ${Math.floor(diff / 86400)} días`;
+  if (diff < 60) return t('sync.view.time.secondsAgo');
+  if (diff < 3600) return t('sync.view.time.minutesAgo', { m: Math.floor(diff / 60) });
+  if (diff < 86400) return t('sync.view.time.hoursAgo', { h: Math.floor(diff / 3600) });
+  return t('sync.view.time.daysAgo', { d: Math.floor(diff / 86400) });
 }
 
 async function handleShowDLQ() {
@@ -705,36 +732,25 @@ function getStatusIcon() {
 }
 
 function getStatusText() {
-  if (!isOnline.value) return 'Sin conexión';
-  if (isSyncing.value) return 'Sincronizando...';
-  if (pendingChanges.value > 0) return 'Pendientes';
-  return 'Sincronizado';
+  if (!isOnline.value) return t('sync.view.state.offline');
+  if (isSyncing.value) return t('sync.view.state.syncing');
+  if (pendingChanges.value > 0) return t('sync.view.state.pending');
+  return t('sync.view.state.synced');
 }
 
 function getEntityLabel(entity: string) {
-  const labels: Record<string, string> = {
-    account: 'Cuentas',
-    budget: 'Presupuestos',
-    budget_entry: 'Entradas de gasto',
-    budget_entry_group: 'Grupos de entradas',
-    budget_provider: 'Proveedores del presupuesto',
-    budget_provider_product: 'Productos de proveedores',
-    entry: 'Entradas',
-    income: 'Ingresos',
-    supplier: 'Proveedores',
-    supplier_product: 'Productos de proveedores',
-    template: 'Plantillas',
-  };
-  return labels[entity] || entity;
+  const key = `sync.view.entity.${entity}`;
+  const label = t(key);
+  return label === key ? entity : label;
 }
 
 function formatLastSync() {
-  if (lastSyncTime.value === 0) return 'Nunca';
+  if (lastSyncTime.value === 0) return t('sync.view.summary.never');
   const diff = Date.now() - lastSyncTime.value;
-  if (diff < 60000) return 'Hace menos de 1 minuto';
-  if (diff < 3600000) return `Hace ${Math.floor(diff / 60000)} minutos`;
-  if (diff < 86400000) return `Hace ${Math.floor(diff / 3600000)} horas`;
-  return `Hace ${Math.floor(diff / 86400000)} días`;
+  if (diff < 60000) return t('sync.view.lastSync.lessThanMinute');
+  if (diff < 3600000) return t('sync.view.lastSync.minutes', { n: Math.floor(diff / 60000) });
+  if (diff < 86400000) return t('sync.view.lastSync.hours', { n: Math.floor(diff / 3600000) });
+  return t('sync.view.lastSync.days', { n: Math.floor(diff / 86400000) });
 }
 
 async function handleSyncNow() {
@@ -748,7 +764,7 @@ async function handleSyncNow() {
   }
   if (success) {
     const toast = await toastController.create({
-      message: 'Sincronización completada',
+      message: t('sync.view.toast.syncCompleted'),
       duration: 2000,
       color: 'success',
     });
@@ -757,7 +773,7 @@ async function handleSyncNow() {
     // LBDS-244: a failed sync used to show nothing at all while the pending
     // badge stayed non-zero, so the user could not tell the sync never ran.
     const toast = await toastController.create({
-      message: syncController.getSyncError() ?? 'No se pudo sincronizar',
+      message: syncController.getSyncError() ?? t('sync.view.toast.syncFailed'),
       duration: 4000,
       color: 'danger',
     });
@@ -823,8 +839,8 @@ async function runForceSync() {
           const syncErrorMsg = syncController.getSyncError();
           const toast = await toastController.create({
             message: syncErrorMsg
-              ? `Error en sincronización completa: ${syncErrorMsg}`
-              : 'Sincronización completa exitosa',
+              ? t('sync.view.toast.fullSyncError', { message: syncErrorMsg })
+              : t('sync.view.toast.fullSyncOk'),
             duration: 3000,
             color: syncErrorMsg ? 'danger' : 'success',
           });
@@ -878,8 +894,8 @@ async function handleResolveClient() {
   } else {
     const toast = await toastController.create({
       message: result.error
-        ? `Error al resolver el conflicto: ${result.error}`
-        : 'Error al resolver el conflicto',
+        ? t('sync.view.toast.resolveConflictError', { message: result.error })
+        : t('sync.view.toast.resolveConflictErrorGeneric'),
       duration: 3000,
       color: 'danger',
     });
@@ -906,8 +922,8 @@ async function handleResolveServer() {
   } else {
     const toast = await toastController.create({
       message: result.error
-        ? `Error al resolver el conflicto: ${result.error}`
-        : 'Error al resolver el conflicto',
+        ? t('sync.view.toast.resolveConflictError', { message: result.error })
+        : t('sync.view.toast.resolveConflictErrorGeneric'),
       duration: 3000,
       color: 'danger',
     });
@@ -925,10 +941,10 @@ function formatResolvedAt(conflict: ResolvedConflict): string {
   const date = new Date(ts);
   if (isNaN(date.getTime())) return '';
   const diff = Date.now() - date.getTime();
-  if (diff < 60000) return 'Hace menos de 1 minuto';
-  if (diff < 3600000) return `Hace ${Math.floor(diff / 60000)} min`;
-  if (diff < 86400000) return `Hace ${Math.floor(diff / 3600000)} h`;
-  return `Hace ${Math.floor(diff / 86400000)} días`;
+  if (diff < 60000) return t('sync.view.resolvedAt.lessThanMinute');
+  if (diff < 3600000) return t('sync.view.resolvedAt.minutes', { n: Math.floor(diff / 60000) });
+  if (diff < 86400000) return t('sync.view.resolvedAt.hours', { n: Math.floor(diff / 3600000) });
+  return t('sync.view.resolvedAt.days', { n: Math.floor(diff / 86400000) });
 }
 
 async function handleRepairSync() {
@@ -954,7 +970,7 @@ async function startRepair() {
   isRepairing.value = true;
   repairStep.value = 'pulling_server';
   repairPercent.value = 0;
-  repairMessage.value = 'Iniciando reparación...';
+  repairMessage.value = t('sync.view.repairModal.starting');
 
   const result = await syncController.repairSync({
     onProgress: (p: RepairProgress) => {
@@ -970,7 +986,7 @@ async function startRepair() {
   if (result.ok) {
     await refreshStatus();
     const toast = await toastController.create({
-      message: `Reparación completada: ${result.created} elemento(s) sincronizado(s)`,
+      message: t('sync.view.toast.repairCompleted', { count: result.created }),
       duration: 3000,
       color: 'success',
     });
@@ -1032,9 +1048,10 @@ async function handleRepairDivergence() {
   try {
     const { requeued } = await syncController.repairDivergence();
     const toast = await toastController.create({
-      message: requeued > 0
-        ? `Re-encadenadas ${requeued} fila(s); sincronización completada`
-        : 'Sincronización completada',
+      message:
+        requeued > 0
+          ? t('sync.view.toast.requeueCompleted', { count: requeued })
+          : t('sync.view.toast.syncCompleted'),
       duration: 2500,
       color: 'success',
     });
@@ -1052,18 +1069,18 @@ async function handleRepairDivergence() {
 async function runFixSequence() {
   isFixing.value = true;
   try {
-    fixStatus.value = 'Actualizando estado...';
+    fixStatus.value = t('sync.view.fix.updatingStatus');
     await refreshStatus();
     await syncController.pullFromServer();
 
-    fixStatus.value = 'Sincronizando todo...';
+    fixStatus.value = t('sync.view.fix.syncingAll');
     await syncController.fullSyncAndSave();
     await refreshStatus();
     const seqError = syncController.getSyncError();
     if (seqError) throw new Error(seqError);
 
     if (pendingChanges.value > 0 || activeConflictDiffs.value.length > 0) {
-      fixStatus.value = 'Reparando sincronización...';
+      fixStatus.value = t('sync.view.fix.repairing');
       await startRepair();
     } else {
       const toast = await toastController.create({
@@ -1076,7 +1093,10 @@ async function runFixSequence() {
   } catch (error) {
       const reason = error instanceof Error ? `: ${error.message}` : '';
     const toast = await toastController.create({
-      message: `Falló el paso (${fixStatus.value})${reason}`,
+      message: t('sync.view.fix.failedStep', {
+        step: fixStatus.value,
+        reason: reason,
+      }),
       duration: 4000,
       color: 'danger',
     });

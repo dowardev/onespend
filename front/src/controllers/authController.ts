@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import { useAuthStore, type User } from '@/stores/authStore'
+import { translate } from '@/i18n'
 import { getSSOClient } from '@/ssoClientAccessor'
 import { clearAllUserData } from '@/services/dataClearService'
 import { syncService } from '@/services/syncService'
@@ -117,8 +118,7 @@ class AuthController {
 
     if (pendingItems > 0) {
       const confirmed = window.confirm(
-        `Tienes ${pendingItems} cambio(s) pendiente(s) de sincronizar. ` +
-          `Si cierras sesión ahora, estos datos se perderán. ¿Deseas continuar?`,
+        translate('auth.logoutPendingWarning', { count: pendingItems }),
       )
 
       if (!confirmed) {

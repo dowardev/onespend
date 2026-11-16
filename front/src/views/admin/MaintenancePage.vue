@@ -11,7 +11,7 @@ SPDX-License-Identifier: AGPL-3.0-only
         <ion-buttons slot="start">
           <ion-menu-button :mode="designMode"></ion-menu-button>
         </ion-buttons>
-        <ion-title>Mantenimiento</ion-title>
+        <ion-title>{{ t('admin.maintenancepage.title') }}</ion-title>
       </ion-toolbar>
     </ion-header>
 
