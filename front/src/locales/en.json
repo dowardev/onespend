@@ -24,7 +24,17 @@
     "select": "Select",
     "selectProvider": "Select provider",
     "unnamed": "Unnamed",
-    "today": "Today"
+    "today": "Today",
+    "periodDay": "Day",
+    "periodWeek": "Week",
+    "periodMonth": "Month",
+    "periodYear": "Year",
+    "description": "Description",
+    "empty": "(empty)",
+    "onlyNumbers": "Numbers only",
+    "onlyNumbersAllowed": "Only numbers are allowed",
+    "mustBeGreaterThanZero": "The value must be greater than 0",
+    "create": "Create"
   },
   "recurring": {
     "section": {
@@ -104,7 +114,7 @@
       "placeholder": "Search",
       "cancelButton": "Cancel",
       "deleteButton": "Delete",
-      "testDataToast": "Datos de prueba insertados",
+      "testDataToast": "Test data inserted",
       "title": "Recurring Charges",
       "empty": "No recurring charges",
       "type": {
@@ -181,6 +191,8 @@
       "deleteAlertMessage": "Delete {name}?"
     },
     "edit": {
+      "occurrenceLabel": "Occurrence",
+      "monthLabel": "Month",
       "section": {
         "info": "Information",
         "date": "Date",
@@ -234,6 +246,8 @@
         "selectSupplier": "Select supplier",
         "createSupplier": "Create supplier"
       },
+      "hourLabel": "Time",
+      "deleteLabel": "Delete",
       "validation": {
         "nameRequired": "Name is required",
         "frequencyRequired": "Frequency is required",
@@ -345,6 +359,8 @@
     }
   },
   "auth": {
+    "logoutWarning": "If you sign out now, this data will be lost. Do you want to continue?",
+    "logoutPendingWarning": "You have {count} pending change(s) to sync. If you sign out now, this data will be lost. Do you want to continue?",
     "login": {
       "title": "Log In",
       "subtitle": "Redirecting to the authentication server...",
@@ -363,7 +379,9 @@
     },
     "callback": {
       "title": "Logging In",
-      "message": "Processing authentication…"
+      "message": "Processing authentication…",
+      "loginFailed": "Sign-in did not complete ({error})",
+      "genericError": "Authentication error"
     }
   },
   "sync": {
@@ -463,6 +481,112 @@
       "dlq": {
         "itemFailed": "failed item",
         "itemsFailed": "failed items"
+      },
+      "lastSync": {
+        "lessThanMinute": "Less than a minute ago",
+        "minutes": "{n} minutes ago",
+        "hours": "{n} hours ago",
+        "days": "{n} days ago"
+      },
+      "resolvedAt": {
+        "lessThanMinute": "Less than a minute ago",
+        "minutes": "{n} min ago",
+        "hours": "{n} h ago",
+        "days": "{n} days ago"
+      },
+      "state": {
+        "offline": "Offline",
+        "pending": "Pending",
+        "synced": "Synced",
+        "syncing": "Syncing..."
+      },
+      "time": {
+        "secondsAgo": "a few seconds ago",
+        "minutesAgo": "{m} min ago",
+        "hoursAgo": "{h} h ago",
+        "daysAgo": "{d} days ago"
+      },
+      "entity": {
+        "account": "Accounts",
+        "budget": "Budgets",
+        "budget_entry": "Expense entries",
+        "budget_entry_group": "Entry groups",
+        "budget_provider": "Budget providers",
+        "budget_provider_product": "Provider products",
+        "entry": "Entries",
+        "income": "Income",
+        "recurring_record": "Recurring records",
+        "recurring_record_product": "Recurring products",
+        "supplier": "Suppliers",
+        "supplier_product": "Supplier products",
+        "template": "Templates"
+      },
+      "conflicts": {
+        "moreFields": "+{n} more",
+        "field_one": "field",
+        "field_other": "fields",
+        "sameField_one": "✓ {n} field matches — no changes",
+        "sameField_other": "✓ {n} fields match — no changes",
+        "resolvedTitle": "Resolved conflicts",
+        "resolution": "Resolution: {resolution}",
+        "resolutionServer": "server",
+        "modalTitle": "Conflict detected",
+        "intro": "This record was modified from two places at once. Choose which version you want to keep:",
+        "introHint": "↕ The values that differ between versions are highlighted in both columns",
+        "yourVersion": "Your version",
+        "serverVersion": "Server version",
+        "keepLocal": "Keep what I have here",
+        "keepServer": "Keep the server version"
+      },
+      "debug": {
+        "title": "Debug",
+        "show": "Show debug information"
+      },
+      "login": {
+        "required": "You need to sign in to sync your data.",
+        "action": "Sign in"
+      },
+      "repairModal": {
+        "title": "Repairing sync",
+        "starting": "Starting repair..."
+      },
+      "fix": {
+        "updatingStatus": "Updating status...",
+        "syncingAll": "Syncing everything...",
+        "repairing": "Repairing sync...",
+        "failedStep": "Step failed ({step}){reason}"
+      },
+      "toast": {
+        "syncCompleted": "Sync completed",
+        "syncFailed": "Could not sync",
+        "fullSyncError": "Full sync error: {message}",
+        "fullSyncOk": "Full sync completed successfully",
+        "resolveConflictError": "Error resolving the conflict: {message}",
+        "resolveConflictErrorGeneric": "Error resolving the conflict",
+        "repairCompleted": "Repair completed: {count} item(s) synced",
+        "requeueCompleted": "Re-queued {count} row(s); sync completed"
+      },
+      "controller": {
+        "disabled": "Sync is disabled",
+        "repairOffline": "Cannot repair while offline",
+        "repairComplete": "Repair complete! {count} item(s) synced",
+        "repairError": "Repair error",
+        "fullSyncFailed": "Full sync failed"
+      },
+      "repair": {
+        "pullingServer": "Fetching data from the server...",
+        "scanningLocal": "Scanning local database...",
+        "queueRebuilt": "Rebuilt queue with {count} item(s)",
+        "pushingItems": "Uploading {count} item(s)...",
+        "noPending": "No pending items found",
+        "updatingFinalState": "Updating final state...",
+        "complete": "Repair complete! {count} item(s) synced",
+        "error": "Repair error"
+      },
+      "queue": {
+        "unconfirmed": "The server did not confirm {count} pending {changes}: {message}",
+        "alreadyRunning": "Another sync is already running; retry in a few seconds",
+        "retrying": "Changes are being retried automatically; wait a few seconds and sync again"
       }
     },
     "settings": {
@@ -730,12 +854,14 @@
         "noResults": "No results for the search or the filter",
         "emptyResults": "No entries in the history",
         "clearFilters": "Clear filters",
-        "goToBudget": "Go to budget"
+        "goToBudget": "Go to budget",
+        "goToDay": "Go to day {label}",
+        "noAccount": "No account"
       }
     },
     "components": {
       "deleteconfirmalert": {
-        "text": "Confirmar eliminación"
+        "text": "Confirm deletion"
       },
       "notesmodal": {
         "placeholder": "Write the notes here..."
@@ -745,35 +871,68 @@
       },
       "detailssection": {
         "label1": "Details",
-        "label2": "Adjuntos",
+        "label2": "Attachments",
         "text": "Notes",
         "placeholder": "Add notes..."
       },
       "summarycards": {
         "label1": "Income",
-        "label2": "Egresos",
+        "label2": "Expenses",
         "label3": "Result",
-        "label4": "Efectivo",
-        "label5": "Tarjeta"
+        "label4": "Cash",
+        "label5": "Card"
       },
       "accountcards": {
         "label": "Accounts",
         "empty": "No accounts created"
       },
       "accountdistributionpicker": {
-        "text": "Quantity"
+        "text": "Quantity",
+        "searchAccount": "Search account",
+        "pendingFields": "Fill in the pending fields before adding another distribution",
+        "selected": "Selected"
       },
       "daysummarymodal": {
+        "title": "Day summary",
+        "totalOfDay": "Total for the day",
+        "averages": "Averages",
+        "income": "Income:",
+        "expense": "Expense:",
+        "byPaymentType": "By payment type",
+        "times": "Times",
+        "start": "Start:",
+        "end": "End:",
         "fallbackTime": "--:--",
         "fallbackAccount": "No account",
-        "fallbackName": "Unnamed"
+        "fallbackName": "Unnamed",
+        "emptySelectedDate": "No records for the selected date.",
+        "entries": "Entries",
+        "exits": "Exits",
+        "balance": "Balance",
+        "topSuppliers": "Top Suppliers",
+        "noSuppliersWithExpenses": "No suppliers with expenses",
+        "topAccounts": "Top Accounts",
+        "noAccountMovements": "No account movements",
+        "details": "Details",
+        "biggestIncome": "Biggest Income",
+        "biggestExpense": "Biggest Expense"
       },
       "pendingrecurringmodal": {
         "title": "Pending Recurring Charges",
         "variableAmount": "Variable amount",
         "autoInsertAt": "Auto-inserts at {time}",
         "empty": "No pending recurring charges",
-        "applyAll": "Apply all ({count})"
+        "applyAll": "Apply all ({count})",
+        "ordinal": {
+          "1": "First",
+          "2": "Second",
+          "3": "Third",
+          "4": "Fourth",
+          "5": "Fifth",
+          "6": "Sixth",
+          "7": "Seventh",
+          "8": "Eighth"
+        }
       },
       "accountbarchart": {
         "label1": "Income",
@@ -782,10 +941,10 @@
     },
     "entries": {
       "inicioviewcomponent": {
-        "button1": "Retroceder",
+        "button1": "Back",
         "text": "Select date",
-        "button2": "Avanzar",
-        "label": "Registro",
+        "button2": "Forward",
+        "label": "Log",
         "emptyMessage": "Press the \"+\" button to add a new income",
         "registro": "Entry",
         "providers": "Providers"
@@ -799,11 +958,22 @@
         "labelTime": "Time",
         "text3": "Accounts",
         "label3": "Reassign date",
-        "message": "Entry not found"
+        "message": "Entry not found",
+        "editTitle": "Edit entry",
+        "newTitle": "New entry",
+        "deleteConfirm": "Are you sure you want to delete this entry?",
+        "itemsInvalid": "All items must have a valid amount and an assigned account",
+        "incomeType": "Income",
+        "expenseType": "Expense",
+        "nameRequired": "The name is required",
+        "dateRequired": "The date is required"
       },
       "componentes": {
         "attachmentsmodal": {
-          "fallback": "0 Bytes"
+          "fallback": "0 Bytes",
+          "title": "Attachments",
+          "uploadText": "Tap or drop files",
+          "uploadHint": "Images and PDF"
         }
       }
     },
@@ -814,7 +984,26 @@
         "placeholder1": "Name",
         "placeholder2": "Price",
         "placeholder3": "Cant",
-        "message": "Provider updated"
+        "message": "Provider updated",
+        "coverageEntered": "Covered: {amount}",
+        "coverageShortage": "Short: {amount}",
+        "covered": "Covered!",
+        "distributionHeader": "Distribution by Account",
+        "distributionSubtitle": "Distribute the amount across the accounts",
+        "searchSupplier": "Search supplier",
+        "deleteConfirm": "Are you sure you want to delete this provider?",
+        "totalCoveredHeader": "Total covered",
+        "totalCoveredMessage": "You already distributed the full amount of the products across the existing accounts.",
+        "completeGroup": "Complete the current group before adding another",
+        "itemsInvalid": "All items must have a valid amount and an assigned account",
+        "numbersOnly": "Numbers only",
+        "supplierRequired": "You must select a provider",
+        "selectSupplierTitle": "Select Provider",
+        "createSupplierTitle": "Create Provider",
+        "deleteProviderLabel": "Delete provider",
+        "editEntry": "Edit Entry",
+        "editProvider": "Edit Provider",
+        "addProvider": "Add Provider"
       }
     },
     "budgetview": {
@@ -829,42 +1018,71 @@
   },
   "admin": {
     "maintenancepage": {
-      "label": "System maintenance tools"
+      "label": "System maintenance tools",
+      "title": "Maintenance"
     }
   },
   "statistics": {
+    "excel": {
+      "reportTitle": "Report for {period} {date}",
+      "concept": "Concept",
+      "amount": "Amount",
+      "incomes": "INCOME",
+      "totalIncomes": "TOTAL INCOME",
+      "expenses": "EXPENSES",
+      "totalExpenses": "TOTAL EXPENSES",
+      "summary": "SUMMARY",
+      "balance": "Balance",
+      "savings": "Savings",
+      "savingsPercent": "Savings percentage",
+      "configuration": "CONFIGURATION",
+      "expectedPercent": "Expected percentage",
+      "sheetName": "Report"
+    },
     "cashflow": {
       "cashflow": {
         "label1": "30 days",
         "label2": "90 days",
-        "label3": "1 year"
+        "label3": "1 year",
+        "label4": "Average / day"
       },
       "title": "Cash Flow",
       "incomes": "Income",
-      "expenses": "Expenses"
+      "expenses": "Expenses",
+      "net": "Net"
     },
     "performance": {
       "components": {
         "budgetexpenseschartmodal": {
-          "label": "Breakdown"
+          "label": "Breakdown",
+          "title": "Budget Expenses",
+          "empty": "No budget expenses"
         },
         "budgetincomeschartmodal": {
-          "label": "Breakdown"
+          "label": "Breakdown",
+          "empty": "No budget income"
         },
         "expenseschartmodal": {
-          "label": "Breakdown"
+          "label": "Breakdown",
+          "empty": "No expenses recorded"
         },
         "goalschartmodal": {
           "label1": "Summary",
-          "label2": "Meta mensual",
-          "label3": "Progreso actual",
-          "label4": "Faltante"
+          "label2": "Monthly goal",
+          "label3": "Current progress",
+          "label4": "Missing",
+          "title": "Goals Progress",
+          "monthlySavings": "Monthly Savings",
+          "progress": "Progress"
         },
         "incomeschartmodal": {
-          "label": "Breakdown"
+          "label": "Breakdown",
+          "empty": "No income recorded"
         },
         "budgetdetailmodal": {
-          "label": "Detail"
+          "label": "Detail",
+          "emptyPeriod": "No records in this period",
+          "total": "Total"
         },
         "performancecomponent": {
           "label1": "Gross profit",
@@ -879,7 +1097,12 @@
       "config": {
         "statisticsconfigpage": {
           "label": "Track your expenses",
-          "title": "Configuration"
+          "title": "Configuration",
+          "addServiceHint": "Press the «+» button to add a new service",
+          "descriptionPlaceholder": "Description",
+          "amountPlaceholder": "Amount",
+          "services": "Services",
+          "estimationHint": "Enter a daily estimate"
         },
         "performanceconfigpage": {
           "label": "Organize your categories by section",
@@ -1053,7 +1276,8 @@
           "alert": {
             "cancel": "Cancel"
           },
-          "text": "Delete"
+          "text": "Delete",
+          "deleteConfirm": "Delete this account?"
         }
       },
       "accountspage": {
@@ -1061,7 +1285,8 @@
         "placeholder": "Search accounts",
         "deleteConfirm": "Delete account {name}?",
         "text1": "Cancel",
-        "text2": "Delete"
+        "text2": "Delete",
+        "initialBalance": "Initial balance: {amount}"
       }
     },
     "modals": {
@@ -1069,7 +1294,11 @@
         "text": "Name",
         "label": "Products",
         "placeholder": "Search products",
-        "message": "Add at least one product"
+        "message": "Add at least one product",
+        "nameLabel": "Name",
+        "priceLabel": "Price",
+        "nameRequired": "The name is required (max. 255 characters)",
+        "price": "Price: {price}"
       },
       "addsuplierscomponent": {
         "editTitle": "Edit Supplier",
@@ -1129,14 +1358,51 @@
   },
   "cashflowchart": {
     "income": "Income",
-    "expense": "Expenses"
+    "expense": "Expenses",
+    "empty": "No data to show"
   },
   "components": {
     "categoryPicker": {
-      "title": "Select category"
+      "title": "Select category",
+      "empty": "No categories. Press '+' to create a new one."
     },
     "sectionAssign": {
-      "title": "Categories by section"
+      "title": "Categories by section",
+      "empty": "No categories. Press '+' to create a new one.",
+      "ariaSection": "Section of {name}",
+      "unassigned": "Unassigned"
+    },
+    "quickCategory": {
+      "namePlaceholder": "Category name"
+    },
+    "quickAccount": {
+      "namePlaceholder": "Account name",
+      "initialBalancePlaceholder": "Initial balance (optional)"
+    }
+  },
+  "lookupResolver": {
+    "unavailable": "(item unavailable)",
+    "list": "List ({count})",
+    "properties": "{count} properties",
+    "field": {
+      "name": "Name",
+      "amount": "Amount",
+      "note": "Note",
+      "date": "Date",
+      "description": "Description",
+      "account_id": "Account",
+      "supplier_id": "Supplier",
+      "supplier_name": "Supplier",
+      "budget_id": "Budget",
+      "entry_type": "Type",
+      "payment_type": "Payment method",
+      "status": "Status",
+      "currency": "Currency",
+      "type": "Type",
+      "initial_balance": "Initial balance",
+      "balance": "Balance",
+      "price": "Price",
+      "total": "Total"
     }
   },
   "views": {
