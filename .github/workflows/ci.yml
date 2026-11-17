@@ -1,0 +1,556 @@
+# ============================================================
+# oneSpend — GitHub Actions
+# Traducido desde .gitlab-ci.yml (ver odd/tasks/github-migration-translation.md)
+#
+# DESVIACIÓN DOCUMENTADA (guía, sección 0.1): los jobs de deploy consumen los
+# artifacts de los jobs `build` del mismo pipeline. En GitHub los artifacts no
+# cruzan entre workflows, así que todos los jobs viven en un único workflow.
+#
+# Mapeo de jobs (nombres idénticos a propósito: son los required checks):
+#   backend_lint, backend_test, frontend_lint, frontend_test, frontend_e2e
+#   backend_build, frontend_build
+#   backend_deploy, frontend_deploy, rollback_backend, rollback_frontend
+#
+# REGLA DE GATING (igual que en GitLab):
+#   - backend_lint, backend_test, frontend_lint, frontend_test, backend_build,
+#     frontend_build, backend_deploy, frontend_deploy → SOLO tags
+#   - frontend_e2e → merge requests Y tags, y NO es gate (allow_failure)
+#   - rollback_* → manual (workflow_dispatch)
+# ============================================================
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      rollback_target:
+        description: 'Rollback target: backend, frontend or both'
+        required: false
+        default: 'both'
+        type: choice
+        options:
+          - backend
+          - frontend
+          - both
+      tag:
+        description: 'Tag to roll back to (empty = previous tag computed automatically)'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  COMPOSER_HOME: ${{ github.workspace }}/back/.composer
+  NODE_VERSION: '26.13'
+  PNPM_VERSION: '11.25.0'
+
+jobs:
+  # ============================================================
+  # STAGE: lint
+  # ============================================================
+
+  backend_lint:
+    name: backend_lint
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v') && matches(github.ref_name, /^v\d+\.\d+\.\d+(-(alpha|beta|rc|dryrun)\.\d+)?$/)
+    steps:
+      - uses: actions/checkout@v4
+
+      # El backend resuelve dowardev/sso-server desde un composer path repository
+      # que apunta al checkout hermano (../../sso/packages/sso-server).
+      # En GitLab se clonaba con CI_JOB_TOKEN; en GitHub GITHUB_TOKEN no cruza
+      # repositorios, asi que se usa un PAT (secrets.CROSS_REPO_TOKEN).
+      # `path: ../sso` deja el checkout en <workspace>/../sso, que es la ruta
+      # que espera el path repository (back/ -> ../../sso -> <parent>/sso).
+      - name: Checkout sibling sso repository
+        uses: actions/checkout@v4
+        with:
+          repository: dowardev/sso
+          ref: main
+          token: ${{ secrets.CROSS_REPO_TOKEN }}
+          path: ../sso
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+          tools: composer:v2
+
+      - name: Cache composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            back/vendor
+            back/.composer/cache
+          key: composer-${{ hashFiles('back/composer.lock') }}
+          restore-keys: composer-
+
+      - name: Run pint
+        working-directory: back
+        run: |
+          composer install --prefer-dist --no-progress --no-interaction
+          vendor/bin/pint --test app/ config/ database/ routes/ bootstrap/app.php bootstrap/providers.php
+
+  frontend_lint:
+    name: frontend_lint
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v') && matches(github.ref_name, /^v\d+\.\d+\.\d+(-(alpha|beta|rc|dryrun)\.\d+)?$/)
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: front/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: front
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        working-directory: front
+        run: pnpm run typecheck
+
+      - name: Lint
+        working-directory: front
+        run: pnpm run lint
+
+  # ============================================================
+  # STAGE: test
+  # ============================================================
+
+  backend_test:
+    name: backend_test
+    runs-on: ubuntu-latest
+    needs: [backend_lint]
+    if: startsWith(github.ref, 'refs/tags/v') && matches(github.ref_name, /^v\d+\.\d+\.\d+(-(alpha|beta|rc|dryrun)\.\d+)?$/)
+    services:
+      mariadb:
+        image: mariadb:11
+        env:
+          MARIADB_ROOT_PASSWORD: toor
+          MARIADB_DATABASE: onespend_test
+        ports:
+          - '3306:3306'
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=10s --health-timeout=5s --health-retries=10
+    env:
+      DB_CONNECTION: mariadb
+      DB_HOST: 127.0.0.1
+      DB_PORT: '3306'
+      DB_DATABASE: onespend_test
+      DB_USERNAME: root
+      DB_PASSWORD: toor
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout sibling sso repository
+        uses: actions/checkout@v4
+        with:
+          repository: dowardev/sso
+          ref: main
+          token: ${{ secrets.CROSS_REPO_TOKEN }}
+          path: ../sso
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+          tools: composer:v2
+          extensions: pdo_mysql
+
+      - name: Cache composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            back/vendor
+            back/.composer/cache
+          key: composer-${{ hashFiles('back/composer.lock') }}
+          restore-keys: composer-
+
+      - name: Prepare testing environment
+        working-directory: back
+        run: |
+          cp .env.example .env
+          composer install --prefer-dist --no-progress --no-interaction
+          php artisan key:generate
+
+      - name: Run Laravel tests
+        working-directory: back
+        run: php artisan test
+
+  frontend_test:
+    name: frontend_test
+    runs-on: ubuntu-latest
+    needs: [frontend_lint]
+    if: startsWith(github.ref, 'refs/tags/v') && matches(github.ref_name, /^v\d+\.\d+\.\d+(-(alpha|beta|rc|dryrun)\.\d+)?$/)
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: front/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: front
+        run: pnpm install --frozen-lockfile
+
+      - name: Run unit tests
+        working-directory: front
+        run: pnpm run test:unit
+
+  # Suite Playwright: corre un browser real contra un dev server de vite.
+  # La imagen de GitLab trae los browsers de su propia version de Playwright,
+  # asi que se instala la revision que espera el @playwright/test pinneado.
+  # allow_failure: true en GitLab -> continue-on-error (no es gate).
+  frontend_e2e:
+    name: frontend_e2e
+    runs-on: ubuntu-latest
+    needs: [frontend_lint]
+    if: github.event_name == 'pull_request' || (startsWith(github.ref, 'refs/tags/v') && matches(github.ref_name, /^v\d+\.\d+\.\d+(-(alpha|beta|rc|dryrun)\.\d+)?$/))
+    continue-on-error: true
+    container:
+      image: mcr.microsoft.com/playwright:v1.61.0-noble
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        working-directory: front
+        run: |
+          npm install -g pnpm@${{ env.PNPM_VERSION }} --no-audit --no-fund
+          pnpm install --frozen-lockfile
+
+      - name: Install Playwright browser
+        working-directory: front
+        run: pnpm exec playwright install chromium
+
+      - name: Run e2e suite
+        working-directory: front
+        run: pnpm run test:e2e
+
+      - name: Upload e2e report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            front/playwright-report/
+            front/test-results/
+          retention-days: 7
+
+  # ============================================================
+  # STAGE: build
+  # ============================================================
+
+  backend_build:
+    name: backend_build
+    runs-on: ubuntu-latest
+    needs: [backend_test]
+    if: startsWith(github.ref, 'refs/tags/v') && matches(github.ref_name, /^v\d+\.\d+\.\d+(-(alpha|beta|rc|dryrun)\.\d+)?$/)
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout sibling sso repository
+        uses: actions/checkout@v4
+        with:
+          repository: dowardev/sso
+          ref: main
+          token: ${{ secrets.CROSS_REPO_TOKEN }}
+          path: ../sso
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+          tools: composer:v2
+
+      - name: Cache composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            back/vendor
+            back/.composer/cache
+          key: composer-${{ hashFiles('back/composer.lock') }}
+          restore-keys: composer-
+
+      - name: Install composer dependencies
+        working-directory: back
+        run: composer install --prefer-dist --no-progress --no-interaction
+
+      - name: Upload backend build
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-build
+          path: |
+            back/
+            !back/.env*
+            !back/vendor/
+            !back/node_modules/
+            !back/storage/*
+            !back/bootstrap/cache/*.php
+            !back/public/build/
+          retention-days: 1
+
+  frontend_build:
+    name: frontend_build
+    runs-on: ubuntu-latest
+    needs: [frontend_test]
+    if: startsWith(github.ref, 'refs/tags/v') && matches(github.ref_name, /^v\d+\.\d+\.\d+(-(alpha|beta|rc|dryrun)\.\d+)?$/)
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: front/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: front
+        run: pnpm install --frozen-lockfile
+
+      - name: Build frontend
+        working-directory: front
+        run: |
+          pnpm run build
+          tar czf ../dist.tar.gz -C dist .
+
+      - name: Upload frontend bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-bundle
+          path: dist.tar.gz
+          retention-days: 1
+
+  # ============================================================
+  # STAGE: deploy (solo tags)
+  # ============================================================
+
+  backend_deploy:
+    name: backend_deploy
+    runs-on: ubuntu-latest
+    needs: [backend_build, backend_test]
+    if: startsWith(github.ref, 'refs/tags/v') && matches(github.ref_name, /^v\d+\.\d+\.\d+(-(alpha|beta|rc|dryrun)\.\d+)?$/)
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout sibling sso repository
+        uses: actions/checkout@v4
+        with:
+          repository: dowardev/sso
+          ref: main
+          token: ${{ secrets.CROSS_REPO_TOKEN }}
+          path: ../sso
+
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@v0.8
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          ssh-known-hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
+
+      - name: Deploy backend
+        env:
+          SSH_HOST: ${{ vars.SSH_HOST }}
+          SSH_PORT: ${{ vars.SSH_PORT }}
+          SSH_USER: ${{ vars.SSH_USER }}
+          DEPLOY_PATH_BACKEND: ${{ vars.DEPLOY_PATH_BACKEND }}
+        run: |
+          tar -czf /tmp/backend.tar.gz \
+            --exclude='.git' \
+            --exclude='node_modules' \
+            --exclude='vendor' \
+            --exclude='.env*' \
+            --exclude='storage/*' \
+            --exclude='bootstrap/cache/*.php' \
+            --exclude='public/build/' \
+            -C back .
+          tar -czf /tmp/sso-server.tar.gz -C ../sso/packages sso-server
+          scp -o ConnectTimeout=60 -P "$SSH_PORT" /tmp/backend.tar.gz "$SSH_USER@$SSH_HOST:/tmp/backend.tar.gz"
+          scp -o ConnectTimeout=60 -P "$SSH_PORT" /tmp/sso-server.tar.gz "$SSH_USER@$SSH_HOST:/tmp/sso-server.tar.gz"
+          DEPLOY_PARENT=$(dirname $DEPLOY_PATH_BACKEND)
+          DEPLOY_GRANDPARENT=$(dirname $DEPLOY_PARENT)
+          '[ "$(basename $DEPLOY_PATH_BACKEND)" = "back" ] || (echo "DEPLOY_PATH_BACKEND must end in /back" >&2; exit 1)'
+          ssh -o ConnectTimeout=60 -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "
+            mkdir -p $DEPLOY_GRANDPARENT/sso/packages &&
+            tar -xzf /tmp/backend.tar.gz -C $DEPLOY_PATH_BACKEND &&
+            tar -xzf /tmp/sso-server.tar.gz -C $DEPLOY_GRANDPARENT/sso/packages &&
+            cd $DEPLOY_PATH_BACKEND &&
+            rm -f bootstrap/cache/*.php bootstrap/cache/*.json config/sanctum.php &&
+            composer install --no-dev --optimize-autoloader &&
+            php artisan migrate --force &&
+            php artisan config:cache &&
+            php artisan route:cache &&
+            rm /tmp/backend.tar.gz &&
+            rm /tmp/sso-server.tar.gz
+          "
+
+  frontend_deploy:
+    name: frontend_deploy
+    runs-on: ubuntu-latest
+    needs: [frontend_build, frontend_test, frontend_lint]
+    if: startsWith(github.ref, 'refs/tags/v') && matches(github.ref_name, /^v\d+\.\d+\.\d+(-(alpha|beta|rc|dryrun)\.\d+)?$/)
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download frontend bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-bundle
+
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@v0.8
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          ssh-known-hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
+
+      - name: Deploy frontend
+        env:
+          SSH_HOST: ${{ vars.SSH_HOST }}
+          SSH_PORT: ${{ vars.SSH_PORT }}
+          SSH_USER: ${{ vars.SSH_USER }}
+          DEPLOY_PATH_FRONTEND: ${{ vars.DEPLOY_PATH_FRONTEND }}
+        run: |
+          scp -o ConnectTimeout=60 -P "$SSH_PORT" dist.tar.gz "$SSH_USER@$SSH_HOST:$DEPLOY_PATH_FRONTEND"
+          ssh -o ConnectTimeout=60 -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "cd $DEPLOY_PATH_FRONTEND && tar xzvf dist.tar.gz && rm dist.tar.gz"
+
+  # ============================================================
+  # STAGE: rollback (manual en GitLab -> workflow_dispatch)
+  # ============================================================
+
+  rollback_backend:
+    name: rollback_backend
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && (inputs.rollback_target == 'backend' || inputs.rollback_target == 'both')
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@v0.8
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          ssh-known-hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
+
+      - name: Roll back backend
+        env:
+          REQUESTED_TAG: ${{ inputs.tag }}
+          SSH_HOST: ${{ vars.SSH_HOST }}
+          SSH_PORT: ${{ vars.SSH_PORT }}
+          SSH_USER: ${{ vars.SSH_USER }}
+          DEPLOY_PATH_BACKEND: ${{ vars.DEPLOY_PATH_BACKEND }}
+        run: |
+          if [ -n "$REQUESTED_TAG" ]; then
+            PREVIOUS_TAG="$REQUESTED_TAG"
+          else
+            PREVIOUS_TAG=$(git tag --list "v*" --sort=-version:refname | sed -n '2p')
+          fi
+          if [ -z "$PREVIOUS_TAG" ]; then echo "No hay tag anterior para rollback"; exit 1; fi
+          echo "Rolling back to $PREVIOUS_TAG"
+          git checkout "$PREVIOUS_TAG"
+          tar -czf /tmp/backend.tar.gz \
+            --exclude='.git' \
+            --exclude='node_modules' \
+            --exclude='vendor' \
+            --exclude='.env*' \
+            --exclude='storage/*' \
+            --exclude='bootstrap/cache/*.php' \
+            --exclude='public/build/' \
+            -C back .
+          scp -o ConnectTimeout=60 -P "$SSH_PORT" /tmp/backend.tar.gz "$SSH_USER@$SSH_HOST:/tmp/backend.tar.gz"
+          tar -czf /tmp/sso-server.tar.gz -C ../sso/packages sso-server
+          scp -o ConnectTimeout=60 -P "$SSH_PORT" /tmp/sso-server.tar.gz "$SSH_USER@$SSH_HOST:/tmp/sso-server.tar.gz"
+          DEPLOY_GRANDPARENT=$(dirname $(dirname $DEPLOY_PATH_BACKEND))
+          ssh -o ConnectTimeout=60 -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "
+            mkdir -p $DEPLOY_PATH_BACKEND &&
+            mkdir -p $DEPLOY_GRANDPARENT/sso/packages &&
+            tar -xzf /tmp/backend.tar.gz -C $DEPLOY_PATH_BACKEND &&
+            tar -xzf /tmp/sso-server.tar.gz -C $DEPLOY_GRANDPARENT/sso/packages &&
+            cd $DEPLOY_PATH_BACKEND &&
+            rm -f bootstrap/cache/*.php bootstrap/cache/*.json config/sanctum.php &&
+            composer install --no-dev --optimize-autoloader &&
+            php artisan migrate --force &&
+            php artisan config:cache &&
+            php artisan route:cache &&
+            rm /tmp/backend.tar.gz
+            rm /tmp/sso-server.tar.gz
+          "
+
+  rollback_frontend:
+    name: rollback_frontend
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && (inputs.rollback_target == 'frontend' || inputs.rollback_target == 'both')
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: front/pnpm-lock.yaml
+
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@v0.8
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          ssh-known-hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
+
+      - name: Roll back frontend
+        env:
+          REQUESTED_TAG: ${{ inputs.tag }}
+          SSH_HOST: ${{ vars.SSH_HOST }}
+          SSH_PORT: ${{ vars.SSH_PORT }}
+          SSH_USER: ${{ vars.SSH_USER }}
+          DEPLOY_PATH_FRONTEND: ${{ vars.DEPLOY_PATH_FRONTEND }}
+        run: |
+          if [ -n "$REQUESTED_TAG" ]; then
+            PREVIOUS_TAG="$REQUESTED_TAG"
+          else
+            PREVIOUS_TAG=$(git tag --list "v*" --sort=-version:refname | sed -n '2p')
+          fi
+          if [ -z "$PREVIOUS_TAG" ]; then echo "No hay tag anterior para rollback"; exit 1; fi
+          echo "Rolling back to $PREVIOUS_TAG"
+          git checkout "$PREVIOUS_TAG"
+          cd front
+          pnpm install --frozen-lockfile
+          pnpm run build
+          tar czvf dist.tar.gz -C dist .
+          scp -o ConnectTimeout=60 -P "$SSH_PORT" dist.tar.gz "$SSH_USER@$SSH_HOST:$DEPLOY_PATH_FRONTEND"
+          ssh -o ConnectTimeout=60 -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "cd $DEPLOY_PATH_FRONTEND && tar xzvf dist.tar.gz && rm dist.tar.gz"
