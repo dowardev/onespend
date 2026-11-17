@@ -34,7 +34,8 @@
     "onlyNumbers": "Solo números",
     "onlyNumbersAllowed": "Solo se permiten números",
     "mustBeGreaterThanZero": "El valor debe ser mayor a 0",
-    "create": "Crear"
+    "create": "Crear",
+    "dateLongFormat": "d 'de' MMMM 'de' yyyy"
   },
   "recurring": {
     "section": {

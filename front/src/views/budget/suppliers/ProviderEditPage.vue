@@ -373,7 +373,7 @@ SPDX-License-Identifier: AGPL-3.0-only
     <DeleteConfirmAlert
       :is-open="deleteConfirm.showDeleteAlert.value"
       :message="t('budget.suppliers.providereditpage.deleteConfirm')"
-      :buttons="deleteConfirm.deleteAlertButtons"
+      :buttons="deleteConfirm.deleteAlertButtons.value"
       @did-dismiss="deleteConfirm.showDeleteAlert.value = false"
     />
 

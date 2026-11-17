@@ -137,7 +137,7 @@ import {
 import { computed, ref } from 'vue';
 import { useLocale } from '@/composables/useLocale';
 import { format, addDays } from 'date-fns';
-import { es as esLocale } from 'date-fns/locale';
+import { getDateFnsLocale } from '@/i18n';
 import { parseLocalDate, formatLocalDate } from '@/utils/date';
 import { faker } from '@faker-js/faker';
 // end imports
@@ -199,7 +199,7 @@ const formattedSelectedDate = computed(() => {
   try {
     const d = parseLocalDate({ d: budgetDayStore.selectedDate });
     if (isNaN(d.getTime())) return budgetDayStore.selectedDate;
-    return format(d, "d 'de' MMMM 'de' yyyy", { locale: esLocale });
+    return format(d, t('common.dateLongFormat'), { locale: getDateFnsLocale() });
   } catch {
     return budgetDayStore.selectedDate;
   }

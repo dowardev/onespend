@@ -86,7 +86,7 @@ import { useLocale } from '@/composables/useLocale';
 
 import { computed, ref, onMounted } from 'vue';
 import { format } from 'date-fns';
-import { es as esLocale } from 'date-fns/locale';
+import { getDateFnsLocale } from '@/i18n';
 
 import { closeOutline, walletOutline } from 'ionicons/icons';
 
@@ -140,7 +140,7 @@ function formatCurrency(val: number | null | undefined) {
 
 function formatTime(timestamp: number) {
   try {
-    return format(new Date(timestamp), 'dd MMM, HH:mm', { locale: esLocale });
+    return format(new Date(timestamp), 'dd MMM, HH:mm', { locale: getDateFnsLocale() });
   } catch {
     return '';
   }

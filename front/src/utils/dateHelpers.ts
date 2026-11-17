@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import { format } from 'date-fns';
+import { getIntlLocale } from '@/i18n';
 
 export function parseDateValue(params: { raw: string | number | Date | null | undefined }): string {
   const { raw } = params;
@@ -31,7 +32,7 @@ export function toShortDate(params: { isoDate: string | null }): string {
   if (!isoDate) return '';
   try {
     const date = new Date(isoDate);
-    return date.toLocaleDateString('es-MX', {
+    return date.toLocaleDateString(getIntlLocale(), {
       day: '2-digit',
       month: '2-digit',
       year: '2-digit',
