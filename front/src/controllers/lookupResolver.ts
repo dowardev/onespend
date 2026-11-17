@@ -5,6 +5,7 @@
 import { accountsDb } from '@/db/controllers/accountsDb'
 import { suppliersDb } from '@/db/controllers/suppliersDb'
 import { translate, getIntlLocale } from '@/i18n'
+import { formatCurrency } from '@/utils/currency'
 
 const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -105,7 +106,10 @@ async function resolveValue(field: string, value: unknown): Promise<string> {
 
   if (typeof value === 'number') {
     if (/(amount|balance|price|total|initial)/i.test(field)) {
-      return new Intl.NumberFormat(getIntlLocale(), { style: 'currency', currency: 'EUR' }).format(value)
+      // Same formatter as the rest of the app (es-MX + MXN). This used to
+      // hardcode EUR, the leftover of the first sync scaffolding, so the
+      // conflict modal showed amounts in a currency the app never uses.
+      return formatCurrency({ value })
     }
     return String(value)
   }
