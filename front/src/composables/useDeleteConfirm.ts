@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { translate } from '@/i18n';
 
 export function useDeleteConfirm(params: {
@@ -12,7 +12,9 @@ export function useDeleteConfirm(params: {
 
   const showDeleteAlert = ref(false);
 
-  const deleteAlertButtons = [
+  // `computed` (not a plain array): the labels are translated, so they must
+  // be rebuilt when the active language changes, not frozen at setup time.
+  const deleteAlertButtons = computed(() => [
     {
       text: translate('common.cancel'),
       role: 'cancel' as const,
@@ -25,7 +27,7 @@ export function useDeleteConfirm(params: {
       cssClass: 'danger-alert-btn',
       handler: onConfirm,
     },
-  ];
+  ]);
 
   function openDeleteAlert() {
     showDeleteAlert.value = true;

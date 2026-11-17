@@ -207,7 +207,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { computed, ref,  } from 'vue';
 import { useLocale } from '@/composables/useLocale';
 import { format } from 'date-fns';
-import { es as esLocale } from 'date-fns/locale';
+import { getDateFnsLocale, getIntlLocale } from '@/i18n';
 import {
   IonCard,
   IonCardContent,
@@ -236,7 +236,7 @@ const { t } = useLocale();
 function formatTime(params: { timestamp: number }) {
   const { timestamp } = params;
   if (!timestamp) return t('budget.components.daysummarymodal.fallbackTime');
-  return new Date(timestamp).toLocaleTimeString('es-MX', {
+  return new Date(timestamp).toLocaleTimeString(getIntlLocale(), {
     hour: '2-digit',
     minute: '2-digit',
   });
@@ -377,7 +377,7 @@ function resolveAccountName(id: string) {
 const formattedDate = computed(() => {
   try {
     const d = new Date(budgetDayStore.selectedDate);
-    return format(d, "d 'de' MMMM 'de' yyyy", { locale: esLocale });
+    return format(d, t('common.dateLongFormat'), { locale: getDateFnsLocale() });
   } catch {
     return budgetDayStore.selectedDate;
   }

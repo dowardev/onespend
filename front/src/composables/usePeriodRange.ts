@@ -16,7 +16,7 @@ import {
   endOfMonth,
   endOfYear,
 } from 'date-fns';
-import { translate } from '@/i18n';
+import { getDateFnsLocale } from '@/i18n';
 
 export type PeriodType = 'day' | 'week' | 'month' | 'year';
 
@@ -52,13 +52,6 @@ export function usePeriodRange(
 ): UsePeriodRangeReturn {
   const referenceDate = ref(options.initialDate ?? new Date());
   const weekStartDay = options.weekStartDay ?? ref(1);
-
-  const _periodLabels: Record<PeriodType, string> = {
-    day: translate('common.periodDay'),
-    week: translate('common.periodWeek'),
-    month: translate('common.periodMonth'),
-    year: translate('common.periodYear'),
-  };
 
   function startOfWeekWithConfig(date: Date): Date {
     const currentDay = date.getDay();
@@ -213,11 +206,11 @@ export function usePeriodRange(
     const baseDate = getBaseDate();
     switch (period.value) {
       case 'day':
-        return format(baseDate, 'dd MMM yyyy');
+        return format(baseDate, 'dd MMM yyyy', { locale: getDateFnsLocale() });
       case 'week':
-        return `${format(startOfWeekWithConfig(baseDate), 'dd')} - ${format(endOfWeekWithConfig(baseDate), 'dd MMM yyyy')}`;
+        return `${format(startOfWeekWithConfig(baseDate), 'dd')} - ${format(endOfWeekWithConfig(baseDate), 'dd MMM yyyy', { locale: getDateFnsLocale() })}`;
       case 'month':
-        return format(baseDate, 'MMMM yyyy');
+        return format(baseDate, 'MMMM yyyy', { locale: getDateFnsLocale() });
       case 'year':
         return format(baseDate, 'yyyy');
       default:
@@ -231,9 +224,9 @@ export function usePeriodRange(
       case 'day':
         return format(baseDate, 'yyyy-MM-dd');
       case 'week':
-        return `${format(startOfWeek(baseDate), 'dd MMM')} - ${format(endOfWeek(baseDate), 'dd MMM')}`;
+        return `${format(startOfWeek(baseDate), 'dd MMM', { locale: getDateFnsLocale() })} - ${format(endOfWeek(baseDate), 'dd MMM', { locale: getDateFnsLocale() })}`;
       case 'month':
-        return format(baseDate, 'MMMM yyyy');
+        return format(baseDate, 'MMMM yyyy', { locale: getDateFnsLocale() });
       case 'year':
         return format(baseDate, 'yyyy');
       default:
@@ -247,9 +240,9 @@ export function usePeriodRange(
       case 'day':
         return format(prevStart, 'yyyy-MM-dd');
       case 'week':
-        return `${format(startOfWeek(prevStart), 'dd MMM')} - ${format(endOfWeek(prevStart), 'dd MMM')}`;
+        return `${format(startOfWeek(prevStart), 'dd MMM', { locale: getDateFnsLocale() })} - ${format(endOfWeek(prevStart), 'dd MMM', { locale: getDateFnsLocale() })}`;
       case 'month':
-        return format(prevStart, 'MMMM yyyy');
+        return format(prevStart, 'MMMM yyyy', { locale: getDateFnsLocale() });
       case 'year':
         return format(prevStart, 'yyyy');
       default:

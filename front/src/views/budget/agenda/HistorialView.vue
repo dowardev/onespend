@@ -194,7 +194,7 @@ import { useLocale } from '@/composables/useLocale';
 import { computed, ref, watch, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { getDateFnsLocale } from '@/i18n';
 
 // 2. Controllers / Composables
 import accountsController from '@/controllers/accountsController';
@@ -246,7 +246,7 @@ const formatDateFilter = computed(() => {
   try {
     const d = new Date(value + 'T00:00:00');
     if (isNaN(d.getTime())) return value;
-    return format(d, 'EEE, d MMM yyyy', { locale: es });
+    return format(d, 'EEE, d MMM yyyy', { locale: getDateFnsLocale() });
   } catch {
     return value;
   }
@@ -413,7 +413,7 @@ const dayBlocks = computed<DayBlock[]>(() => {
     try {
       const d = new Date(dateKey + 'T00:00:00');
       if (!isNaN(d.getTime())) {
-        label = format(d, 'EEE, d MMM yyyy', { locale: es });
+        label = format(d, 'EEE, d MMM yyyy', { locale: getDateFnsLocale() });
       }
     } catch (e) {
       console.warn('failed to parse date', dateKey, e);

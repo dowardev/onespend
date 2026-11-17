@@ -164,7 +164,7 @@ import {
 } from 'ionicons/icons';
 import { computed } from 'vue';
 import { format } from 'date-fns';
-import { es as esLocale } from 'date-fns/locale';
+import { getDateFnsLocale, getIntlLocale } from '@/i18n';
 import { useRouter } from 'vue-router';
 import AccountCards from '../components/AccountCards.vue';
 import { useMediaQuery } from '@/composables/useMediaQuery';
@@ -216,7 +216,7 @@ const formattedSelectedDate = computed(() => {
   try {
     const d = parseLocalDate({ d: budgetDayStore.selectedDate });
     if (isNaN(d.getTime())) return budgetDayStore.selectedDate;
-    return format(d, "d 'de' MMMM 'de' yyyy", { locale: esLocale });
+    return format(d, t('common.dateLongFormat'), { locale: getDateFnsLocale() });
   } catch {
     return budgetDayStore.selectedDate;
   }
@@ -407,7 +407,7 @@ function openDatePicker(params: { event: Event }) {
 
 function formatTimeLocal(ms?: number) {
   if (!ms) return '';
-  return new Date(Number(ms)).toLocaleTimeString('es-MX', {
+  return new Date(Number(ms)).toLocaleTimeString(getIntlLocale(), {
     hour: '2-digit',
     minute: '2-digit',
   });

@@ -7,7 +7,7 @@
 // global concept (no section here); the Income Statement section→category mapping
 // is configured separately in the Performance config panel.
 
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { entryCategoriesDb } from '@/db/controllers/entryCategoriesDb';
 import { translate } from '@/i18n';
 import type { EntryCategoryRow } from '@/db/types';
@@ -42,11 +42,11 @@ export function useQuickCategory(params: {
     return true;
   }
 
-  const quickCategoryInputs = [
+  const quickCategoryInputs = computed(() => [
     { name: 'categoryName', type: 'text' as const, placeholder: translate('components.quickCategory.namePlaceholder') },
-  ];
+  ]);
 
-  const quickCategoryButtons = [
+  const quickCategoryButtons = computed(() => [
     { text: translate('common.cancel'), role: 'cancel' as const },
     {
       text: translate('common.create'),
@@ -57,7 +57,7 @@ export function useQuickCategory(params: {
         return await createQuickCategory({ name: data.categoryName.trim() });
       },
     },
-  ];
+  ]);
 
   return {
     showQuickCategoryAlert,

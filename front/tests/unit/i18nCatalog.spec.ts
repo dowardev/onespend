@@ -17,9 +17,17 @@
 //    English build.
 
 import { describe, it, expect } from 'vitest';
+import { format } from 'date-fns';
 import es from '@/locales/es.json';
 import en from '@/locales/en.json';
-import { translate, getIntlLocale, getCurrentLocale, setCurrentLocale } from '@/i18n';
+import {
+  translate,
+  getIntlLocale,
+  getCurrentLocale,
+  setCurrentLocale,
+  getDateFnsLocale,
+} from '@/i18n';
+import { useDeleteConfirm } from '@/composables/useDeleteConfirm';
 
 type MessageTree = { [key: string]: string | MessageTree };
 
@@ -74,6 +82,55 @@ describe('translate() outside a component setup', () => {
       setCurrentLocale('es');
       expect(translate('common.cancel')).toBe('Cancelar');
       expect(getIntlLocale()).toBe('es-ES');
+    } finally {
+      setCurrentLocale(original);
+    }
+  });
+});
+
+describe('date formatting follows the active language', () => {
+  const sample = new Date('2026-01-05T12:00:00');
+
+  it('renders month names in the active language', () => {
+    const original = getCurrentLocale();
+    try {
+      setCurrentLocale('es');
+      expect(format(sample, 'MMMM', { locale: getDateFnsLocale() })).toBe('enero');
+
+      setCurrentLocale('en');
+      expect(format(sample, 'MMMM', { locale: getDateFnsLocale() })).toBe('January');
+    } finally {
+      setCurrentLocale(original);
+    }
+  });
+
+  it('uses the long date pattern of the active language', () => {
+    const original = getCurrentLocale();
+    try {
+      setCurrentLocale('es');
+      expect(format(sample, translate('common.dateLongFormat'), { locale: getDateFnsLocale() }))
+        .toBe('5 de enero de 2026');
+
+      setCurrentLocale('en');
+      expect(format(sample, translate('common.dateLongFormat'), { locale: getDateFnsLocale() }))
+        .toBe('January 5, 2026');
+    } finally {
+      setCurrentLocale(original);
+    }
+  });
+});
+
+describe('translated alert labels follow the active language', () => {
+  it('rebuilds the delete confirmation buttons when the locale changes', () => {
+    const original = getCurrentLocale();
+    try {
+      const confirm = useDeleteConfirm({ onConfirm: () => {} });
+
+      setCurrentLocale('es');
+      expect(confirm.deleteAlertButtons.value[0].text).toBe('Cancelar');
+
+      setCurrentLocale('en');
+      expect(confirm.deleteAlertButtons.value[0].text).toBe('Cancel');
     } finally {
       setCurrentLocale(original);
     }

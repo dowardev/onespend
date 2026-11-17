@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import accountsController from '@/controllers/accountsController';
 import { translate } from '@/i18n';
 
@@ -33,12 +33,12 @@ export function useQuickAccount(params: {
     quickAccountTargetIndex.value = null;
   }
 
-  const quickAccountInputs = [
+  const quickAccountInputs = computed(() => [
     { name: 'accountName', type: 'text' as const, placeholder: translate('components.quickAccount.namePlaceholder') },
     { name: 'initialBalance', type: 'number' as const, placeholder: translate('components.quickAccount.initialBalancePlaceholder'), value: 0 },
-  ];
+  ]);
 
-  const quickAccountButtons = [
+  const quickAccountButtons = computed(() => [
     { text: translate('common.cancel'), role: 'cancel' as const },
     {
       text: translate('common.create'),
@@ -50,7 +50,7 @@ export function useQuickAccount(params: {
         return true;
       },
     },
-  ];
+  ]);
 
   return {
     showQuickAccountAlert,

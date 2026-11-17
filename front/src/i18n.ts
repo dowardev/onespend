@@ -10,6 +10,8 @@
 // English" request.
 
 import { createI18n } from 'vue-i18n';
+import { es as esDateFnsLocale, enUS as enUSDateFnsLocale } from 'date-fns/locale';
+import type { Locale } from 'date-fns';
 import es from './locales/es.json';
 import en from './locales/en.json';
 
@@ -69,6 +71,15 @@ export function setCurrentLocale(locale: AppLocale): void {
  */
 export function getIntlLocale(): string {
   return getCurrentLocale() === 'en' ? 'en-GB' : 'es-ES';
+}
+
+/**
+ * Returns the `date-fns` locale matching the active app language, so month
+ * and weekday names ("enero"/"January") follow the app instead of being
+ * pinned to Spanish.
+ */
+export function getDateFnsLocale(): Locale {
+  return getCurrentLocale() === 'en' ? enUSDateFnsLocale : esDateFnsLocale;
 }
 
 /**
