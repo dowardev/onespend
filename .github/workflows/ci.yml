@@ -89,16 +89,17 @@ jobs:
       # El backend resuelve dowardev/sso-server desde un composer path repository
       # que apunta al checkout hermano (../../sso/packages/sso-server).
       # En GitLab se clonaba con CI_JOB_TOKEN; en GitHub GITHUB_TOKEN no cruza
-      # repositorios, asi que se usa un PAT (secrets.CROSS_REPO_TOKEN).
-      # `path: ../sso` deja el checkout en <workspace>/../sso, que es la ruta
-      # que espera el path repository (back/ -> ../../sso -> <parent>/sso).
+      # repositorios, pero dowardev/sso es publico, asi que el clone por HTTPS
+      # no necesita ningun PAT.
+      # El checkout queda en <workspace>/../sso, que es la ruta que espera el
+      # path repository (back/ -> ../../sso -> <parent>/sso).
+      # El repositorio sso es publico, asi que se clona por HTTPS sin token:
+      # GITHUB_TOKEN no permite checkout cross-repo, pero al ser publico no
+      # hace falta un PAT. Equivale al clone con CI_JOB_TOKEN de GitLab.
       - name: Checkout sibling sso repository
-        uses: actions/checkout@v4
-        with:
-          repository: dowardev/sso
-          ref: main
-          token: ${{ secrets.CROSS_REPO_TOKEN }}
-          path: ../sso
+        run: |
+          rm -rf ../sso
+          git clone --depth 1 --branch main https://github.com/dowardev/sso.git ../sso
 
       - uses: shivammathur/setup-php@v2
         with:
@@ -181,13 +182,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # El repositorio sso es publico, asi que se clona por HTTPS sin token:
+      # GITHUB_TOKEN no permite checkout cross-repo, pero al ser publico no
+      # hace falta un PAT. Equivale al clone con CI_JOB_TOKEN de GitLab.
       - name: Checkout sibling sso repository
-        uses: actions/checkout@v4
-        with:
-          repository: dowardev/sso
-          ref: main
-          token: ${{ secrets.CROSS_REPO_TOKEN }}
-          path: ../sso
+        run: |
+          rm -rf ../sso
+          git clone --depth 1 --branch main https://github.com/dowardev/sso.git ../sso
 
       - uses: shivammathur/setup-php@v2
         with:
@@ -293,13 +294,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # El repositorio sso es publico, asi que se clona por HTTPS sin token:
+      # GITHUB_TOKEN no permite checkout cross-repo, pero al ser publico no
+      # hace falta un PAT. Equivale al clone con CI_JOB_TOKEN de GitLab.
       - name: Checkout sibling sso repository
-        uses: actions/checkout@v4
-        with:
-          repository: dowardev/sso
-          ref: main
-          token: ${{ secrets.CROSS_REPO_TOKEN }}
-          path: ../sso
+        run: |
+          rm -rf ../sso
+          git clone --depth 1 --branch main https://github.com/dowardev/sso.git ../sso
 
       - uses: shivammathur/setup-php@v2
         with:
@@ -382,13 +383,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # El repositorio sso es publico, asi que se clona por HTTPS sin token:
+      # GITHUB_TOKEN no permite checkout cross-repo, pero al ser publico no
+      # hace falta un PAT. Equivale al clone con CI_JOB_TOKEN de GitLab.
       - name: Checkout sibling sso repository
-        uses: actions/checkout@v4
-        with:
-          repository: dowardev/sso
-          ref: main
-          token: ${{ secrets.CROSS_REPO_TOKEN }}
-          path: ../sso
+        run: |
+          rm -rf ../sso
+          git clone --depth 1 --branch main https://github.com/dowardev/sso.git ../sso
 
       - name: Set up SSH
         uses: webfactory/ssh-agent@v0.8
