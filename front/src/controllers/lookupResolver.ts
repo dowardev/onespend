@@ -49,9 +49,18 @@ export interface DisplayField {
   hasDifference: boolean
 }
 
-function getFieldLabel(field: string): string {
+export function getFieldLabel(field: string): string {
   const key = FIELD_LABEL_KEYS[field]
-  if (key) return translate(key)
+  if (key) {
+    const label = translate(key)
+    // vue-i18n returns the key path itself when the translation is missing,
+    // so a typo in FIELD_LABEL_KEYS would render "lookupResolver.field.nmae"
+    // in the conflict modal. An empty translation is just as broken: it
+    // would render a blank label. Fall through to the field name instead.
+    if (label && label !== key) return label
+  }
+  // Unknown field (or missing translation): fall back to a readable
+  // title-cased label. A degraded label beats leaking a raw key path.
   return field
     .split('_')
     .map((w, i) => i === 0 ? w.charAt(0).toUpperCase() + w.slice(1) : w)

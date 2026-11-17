@@ -70,7 +70,10 @@ export function setCurrentLocale(locale: AppLocale): void {
  * and currency formats.
  */
 export function getIntlLocale(): string {
-  return getCurrentLocale() === 'en' ? 'en-GB' : 'es-ES';
+  // Same regional variants the app already uses for the date picker
+  // (DATETIME_LOCALE_BY_APP_LOCALE in DatePickerPopover.vue): 'es-ES' and
+  // 'en-US'. English must stay month-first, as it was before the i18n pass.
+  return getCurrentLocale() === 'en' ? 'en-US' : 'es-ES';
 }
 
 /**

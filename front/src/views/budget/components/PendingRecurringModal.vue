@@ -107,6 +107,9 @@ const { t } = useLocale();
 // Weekday/month/ordinal names come from the locale files so they follow the
 // active language. They are computed (not plain consts) so a runtime locale
 // switch re-renders them.
+// The keys are built dynamically, so tests/unit/i18nCatalog.spec.ts pins all
+// 34 of them: CI runs that suite, so a locale file that loses one of these
+// keys fails the pipeline instead of shipping a raw key path to the UI.
 const weekDayShort = computed(() =>
   [0, 1, 2, 3, 4, 5, 6].map((day) => t(`recurring.edit.weekday.short.${day}`)),
 );
