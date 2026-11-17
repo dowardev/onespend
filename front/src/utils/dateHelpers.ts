@@ -35,7 +35,9 @@ export function toShortDate(params: { isoDate: string | null }): string {
     return date.toLocaleDateString(getIntlLocale(), {
       day: '2-digit',
       month: '2-digit',
-      year: '2-digit',
+      // Full year on purpose: a two-digit year is ambiguous ("05/01/26" could
+      // be January or May), and this label dates transactions.
+      year: 'numeric',
     });
   } catch {
     return String(isoDate).slice(0, 10);

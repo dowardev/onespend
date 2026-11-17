@@ -1363,6 +1363,9 @@
     "empty": "No data to show"
   },
   "components": {
+    "cashflowchart": {
+      "empty": "No data to show"
+    },
     "categoryPicker": {
       "title": "Select category",
       "empty": "No categories. Press '+' to create a new one."
