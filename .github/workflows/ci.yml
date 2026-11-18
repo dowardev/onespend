@@ -427,7 +427,7 @@ jobs:
           scp -o ConnectTimeout=60 -P "$SSH_PORT" /tmp/sso-server.tar.gz "$SSH_USER@$SSH_HOST:/tmp/sso-server.tar.gz"
           DEPLOY_PARENT=$(dirname $DEPLOY_PATH_BACKEND)
           DEPLOY_GRANDPARENT=$(dirname $DEPLOY_PARENT)
-          '[ "$(basename $DEPLOY_PATH_BACKEND)" = "back" ] || (echo "DEPLOY_PATH_BACKEND must end in /back" >&2; exit 1)'
+          [ "$(basename $DEPLOY_PATH_BACKEND)" = "back" ] || (echo "DEPLOY_PATH_BACKEND must end in /back" >&2; exit 1)
           ssh -o ConnectTimeout=60 -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "
             mkdir -p $DEPLOY_GRANDPARENT/sso/packages &&
             tar -xzf /tmp/backend.tar.gz -C $DEPLOY_PATH_BACKEND &&
