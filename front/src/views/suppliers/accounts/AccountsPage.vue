@@ -70,24 +70,6 @@ SPDX-License-Identifier: AGPL-3.0-only
                         <p>{{ t('suppliers.accounts.accountspage.initialBalance', { amount: c.initialBalance ?? 0 }) }}</p>
                         <p>{{ t('suppliers.accounts.accountspage.currentBalance', { amount: formatCurrency({ value: currentBalanceFor({ account: c }) }) }) }}</p>
                       </ion-label>
-
-                      <ion-buttons slot="end" class="account-actions">
-                        <ion-button
-                          fill="clear"
-                          :title="t('accounts.balanceAdjustment.action')"
-                          @click.stop="openBalanceModal({ account: c })"
-                        >
-                          <ion-icon :icon="scaleOutline"></ion-icon>
-                        </ion-button>
-
-                        <ion-button
-                          color="danger"
-                          fill="clear"
-                          @click.stop="confirmRemoveAccount({ id: c.id, name: c.name })"
-                        >
-                          <ion-icon :icon="trashOutline" color="danger"></ion-icon>
-                        </ion-button>
-                      </ion-buttons>
                     </ion-item>
                   </ion-item-group>
                 </template>
@@ -103,7 +85,13 @@ SPDX-License-Identifier: AGPL-3.0-only
         :backdrop-dismiss="false"
         @did-dismiss="cancelModal"
       >
-        <AddAccountComponent :account="modalAccount" @dismiss="cancelModal" @saved="onModalSaved" />
+        <AddAccountComponent
+          :account="modalAccount"
+          @dismiss="cancelModal"
+          @saved="onModalSaved"
+          @adjust-balance="onAdjustBalance"
+          @delete="onDeleteAccount"
+        />
       </ion-modal>
 
       <!-- LBDS-277: set the balance of the account through an adjustment entry -->
@@ -122,19 +110,14 @@ SPDX-License-Identifier: AGPL-3.0-only
         />
       </ion-modal>
 
-      <ion-alert
-        :is-open="deleteConfirmAccount.open"
-        :message="t('suppliers.accounts.accountspage.deleteConfirm', { name: deleteConfirmAccount.accountName })"
-        :buttons="getAlertButtonsAccount()"
-        @did-dismiss="onDeleteAlertDidDismissAccount"
-      ></ion-alert>
+
     </ion-content>
   </ion-page>
 </template>
 
 <script setup lang="ts">
 // Imports
-import { onMounted, ref, computed, unref, reactive,  } from 'vue';
+import { onMounted, ref, computed } from 'vue';
 import { useLocale } from '@/composables/useLocale';
 import {
   IonContent,
@@ -150,13 +133,12 @@ import {
   IonItemGroup,
   IonItemDivider,
   IonModal,
-  IonAlert,
   IonButtons,
   IonIcon,
   IonMenuButton,
   IonSearchbar,
 } from '@ionic/vue';
-import { addOutline, searchOutline, trashOutline, scaleOutline } from 'ionicons/icons';
+import { addOutline, searchOutline } from 'ionicons/icons';
 // End Imports
 
 // Controllers
@@ -192,11 +174,6 @@ const showModal = ref(false);
 const modalAccount = ref<any | null>(null);
 const searchTerm = ref('');
 const showSearch = ref(false);
-const deleteConfirmAccount = reactive({
-  open: false,
-  accountId: null as string | number | null,
-  accountName: '' as string,
-});
 
 const showBalanceModal = ref(false);
 const balanceAccountId = ref<string | number | null>(null);
@@ -222,17 +199,6 @@ function cancelModal() {
   modalAccount.value = null;
 }
 
-// LBDS-277: the balance of an account is cumulative (opening balance plus
-// every movement of the account), so the adjustment is computed against that
-// balance and creates a regular entry dated today.
-function openBalanceModal(params: { account: Account }) {
-  const { account } = params;
-  balanceAccountId.value = account.id ?? null;
-  balanceAccountName.value = account.name || '';
-  balanceAccountCurrentBalance.value = currentBalanceFor({ account });
-  showBalanceModal.value = true;
-}
-
 function cancelBalanceModal() {
   showBalanceModal.value = false;
   balanceAccountId.value = null;
@@ -256,44 +222,22 @@ async function onBalanceSubmit(params: {
   cancelBalanceModal();
 }
 
-function confirmRemoveAccount(params: { id: string | number | null | undefined; name?: string }) {
-  const { id, name } = params;
-  deleteConfirmAccount.open = true;
-  deleteConfirmAccount.accountId = id ?? null;
-  deleteConfirmAccount.accountName = name ?? '';
+async function onAdjustBalance(params: { accountId: string | number; accountName: string }) {
+  const { accountId, accountName } = params;
+  const account = accounts.value.find((a: Account) => String(a.id) === String(accountId));
+  if (!account) return;
+
+  balanceAccountId.value = accountId;
+  balanceAccountName.value = accountName;
+  balanceAccountCurrentBalance.value = currentBalanceFor({ account });
+  showBalanceModal.value = true;
 }
 
-function getAlertButtonsAccount() {
-  return [
-    {
-      text: t('suppliers.accounts.accountspage.text1'),
-      role: 'cancel',
-      handler: () => {},
-    },
-    {
-      text: t('suppliers.accounts.accountspage.text2'),
-      role: 'destructive',
-      handler: () => {
-        void removeAccountConfirmed();
-      },
-    },
-  ];
-}
 
-async function removeAccountConfirmed() {
-  const id = deleteConfirmAccount.accountId;
-  deleteConfirmAccount.open = false;
-  deleteConfirmAccount.accountId = null;
-  deleteConfirmAccount.accountName = '';
-
-  if (id == null) return;
-  await remove({ id: id as string | number });
-}
-
-function onDeleteAlertDidDismissAccount() {
-  deleteConfirmAccount.open = false;
-  deleteConfirmAccount.accountId = null;
-  deleteConfirmAccount.accountName = '';
+async function onDeleteAccount(accountId: string | number) {
+  await accountsController.deleteAccount({ id: accountId });
+  await accountsController.loadAll();
+  cancelModal();
 }
 
 async function onModalSaved(payload: AccountFormData) {
@@ -305,13 +249,6 @@ async function onModalSaved(payload: AccountFormData) {
   }
 
   cancelModal();
-  await accountsController.loadAll();
-}
-
-async function remove(params: { id: IDBValidKey | undefined }) {
-  const { id } = params;
-  if (id == null) return;
-  await accountsController.deleteAccount({ id });
   await accountsController.loadAll();
 }
 
@@ -429,32 +366,6 @@ ion-list.transparent {
 
 .search-row--open .search-row__inner {
   opacity: 1;
-}
-
-.account-actions {
-  opacity: 0;
-  transition: opacity 150ms ease;
-}
-
-ion-item:hover .account-actions,
-ion-item:focus-within .account-actions {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-@media (pointer: fine) {
-  ion-item:hover .account-actions,
-  ion-item:focus-within .account-actions {
-    opacity: 1;
-    pointer-events: auto;
-  }
-}
-
-@media (pointer: coarse) {
-  .account-actions {
-    opacity: 1;
-    pointer-events: auto;
-  }
 }
 
 @media (min-width: 1025px) and (max-width: 1440px) {
