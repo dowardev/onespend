@@ -1290,15 +1290,16 @@
             "cancel": "Cancelar"
           },
           "text": "Eliminar",
-          "deleteConfirm": "¿Eliminar esta cuenta?"
+          "deleteConfirm": "¿Eliminar esta cuenta?",
+          "editTitle": "Editar Cuenta",
+          "newTitle": "Crear Cuenta",
+          "deleteAction": "Eliminar cuenta",
+          "moreActions": "Más acciones"
         }
       },
       "accountspage": {
         "label": "Lista de cuentas",
         "placeholder": "Buscar cuentas",
-        "deleteConfirm": "¿Eliminar cuenta {name}?",
-        "text1": "Cancelar",
-        "text2": "Eliminar",
         "initialBalance": "Balance inicial: {amount}",
         "currentBalance": "Balance actual: {amount}"
       }
