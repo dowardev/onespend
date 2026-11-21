@@ -39,24 +39,17 @@ SPDX-License-Identifier: AGPL-3.0-only
       :trigger="popoverTriggerId"
       trigger-action="click"
     >
-      <ion-buttons>
-        <ion-button
-          fill="clear"
-          @click="onAdjustBalance"
-        >
+      <ion-content>
+        <ion-item lines="full" button @click="onAdjustBalance">
           <ion-icon slot="start" :icon="scaleOutline"></ion-icon>
-          {{ t('accounts.balanceAdjustment.action') }}
-        </ion-button>
+          <ion-label>{{ t('accounts.balanceAdjustment.action') }}</ion-label>
+        </ion-item>
 
-        <ion-button
-          fill="clear"
-          color="danger"
-          @click="confirmRemove"
-        >
-          <ion-icon slot="start" :icon="trashOutline"></ion-icon>
-          {{ t('suppliers.accounts.modals.addaccountcomponent.deleteAction') }}
-        </ion-button>
-      </ion-buttons>
+        <ion-item lines="full" button @click="confirmRemove">
+          <ion-icon slot="start" color="danger" :icon="trashOutline"></ion-icon>
+          <ion-label>{{ t('suppliers.accounts.modals.addaccountcomponent.deleteAction') }}</ion-label>
+        </ion-item>
+      </ion-content>
     </ion-popover>
 
     <ion-content class="ion-padding-top ion-padding-bottom">
@@ -102,6 +95,8 @@ import {
   IonTitle,
   IonContent,
   IonCard,
+  IonItem,
+  IonLabel,
   IonInput,
   IonAlert,
   IonPopover,
