@@ -17,12 +17,17 @@ SPDX-License-Identifier: AGPL-3.0-only
         <ion-title>{{ selectedId ? t('suppliers.accounts.modals.addaccountcomponent.editTitle') : t('suppliers.accounts.modals.addaccountcomponent.newTitle') }}</ion-title>
 
         <ion-buttons slot="end">
-          <ion-button v-if="selectedId" :id="popoverTriggerId" fill="clear" :title="t('suppliers.accounts.modals.addaccountcomponent.moreActions')">
-            <ion-icon :icon="ellipsisVerticalOutline"></ion-icon>
-          </ion-button>
-
           <ion-button :disabled="!isFormValid" @click="onSubmit">
             <ion-icon :icon="saveOutline"></ion-icon>
+          </ion-button>
+
+          <ion-button
+            v-if="selectedId"
+            :id="popoverTriggerId"
+            fill="clear"
+            :title="t('suppliers.accounts.modals.addaccountcomponent.moreActions')"
+          >
+            <ion-icon :icon="ellipsisVerticalOutline"></ion-icon>
           </ion-button>
         </ion-buttons>
       </ion-toolbar>
@@ -33,14 +38,10 @@ SPDX-License-Identifier: AGPL-3.0-only
       ref="actionsPopover"
       :trigger="popoverTriggerId"
       trigger-action="click"
-      side="bottom"
-      alignment="end"
-      class="actions-popover"
     >
-      <div class="popover-content">
+      <ion-buttons>
         <ion-button
           fill="clear"
-          class="popover-action"
           @click="onAdjustBalance"
         >
           <ion-icon slot="start" :icon="scaleOutline"></ion-icon>
@@ -50,13 +51,12 @@ SPDX-License-Identifier: AGPL-3.0-only
         <ion-button
           fill="clear"
           color="danger"
-          class="popover-action"
           @click="confirmRemove"
         >
           <ion-icon slot="start" :icon="trashOutline"></ion-icon>
           {{ t('suppliers.accounts.modals.addaccountcomponent.deleteAction') }}
         </ion-button>
-      </div>
+      </ion-buttons>
     </ion-popover>
 
     <ion-content class="ion-padding-top ion-padding-bottom">
@@ -236,28 +236,4 @@ async function onSubmit() {
 </script>
 
 <style scoped>
-.actions-popover {
-  --width: auto;
-  --max-width: 200px;
-  --background: var(--ion-background-color);
-  --color: var(--ion-text-color);
-}
-
-.popover-content {
-  padding: 8px;
-}
-
-.popover-action {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  justify-content: flex-start;
-  padding: 12px 16px;
-  border-radius: 8px;
-}
-
-.popover-action ion-icon {
-  font-size: 1.2rem;
-}
 </style>
