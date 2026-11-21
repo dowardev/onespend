@@ -28,6 +28,17 @@ class BudgetEntriesController {
     return [...this.getStore().entries];
   }
 
+  /**
+   * Every entry, regardless of the selected date.
+   *
+   * The store exposes only the entries of the day being viewed, but the
+   * balance of an account is cumulative (LBDS-277), so the account
+   * configuration needs the whole history.
+   */
+  getAllEntries(): Income[] {
+    return this.getStore().rawEntries.map((row) => mapEntryRow(row)) as unknown as Income[];
+  }
+
   async getEntriesBetween(params: { start: Date; end: Date }): Promise<Income[]> {
     const { start, end } = params
     const fromStr = start.toISOString().slice(0, 10)

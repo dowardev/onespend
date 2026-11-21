@@ -829,7 +829,19 @@
     "macosSubtitle": "macOS · Apple Silicon and Intel"
   },
   "accounts": {
-    "title": "Accounts"
+    "title": "Accounts",
+    "balanceAdjustment": {
+      "action": "Set balance",
+      "title": "Set balance",
+      "currentBalance": "Current balance",
+      "targetBalance": "New balance",
+      "income": "Income",
+      "expense": "Expense",
+      "hint": "Enter the balance you want the account to have.",
+      "noChanges": "The balance already matches the given value: no movement will be created.",
+      "preview": "A {type} of {amount} will be created.",
+      "entryName": "Balance adjustment"
+    }
   },
   "budget": {
     "account": {
@@ -1287,7 +1299,8 @@
         "deleteConfirm": "Delete account {name}?",
         "text1": "Cancel",
         "text2": "Delete",
-        "initialBalance": "Initial balance: {amount}"
+        "initialBalance": "Initial balance: {amount}",
+        "currentBalance": "Current balance: {amount}"
       }
     },
     "modals": {
