@@ -829,7 +829,19 @@
     "macosSubtitle": "macOS · Apple Silicon e Intel"
   },
   "accounts": {
-    "title": "Cuentas"
+    "title": "Cuentas",
+    "balanceAdjustment": {
+      "action": "Ajustar saldo",
+      "title": "Ajustar saldo",
+      "currentBalance": "Saldo actual",
+      "targetBalance": "Nuevo saldo",
+      "income": "Ingreso",
+      "expense": "Egreso",
+      "hint": "Ingresá el saldo que querés dejar en la cuenta.",
+      "noChanges": "El saldo ya coincide con el valor indicado: no se crea ningún movimiento.",
+      "preview": "Se creará un {type} de {amount}.",
+      "entryName": "Ajuste de saldo"
+    }
   },
   "budget": {
     "account": {
@@ -1287,7 +1299,8 @@
         "deleteConfirm": "¿Eliminar cuenta {name}?",
         "text1": "Cancelar",
         "text2": "Eliminar",
-        "initialBalance": "Balance inicial: {amount}"
+        "initialBalance": "Balance inicial: {amount}",
+        "currentBalance": "Balance actual: {amount}"
       }
     },
     "modals": {

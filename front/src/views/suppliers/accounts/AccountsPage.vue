@@ -68,9 +68,18 @@ SPDX-License-Identifier: AGPL-3.0-only
                       <ion-label>
                         <h3>{{ c.name }}</h3>
                         <p>{{ t('suppliers.accounts.accountspage.initialBalance', { amount: c.initialBalance ?? 0 }) }}</p>
+                        <p>{{ t('suppliers.accounts.accountspage.currentBalance', { amount: formatCurrency({ value: currentBalanceFor({ account: c }) }) }) }}</p>
                       </ion-label>
 
                       <ion-buttons slot="end" class="account-actions">
+                        <ion-button
+                          fill="clear"
+                          :title="t('accounts.balanceAdjustment.action')"
+                          @click.stop="openBalanceModal({ account: c })"
+                        >
+                          <ion-icon :icon="scaleOutline"></ion-icon>
+                        </ion-button>
+
                         <ion-button
                           color="danger"
                           fill="clear"
@@ -95,6 +104,22 @@ SPDX-License-Identifier: AGPL-3.0-only
         @did-dismiss="cancelModal"
       >
         <AddAccountComponent :account="modalAccount" @dismiss="cancelModal" @saved="onModalSaved" />
+      </ion-modal>
+
+      <!-- LBDS-277: set the balance of the account through an adjustment entry -->
+      <ion-modal
+        class="accounts__modal"
+        :is-open="showBalanceModal"
+        :backdrop-dismiss="false"
+        @did-dismiss="cancelBalanceModal"
+      >
+        <SetBalanceModal
+          :account-id="balanceAccountId"
+          :account-name="balanceAccountName"
+          :current-balance="balanceAccountCurrentBalance"
+          @dismiss="cancelBalanceModal"
+          @submit="(p) => onBalanceSubmit({ payload: p })"
+        />
       </ion-modal>
 
       <ion-alert
@@ -131,20 +156,26 @@ import {
   IonMenuButton,
   IonSearchbar,
 } from '@ionic/vue';
-import { addOutline, searchOutline, trashOutline } from 'ionicons/icons';
+import { addOutline, searchOutline, trashOutline, scaleOutline } from 'ionicons/icons';
 // End Imports
 
 // Controllers
 import systemController from '@/controllers/systemConfigController';
 import accountsController from '@/controllers/accountsController';
+import budgetEntriesController from '@/controllers/budgetEntriesController';
 // End Controllers
 
 // Components
 import AddAccountComponent from './modals/AddAccountComponent.vue';
+import SetBalanceModal from './modals/SetBalanceModal.vue';
 // End Components
 
 // Types
 import type { Account } from '@/stores/accountsStore';
+import type { BalanceAdjustmentEntryType } from '@/utils/accountBalance';
+import { computeAccountsBalances } from '@/utils/accountBalance';
+import { formatCurrency } from '@/utils/currency';
+import { formatLocalDate } from '@/utils/date';
 
 
 const { t } = useLocale();
@@ -167,6 +198,11 @@ const deleteConfirmAccount = reactive({
   accountName: '' as string,
 });
 
+const showBalanceModal = ref(false);
+const balanceAccountId = ref<string | number | null>(null);
+const balanceAccountName = ref('');
+const balanceAccountCurrentBalance = ref(0);
+
 // End Vars
 
 // Functions
@@ -184,6 +220,40 @@ function edit(params: { account: Account | null }) {
 function cancelModal() {
   showModal.value = false;
   modalAccount.value = null;
+}
+
+// LBDS-277: the balance of an account is cumulative (opening balance plus
+// every movement of the account), so the adjustment is computed against that
+// balance and creates a regular entry dated today.
+function openBalanceModal(params: { account: Account }) {
+  const { account } = params;
+  balanceAccountId.value = account.id ?? null;
+  balanceAccountName.value = account.name || '';
+  balanceAccountCurrentBalance.value = currentBalanceFor({ account });
+  showBalanceModal.value = true;
+}
+
+function cancelBalanceModal() {
+  showBalanceModal.value = false;
+  balanceAccountId.value = null;
+  balanceAccountName.value = '';
+  balanceAccountCurrentBalance.value = 0;
+}
+
+async function onBalanceSubmit(params: {
+  payload: { accountId: string | number; entryType: BalanceAdjustmentEntryType; amount: number };
+}) {
+  const { accountId, entryType, amount } = params.payload;
+  const name = t('accounts.balanceAdjustment.entryName');
+  const date = formatLocalDate({ d: new Date() });
+
+  if (entryType === 'ingreso') {
+    await budgetEntriesController.addIngreso({ name, amount, accountId, date, paymentType: 'cash' });
+  } else {
+    await budgetEntriesController.addEgreso({ name, amount, accountId, date, paymentType: 'cash' });
+  }
+
+  cancelBalanceModal();
 }
 
 function confirmRemoveAccount(params: { id: string | number | null | undefined; name?: string }) {
@@ -258,6 +328,21 @@ onMounted(() => {
 const designMode = computed(() => systemController.getDesignMode());
 
 const accounts = computed(() => accountsController.getAccounts());
+
+// LBDS-277: the balance of every account, derived from its entries.
+const accountsBalances = computed(() =>
+  computeAccountsBalances({
+    accounts: accounts.value || [],
+    entries: budgetEntriesController.getAllEntries(),
+  }),
+);
+
+function currentBalanceFor(params: { account: Account }): number {
+  const { account } = params;
+  if (account.id == null) return 0;
+  const balance = accountsBalances.value.get(String(account.id));
+  return balance ?? (Number(account.initialBalance) || 0);
+}
 
 const filteredAccounts = computed(() => {
   const term = (searchTerm.value || '').toString().toLowerCase().trim();
