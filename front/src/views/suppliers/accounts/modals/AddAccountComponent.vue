@@ -42,7 +42,7 @@ SPDX-License-Identifier: AGPL-3.0-only
       </ion-toolbar>
     </ion-header>
 
-    <ion-content class="ion-padding-top ion-padding-bottom">
+    <ion-content class="ion-padding-top ion-padding-bottom account-modal-content">
       <ion-card class="shadow1">
         <ion-item class="transparent" lines="none">
           <ion-input
@@ -91,7 +91,7 @@ SPDX-License-Identifier: AGPL-3.0-only
             </div>
           </ion-item>
 
-          <div slot="content">
+          <div slot="content" class="transactions-content">
             <template v-for="block in dayBlocks" :key="block.dateKey">
               <ion-item-divider sticky class="day-divider">
                 <ion-label>{{ block.label }}</ion-label>
@@ -413,6 +413,23 @@ async function onSubmit() {
    the cards carry a 10px inline margin, the accordion has none. */
 .transactions-group {
   margin-inline: 10px;
+  /* The group takes the space left by the form card, so the accordion (and
+     not the modal) is the one that scrolls. */
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+/* The expanded accordion fills the group, so its content region can scroll.
+   As a flex column, the content region takes the space left by the header. */
+.transactions-accordion ion-accordion.accordion-expanded {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* El listado scrollea dentro del acordeón, no en el modal. */
+.transactions-content {
+  overscroll-behavior: contain;
 }
 
 /* Título del acordeón con el contador a su derecha (antes de la flecha). */
@@ -436,5 +453,22 @@ async function onSubmit() {
 
 .agenda-item {
   --min-height: 44px;
+}
+</style>
+
+<style>
+/* ::part() no admite selectores de atributo, asi que estas reglas van fuera
+   del scope y se acotan con las clases propias del modal. */
+.account-modal-content::part(scroll) {
+  display: flex;
+  flex-direction: column;
+}
+
+.transactions-accordion ion-accordion::part(content) {
+  /* !important: the shadow sets `#content { overflow: hidden }`, and a ::part()
+     rule without it loses against that id selector. */
+  overflow-y: auto !important;
+  min-height: 0;
+  overscroll-behavior: contain;
 }
 </style>
