@@ -217,6 +217,7 @@ import { addOutline, informationCircleOutline } from 'ionicons/icons';
 import { formatCurrency } from '@/utils/currency';
 import accountsController from '@/controllers/accountsController';
 import budgetEntriesController from '@/controllers/budgetEntriesController';
+import { useAccountBalance } from '@/composables/useAccountBalance';
 // End Imports
 
 // Components
@@ -232,6 +233,7 @@ import { accountBalanceFromTransactions, accountTransactions } from '@/utils/acc
 
 
 const { t } = useLocale();
+const { applyTargetBalance } = useAccountBalance();
 interface Summary {
   label: string;
   color: string | undefined;
@@ -274,11 +276,25 @@ function cancelModal() {
 async function onModalSaved(params: { payload: Record<string, unknown> }) {
   const { payload } = params;
   if (!payload) return;
-  if (payload.id != null) {
+  const accountId = payload.id as string | number | undefined;
+  const isEditing = accountId != null;
+  if (isEditing) {
     await updateAccount({ account: payload as Account });
   } else {
     await createAccount({ account: payload as Account });
   }
+
+  // A target balance is applied as an adjustment entry, exactly like in the
+  // accounts page, so the balance changes the same way no matter which screen
+  // opened the modal.
+  if (isEditing && payload.targetBalance != null) {
+    await applyTargetBalance({
+      accountId: accountId as string | number,
+      targetBalance: Number(payload.targetBalance),
+      currentBalance: modalCurrentBalance.value,
+    });
+  }
+
   cancelModal();
   await loadAll();
 }

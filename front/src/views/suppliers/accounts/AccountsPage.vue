@@ -129,6 +129,7 @@ import { addOutline, searchOutline } from 'ionicons/icons';
 import systemController from '@/controllers/systemConfigController';
 import accountsController from '@/controllers/accountsController';
 import budgetEntriesController from '@/controllers/budgetEntriesController';
+import { useAccountBalance } from '@/composables/useAccountBalance';
 // End Controllers / Composables
 
 // 3. Components
@@ -138,13 +139,12 @@ import AddAccountComponent from './modals/AddAccountComponent.vue';
 // 4. Interface and types imports
 import type { Account } from '@/stores/accountsStore';
 import { computeAccountsBalances } from '@/utils/accountBalance';
-import { planBalanceAdjustment } from '@/utils/accountBalance';
 import { accountTransactions } from '@/utils/accountTransactions';
 import type { TransactionRow } from '@/types/account';
 import { formatCurrency } from '@/utils/currency';
-import { formatLocalDate } from '@/utils/date';
 
 const { t } = useLocale();
+const { applyTargetBalance } = useAccountBalance();
 
 interface AccountFormData {
   name: string;
@@ -279,33 +279,11 @@ async function onModalSaved(payload: AccountFormData) {
   // If editing and a target balance was provided, create an adjustment entry (S5)
   if (isEditing && payload.targetBalance != null) {
     const currentBalance = currentBalanceFor({ account: { id: accountId } as Account });
-    const plan = planBalanceAdjustment({
-      currentBalance,
+    await applyTargetBalance({
+      accountId,
       targetBalance: payload.targetBalance,
+      currentBalance,
     });
-
-    if (plan) {
-      const name = t('accounts.balanceAdjustment.entryName');
-      const date = formatLocalDate({ d: new Date() });
-
-      if (plan.entryType === 'ingreso') {
-        await budgetEntriesController.addIngreso({
-          name,
-          amount: plan.amount,
-          accountId,
-          date,
-          paymentType: 'cash',
-        });
-      } else {
-        await budgetEntriesController.addEgreso({
-          name,
-          amount: plan.amount,
-          accountId,
-          date,
-          paymentType: 'cash',
-        });
-      }
-    }
   }
 
   cancelModal();
