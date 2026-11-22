@@ -28,7 +28,7 @@ test.describe('Accounts page — account configuration modal', () => {
     // Fill account name and initial balance, then save
     await modal.locator('ion-input >> input').first().fill('Cuenta Test E2E')
     await modal.locator('ion-input >> input').nth(1).fill('1000') // Initial balance
-    await modal.locator('ion-buttons[slot="end"] ion-button').first().click() // Save button
+    await modal.locator('ion-buttons[slot="end"] ion-button[data-cy="save-account"]').click() // Save button
 
     // Wait for modal to close and list to update
     await expect(modal).toBeHidden({ timeout: 10000 })
@@ -60,7 +60,7 @@ test.describe('Accounts page — account configuration modal', () => {
     await targetBalanceInput.fill('1500')
 
     // Save the modal
-    await editModal.locator('ion-buttons[slot="end"] ion-button').first().click()
+    await editModal.locator('ion-buttons[slot="end"] ion-button[data-cy="save-account"]').click()
 
     // Wait for modal to close
     await expect(editModal).toBeHidden({ timeout: 10000 })
@@ -114,7 +114,7 @@ test.describe('Accounts page — account configuration modal', () => {
     await expect(editModal3).toBeVisible({ timeout: 10000 })
 
     // Click the delete button in the toolbar (trash icon, color="danger")
-    const deleteButton = editModal3.locator('ion-header ion-buttons[slot="end"] ion-button[color="danger"]')
+    const deleteButton = editModal3.locator('ion-header ion-buttons[slot="end"] ion-button[data-cy="delete-account"]')
     await expect(deleteButton).toBeVisible()
     await deleteButton.click()
 
