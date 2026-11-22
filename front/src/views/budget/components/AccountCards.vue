@@ -186,6 +186,8 @@ SPDX-License-Identifier: AGPL-3.0-only
   <ion-modal :is-open="showModal" :backdrop-dismiss="false" @did-dismiss="cancelModal">
     <AddAccountComponent
       :account="modalAccount"
+      :transactions="modalTransactions"
+      :current-balance="modalCurrentBalance"
       @dismiss="cancelModal"
       @saved="(p: any) => onModalSaved({ payload: p })"
       @delete="(id) => onDeleteAccount({ id })"
@@ -195,7 +197,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script setup lang="ts">
 // Imports
-import { ref,  } from 'vue';
+import { ref, computed } from 'vue';
 import { useLocale } from '@/composables/useLocale';
 import {
   IonAccordion,
@@ -225,6 +227,8 @@ import AddAccountComponent from '@/views/suppliers/accounts/modals/AddAccountCom
 // Vars
 import type { AccountWithBalance } from '@/utils/budgetTypes';
 import type { Account } from '@/stores/accountsStore';
+import type { TransactionRow } from '@/types/account';
+import { accountBalanceFromTransactions, accountTransactions } from '@/utils/accountTransactions';
 
 
 const { t } = useLocale();
@@ -297,6 +301,26 @@ async function onDeleteAccount(params: { id: string | number }) {
 // End Life cycle
 
 // Computed
+
+function transactionsForAccount(accountId: string | number): TransactionRow[] {
+  return accountTransactions({
+    entries: budgetEntriesController.getAllEntries(),
+    accountId,
+  });
+}
+
+const modalTransactions = computed(() => {
+  if (!modalAccount.value?.id) return [];
+  return transactionsForAccount(modalAccount.value.id);
+});
+
+const modalCurrentBalance = computed(() => {
+  if (!modalAccount.value) return 0;
+  return accountBalanceFromTransactions({
+    initialBalance: modalAccount.value.initialBalance,
+    transactions: modalTransactions.value,
+  });
+});
 
 // End Computed
 
