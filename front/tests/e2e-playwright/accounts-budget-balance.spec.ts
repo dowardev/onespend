@@ -47,6 +47,10 @@ test.describe('Budget account cards — apply a balance', () => {
     await expect(inputs).toHaveCount(2)
     await inputs.nth(1).fill('1500')
 
+    // The modal tells what the new balance does before saving
+    await expect(modal).toContainText('Saldo actual: $1,000.00')
+    await expect(modal).toContainText('Se creará un Ingreso de $500.00')
+
     await modal.locator('ion-buttons[slot="end"] ion-button[data-cy="save-account"]').click()
     await expect(modal).toBeHidden({ timeout: 10000 })
     await page.waitForTimeout(1000)

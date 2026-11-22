@@ -68,11 +68,22 @@ SPDX-License-Identifier: AGPL-3.0-only
           <ion-input
             v-model.number="form.targetBalance"
             :label="t('suppliers.accounts.modals.addaccountcomponent.text3')"
-            :placeholder="t('suppliers.accounts.modals.addaccountcomponent.text3Placeholder')"
+            :placeholder="String(currentBalanceLabel)"
             label-placement="floating"
             type="number"
             inputmode="decimal"
           ></ion-input>
+        </ion-item>
+      </ion-card>
+
+      <!-- What the new balance does: current balance and the resulting movement -->
+      <ion-card v-if="selectedId" class="shadow1">
+        <ion-item class="transparent" lines="none">
+          <ion-label class="ion-text-wrap">
+            <p>{{ t('accounts.balanceAdjustment.currentBalance') }}: {{ currentBalanceLabel }}</p>
+
+            <p>{{ balancePreview }}</p>
+          </ion-label>
         </ion-item>
       </ion-card>
 
@@ -180,6 +191,7 @@ import { required, minValue, maxLength, helpers } from '@vuelidate/validators';
 import useVuelidate from '@vuelidate/core';
 import { formatCurrency } from '@/utils/currency';
 import { formatLocalDate } from '@/utils/date';
+import { planBalanceAdjustment } from '@/utils/accountBalance';
 // End Imports
 
 // 2. Controllers / Composables
@@ -282,6 +294,38 @@ watch(
 
 // 8. Computed
 const movementsCount = computed(() => props.transactions?.length || 0);
+
+const currentBalanceLabel = computed(() => formatCurrency({ value: Number(props.currentBalance) || 0 }));
+
+/**
+ * What applying the typed balance does, so the user knows what to expect
+ * before saving (and sees why nothing happens when the balance already
+ * matches).
+ */
+const balancePreview = computed(() => {
+  if (form.targetBalance == null || form.targetBalance === ('' as unknown as number)) {
+    return t('accounts.balanceAdjustment.hint');
+  }
+
+  const plan = planBalanceAdjustment({
+    currentBalance: Number(props.currentBalance) || 0,
+    targetBalance: Number(form.targetBalance),
+  });
+
+  if (!plan) {
+    return t('accounts.balanceAdjustment.noChanges');
+  }
+
+  const label =
+    plan.entryType === 'ingreso'
+      ? t('accounts.balanceAdjustment.income')
+      : t('accounts.balanceAdjustment.expense');
+
+  return t('accounts.balanceAdjustment.preview', {
+    type: label,
+    amount: formatCurrency({ value: plan.amount }),
+  });
+});
 
 const dayBlocks = computed<DayBlock[]>(() => {
   const transactions = props.transactions || [];
