@@ -77,7 +77,11 @@ SPDX-License-Identifier: AGPL-3.0-only
       </ion-card>
 
       <!-- Transactions accordion: only when editing (S2, S6, S11, S13) -->
-      <ion-accordion-group v-if="selectedId && dayBlocks.length > 0" expand="inset" class="transactions-accordion">
+      <ion-accordion-group
+        v-if="selectedId && dayBlocks.length > 0"
+        expand="inset"
+        class="transactions-accordion transactions-group"
+      >
         <ion-accordion value="transactions" class="shadow1">
           <ion-item slot="header" class="transparent">
             <div class="transactions-header">
@@ -402,6 +406,13 @@ async function onSubmit() {
 <style scoped>
 .transactions-accordion {
   margin-top: 16px;
+}
+
+/* Ionic insets an inset-expanded accordion group by 16px on each side, which
+   leaves the accordion narrower than the cards around it. Align it with them:
+   the cards carry a 10px inline margin, the accordion has none. */
+.transactions-group {
+  margin-inline: 10px;
 }
 
 /* Título del acordeón con el contador a su derecha (antes de la flecha). */
