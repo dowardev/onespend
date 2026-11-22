@@ -80,9 +80,11 @@ SPDX-License-Identifier: AGPL-3.0-only
       <ion-accordion-group v-if="selectedId && dayBlocks.length > 0" expand="inset" class="transactions-accordion">
         <ion-accordion value="transactions" class="shadow1">
           <ion-item slot="header" class="transparent">
-            <ion-label>{{ t('suppliers.accounts.modals.addaccountcomponent.transactionsTitle') }}</ion-label>
+            <div class="transactions-header">
+              <ion-label>{{ t('suppliers.accounts.modals.addaccountcomponent.transactionsTitle') }}</ion-label>
 
-            <ion-badge slot="end" color="secondary">{{ movementsCount }}</ion-badge>
+              <ion-badge color="secondary">{{ movementsCount }}</ion-badge>
+            </div>
           </ion-item>
 
           <div slot="content">
@@ -400,6 +402,14 @@ async function onSubmit() {
 <style scoped>
 .transactions-accordion {
   margin-top: 16px;
+}
+
+/* Título del acordeón con el contador a su derecha (antes de la flecha). */
+.transactions-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
 }
 
 .day-divider {
