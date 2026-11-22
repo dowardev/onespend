@@ -17,17 +17,26 @@ SPDX-License-Identifier: AGPL-3.0-only
         <ion-title>{{ selectedId ? t('suppliers.accounts.modals.addaccountcomponent.editTitle') : t('suppliers.accounts.modals.addaccountcomponent.newTitle') }}</ion-title>
 
         <ion-buttons slot="end">
-          <ion-button :disabled="!isFormValid" @click="onSubmit">
-            <ion-icon :icon="saveOutline"></ion-icon>
-          </ion-button>
-
           <ion-button
             v-if="selectedId"
             fill="clear"
             color="danger"
+            data-cy="delete-account"
+            :title="t('suppliers.accounts.modals.addaccountcomponent.deleteAction')"
+            :aria-label="t('suppliers.accounts.modals.addaccountcomponent.deleteAction')"
             @click="confirmRemove"
           >
             <ion-icon :icon="trashOutline"></ion-icon>
+          </ion-button>
+
+          <ion-button
+            :disabled="!isFormValid"
+            data-cy="save-account"
+            :title="t('common.save')"
+            :aria-label="t('common.save')"
+            @click="onSubmit"
+          >
+            <ion-icon :icon="saveOutline"></ion-icon>
           </ion-button>
         </ion-buttons>
       </ion-toolbar>
@@ -71,10 +80,9 @@ SPDX-License-Identifier: AGPL-3.0-only
       <ion-accordion-group v-if="selectedId && dayBlocks.length > 0" expand="inset" class="transactions-accordion">
         <ion-accordion value="transactions" class="shadow1">
           <ion-item slot="header" class="transparent">
-            <ion-label>
-              {{ t('suppliers.accounts.modals.addaccountcomponent.transactionsTitle') }}
-              <ion-badge slot="end" color="secondary">{{ movementsCount }}</ion-badge>
-            </ion-label>
+            <ion-label>{{ t('suppliers.accounts.modals.addaccountcomponent.transactionsTitle') }}</ion-label>
+
+            <ion-badge slot="end" color="secondary">{{ movementsCount }}</ion-badge>
           </ion-item>
 
           <div slot="content">

@@ -76,6 +76,9 @@ ion-accordion.shadow1 {
     var(--card-shadow-light) 0px 1px 3px 0px,
     var(--card-shadow-heavy) 0px 0px 0px 1px;
   background: var(--background-contrast) !important;
+  /* Same radius as ion-card (8px): the accordion is a card surface and
+     Ionic does not give it a radius on its own. */
+  border-radius: 8px;
 }
 
 ion-accordion.shadow2 {
