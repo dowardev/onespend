@@ -1300,7 +1300,7 @@
           "deleteAction": "Eliminar cuenta",
           "moreActions": "Más acciones",
           "deleteMovementConfirm": "¿Eliminar este movimiento?",
-          "balanceHelp": "El balance es el saldo de la cuenta: el balance inicial más la suma de sus ingresos y egresos. «Nuevo balance» es el saldo que querés que le quede: al guardarlo, la diferencia se registra como un ingreso si hay que subirlo o como un egreso si hay que bajarlo, sin tocar el balance inicial."
+          "balanceHelp": "Escribí el saldo que querés que tenga la cuenta. Si es distinto del que tiene hoy, la diferencia se guarda como un ingreso (si hay que subirlo) o como un egreso (si hay que bajarlo). El movimiento queda en el historial de la cuenta."
         }
       },
       "accountspage": {

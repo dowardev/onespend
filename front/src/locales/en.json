@@ -1300,7 +1300,7 @@
           "deleteAction": "Delete account",
           "moreActions": "More actions",
           "deleteMovementConfirm": "Delete this movement?",
-          "balanceHelp": "The balance is the account's balance: the initial balance plus its income and expenses. «New balance» is the balance you want it to have: when you save it, the difference is registered as an income if it goes up or as an expense if it goes down, without touching the initial balance."
+          "balanceHelp": "Type the balance you want the account to have. If it is different from the one it has today, the difference is saved as an income (if it goes up) or as an expense (if it goes down). The movement stays in the account's history."
         }
       },
       "accountspage": {

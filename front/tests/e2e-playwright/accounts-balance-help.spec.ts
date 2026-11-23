@@ -36,9 +36,9 @@ test.describe('Account modal — balance help', () => {
     const popover = page.locator('ion-popover:not(.overlay-hidden)')
     await expect(popover).toBeVisible({ timeout: 5000 })
     await expect(popover).toContainText('Ajustar saldo')
-    await expect(popover).toContainText('El balance es el saldo de la cuenta')
-    await expect(popover).toContainText('«Nuevo balance» es el saldo que querés que le quede')
-    await expect(popover).toContainText('sin tocar el balance inicial')
+    await expect(popover).toContainText('Escribí el saldo que querés que tenga la cuenta')
+    await expect(popover).toContainText('la diferencia se guarda como un ingreso')
+    await expect(popover).toContainText('queda en el historial de la cuenta')
 
     await page.screenshot({ path: '/tmp/balance-help.png' })
   })
