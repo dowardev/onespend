@@ -73,6 +73,17 @@ SPDX-License-Identifier: AGPL-3.0-only
             type="number"
             inputmode="decimal"
           ></ion-input>
+
+          <ion-button
+            slot="end"
+            fill="clear"
+            data-cy="balance-help"
+            :title="t('accounts.balanceAdjustment.title')"
+            :aria-label="t('accounts.balanceAdjustment.title')"
+            @click="openBalanceHelp($event)"
+          >
+            <ion-icon :icon="informationCircleOutline"></ion-icon>
+          </ion-button>
         </ion-item>
       </ion-card>
 
@@ -185,6 +196,25 @@ SPDX-License-Identifier: AGPL-3.0-only
       @did-dismiss="showDeleteAlert = false"
     ></ion-alert>
 
+    <!-- What applying a new balance does -->
+    <ion-popover
+      :is-open="balanceHelpOpen"
+      :event="balanceHelpEvent"
+      @did-dismiss="closeBalanceHelp"
+    >
+      <ion-content>
+        <ion-list>
+          <ion-item lines="none">
+            <ion-label class="ion-text-wrap">
+              <p>{{ t('accounts.balanceAdjustment.title') }}</p>
+
+              <p>{{ t('suppliers.accounts.modals.addaccountcomponent.balanceHelp') }}</p>
+            </ion-label>
+          </ion-item>
+        </ion-list>
+      </ion-content>
+    </ion-popover>
+
     <!-- Movement options: touch devices open them from the ellipsis button. -->
     <ion-popover
       :is-open="movementOptionsOpen"
@@ -244,7 +274,7 @@ import {
 import { useLocale } from '@/composables/useLocale';
 import { reactive, computed, watch, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { closeOutline, createOutline, ellipsisVerticalOutline, saveOutline, trashOutline } from 'ionicons/icons';
+import { closeOutline, createOutline, ellipsisVerticalOutline, informationCircleOutline, saveOutline, trashOutline } from 'ionicons/icons';
 import { required, minValue, maxLength, helpers } from '@vuelidate/validators';
 import useVuelidate from '@vuelidate/core';
 import { formatCurrency } from '@/utils/currency';
@@ -318,6 +348,10 @@ const movementOptionsOpen = ref(false);
 const movementOptionsEvent = ref<Event | undefined>(undefined);
 const movementOptionsItem = ref<AgendaItemDisplay | null>(null);
 const pendingDeleteItem = ref<AgendaItemDisplay | null>(null);
+
+// Help popover of the balance input.
+const balanceHelpOpen = ref(false);
+const balanceHelpEvent = ref<Event | undefined>(undefined);
 
 const formRules = computed(() => ({
   name: { required: helpers.withMessage('El nombre es obligatorio', required), maxLength: maxLength(255) },
@@ -494,6 +528,15 @@ async function onSubmit() {
 }
 
 // 10.1 Movement actions (S8)
+function openBalanceHelp(event: Event) {
+  balanceHelpEvent.value = event;
+  balanceHelpOpen.value = true;
+}
+
+function closeBalanceHelp() {
+  balanceHelpOpen.value = false;
+  balanceHelpEvent.value = undefined;
+}
 function openMovementOptions(params: { event: Event; item: AgendaItemDisplay }) {
   movementOptionsEvent.value = params.event;
   movementOptionsItem.value = params.item;

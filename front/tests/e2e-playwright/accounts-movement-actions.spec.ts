@@ -84,7 +84,8 @@ test.describe('Account modal — movement actions (touch)', () => {
     await expect(modal.locator('ion-item.agenda-item ion-buttons.movement-actions')).toBeHidden()
 
     await moreButton.click()
-    const popover = page.locator('ion-popover')
+    // The modal also has the balance-help popover: pick the visible one.
+    const popover = page.locator('ion-popover:not(.overlay-hidden)')
     await expect(popover).toBeVisible({ timeout: 5000 })
     await expect(popover.locator('ion-item', { hasText: 'Editar' })).toBeVisible()
     await expect(popover.locator('ion-item', { hasText: 'Eliminar' })).toBeVisible()
@@ -97,7 +98,8 @@ test.describe('Account modal — movement actions (touch)', () => {
     await expect(modal.locator('ion-item.agenda-item')).toHaveCount(1)
 
     await modal.locator('ion-item.agenda-item ion-button.movement-more').click()
-    const popover = page.locator('ion-popover')
+    // The modal also has the balance-help popover: pick the visible one.
+    const popover = page.locator('ion-popover:not(.overlay-hidden)')
     await expect(popover).toBeVisible({ timeout: 5000 })
     await popover.locator('ion-item', { hasText: 'Eliminar' }).click()
 
@@ -116,7 +118,8 @@ test.describe('Account modal — movement actions (touch)', () => {
     const modal = await openAccountModal(page)
 
     await modal.locator('ion-item.agenda-item ion-button.movement-more').click()
-    const popover = page.locator('ion-popover')
+    // The modal also has the balance-help popover: pick the visible one.
+    const popover = page.locator('ion-popover:not(.overlay-hidden)')
     await expect(popover).toBeVisible({ timeout: 5000 })
     await popover.locator('ion-item', { hasText: 'Editar' }).click()
 

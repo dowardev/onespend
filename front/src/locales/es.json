@@ -1299,7 +1299,8 @@
           "newTitle": "Crear Cuenta",
           "deleteAction": "Eliminar cuenta",
           "moreActions": "Más acciones",
-          "deleteMovementConfirm": "¿Eliminar este movimiento?"
+          "deleteMovementConfirm": "¿Eliminar este movimiento?",
+          "balanceHelp": "Escribí el saldo que querés dejar en la cuenta. La diferencia con el saldo actual se registra como un movimiento (ingreso o egreso), así queda en el historial y se sincroniza. El balance inicial de la cuenta no se modifica."
         }
       },
       "accountspage": {
