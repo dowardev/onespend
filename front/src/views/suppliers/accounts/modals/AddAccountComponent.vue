@@ -127,10 +127,45 @@ SPDX-License-Identifier: AGPL-3.0-only
                     </p>
                   </ion-label>
 
-                  <ion-label slot="end" class="ion-text-end" :style="{ color: item.color }">
-                    {{ formatCurrency({ value: item.amount }) }}
-                    <p>{{ formatCurrency({ value: item.runningBalance }) }}</p>
-                  </ion-label>
+                  <div slot="end" class="movement-end">
+                    <ion-label class="ion-text-end" :style="{ color: item.color }">
+                      {{ formatCurrency({ value: item.amount }) }}
+                      <p>{{ formatCurrency({ value: item.runningBalance }) }}</p>
+                    </ion-label>
+
+                    <!-- Pointer devices: the actions appear when the pointer is over the row. -->
+                    <ion-buttons class="movement-actions">
+                      <ion-button
+                        fill="clear"
+                        :title="t('common.edit')"
+                        :aria-label="t('common.edit')"
+                        @click.stop="editMovement({ item })"
+                      >
+                        <ion-icon :icon="createOutline"></ion-icon>
+                      </ion-button>
+
+                      <ion-button
+                        fill="clear"
+                        color="danger"
+                        :title="t('common.delete')"
+                        :aria-label="t('common.delete')"
+                        @click.stop="askDeleteMovement({ item })"
+                      >
+                        <ion-icon :icon="trashOutline"></ion-icon>
+                      </ion-button>
+                    </ion-buttons>
+
+                    <!-- Touch devices: an ellipsis button that opens the options. -->
+                    <ion-button
+                      class="movement-more"
+                      fill="clear"
+                      :title="t('suppliers.accounts.modals.addaccountcomponent.moreActions')"
+                      :aria-label="t('suppliers.accounts.modals.addaccountcomponent.moreActions')"
+                      @click.stop="openMovementOptions({ event: $event, item })"
+                    >
+                      <ion-icon :icon="ellipsisVerticalOutline"></ion-icon>
+                    </ion-button>
+                  </div>
                 </ion-item>
               </ion-card>
             </template>
@@ -149,6 +184,37 @@ SPDX-License-Identifier: AGPL-3.0-only
       :buttons="alertButtons"
       @did-dismiss="showDeleteAlert = false"
     ></ion-alert>
+
+    <!-- Movement options: touch devices open them from the ellipsis button. -->
+    <ion-popover
+      :is-open="movementOptionsOpen"
+      :event="movementOptionsEvent"
+      @did-dismiss="closeMovementOptions"
+    >
+      <ion-content>
+        <ion-list>
+          <ion-item button @click="editMovement({ item: movementOptionsItem })">
+            <ion-icon slot="start" :icon="createOutline"></ion-icon>
+
+            <ion-label>{{ t('common.edit') }}</ion-label>
+          </ion-item>
+
+          <ion-item button @click="askDeleteMovement({ item: movementOptionsItem })">
+            <ion-icon slot="start" :icon="trashOutline" color="danger"></ion-icon>
+
+            <ion-label color="danger">{{ t('common.delete') }}</ion-label>
+          </ion-item>
+        </ion-list>
+      </ion-content>
+    </ion-popover>
+
+    <!-- Movement delete confirmation -->
+    <DeleteConfirmAlert
+      :is-open="deleteConfirm.showDeleteAlert.value"
+      :message="t('suppliers.accounts.modals.addaccountcomponent.deleteMovementConfirm')"
+      :buttons="deleteConfirm.deleteAlertButtons.value"
+      @did-dismiss="deleteConfirm.showDeleteAlert.value = false"
+    />
   </ion-page>
 </template>
 
@@ -172,10 +238,13 @@ import {
   IonAccordion,
   IonItemDivider,
   IonBadge,
+  IonPopover,
+  IonList,
 } from '@ionic/vue';
 import { useLocale } from '@/composables/useLocale';
 import { reactive, computed, watch, ref } from 'vue';
-import { closeOutline, saveOutline, trashOutline } from 'ionicons/icons';
+import { useRouter } from 'vue-router';
+import { closeOutline, createOutline, ellipsisVerticalOutline, saveOutline, trashOutline } from 'ionicons/icons';
 import { required, minValue, maxLength, helpers } from '@vuelidate/validators';
 import useVuelidate from '@vuelidate/core';
 import { formatCurrency } from '@/utils/currency';
@@ -183,10 +252,15 @@ import { formatLocalDate } from '@/utils/date';
 // End Imports
 
 // 2. Controllers / Composables
+import budgetEntriesController from '@/controllers/budgetEntriesController';
+import { useDeleteConfirm } from '@/composables/useDeleteConfirm';
+
 const { t } = useLocale();
+const router = useRouter();
 // End Controllers / Composables
 
 // 3. Components
+import DeleteConfirmAlert from '@/views/budget/components/DeleteConfirmAlert.vue';
 // End Components
 
 // 4. Interface and types imports
@@ -238,6 +312,13 @@ const form = reactive({ name: '', initialBalance: 0, targetBalance: null as numb
 const selectedId = computed(() => props.account?.id ?? null);
 const showDeleteAlert = ref(false);
 
+// Movement actions (S8): the movement the popover is acting on, and the one
+// waiting for the delete confirmation.
+const movementOptionsOpen = ref(false);
+const movementOptionsEvent = ref<Event | undefined>(undefined);
+const movementOptionsItem = ref<AgendaItemDisplay | null>(null);
+const pendingDeleteItem = ref<AgendaItemDisplay | null>(null);
+
 const formRules = computed(() => ({
   name: { required: helpers.withMessage('El nombre es obligatorio', required), maxLength: maxLength(255) },
   initialBalance: { minValue: minValue(0) },
@@ -245,6 +326,10 @@ const formRules = computed(() => ({
 }));
 
 const v$ = useVuelidate(formRules, form);
+
+const deleteConfirm = useDeleteConfirm({
+  onConfirm: confirmDeleteMovement,
+});
 
 const isFormValid = computed(() => {
   return !v$.value.$invalid;
@@ -407,6 +492,49 @@ async function onSubmit() {
 
   emit('saved', payload);
 }
+
+// 10.1 Movement actions (S8)
+function openMovementOptions(params: { event: Event; item: AgendaItemDisplay }) {
+  movementOptionsEvent.value = params.event;
+  movementOptionsItem.value = params.item;
+  movementOptionsOpen.value = true;
+}
+
+function closeMovementOptions() {
+  movementOptionsOpen.value = false;
+  movementOptionsEvent.value = undefined;
+}
+
+async function editMovement(params: { item: AgendaItemDisplay | null }) {
+  const item = params.item;
+  closeMovementOptions();
+  if (!item) return;
+
+  // The modal closes before navigating: the edit screen takes over the view.
+  emit('dismiss');
+  await router.push(`/budget/entry/edit?entryId=${item.id}`);
+}
+
+function askDeleteMovement(params: { item: AgendaItemDisplay | null }) {
+  const item = params.item;
+  closeMovementOptions();
+  if (!item) return;
+
+  pendingDeleteItem.value = item;
+  deleteConfirm.openDeleteAlert();
+}
+
+async function confirmDeleteMovement() {
+  // Close the confirmation right away so the tap gives feedback.
+  deleteConfirm.showDeleteAlert.value = false;
+
+  const item = pendingDeleteItem.value;
+  pendingDeleteItem.value = null;
+  if (!item) return;
+
+  // Standard delete path: local removal plus the sync queue enqueue.
+  await budgetEntriesController.removeEntry({ id: item.id });
+}
 // End Functions
 </script>
 
@@ -460,6 +588,40 @@ async function onSubmit() {
 
 .agenda-item {
   --min-height: 44px;
+}
+
+/* Movement actions (S8): pointer devices reveal them on hover, touch devices
+   use the ellipsis button instead. Same pattern as RecurringPage/SuppliersPage. */
+.movement-end {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.movement-actions {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms ease;
+}
+
+.movement-more {
+  display: none;
+}
+
+ion-item:hover .movement-actions,
+ion-item:focus-within .movement-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+@media (pointer: coarse) {
+  .movement-actions {
+    display: none;
+  }
+
+  .movement-more {
+    display: inline-flex;
+  }
 }
 </style>
 

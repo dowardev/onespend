@@ -1298,7 +1298,8 @@
           "editTitle": "Edit Account",
           "newTitle": "Create Account",
           "deleteAction": "Delete account",
-          "moreActions": "More actions"
+          "moreActions": "More actions",
+          "deleteMovementConfirm": "Delete this movement?"
         }
       },
       "accountspage": {
