@@ -1300,7 +1300,7 @@
           "deleteAction": "Delete account",
           "moreActions": "More actions",
           "deleteMovementConfirm": "Delete this movement?",
-          "balanceHelp": "Type the balance you want to leave in the account. The difference with the current balance is registered as a movement (income or expense), so it shows in the history and syncs. The account's initial balance is not modified."
+          "balanceHelp": "The balance is the account's balance: the initial balance plus its income and expenses. «New balance» is the balance you want it to have: when you save it, the difference is registered as an income if it goes up or as an expense if it goes down, without touching the initial balance."
         }
       },
       "accountspage": {

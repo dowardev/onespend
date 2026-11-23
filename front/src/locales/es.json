@@ -1300,7 +1300,7 @@
           "deleteAction": "Eliminar cuenta",
           "moreActions": "Más acciones",
           "deleteMovementConfirm": "¿Eliminar este movimiento?",
-          "balanceHelp": "Escribí el saldo que querés dejar en la cuenta. La diferencia con el saldo actual se registra como un movimiento (ingreso o egreso), así queda en el historial y se sincroniza. El balance inicial de la cuenta no se modifica."
+          "balanceHelp": "El balance es el saldo de la cuenta: el balance inicial más la suma de sus ingresos y egresos. «Nuevo balance» es el saldo que querés que le quede: al guardarlo, la diferencia se registra como un ingreso si hay que subirlo o como un egreso si hay que bajarlo, sin tocar el balance inicial."
         }
       },
       "accountspage": {

@@ -36,8 +36,9 @@ test.describe('Account modal — balance help', () => {
     const popover = page.locator('ion-popover:not(.overlay-hidden)')
     await expect(popover).toBeVisible({ timeout: 5000 })
     await expect(popover).toContainText('Ajustar saldo')
-    await expect(popover).toContainText('se registra como un movimiento')
-    await expect(popover).toContainText('El balance inicial de la cuenta no se modifica')
+    await expect(popover).toContainText('El balance es el saldo de la cuenta')
+    await expect(popover).toContainText('«Nuevo balance» es el saldo que querés que le quede')
+    await expect(popover).toContainText('sin tocar el balance inicial')
 
     await page.screenshot({ path: '/tmp/balance-help.png' })
   })
