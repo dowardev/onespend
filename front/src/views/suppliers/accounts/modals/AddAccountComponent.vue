@@ -365,8 +365,15 @@ const dayBlocks = computed<DayBlock[]>(() => {
     blocks.push({ dateKey, label, dayTotal, items: sortedDesc });
   }
 
-  // Sort blocks by dateKey descending (newest first)
-  blocks.sort((a, b) => b.dateKey.localeCompare(a.dateKey));
+  // Sort the blocks by the most recent movement they contain, so the newest
+  // movement comes first. An applied balance is the newest movement of the
+  // account, and this keeps it visible even when other movements are dated
+  // in the future (they would otherwise push it down the list).
+  blocks.sort((a, b) => {
+    const aCreatedAt = a.items[0]?.createdAt ?? 0;
+    const bCreatedAt = b.items[0]?.createdAt ?? 0;
+    return bCreatedAt - aCreatedAt;
+  });
 
   return blocks;
 });
