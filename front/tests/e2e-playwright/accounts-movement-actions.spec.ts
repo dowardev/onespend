@@ -139,6 +139,10 @@ test.describe('Account modal — movement actions (pointer)', () => {
     const opacityBefore = await actions.evaluate((el: HTMLElement) => getComputedStyle(el).opacity)
     expect(opacityBefore).toBe('0')
 
+    // And they reserve no space: the amounts do not move when they show up
+    const amounts = modal.locator('ion-item.agenda-item ion-label.ion-text-end')
+    const amountBefore = await amounts.boundingBox()
+
     // The ellipsis button is for touch devices only
     await expect(modal.locator('ion-item.agenda-item ion-button.movement-more')).toBeHidden()
 
@@ -147,6 +151,10 @@ test.describe('Account modal — movement actions (pointer)', () => {
 
     const opacityAfter = await actions.evaluate((el: HTMLElement) => getComputedStyle(el).opacity)
     expect(opacityAfter).toBe('1')
+
+    const amountAfter = await amounts.boundingBox()
+    expect(amountAfter?.x).toBe(amountBefore?.x)
+    expect(amountAfter?.width).toBe(amountBefore?.width)
     await expect(modal.locator('ion-item.agenda-item ion-button', { hasText: '' }).first()).toBeVisible()
   })
 })

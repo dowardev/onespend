@@ -591,17 +591,31 @@ async function confirmDeleteMovement() {
 }
 
 /* Movement actions (S8): pointer devices reveal them on hover, touch devices
-   use the ellipsis button instead. Same pattern as RecurringPage/SuppliersPage. */
+   use the ellipsis button instead. Same pattern as RecurringPage/SuppliersPage.
+   On pointer devices the actions float over the row (absolute) so the idle
+   list keeps no empty space reserved for them. */
 .movement-end {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 4px;
 }
 
 .movement-actions {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding-left: 12px;
   opacity: 0;
   pointer-events: none;
   transition: opacity 150ms ease;
+  background: var(--background-contrast);
+  border-radius: 4px;
 }
 
 .movement-more {
