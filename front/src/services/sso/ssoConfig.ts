@@ -91,6 +91,41 @@ export function defaultSsoFrontendUrl(): string {
 }
 
 /**
+ * Placeholder host used when there is no SSO server configured.
+ *
+ * The SSO client refuses to be constructed without a valid URL and it
+ * throws in its constructor. That throw happens while `main.ts` is being
+ * imported, so the app never mounts and the user gets a blank screen
+ * instead of a login page. Pointing the client at a reserved,
+ * non-resolvable host keeps the app booting: the login attempt then fails
+ * with a network error the UI already knows how to surface.
+ */
+export const SSO_NOT_CONFIGURED_URL = 'http://sso.invalid/';
+
+/**
+ * A URL the SSO client accepts: the configured one, or the placeholder
+ * when there is none (or the configured one is malformed).
+ *
+ * The client validates both of its URLs (API base and login page) and
+ * throws while it is constructed, which would leave the app unmounted.
+ */
+export function ssoUrlOrPlaceholder(params: { url: string }): string {
+  const { url } = params;
+  const trimmed = url.trim();
+  if (trimmed !== '') {
+    try {
+      const parsed = new URL(trimmed);
+      if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+        return trimmed;
+      }
+    } catch {
+      // Not a URL: fall through to the placeholder.
+    }
+  }
+  return SSO_NOT_CONFIGURED_URL;
+}
+
+/**
  * Shared read path for `getSsoBaseUrl` / `getSsoFrontendUrl`. Returns
  * the trimmed persisted value when it parses as an http(s) URL,
  * otherwise calls `fallback()` and logs a warning so a corrupted row
