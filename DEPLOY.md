@@ -195,6 +195,19 @@ Upload `front/dist/` to the hosting public directory:
 
 - `/home/[user]/public_html/`
 
+#### The CI build and the SSO settings
+
+The pipeline builds the frontend with `pnpm run build`, and Vite bakes the
+`VITE_*` values into the bundle at build time. The CI job reads them from
+the **repository variables** (`VITE_API_URL`, `VITE_SSO_URL`,
+`VITE_SSO_FRONTEND_URL`, `VITE_SSO_CLIENT_ID`) — they are public
+identifiers, not secrets, so they are variables and not secrets.
+
+If they are not set, the bundle ships with no login server: the app still
+starts and shows the login screen, but nobody can sign in. The
+self-hosted path (building with your own `front/.env.production` and
+uploading `front/dist/` by hand) keeps working exactly as before.
+
 ### Mobile (Android)
 
 Android APK/AAB builds are documented in [front/ANDROID.md](front/ANDROID.md).

@@ -360,6 +360,15 @@ jobs:
 
       - name: Build frontend
         working-directory: front
+        env:
+          # The SSO settings are public identifiers (URLs and a client id), so
+          # they live in the repository variables, not in secrets. Without
+          # them the bundle ships with no login server and the app can only
+          # show the login screen. Vite exposes the VITE_-prefixed ones.
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
+          VITE_SSO_URL: ${{ vars.VITE_SSO_URL }}
+          VITE_SSO_FRONTEND_URL: ${{ vars.VITE_SSO_FRONTEND_URL }}
+          VITE_SSO_CLIENT_ID: ${{ vars.VITE_SSO_CLIENT_ID }}
         run: |
           pnpm run build
           tar czf ../dist.tar.gz -C dist .
