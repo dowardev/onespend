@@ -1,0 +1,4 @@
+v0.82.0
+• La ventana de la cuenta ahora muestra el nombre, el saldo actual y todos sus movimientos, y permite dejar un saldo nuevo ahí mismo: la diferencia se guarda como un ingreso o un egreso normal, así que aparece en el historial y se sincroniza como cualquier otro movimiento.
+• Los movimientos de esa lista se pueden editar o borrar.
+• La app ya no arranca en blanco cuando se compila sin un servidor de login configurado.

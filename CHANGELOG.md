@@ -8,6 +8,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 ## [Unreleased]
 
+## [v0.82.0] - 2026-11-24
+
 ### Added
 - The account configuration modal now shows the account name, its current balance and the full list of transactions inside an accordion, and it can adjust the balance in place: the difference between the balance you type and the current one is saved as a regular income or expense, so it shows up in the account history and syncs like any other movement. The initial balance can only be set when the account is created, and the transactions in the list can be edited or deleted (GitHub #12).
 
