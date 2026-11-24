@@ -126,6 +126,47 @@ export function ssoUrlOrPlaceholder(params: { url: string }): string {
 }
 
 /**
+ * The configuration to build the SSO client with.
+ *
+ * A client id the server does not know is worse than no id at all: the
+ * login would be rejected and the attempt would be left in the server's
+ * logs. So a build without a client id is treated as a build without SSO:
+ * every URL falls back to the placeholder and the app boots without ever
+ * reaching a server.
+ */
+export function resolveSsoClientConfig(params: {
+  clientId: string;
+  ssoUrl: string;
+  ssoFrontendUrl: string;
+  apiBaseUrl: string;
+}): {
+  ssoUrl: string;
+  ssoFrontendUrl: string;
+  apiBaseUrl: string;
+  clientId: string;
+  configured: boolean;
+} {
+  const { clientId, ssoUrl, ssoFrontendUrl, apiBaseUrl } = params;
+  const trimmedClientId = clientId.trim();
+  if (trimmedClientId === '') {
+    return {
+      ssoUrl: SSO_NOT_CONFIGURED_URL,
+      ssoFrontendUrl: SSO_NOT_CONFIGURED_URL,
+      apiBaseUrl: SSO_NOT_CONFIGURED_URL,
+      clientId: 'not-configured',
+      configured: false,
+    };
+  }
+  return {
+    ssoUrl: ssoUrlOrPlaceholder({ url: ssoUrl }),
+    ssoFrontendUrl: ssoUrlOrPlaceholder({ url: ssoFrontendUrl }),
+    apiBaseUrl: ssoUrlOrPlaceholder({ url: apiBaseUrl }),
+    clientId: trimmedClientId,
+    configured: true,
+  };
+}
+
+/**
  * Shared read path for `getSsoBaseUrl` / `getSsoFrontendUrl`. Returns
  * the trimmed persisted value when it parses as an http(s) URL,
  * otherwise calls `fallback()` and logs a warning so a corrupted row

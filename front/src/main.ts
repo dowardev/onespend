@@ -60,8 +60,7 @@ import {
   getSsoFrontendUrl,
   defaultSsoBaseUrl,
   defaultSsoFrontendUrl,
-  ssoUrlOrPlaceholder,
-  SSO_NOT_CONFIGURED_URL,
+  resolveSsoClientConfig,
 } from './services/sso/ssoConfig';
 // LBDS-295: resolve SSO URLs from configDb at boot so self-hosters
 // can point login at their own SSO without rebuilding the APK. The
@@ -99,26 +98,22 @@ try {
 // the user would see a blank screen. Build the client with a placeholder
 // host when there is no SSO server configured, so the app always boots and
 // the login attempt fails with a message instead.
-const ssoApiUrl = ssoUrlOrPlaceholder({ url: ssoBaseUrl })
-const ssoLoginUrl = ssoUrlOrPlaceholder({ url: ssoFrontendUrl })
-const apiBaseUrl = ssoUrlOrPlaceholder({ url: import.meta.env.VITE_API_URL || '' })
-if (
-  ssoApiUrl === SSO_NOT_CONFIGURED_URL ||
-  ssoLoginUrl === SSO_NOT_CONFIGURED_URL ||
-  apiBaseUrl === SSO_NOT_CONFIGURED_URL
-) {
+const ssoConfig = resolveSsoClientConfig({
+  clientId: import.meta.env.VITE_SSO_CLIENT_ID || '',
+  ssoUrl: ssoBaseUrl,
+  ssoFrontendUrl: ssoFrontendUrl,
+  apiBaseUrl: import.meta.env.VITE_API_URL || '',
+})
+if (!ssoConfig.configured) {
   console.warn(
     '[main] No SSO server configured; login will not reach a server until one is set.',
   )
 }
 const ssoClient = new SSOClient({
-  ssoUrl: ssoApiUrl,
-  ssoFrontendUrl: ssoLoginUrl,
-  // The client refuses to be built without a client id either. It is only
-  // meaningful against a real SSO server, so a placeholder is enough to keep
-  // the app booting when none is configured.
-  clientId: import.meta.env.VITE_SSO_CLIENT_ID || 'not-configured',
-  apiBaseUrl,
+  ssoUrl: ssoConfig.ssoUrl,
+  ssoFrontendUrl: ssoConfig.ssoFrontendUrl,
+  clientId: ssoConfig.clientId,
+  apiBaseUrl: ssoConfig.apiBaseUrl,
 })
 export { ssoClient }
 

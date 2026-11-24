@@ -3,7 +3,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import { describe, expect, it } from 'vitest'
-import { SSO_NOT_CONFIGURED_URL, ssoUrlOrPlaceholder } from '@/services/sso/ssoConfig'
+import {
+  SSO_NOT_CONFIGURED_URL,
+  resolveSsoClientConfig,
+  ssoUrlOrPlaceholder,
+} from '@/services/sso/ssoConfig'
 
 describe('ssoUrlOrPlaceholder', () => {
   it('keeps a configured https URL', () => {
@@ -36,6 +40,60 @@ describe('ssoUrlOrPlaceholder', () => {
       const resolved = ssoUrlOrPlaceholder({ url })
       expect(() => new URL(resolved)).not.toThrow()
       expect(['http:', 'https:']).toContain(new URL(resolved).protocol)
+    }
+  })
+})
+
+describe('resolveSsoClientConfig', () => {
+  it('keeps a fully configured setup untouched', () => {
+    const config = resolveSsoClientConfig({
+      clientId: 'onespend-web',
+      ssoUrl: 'https://sso.example.com/api/',
+      ssoFrontendUrl: 'https://sso.example.com',
+      apiBaseUrl: 'https://api.example.com/api/',
+    })
+
+    expect(config.configured).toBe(true)
+    expect(config.clientId).toBe('onespend-web')
+    expect(config.ssoUrl).toBe('https://sso.example.com/api/')
+    expect(config.ssoFrontendUrl).toBe('https://sso.example.com')
+    expect(config.apiBaseUrl).toBe('https://api.example.com/api/')
+  })
+
+  it('treats a build without a client id as a build without SSO', () => {
+    // A client id the server does not know would be rejected by the SSO and
+    // the attempt would be left in its logs, so no real server is contacted.
+    const config = resolveSsoClientConfig({
+      clientId: '',
+      ssoUrl: 'https://sso.example.com/api/',
+      ssoFrontendUrl: 'https://sso.example.com',
+      apiBaseUrl: 'https://api.example.com/api/',
+    })
+
+    expect(config.configured).toBe(false)
+    expect(config.ssoUrl).toBe(SSO_NOT_CONFIGURED_URL)
+    expect(config.ssoFrontendUrl).toBe(SSO_NOT_CONFIGURED_URL)
+    expect(config.apiBaseUrl).toBe(SSO_NOT_CONFIGURED_URL)
+    expect(config.clientId).toBe('not-configured')
+  })
+
+  it('never returns a URL the SSO client would reject', () => {
+    const configs = [
+      resolveSsoClientConfig({ clientId: '', ssoUrl: '', ssoFrontendUrl: '', apiBaseUrl: '' }),
+      resolveSsoClientConfig({ clientId: 'x', ssoUrl: 'nope', ssoFrontendUrl: '', apiBaseUrl: '' }),
+      resolveSsoClientConfig({
+        clientId: 'x',
+        ssoUrl: 'https://sso.example.com/api/',
+        ssoFrontendUrl: 'https://sso.example.com',
+        apiBaseUrl: 'https://api.example.com/api/',
+      }),
+    ]
+
+    for (const config of configs) {
+      expect(config.clientId).not.toBe('')
+      for (const url of [config.ssoUrl, config.ssoFrontendUrl, config.apiBaseUrl]) {
+        expect(() => new URL(url)).not.toThrow()
+      }
     }
   })
 })
