@@ -31,6 +31,7 @@
     "periodYear": "Year",
     "description": "Description",
     "empty": "(empty)",
+    "noData": "No data available",
     "onlyNumbers": "Numbers only",
     "onlyNumbersAllowed": "Only numbers are allowed",
     "mustBeGreaterThanZero": "The value must be greater than 0",
@@ -1286,19 +1287,25 @@
         "addaccountcomponent": {
           "text1": "Name",
           "text2": "Initial balance",
+          "text3": "Apply new balance",
+          "text3Placeholder": "Current balance",
+          "transactionsTitle": "Transactions",
           "alert": {
             "cancel": "Cancel"
           },
           "text": "Delete",
-          "deleteConfirm": "Delete this account?"
+          "deleteConfirm": "Delete this account?",
+          "editTitle": "Edit Account",
+          "newTitle": "Create Account",
+          "deleteAction": "Delete account",
+          "moreActions": "More actions",
+          "deleteMovementConfirm": "Delete this movement?",
+          "balanceHelp": "Type the balance you want the account to have. If it is different from the one it has today, the difference is saved as an income (if it goes up) or as an expense (if it goes down). The movement stays in the account's history."
         }
       },
       "accountspage": {
         "label": "Account list",
         "placeholder": "Search accounts",
-        "deleteConfirm": "Delete account {name}?",
-        "text1": "Cancel",
-        "text2": "Delete",
         "initialBalance": "Initial balance: {amount}",
         "currentBalance": "Current balance: {amount}"
       }

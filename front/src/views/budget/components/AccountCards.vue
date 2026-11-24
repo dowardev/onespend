@@ -186,6 +186,8 @@ SPDX-License-Identifier: AGPL-3.0-only
   <ion-modal :is-open="showModal" :backdrop-dismiss="false" @did-dismiss="cancelModal">
     <AddAccountComponent
       :account="modalAccount"
+      :transactions="modalTransactions"
+      :current-balance="modalCurrentBalance"
       @dismiss="cancelModal"
       @saved="(p: any) => onModalSaved({ payload: p })"
       @delete="(id) => onDeleteAccount({ id })"
@@ -195,7 +197,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script setup lang="ts">
 // Imports
-import { ref,  } from 'vue';
+import { ref, computed } from 'vue';
 import { useLocale } from '@/composables/useLocale';
 import {
   IonAccordion,
@@ -215,6 +217,7 @@ import { addOutline, informationCircleOutline } from 'ionicons/icons';
 import { formatCurrency } from '@/utils/currency';
 import accountsController from '@/controllers/accountsController';
 import budgetEntriesController from '@/controllers/budgetEntriesController';
+import { useAccountBalance } from '@/composables/useAccountBalance';
 // End Imports
 
 // Components
@@ -225,9 +228,12 @@ import AddAccountComponent from '@/views/suppliers/accounts/modals/AddAccountCom
 // Vars
 import type { AccountWithBalance } from '@/utils/budgetTypes';
 import type { Account } from '@/stores/accountsStore';
+import type { TransactionRow } from '@/types/account';
+import { accountBalanceFromTransactions, accountTransactions } from '@/utils/accountTransactions';
 
 
 const { t } = useLocale();
+const { applyTargetBalance } = useAccountBalance();
 interface Summary {
   label: string;
   color: string | undefined;
@@ -270,11 +276,25 @@ function cancelModal() {
 async function onModalSaved(params: { payload: Record<string, unknown> }) {
   const { payload } = params;
   if (!payload) return;
-  if (payload.id != null) {
+  const accountId = payload.id as string | number | undefined;
+  const isEditing = accountId != null;
+  if (isEditing) {
     await updateAccount({ account: payload as Account });
   } else {
     await createAccount({ account: payload as Account });
   }
+
+  // A target balance is applied as an adjustment entry, exactly like in the
+  // accounts page, so the balance changes the same way no matter which screen
+  // opened the modal.
+  if (isEditing && payload.targetBalance != null) {
+    await applyTargetBalance({
+      accountId: accountId as string | number,
+      targetBalance: Number(payload.targetBalance),
+      currentBalance: modalCurrentBalance.value,
+    });
+  }
+
   cancelModal();
   await loadAll();
 }
@@ -297,6 +317,26 @@ async function onDeleteAccount(params: { id: string | number }) {
 // End Life cycle
 
 // Computed
+
+function transactionsForAccount(accountId: string | number): TransactionRow[] {
+  return accountTransactions({
+    entries: budgetEntriesController.getAllEntries(),
+    accountId,
+  });
+}
+
+const modalTransactions = computed(() => {
+  if (!modalAccount.value?.id) return [];
+  return transactionsForAccount(modalAccount.value.id);
+});
+
+const modalCurrentBalance = computed(() => {
+  if (!modalAccount.value) return 0;
+  return accountBalanceFromTransactions({
+    initialBalance: modalAccount.value.initialBalance,
+    transactions: modalTransactions.value,
+  });
+});
 
 // End Computed
 

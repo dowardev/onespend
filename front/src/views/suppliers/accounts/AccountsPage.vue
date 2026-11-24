@@ -70,24 +70,6 @@ SPDX-License-Identifier: AGPL-3.0-only
                         <p>{{ t('suppliers.accounts.accountspage.initialBalance', { amount: c.initialBalance ?? 0 }) }}</p>
                         <p>{{ t('suppliers.accounts.accountspage.currentBalance', { amount: formatCurrency({ value: currentBalanceFor({ account: c }) }) }) }}</p>
                       </ion-label>
-
-                      <ion-buttons slot="end" class="account-actions">
-                        <ion-button
-                          fill="clear"
-                          :title="t('accounts.balanceAdjustment.action')"
-                          @click.stop="openBalanceModal({ account: c })"
-                        >
-                          <ion-icon :icon="scaleOutline"></ion-icon>
-                        </ion-button>
-
-                        <ion-button
-                          color="danger"
-                          fill="clear"
-                          @click.stop="confirmRemoveAccount({ id: c.id, name: c.name })"
-                        >
-                          <ion-icon :icon="trashOutline" color="danger"></ion-icon>
-                        </ion-button>
-                      </ion-buttons>
                     </ion-item>
                   </ion-item-group>
                 </template>
@@ -103,38 +85,23 @@ SPDX-License-Identifier: AGPL-3.0-only
         :backdrop-dismiss="false"
         @did-dismiss="cancelModal"
       >
-        <AddAccountComponent :account="modalAccount" @dismiss="cancelModal" @saved="onModalSaved" />
-      </ion-modal>
-
-      <!-- LBDS-277: set the balance of the account through an adjustment entry -->
-      <ion-modal
-        class="accounts__modal"
-        :is-open="showBalanceModal"
-        :backdrop-dismiss="false"
-        @did-dismiss="cancelBalanceModal"
-      >
-        <SetBalanceModal
-          :account-id="balanceAccountId"
-          :account-name="balanceAccountName"
-          :current-balance="balanceAccountCurrentBalance"
-          @dismiss="cancelBalanceModal"
-          @submit="(p) => onBalanceSubmit({ payload: p })"
+        <AddAccountComponent
+          :account="modalAccount"
+          :transactions="modalTransactions"
+          :current-balance="modalCurrentBalance"
+          @dismiss="cancelModal"
+          @saved="onModalSaved"
+          @delete="onDeleteAccount"
         />
       </ion-modal>
 
-      <ion-alert
-        :is-open="deleteConfirmAccount.open"
-        :message="t('suppliers.accounts.accountspage.deleteConfirm', { name: deleteConfirmAccount.accountName })"
-        :buttons="getAlertButtonsAccount()"
-        @did-dismiss="onDeleteAlertDidDismissAccount"
-      ></ion-alert>
     </ion-content>
   </ion-page>
 </template>
 
 <script setup lang="ts">
-// Imports
-import { onMounted, ref, computed, unref, reactive,  } from 'vue';
+// 1. Imports (ionic/vue/ionicons)
+import { onMounted, ref, computed } from 'vue';
 import { useLocale } from '@/composables/useLocale';
 import {
   IonContent,
@@ -150,181 +117,58 @@ import {
   IonItemGroup,
   IonItemDivider,
   IonModal,
-  IonAlert,
   IonButtons,
   IonIcon,
   IonMenuButton,
   IonSearchbar,
 } from '@ionic/vue';
-import { addOutline, searchOutline, trashOutline, scaleOutline } from 'ionicons/icons';
+import { addOutline, searchOutline } from 'ionicons/icons';
 // End Imports
 
-// Controllers
+// 2. Controllers / Composables
 import systemController from '@/controllers/systemConfigController';
 import accountsController from '@/controllers/accountsController';
 import budgetEntriesController from '@/controllers/budgetEntriesController';
-// End Controllers
+import { useAccountBalance } from '@/composables/useAccountBalance';
+// End Controllers / Composables
 
-// Components
+// 3. Components
 import AddAccountComponent from './modals/AddAccountComponent.vue';
-import SetBalanceModal from './modals/SetBalanceModal.vue';
 // End Components
 
-// Types
+// 4. Interface and types imports
 import type { Account } from '@/stores/accountsStore';
-import type { BalanceAdjustmentEntryType } from '@/utils/accountBalance';
 import { computeAccountsBalances } from '@/utils/accountBalance';
+import { accountTransactions } from '@/utils/accountTransactions';
+import type { TransactionRow } from '@/types/account';
 import { formatCurrency } from '@/utils/currency';
-import { formatLocalDate } from '@/utils/date';
-
 
 const { t } = useLocale();
+const { applyTargetBalance } = useAccountBalance();
+
 interface AccountFormData {
   name: string;
   initialBalance: number;
   id?: string | number;
   sync_id?: string;
+  targetBalance?: number;
 }
 // End Types
 
-// Vars
+// 5. Main (props, emits, etc.)
+// End Main
+
+// 6. Vars and const
 const showModal = ref(false);
-const modalAccount = ref<any | null>(null);
+const modalAccount = ref<Account | null>(null);
 const searchTerm = ref('');
 const showSearch = ref(false);
-const deleteConfirmAccount = reactive({
-  open: false,
-  accountId: null as string | number | null,
-  accountName: '' as string,
-});
-
-const showBalanceModal = ref(false);
-const balanceAccountId = ref<string | number | null>(null);
-const balanceAccountName = ref('');
-const balanceAccountCurrentBalance = ref(0);
-
 // End Vars
 
-// Functions
-function openModal() {
-  modalAccount.value = null;
-  showModal.value = true;
-}
+// 7. Watch
+// End Watch
 
-function edit(params: { account: Account | null }) {
-  const { account } = params;
-  modalAccount.value = account;
-  showModal.value = true;
-}
-
-function cancelModal() {
-  showModal.value = false;
-  modalAccount.value = null;
-}
-
-// LBDS-277: the balance of an account is cumulative (opening balance plus
-// every movement of the account), so the adjustment is computed against that
-// balance and creates a regular entry dated today.
-function openBalanceModal(params: { account: Account }) {
-  const { account } = params;
-  balanceAccountId.value = account.id ?? null;
-  balanceAccountName.value = account.name || '';
-  balanceAccountCurrentBalance.value = currentBalanceFor({ account });
-  showBalanceModal.value = true;
-}
-
-function cancelBalanceModal() {
-  showBalanceModal.value = false;
-  balanceAccountId.value = null;
-  balanceAccountName.value = '';
-  balanceAccountCurrentBalance.value = 0;
-}
-
-async function onBalanceSubmit(params: {
-  payload: { accountId: string | number; entryType: BalanceAdjustmentEntryType; amount: number };
-}) {
-  const { accountId, entryType, amount } = params.payload;
-  const name = t('accounts.balanceAdjustment.entryName');
-  const date = formatLocalDate({ d: new Date() });
-
-  if (entryType === 'ingreso') {
-    await budgetEntriesController.addIngreso({ name, amount, accountId, date, paymentType: 'cash' });
-  } else {
-    await budgetEntriesController.addEgreso({ name, amount, accountId, date, paymentType: 'cash' });
-  }
-
-  cancelBalanceModal();
-}
-
-function confirmRemoveAccount(params: { id: string | number | null | undefined; name?: string }) {
-  const { id, name } = params;
-  deleteConfirmAccount.open = true;
-  deleteConfirmAccount.accountId = id ?? null;
-  deleteConfirmAccount.accountName = name ?? '';
-}
-
-function getAlertButtonsAccount() {
-  return [
-    {
-      text: t('suppliers.accounts.accountspage.text1'),
-      role: 'cancel',
-      handler: () => {},
-    },
-    {
-      text: t('suppliers.accounts.accountspage.text2'),
-      role: 'destructive',
-      handler: () => {
-        void removeAccountConfirmed();
-      },
-    },
-  ];
-}
-
-async function removeAccountConfirmed() {
-  const id = deleteConfirmAccount.accountId;
-  deleteConfirmAccount.open = false;
-  deleteConfirmAccount.accountId = null;
-  deleteConfirmAccount.accountName = '';
-
-  if (id == null) return;
-  await remove({ id: id as string | number });
-}
-
-function onDeleteAlertDidDismissAccount() {
-  deleteConfirmAccount.open = false;
-  deleteConfirmAccount.accountId = null;
-  deleteConfirmAccount.accountName = '';
-}
-
-async function onModalSaved(payload: AccountFormData) {
-  if (!payload) return;
-  if (payload.id != null) {
-    await accountsController.updateAccount({ account: payload as AccountFormData });
-  } else {
-    await accountsController.addAccount({ account: payload as AccountFormData });
-  }
-
-  cancelModal();
-  await accountsController.loadAll();
-}
-
-async function remove(params: { id: IDBValidKey | undefined }) {
-  const { id } = params;
-  if (id == null) return;
-  await accountsController.deleteAccount({ id });
-  await accountsController.loadAll();
-}
-
-// End Functions
-
-// Life cycle
-onMounted(() => {
-  accountsController.loadAll();
-});
-
-// End Life cycle
-
-// Computed
+// 8. Computed
 const designMode = computed(() => systemController.getDesignMode());
 
 const accounts = computed(() => accountsController.getAccounts());
@@ -343,6 +187,23 @@ function currentBalanceFor(params: { account: Account }): number {
   const balance = accountsBalances.value.get(String(account.id));
   return balance ?? (Number(account.initialBalance) || 0);
 }
+
+function transactionsForAccount(accountId: string | number): TransactionRow[] {
+  return accountTransactions({
+    entries: budgetEntriesController.getAllEntries(),
+    accountId,
+  });
+}
+
+const modalTransactions = computed(() => {
+  if (!modalAccount.value?.id) return [];
+  return transactionsForAccount(modalAccount.value.id);
+});
+
+const modalCurrentBalance = computed(() => {
+  if (!modalAccount.value) return 0;
+  return currentBalanceFor({ account: modalAccount.value });
+});
 
 const filteredAccounts = computed(() => {
   const term = (searchTerm.value || '').toString().toLowerCase().trim();
@@ -374,10 +235,67 @@ const groupedAccounts = computed(() => {
     .sort()
     .map((letter) => ({ letter, items: map.get(letter) || [] }));
 });
-
 // End Computed
 
-// Watch
+// 9. OnMounted
+onMounted(() => {
+  accountsController.loadAll();
+});
+// End Life cycle
+
+// 10. Functions
+function openModal() {
+  modalAccount.value = null;
+  showModal.value = true;
+}
+
+function edit(params: { account: Account | null }) {
+  const { account } = params;
+  modalAccount.value = account;
+  showModal.value = true;
+}
+
+function cancelModal() {
+  showModal.value = false;
+  modalAccount.value = null;
+}
+
+async function onModalSaved(payload: AccountFormData) {
+  if (!payload) return;
+
+  const accountId = payload.id as string | number;
+  const isEditing = accountId != null;
+
+  // Create or update the account (without mutating initialBalance on edit)
+  if (isEditing) {
+    // When editing, only update the name, keep initialBalance as-is
+    await accountsController.updateAccount({
+      account: { name: payload.name, initialBalance: payload.initialBalance, id: accountId },
+    });
+  } else {
+    await accountsController.addAccount({ account: payload as AccountFormData });
+  }
+
+  // If editing and a target balance was provided, create an adjustment entry (S5)
+  if (isEditing && payload.targetBalance != null) {
+    const currentBalance = currentBalanceFor({ account: { id: accountId } as Account });
+    await applyTargetBalance({
+      accountId,
+      targetBalance: payload.targetBalance,
+      currentBalance,
+    });
+  }
+
+  cancelModal();
+  await accountsController.loadAll();
+}
+
+async function onDeleteAccount(accountId: string | number) {
+  await accountsController.deleteAccount({ id: accountId });
+  await accountsController.loadAll();
+  cancelModal();
+}
+// End Functions
 </script>
 
 <style scoped>
@@ -429,32 +347,6 @@ ion-list.transparent {
 
 .search-row--open .search-row__inner {
   opacity: 1;
-}
-
-.account-actions {
-  opacity: 0;
-  transition: opacity 150ms ease;
-}
-
-ion-item:hover .account-actions,
-ion-item:focus-within .account-actions {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-@media (pointer: fine) {
-  ion-item:hover .account-actions,
-  ion-item:focus-within .account-actions {
-    opacity: 1;
-    pointer-events: auto;
-  }
-}
-
-@media (pointer: coarse) {
-  .account-actions {
-    opacity: 1;
-    pointer-events: auto;
-  }
 }
 
 @media (min-width: 1025px) and (max-width: 1440px) {

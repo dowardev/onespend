@@ -31,6 +31,7 @@
     "periodYear": "Año",
     "description": "Descripción",
     "empty": "(vacío)",
+    "noData": "No hay datos",
     "onlyNumbers": "Solo números",
     "onlyNumbersAllowed": "Solo se permiten números",
     "mustBeGreaterThanZero": "El valor debe ser mayor a 0",
@@ -1286,19 +1287,25 @@
         "addaccountcomponent": {
           "text1": "Nombre",
           "text2": "Balance inicial",
+          "text3": "Aplicar nuevo saldo",
+          "text3Placeholder": "Saldo actual",
+          "transactionsTitle": "Transacciones",
           "alert": {
             "cancel": "Cancelar"
           },
           "text": "Eliminar",
-          "deleteConfirm": "¿Eliminar esta cuenta?"
+          "deleteConfirm": "¿Eliminar esta cuenta?",
+          "editTitle": "Editar Cuenta",
+          "newTitle": "Crear Cuenta",
+          "deleteAction": "Eliminar cuenta",
+          "moreActions": "Más acciones",
+          "deleteMovementConfirm": "¿Eliminar este movimiento?",
+          "balanceHelp": "Escribí el saldo que querés que tenga la cuenta. Si es distinto del que tiene hoy, la diferencia se guarda como un ingreso (si hay que subirlo) o como un egreso (si hay que bajarlo). El movimiento queda en el historial de la cuenta."
         }
       },
       "accountspage": {
         "label": "Lista de cuentas",
         "placeholder": "Buscar cuentas",
-        "deleteConfirm": "¿Eliminar cuenta {name}?",
-        "text1": "Cancelar",
-        "text2": "Eliminar",
         "initialBalance": "Balance inicial: {amount}",
         "currentBalance": "Balance actual: {amount}"
       }

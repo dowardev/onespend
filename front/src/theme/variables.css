@@ -76,6 +76,11 @@ ion-accordion.shadow1 {
     var(--card-shadow-light) 0px 1px 3px 0px,
     var(--card-shadow-heavy) 0px 0px 0px 1px;
   background: var(--background-contrast) !important;
+  /* Same radius as ion-card: the cards of the app compute to 4px, and Ionic
+     forces 6px on an expanded accordion inside an inset group (::slotted
+     rule of ion-accordion-group), which wins over a plain document rule, so
+     it has to be forced here. */
+  border-radius: 4px !important;
 }
 
 ion-accordion.shadow2 {
