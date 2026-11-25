@@ -315,6 +315,13 @@ Preferir las utilidades de layout de Ionic sobre CSS personalizado:
 
 NEVER create git commits unless the user explicitly requests it. This overrides any skill or workflow that suggests committing as a final step.
 
+## Changelog / Release Policy
+
+- Every feature PR adds its entry under the `## [Unreleased]` heading of the changelogs it touches (the root `CHANGELOG.md`, `front/CHANGELOG.md`, `back/CHANGELOG.md`). Entries accumulate there across many merges.
+- The release is cut when the user asks for a deploy. Only then does the agent create the release commit: bump the version (`front/package.json` `version` + `versionCode`), move everything under `[Unreleased]` into the new `## [vX.Y.Z] - <date>` section of the three changelogs, add the store changelogs for the new versionCode, commit, tag it (`git tag -a vX.Y.Z -m "Release X.Y.Z"`) and push the tag, which triggers the pipeline.
+- The release commit is the commit the tag points to (same as `v0.81.0` -> `810eee6`). A version section never exists without a tag, and a tag never points to a commit without its version section.
+- Do not create a release commit, a version bump or a tag on your own initiative: the deploy is the user's decision, and it is when the release work happens.
+
 ## Ticket / Issue Policy
 
 NEVER create or edit GitLab issues (or any external issue/ticket) without the user explicitly asking for it. Creating an issue is a mutation an agent must never do on its own initiative — even when a finding, follow-up, or proposal seems obvious. If you think an issue is warranted, propose it in the conversation and ask the user first; only create it after an explicit request. This also covers branch names derived from issues: do not branch off an issue that was not requested.
