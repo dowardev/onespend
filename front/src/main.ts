@@ -60,6 +60,7 @@ import {
   getSsoFrontendUrl,
   defaultSsoBaseUrl,
   defaultSsoFrontendUrl,
+  resolveSsoClientConfig,
 } from './services/sso/ssoConfig';
 // LBDS-295: resolve SSO URLs from configDb at boot so self-hosters
 // can point login at their own SSO without rebuilding the APK. The
@@ -92,11 +93,27 @@ try {
   ssoBaseUrl = defaultSsoBaseUrl()
   ssoFrontendUrl = defaultSsoFrontendUrl()
 }
-const ssoClient = new SSOClient({
+// The SSO client throws when it gets an invalid URL, and that throw would
+// happen while this module is being imported: the app would never mount and
+// the user would see a blank screen. Build the client with a placeholder
+// host when there is no SSO server configured, so the app always boots and
+// the login attempt fails with a message instead.
+const ssoConfig = resolveSsoClientConfig({
+  clientId: import.meta.env.VITE_SSO_CLIENT_ID || '',
   ssoUrl: ssoBaseUrl,
   ssoFrontendUrl: ssoFrontendUrl,
-  clientId: import.meta.env.VITE_SSO_CLIENT_ID,
-  apiBaseUrl: import.meta.env.VITE_API_URL,
+  apiBaseUrl: import.meta.env.VITE_API_URL || '',
+})
+if (!ssoConfig.configured) {
+  console.warn(
+    '[main] No SSO server configured; login will not reach a server until one is set.',
+  )
+}
+const ssoClient = new SSOClient({
+  ssoUrl: ssoConfig.ssoUrl,
+  ssoFrontendUrl: ssoConfig.ssoFrontendUrl,
+  clientId: ssoConfig.clientId,
+  apiBaseUrl: ssoConfig.apiBaseUrl,
 })
 export { ssoClient }
 

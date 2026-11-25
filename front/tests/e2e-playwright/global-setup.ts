@@ -28,13 +28,42 @@ export default async function globalSetup(): Promise<void> {
     // --no-sandbox to launch chromium at all.
     browser = await chromium.launch({ args: [...E2E_CHROMIUM_ARGS] });
     const page = await browser.newPage();
+    const problems: string[] = [];
+    page.on('pageerror', (error) => problems.push(`pageerror: ${error.message}`));
+    page.on('console', (message) => {
+      if (message.type() === 'error') problems.push(`console.error: ${message.text()}`);
+    });
+
     await page.goto(`${BASE_URL}/budget`, {
       waitUntil: 'domcontentloaded',
       timeout: 120000,
     });
     await page.waitForLoadState('load', { timeout: 30000 }).catch(() => undefined);
+    await page.waitForTimeout(2000);
+
+    // A boot failure used to surface as dozens of unrelated spec failures
+    // ("the header button was not found"), which hid the real cause. The app
+    // not mounting is a broken app, not a broken spec: report it here, with
+    // the errors the browser collected, and stop the run.
+    const mounted = await page
+      .evaluate(() => !!document.querySelector('ion-app'))
+      .catch(() => false);
+
+    if (!mounted) {
+      throw new Error(
+        `The app did not mount at ${BASE_URL}/budget.` +
+          (problems.length ? `\nBrowser errors:\n  ${problems.join('\n  ')}` : ''),
+      );
+    }
   } catch (error) {
-    console.warn(`[e2e] warm-up skipped: ${(error as Error).message}`);
+    const message = (error as Error).message;
+    // A missing browser or a server that is not up yet is not an app
+    // problem: the specs can still run and pay the cold start themselves.
+    if (message.includes('did not mount')) {
+      console.error(`[e2e] ${message}`);
+      throw error;
+    }
+    console.warn(`[e2e] warm-up skipped: ${message}`);
   } finally {
     await browser?.close().catch(() => undefined);
   }

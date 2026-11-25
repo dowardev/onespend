@@ -14,7 +14,9 @@
 # REGLA DE GATING (igual que en GitLab):
 #   - backend_lint, backend_test, frontend_lint, frontend_test, backend_build,
 #     frontend_build, backend_deploy, frontend_deploy → SOLO tags
-#   - frontend_e2e → merge requests Y tags, y NO es gate (allow_failure)
+#   - frontend_e2e → merge requests Y tags, y ES gate: bloquea el merge
+#     (dejó de ser allow_failure cuando la app pasó a arrancar sin
+#     configuración de SSO; antes el job fallaba siempre y no marcaba nada)
 #   - rollback_* → manual (workflow_dispatch)
 # ============================================================
 
@@ -252,7 +254,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: [release_gate]
     if: github.event_name == 'pull_request' || (startsWith(github.ref, 'refs/tags/v') && needs.release_gate.outputs.release == 'true')
-    continue-on-error: true
     container:
       image: mcr.microsoft.com/playwright:v1.61.0-noble
     steps:
@@ -359,6 +360,15 @@ jobs:
 
       - name: Build frontend
         working-directory: front
+        env:
+          # The SSO settings are public identifiers (URLs and a client id), so
+          # they live in the repository variables, not in secrets. Without
+          # them the bundle ships with no login server and the app can only
+          # show the login screen. Vite exposes the VITE_-prefixed ones.
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
+          VITE_SSO_URL: ${{ vars.VITE_SSO_URL }}
+          VITE_SSO_FRONTEND_URL: ${{ vars.VITE_SSO_FRONTEND_URL }}
+          VITE_SSO_CLIENT_ID: ${{ vars.VITE_SSO_CLIENT_ID }}
         run: |
           pnpm run build
           tar czf ../dist.tar.gz -C dist .
