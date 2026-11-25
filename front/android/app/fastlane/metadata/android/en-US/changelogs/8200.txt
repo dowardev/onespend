@@ -1,0 +1,4 @@
+v0.82.0
+• The account window now shows the account name, its current balance and every transaction it has, and you can set a new balance right there: the difference is saved as a regular income or expense, so it shows up in the history and syncs like any other movement.
+• The transactions in that list can be edited or deleted.
+• The app no longer starts blank when it is built without a login server configured.
