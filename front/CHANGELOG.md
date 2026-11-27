@@ -9,9 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - The account configuration modal now shows the account name, its current balance and the full list of transactions inside an accordion, and it can adjust the balance in place: the difference between the balance you type and the current one is saved as a regular income or expense, so it shows up in the account history and syncs like any other movement. The initial balance can only be set when the account is created, and the transactions in the list can be edited or deleted (GitHub #12).
+- Setting an account balance no longer rewrites the stored balance: it creates a regular income or expense entry with the difference, so the adjustment is auditable and syncs like any other movement, and the initial balance stays editable only when the account is created (GitHub #11).
+
+### Changed
+- The release flow is documented as tag-driven: the F-Droid recipe mirrors the released version and the checkupdates bot lands the build block, so the release tag is what publishes a new build.
 
 ### Fixed
 - The app no longer shows a blank screen when it is built without an SSO server configured: the SSO client refused to be built without a URL and the app failed to mount, which is also what broke the whole end-to-end suite in CI (GitHub #17).
+- Conflict amounts are now formatted with the app currency instead of euros, so a push conflict shows the same currency as the rest of the app.
+- The app is translated end to end: the message catalogs are complete and the sync, auth, budget, recurring, statistics and supplier views render in the active language.
+- Month and weekday names, and the year in short dates, are rendered in the active language, and the i18n layer no longer leaves a message untranslated.
+- The F-Droid download entry works again and the downloads page is translated.
 
 ## [v0.81.0] - 2026-11-10
 
