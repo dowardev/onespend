@@ -13,6 +13,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 - Setting an account balance records the difference between the target balance and the current one as a regular income or expense entry, so the adjustment is auditable and syncable instead of rewriting the stored balance (GitHub #11).
 
 ### Changed
+- The deploy verifies the SSH key against the server before anything is built: a missing, invalid or unauthorized key now fails in seconds with a message that says exactly what to fix, instead of failing at the end of the deploy.
 - The app is translated end to end (es/en): the message catalogs are complete and the sync, auth, budget, recurring, statistics and supplier views follow the active language.
 - CI/CD moved from GitLab to GitHub Actions. The pipeline keeps the same job names so they work as the required status checks of `main`, and the deploy and the rollback stay tag-gated and manual, as they were in GitLab.
 - The F-Droid recipe mirrors the released version and the release flow is documented as tag-driven: the release tag is what publishes a new build.

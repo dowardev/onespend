@@ -9,7 +9,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 This guide covers deploying OneSpend on shared Apache hosting with SSH support.
 
 > **Note:** Deployment can be done **manually** (SSH, documented here)
-> or **automatically** via GitLab CI/CD with tags (see section 9).
+> or **automatically** via GitHub Actions with tags (see section 9).
 
 ---
 
@@ -29,7 +29,7 @@ This guide covers deploying OneSpend on shared Apache hosting with SSH support.
 ## 2. SSO Authentication
 
 OneSpend uses an external SSO server for authentication
-([source code](https://gitlab.com/dowardev/sso)).
+([source code](https://github.com/dowardev/sso)).
 You must set up the SSO server first, then configure the apps.
 
 ### Configure the SSO Server
@@ -325,18 +325,23 @@ Add this line in your hosting cron panel:
 
 ---
 
-## 9. GitLab CI/CD
+## 9. GitHub Actions
 
-See `.gitlab-ci.yml` in the project root.
+See `.github/workflows/ci.yml` in the project root.
 Pipeline triggers automatically on tags matching
 `vX.Y.Z`, `vX.Y.Z-alpha.N`, `vX.Y.Z-beta.N`, `vX.Y.Z-rc.N`, or `vX.Y.Z-dryrun.N`.
 
-### Required CI/CD Variables
+### Required secrets and variables
+
+`SSH_PRIVATE_KEY` and `SSH_KNOWN_HOSTS` are repository **secrets**
+(Settings > Secrets and variables > Actions); the rest are repository
+**variables** (Settings > Secrets and variables > Actions > Variables).
 
 <!-- markdownlint-disable MD013 -->
 | Variable              | Description              | Example                        |
 | --------------------- | ------------------------ | ------------------------------ |
-| `SSH_PRIVATE_KEY`     | Server SSH private key   | `[ssh_private_key]`            |
+| `SSH_PRIVATE_KEY`     | Server SSH private key (secret) | `[ssh_private_key]`     |
+| `SSH_KNOWN_HOSTS`     | Known hosts entry for the server (secret) | `[known_hosts]`    |
 | `SSH_HOST`            | Server host              | `yourdomain.com`               |
 | `SSH_PORT`            | SSH port                 | `[ssh_port]`                   |
 | `SSH_USER`            | SSH user                 | `your-user`                    |
@@ -369,7 +374,7 @@ git tag -a v0.0.0-dryrun.1 -m "dryrun: validate CI changes against server"
 git push origin v0.0.0-dryrun.1
 ```
 
-Watch the pipeline in GitLab (CI/CD > Pipelines). When it finishes successfully,
+Watch the workflow run in GitHub (Actions). When it finishes successfully,
 remove the tag:
 
 ```bash
@@ -378,6 +383,18 @@ git push origin :refs/tags/v0.0.0-dryrun.1
 ```
 
 All other tags are ignored by the pipeline.
+
+### SSH key preflight
+
+Before anything is built, the `ssh_preflight` job checks that the deploy key
+is actually authorized on the server: the secret is not empty, it is a valid
+private key, and the host accepts it. A missing or unauthorized key fails in
+seconds with a message that says what to do, instead of failing at the end of
+the deploy.
+
+To authorize it, add the **public** key of `SSH_PRIVATE_KEY` to the hosting
+panel (SSH keys of the deploy user) and make sure `SSH_KNOWN_HOSTS` holds the
+matching host key entry.
 
 ---
 
