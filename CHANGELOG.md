@@ -8,10 +8,14 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 ## [Unreleased]
 
-## [v0.82.0] - 2026-11-24
-
 ### Added
 - The account configuration modal now shows the account name, its current balance and the full list of transactions inside an accordion, and it can adjust the balance in place: the difference between the balance you type and the current one is saved as a regular income or expense, so it shows up in the account history and syncs like any other movement. The initial balance can only be set when the account is created, and the transactions in the list can be edited or deleted (GitHub #12).
+- Setting an account balance records the difference between the target balance and the current one as a regular income or expense entry, so the adjustment is auditable and syncable instead of rewriting the stored balance (GitHub #11).
+
+### Changed
+- The app is translated end to end (es/en): the message catalogs are complete and the sync, auth, budget, recurring, statistics and supplier views follow the active language.
+- CI/CD moved from GitLab to GitHub Actions. The pipeline keeps the same job names so they work as the required status checks of `main`, and the deploy and the rollback stay tag-gated and manual, as they were in GitLab.
+- The F-Droid recipe mirrors the released version and the release flow is documented as tag-driven: the release tag is what publishes a new build.
 
 ### Fixed
 - The app no longer shows a blank screen when it is built without an SSO server configured: the SSO client refused to be built without a URL and the app failed to mount, which is also what broke the whole end-to-end suite in CI (GitHub #17).
